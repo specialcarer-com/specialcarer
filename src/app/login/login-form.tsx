@@ -1,40 +1,115 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type Props = { redirectTo: string };
+type Stage = "enter-email" | "enter-code";
 
 export function LoginForm({ redirectTo }: Props) {
+  const router = useRouter();
+  const [stage, setStage] = useState<Stage>("enter-email");
   const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [, startTransition] = useTransition();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const codeInputRef = useRef<HTMLInputElement>(null);
   const googleEnabled =
     process.env.NEXT_PUBLIC_GOOGLE_OAUTH_ENABLED === "true";
+
+  // Cooldown timer for resend
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setTimeout(() => setResendCooldown((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendCooldown]);
+
+  useEffect(() => {
+    if (stage === "enter-code") codeInputRef.current?.focus();
+  }, [stage]);
+
+  async function sendCode(emailValue: string) {
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOtp({
+      email: emailValue,
+      options: {
+        // Setting shouldCreateUser=true is the default; included for clarity
+        shouldCreateUser: true,
+      },
+    });
+    if (error) throw error;
+  }
 
   async function handleEmailSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSubmitting(true);
     setErrorMsg(null);
+    const cleaned = email.trim().toLowerCase();
     try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signInWithOtp({
-        email: email.trim().toLowerCase(),
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(
-            redirectTo
-          )}`,
-        },
-      });
-      if (error) throw error;
-      setSent(true);
+      await sendCode(cleaned);
+      setEmail(cleaned);
+      setStage("enter-code");
+      setResendCooldown(30);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Couldn't send link";
-      setErrorMsg(msg);
+      setErrorMsg(err instanceof Error ? err.message : "Couldn't send code");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleCodeSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSubmitting(true);
+    setErrorMsg(null);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: code.trim(),
+        type: "email",
+      });
+      if (error) throw error;
+      // Decide where to send them based on profile completeness
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name, country")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (!profile?.full_name || !profile?.country) {
+          router.push(`/onboarding?next=${encodeURIComponent(redirectTo)}`);
+        } else {
+          router.push(redirectTo);
+        }
+      } else {
+        router.push(redirectTo);
+      }
+      router.refresh();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Invalid code";
+      setErrorMsg(
+        msg.toLowerCase().includes("expired") || msg.toLowerCase().includes("invalid")
+          ? "That code is invalid or expired. Try again or request a new one."
+          : msg
+      );
+      setSubmitting(false);
+    }
+  }
+
+  async function handleResend() {
+    if (resendCooldown > 0) return;
+    setErrorMsg(null);
+    try {
+      await sendCode(email);
+      setResendCooldown(30);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Couldn't resend code");
     }
   }
 
@@ -52,23 +127,70 @@ export function LoginForm({ redirectTo }: Props) {
     });
   }
 
-  if (sent) {
+  if (stage === "enter-code") {
     return (
-      <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900">
-        <h2 className="font-semibold">Check your email</h2>
-        <p className="mt-2 text-sm">
-          We sent a sign-in link to <strong>{email}</strong>. Click the link to
-          finish signing in. It expires in 1 hour.
-        </p>
-        <button
-          onClick={() => {
-            setSent(false);
-            setEmail("");
-          }}
-          className="mt-4 text-sm underline"
-        >
-          Use a different email
-        </button>
+      <div className="space-y-6">
+        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-700">
+          We sent a 6-digit code to <strong>{email}</strong>. Enter it below.
+          The code expires in 1 hour.
+        </div>
+
+        <form onSubmit={handleCodeSubmit} className="space-y-3">
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">
+              6-digit code
+            </span>
+            <input
+              ref={codeInputRef}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]{6}"
+              maxLength={6}
+              required
+              autoComplete="one-time-code"
+              value={code}
+              onChange={(e) =>
+                setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+              }
+              placeholder="123456"
+              className="mt-1 w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand text-center text-2xl tracking-[0.5em] font-mono"
+            />
+          </label>
+
+          {errorMsg && <p className="text-sm text-rose-600">{errorMsg}</p>}
+
+          <button
+            type="submit"
+            disabled={submitting || code.length !== 6}
+            className="w-full px-4 py-3 rounded-xl bg-brand text-white font-medium hover:bg-brand-600 transition disabled:opacity-50"
+          >
+            {submitting ? "Verifying…" : "Verify and continue"}
+          </button>
+        </form>
+
+        <div className="flex items-center justify-between text-sm">
+          <button
+            type="button"
+            onClick={() => {
+              setStage("enter-email");
+              setCode("");
+              setErrorMsg(null);
+            }}
+            className="text-slate-600 hover:text-slate-900 underline"
+          >
+            Use a different email
+          </button>
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={resendCooldown > 0}
+            className="text-brand hover:text-brand-600 disabled:text-slate-400 disabled:cursor-not-allowed"
+          >
+            {resendCooldown > 0
+              ? `Resend in ${resendCooldown}s`
+              : "Resend code"}
+          </button>
+        </div>
       </div>
     );
   }
@@ -108,17 +230,20 @@ export function LoginForm({ redirectTo }: Props) {
           />
         </label>
 
-        {errorMsg && (
-          <p className="text-sm text-rose-600">{errorMsg}</p>
-        )}
+        {errorMsg && <p className="text-sm text-rose-600">{errorMsg}</p>}
 
         <button
           type="submit"
           disabled={submitting || !email}
           className="w-full px-4 py-3 rounded-xl bg-brand text-white font-medium hover:bg-brand-600 transition disabled:opacity-50"
         >
-          {submitting ? "Sending link…" : "Email me a sign-in link"}
+          {submitting ? "Sending code…" : "Email me a 6-digit code"}
         </button>
+
+        <p className="text-xs text-slate-500 text-center pt-1">
+          We&rsquo;ll email you a 6-digit code instead of a clickable link, so
+          email scanners can&rsquo;t hijack your sign-in.
+        </p>
       </form>
     </div>
   );
