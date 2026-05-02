@@ -1,0 +1,85 @@
+{
+  "expo": {
+    "name": "SpecialCarer",
+    "slug": "specialcarer",
+    "scheme": "specialcarer",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0ea5e9"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "co.uk.allcare4u.specialcarer",
+      "buildNumber": "1",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "SpecialCarer uses your location during active shifts so the family you're caring for can see you're on the way and on site.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "SpecialCarer continues sharing your location during active shifts (only between shift start and 15 minutes after the scheduled end) so the family receives uninterrupted updates if the app is in the background.",
+        "NSLocationAlwaysUsageDescription": "SpecialCarer continues sharing your location during active shifts so the family receives uninterrupted updates if the app is in the background.",
+        "UIBackgroundModes": ["location", "fetch"],
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0ea5e9"
+      },
+      "package": "co.uk.allcare4u.specialcarer",
+      "versionCode": 1,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow SpecialCarer to share your location with the family during active shifts.",
+          "locationAlwaysPermission": "Allow SpecialCarer to share your location with the family during active shifts even if the app is in the background.",
+          "locationWhenInUsePermission": "Allow SpecialCarer to share your location with the family while a shift is active.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#0ea5e9"
+        }
+      ]
+    ],
+    "extra": {
+      "webOrigin": "https://specialcarer.com",
+      "eas": {
+        "projectId": "REPLACE_AFTER_EAS_INIT"
+      }
+    },
+    "owner": "allcare4u",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/REPLACE_AFTER_EAS_INIT"
+    }
+  }
+}

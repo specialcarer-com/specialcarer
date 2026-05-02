@@ -1,6 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  isNative,
+  onNativeEvent,
+  startNativeTracking,
+  stopNativeTracking,
+} from "@/lib/native-bridge";
 
 type Ping = {
   id: number;
@@ -148,6 +154,20 @@ export default function BookingTrackingClient(props: Props) {
 
   // -------------------- Caregiver controls --------------------
 
+  // Listen for native bridge updates (permission outcome, status changes)
+  useEffect(() => {
+    return onNativeEvent((evt) => {
+      if (evt.type === "tracking.status") {
+        if (evt.payload.permission === "denied") {
+          setPermission("Native location permission denied. Enable it in Settings → SpecialCarer → Location.");
+          setTracking(false);
+        } else if (evt.payload.active) {
+          setTracking(true);
+        }
+      }
+    });
+  }, []);
+
   const startTracking = useCallback(async () => {
     setBusy(true);
     setError(null);
@@ -159,7 +179,21 @@ export default function BookingTrackingClient(props: Props) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not start tracking");
       setSession(data.session);
-      // Begin geolocation watch
+
+      // If running inside the native shell, defer GPS to the native runtime
+      // (background-capable, survives suspend). Web fallback below.
+      if (isNative()) {
+        const ok = startNativeTracking(
+          props.bookingId,
+          data.session.tracking_window_end
+        );
+        if (ok) {
+          setTracking(true);
+          return;
+        }
+      }
+
+      // Begin geolocation watch (web fallback)
       if (!("geolocation" in navigator)) {
         throw new Error("Geolocation not supported in this browser");
       }
@@ -216,6 +250,9 @@ export default function BookingTrackingClient(props: Props) {
     setBusy(true);
     setError(null);
     try {
+      if (isNative()) {
+        stopNativeTracking(props.bookingId);
+      }
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;

@@ -1,0 +1,17 @@
+node_modules/
+.expo/
+.expo-shared/
+dist/
+web-build/
+ios/
+android/
+*.log
+.env
+.env.local
+.eas-build-local-nodejs/
+play-service-account.json
+*.p8
+*.p12
+*.mobileprovision
+GoogleService-Info.plist
+google-services.json
