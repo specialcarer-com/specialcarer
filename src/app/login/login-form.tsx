@@ -146,29 +146,29 @@ export function LoginForm({ redirectTo }: Props) {
     return (
       <div className="space-y-6">
         <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-700">
-          We sent a 6-digit code to <strong>{email}</strong>. Enter it below.
+          We sent a code to <strong>{email}</strong>. Enter it below.
           The code expires in 1 hour.
         </div>
 
         <form onSubmit={handleCodeSubmit} className="space-y-3">
           <label className="block">
             <span className="text-sm font-medium text-slate-700">
-              6-digit code
+              Verification code
             </span>
             <input
               ref={codeInputRef}
               type="text"
               inputMode="numeric"
-              pattern="[0-9]{6}"
-              maxLength={6}
+              pattern="[0-9]{6,10}"
+              maxLength={10}
               required
               autoComplete="one-time-code"
               value={code}
               onChange={(e) =>
-                setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                setCode(e.target.value.replace(/\D/g, "").slice(0, 10))
               }
-              placeholder="123456"
-              className="mt-1 w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand text-center text-2xl tracking-[0.5em] font-mono"
+              placeholder="12345678"
+              className="mt-1 w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand text-center text-2xl tracking-[0.4em] font-mono"
             />
           </label>
 
@@ -176,7 +176,7 @@ export function LoginForm({ redirectTo }: Props) {
 
           <button
             type="submit"
-            disabled={submitting || code.length !== 6}
+            disabled={submitting || code.length < 6}
             className="w-full px-4 py-3 rounded-xl bg-brand text-white font-medium hover:bg-brand-600 transition disabled:opacity-50"
           >
             {submitting ? "Verifying…" : "Verify and continue"}
@@ -252,11 +252,11 @@ export function LoginForm({ redirectTo }: Props) {
           disabled={submitting || !email}
           className="w-full px-4 py-3 rounded-xl bg-brand text-white font-medium hover:bg-brand-600 transition disabled:opacity-50"
         >
-          {submitting ? "Sending code…" : "Email me a 6-digit code"}
+          {submitting ? "Sending code…" : "Email me a sign-in code"}
         </button>
 
         <p className="text-xs text-slate-500 text-center pt-1">
-          We&rsquo;ll email you a 6-digit code instead of a clickable link, so
+          We&rsquo;ll email you a numeric code instead of a clickable link, so
           email scanners can&rsquo;t hijack your sign-in.
         </p>
       </form>
