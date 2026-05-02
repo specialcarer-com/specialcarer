@@ -49,17 +49,6 @@ export default function VerificationClient({
     );
   }
 
-  if (country !== "GB") {
-    return (
-      <button
-        disabled
-        className="px-4 py-3 rounded-xl bg-slate-100 text-slate-500 text-sm font-medium cursor-not-allowed"
-      >
-        US verification coming soon
-      </button>
-    );
-  }
-
   return (
     <div className="space-y-3">
       <button

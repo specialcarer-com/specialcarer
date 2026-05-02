@@ -6,7 +6,7 @@ import VerificationClient from "./verification-client";
 
 export const dynamic = "force-dynamic";
 
-const REQUIRED = [
+const UK_REQUIRED = [
   {
     type: "enhanced_dbs_barred",
     label: "Enhanced DBS with Barred Lists",
@@ -27,7 +27,23 @@ const REQUIRED = [
   },
 ] as const;
 
+const US_REQUIRED = [
+  {
+    type: "us_criminal",
+    label: "Criminal background check",
+    blurb:
+      "National + county criminal search, SSN trace, and sex offender registry scrub. Run through Checkr (FCRA compliant).",
+  },
+  {
+    type: "us_healthcare_sanctions",
+    label: "Healthcare sanctions",
+    blurb:
+      "Checks federal exclusion lists (OIG, SAM) required for caregivers in regulated home-care settings.",
+  },
+] as const;
+
 type CheckRow = {
+  vendor: string;
   check_type: string;
   status: string;
   invite_url: string | null;
@@ -88,23 +104,33 @@ export default async function VerificationPage() {
     );
   }
 
+  const country = (profile.country as "GB" | "US") || "GB";
+  const required = country === "US" ? US_REQUIRED : UK_REQUIRED;
+  const vendor = country === "US" ? "checkr" : "uchecks";
+  const vendorLabel = country === "US" ? "Checkr" : "uCheck";
+
   const { data: rows } = await admin
     .from("background_checks")
     .select(
-      "check_type, status, invite_url, issued_at, expires_at, result_summary"
+      "vendor, check_type, status, invite_url, issued_at, expires_at, result_summary"
     )
     .eq("user_id", user.id)
-    .eq("vendor", "uchecks");
+    .eq("vendor", vendor);
 
   const byType = new Map<string, CheckRow>();
   (rows ?? []).forEach((r) => byType.set(r.check_type, r as CheckRow));
 
   const inviteUrl =
     (rows ?? []).find((r) => r.invite_url)?.invite_url ?? null;
-  const allCleared = REQUIRED.every(
+  const allCleared = required.every(
     (r) => byType.get(r.type)?.status === "cleared"
   );
   const anyStarted = (rows ?? []).length > 0;
+
+  const provider =
+    country === "US"
+      ? "Checkr (FCRA-compliant background-check provider used by Lyft, DoorDash, and Care.com)"
+      : "uCheck (a DBS Responsible Organisation)";
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-12">
@@ -116,17 +142,9 @@ export default async function VerificationPage() {
       </Link>
       <h1 className="text-3xl font-semibold mt-2">Verification</h1>
       <p className="text-slate-600 mt-1">
-        We verify every UK caregiver before they can be booked. SpecialCarer
-        covers the cost &mdash; you pay nothing.
+        We verify every {country === "US" ? "US" : "UK"} caregiver before they
+        can be booked. SpecialCarer covers the cost &mdash; you pay nothing.
       </p>
-
-      {profile.country && profile.country !== "GB" ? (
-        <div className="mt-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-sm">
-          Your account country is set to <strong>{profile.country}</strong>.
-          uCheck only supports UK caregivers; US verification (Checkr) is coming
-          soon.
-        </div>
-      ) : null}
 
       {allCleared && (
         <div className="mt-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm">
@@ -135,7 +153,7 @@ export default async function VerificationPage() {
       )}
 
       <ol className="mt-8 space-y-3">
-        {REQUIRED.map((req) => {
+        {required.map((req) => {
           const row = byType.get(req.type);
           const s = statusLabel(row?.status ?? "not_started");
           const tone =
@@ -179,23 +197,22 @@ export default async function VerificationPage() {
         </h2>
         <p className="text-sm text-slate-600 mt-1">
           {anyStarted
-            ? "Pick up where you left off in the secure uCheck portal."
-            : "We&rsquo;ll redirect you to uCheck to verify your ID and submit your DBS check. Takes about 10 minutes."}
+            ? `Pick up where you left off in the secure ${vendorLabel} portal.`
+            : `We'll redirect you to ${vendorLabel} to verify your ID and run your checks. Takes about 10 minutes.`}
         </p>
         <div className="mt-4">
           <VerificationClient
             inviteUrl={inviteUrl}
             allCleared={allCleared}
-            country={(profile.country as "GB" | "US") ?? "GB"}
+            country={country}
           />
         </div>
       </div>
 
       <p className="text-xs text-slate-500 mt-6">
-        SpecialCarer uses uCheck, a DBS Responsible Organisation, to run your
-        Enhanced DBS, Right-to-Work and Digital ID checks. We never see your
-        passport or DBS certificate &mdash; uCheck holds them securely under
-        UK GDPR.
+        SpecialCarer uses {provider} to run your checks. We never see your
+        personal documents &mdash; they&rsquo;re held securely by the provider
+        under {country === "US" ? "FCRA + CCPA" : "UK GDPR"}.
       </p>
     </div>
   );

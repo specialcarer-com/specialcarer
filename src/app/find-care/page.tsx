@@ -27,29 +27,34 @@ export default async function FindCarePage() {
     .map((r) => r.user_id)
     .filter((id) => id !== user.id);
 
-  // Restrict to caregivers whose required UK background checks are all cleared
+  // Restrict to caregivers whose required background checks are all cleared.
+  // UK caregivers must have the uCheck bundle cleared; US caregivers must have
+  // the Checkr bundle cleared.
   let clearedSet = new Set<string>();
   if (candidateIds.length > 0) {
     const { data: bgRows } = await admin
       .from("background_checks")
       .select("user_id, check_type, status")
       .in("user_id", candidateIds)
-      .eq("vendor", "uchecks")
       .eq("status", "cleared");
-    const required = [
+    const ukRequired = [
       "enhanced_dbs_barred",
       "right_to_work",
       "digital_id",
     ];
-    const counts = new Map<string, Set<string>>();
+    const usRequired = ["us_criminal", "us_healthcare_sanctions"];
+    const cleared = new Map<string, Set<string>>();
     (bgRows ?? []).forEach((r) => {
-      if (!counts.has(r.user_id)) counts.set(r.user_id, new Set());
-      counts.get(r.user_id)!.add(r.check_type);
+      if (!cleared.has(r.user_id)) cleared.set(r.user_id, new Set());
+      cleared.get(r.user_id)!.add(r.check_type);
     });
     clearedSet = new Set(
-      candidateIds.filter((id) =>
-        required.every((t) => counts.get(id)?.has(t))
-      )
+      (ready ?? []).filter((r) => r.user_id !== user.id).filter((r) => {
+        const set = cleared.get(r.user_id);
+        if (!set) return false;
+        const required = r.country === "US" ? usRequired : ukRequired;
+        return required.every((t) => set.has(t));
+      }).map((r) => r.user_id)
     );
   }
 

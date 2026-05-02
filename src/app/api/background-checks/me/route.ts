@@ -7,7 +7,8 @@ export const runtime = "nodejs";
  * GET /api/background-checks/me
  *
  * Returns the current caller's background-check status across all check types
- * plus an aggregate `cleared` boolean.
+ * plus an aggregate `cleared` boolean. Country-aware (GB → uCheck bundle,
+ * US → Checkr bundle).
  */
 export async function GET() {
   const supabase = await createClient();
@@ -18,6 +19,13 @@ export async function GET() {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("country")
+    .eq("id", user.id)
+    .maybeSingle();
+  const country = (profile?.country as "GB" | "US") || "GB";
+
   const { data: rows } = await supabase
     .from("background_checks")
     .select(
@@ -25,16 +33,20 @@ export async function GET() {
     )
     .eq("user_id", user.id);
 
-  const ukRequired = ["enhanced_dbs_barred", "right_to_work", "digital_id"];
+  const required =
+    country === "US"
+      ? ["us_criminal", "us_healthcare_sanctions"]
+      : ["enhanced_dbs_barred", "right_to_work", "digital_id"];
+
   const list = rows ?? [];
-  const allClearedUK =
-    ukRequired.every((t) =>
-      list.some((r) => r.check_type === t && r.status === "cleared")
-    );
+  const allCleared = required.every((t) =>
+    list.some((r) => r.check_type === t && r.status === "cleared")
+  );
 
   return NextResponse.json({
-    cleared: allClearedUK,
-    required: ukRequired,
+    country,
+    cleared: allCleared,
+    required,
     checks: list,
   });
 }
