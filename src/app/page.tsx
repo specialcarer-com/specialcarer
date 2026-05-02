@@ -1,6 +1,11 @@
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   return (
     <main className="min-h-screen flex flex-col">
       {/* Header */}
@@ -17,12 +22,31 @@ export default function Home() {
           <a href="#trust" className="hover:text-slate-900">Trust &amp; safety</a>
           <a href="#caregivers" className="hover:text-slate-900">For caregivers</a>
         </nav>
-        <Link
-          href="#waitlist"
-          className="px-4 py-2 rounded-full bg-brand text-white text-sm font-medium hover:bg-brand-600 transition"
-        >
-          Join waitlist
-        </Link>
+        <div className="flex items-center gap-3">
+          {user ? (
+            <Link
+              href="/dashboard"
+              className="px-4 py-2 rounded-full bg-brand text-white text-sm font-medium hover:bg-brand-600 transition"
+            >
+              Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="text-sm text-slate-700 hover:text-slate-900 hidden sm:inline"
+              >
+                Sign in
+              </Link>
+              <Link
+                href="/login"
+                className="px-4 py-2 rounded-full bg-brand text-white text-sm font-medium hover:bg-brand-600 transition"
+              >
+                Get started
+              </Link>
+            </>
+          )}
+        </div>
       </header>
 
       {/* Hero */}
