@@ -66,12 +66,27 @@ export function LoginForm({ redirectTo }: Props) {
     setErrorMsg(null);
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token: code.trim(),
-        type: "email",
-      });
-      if (error) throw error;
+      // Try "email" type first (new sign-up / first-time OTP),
+      // then fall back to "magiclink" (existing user OTP from signInWithOtp).
+      // Supabase issues different token types depending on whether the user
+      // already exists, but does not surface which one was sent.
+      const cleanCode = code.trim();
+      let lastErr: unknown = null;
+      const types = ["email", "magiclink", "recovery", "signup"] as const;
+      let verified = false;
+      for (const t of types) {
+        const { error } = await supabase.auth.verifyOtp({
+          email,
+          token: cleanCode,
+          type: t,
+        });
+        if (!error) {
+          verified = true;
+          break;
+        }
+        lastErr = error;
+      }
+      if (!verified) throw lastErr ?? new Error("Invalid code");
       // Decide where to send them based on profile completeness
       const {
         data: { user },
