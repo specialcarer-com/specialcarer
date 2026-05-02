@@ -1,13 +1,16 @@
 /**
  * Mapbox adapter (server-side helpers).
  *
- * Stub mode (when MAPBOX_SECRET_TOKEN is missing or starts with "stub_") returns
+ * Stub mode (when MAPBOX_PUBLIC_TOKEN is missing or starts with "stub_") returns
  * deterministic fake responses so the integration is testable end-to-end before
  * real Mapbox credentials arrive.
  *
  * Env:
- *   MAPBOX_PUBLIC_TOKEN     (pk.* — used in browser for map rendering, exposed to client)
- *   MAPBOX_SECRET_TOKEN     (sk.* — used server-side for elevated operations / token validation)
+ *   MAPBOX_PUBLIC_TOKEN     (pk.* — used both client-side for map rendering and
+ *                            server-side for geocoding. Mapbox no longer requires
+ *                            a secret token for geocoding/search.)
+ *   MAPBOX_SECRET_TOKEN     (sk.*, optional — only needed for admin APIs like
+ *                            uploads, tilesets, downloads. Not needed for tracking.)
  *   MAPBOX_STYLE            (default 'mapbox://styles/mapbox/streets-v12')
  *
  * Docs: https://docs.mapbox.com/
@@ -18,7 +21,7 @@ const secretToken = process.env.MAPBOX_SECRET_TOKEN || "";
 const style = process.env.MAPBOX_STYLE || "mapbox://styles/mapbox/streets-v12";
 
 export function isStubMode(): boolean {
-  return !secretToken || secretToken.startsWith("stub_");
+  return !publicToken || publicToken.startsWith("stub_");
 }
 
 export function getPublicToken(): string {
@@ -51,7 +54,8 @@ export async function reverseGeocode(
       country: "GB",
     };
   }
-  const token = secretToken || publicToken;
+  // Mapbox supports geocoding with public tokens — no secret needed.
+  const token = publicToken || secretToken;
   if (!token) return null;
 
   const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${encodeURIComponent(token)}&types=address,place&limit=1`;
