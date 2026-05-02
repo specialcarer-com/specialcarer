@@ -64,7 +64,7 @@ export default async function DashboardPage() {
               : "We're rolling out booking next. You'll be among the first to try it."}
           </p>
 
-          {isCaregiver && (
+          {isCaregiver ? (
             <div className="mt-8 p-5 rounded-2xl bg-white border border-slate-100 flex items-center justify-between">
               <div>
                 <h2 className="font-semibold">Payouts</h2>
@@ -77,6 +77,21 @@ export default async function DashboardPage() {
                 className="px-4 py-2 rounded-xl bg-brand text-white text-sm font-medium hover:bg-brand-600 transition shrink-0"
               >
                 Set up
+              </Link>
+            </div>
+          ) : (
+            <div className="mt-8 p-5 rounded-2xl bg-white border border-slate-100 flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold">Find care</h2>
+                <p className="text-sm text-slate-600 mt-1">
+                  Browse verified caregivers and book a shift.
+                </p>
+              </div>
+              <Link
+                href="/find-care"
+                className="px-4 py-2 rounded-xl bg-brand text-white text-sm font-medium hover:bg-brand-600 transition shrink-0"
+              >
+                Browse
               </Link>
             </div>
           )}
