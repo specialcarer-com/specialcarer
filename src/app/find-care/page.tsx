@@ -23,8 +23,39 @@ export default async function FindCarePage() {
     .eq("payouts_enabled", true)
     .eq("charges_enabled", true);
 
-  const caregivers =
-    (ready ?? []).filter((r) => r.user_id !== user.id);
+  const candidateIds = (ready ?? [])
+    .map((r) => r.user_id)
+    .filter((id) => id !== user.id);
+
+  // Restrict to caregivers whose required UK background checks are all cleared
+  let clearedSet = new Set<string>();
+  if (candidateIds.length > 0) {
+    const { data: bgRows } = await admin
+      .from("background_checks")
+      .select("user_id, check_type, status")
+      .in("user_id", candidateIds)
+      .eq("vendor", "uchecks")
+      .eq("status", "cleared");
+    const required = [
+      "enhanced_dbs_barred",
+      "right_to_work",
+      "digital_id",
+    ];
+    const counts = new Map<string, Set<string>>();
+    (bgRows ?? []).forEach((r) => {
+      if (!counts.has(r.user_id)) counts.set(r.user_id, new Set());
+      counts.get(r.user_id)!.add(r.check_type);
+    });
+    clearedSet = new Set(
+      candidateIds.filter((id) =>
+        required.every((t) => counts.get(id)?.has(t))
+      )
+    );
+  }
+
+  const caregivers = (ready ?? []).filter(
+    (r) => r.user_id !== user.id && clearedSet.has(r.user_id)
+  );
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-12">

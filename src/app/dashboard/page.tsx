@@ -65,19 +65,35 @@ export default async function DashboardPage() {
           </p>
 
           {isCaregiver ? (
-            <div className="mt-8 p-5 rounded-2xl bg-white border border-slate-100 flex items-center justify-between">
-              <div>
-                <h2 className="font-semibold">Payouts</h2>
-                <p className="text-sm text-slate-600 mt-1">
-                  Connect a bank account so we can pay you for completed shifts.
-                </p>
+            <div className="mt-8 space-y-3">
+              <div className="p-5 rounded-2xl bg-white border border-slate-100 flex items-center justify-between">
+                <div>
+                  <h2 className="font-semibold">Verification</h2>
+                  <p className="text-sm text-slate-600 mt-1">
+                    Complete your DBS, ID and Right-to-Work checks. We cover the cost.
+                  </p>
+                </div>
+                <Link
+                  href="/dashboard/verification"
+                  className="px-4 py-2 rounded-xl bg-brand text-white text-sm font-medium hover:bg-brand-600 transition shrink-0"
+                >
+                  Start
+                </Link>
               </div>
-              <Link
-                href="/dashboard/payouts"
-                className="px-4 py-2 rounded-xl bg-brand text-white text-sm font-medium hover:bg-brand-600 transition shrink-0"
-              >
-                Set up
-              </Link>
+              <div className="p-5 rounded-2xl bg-white border border-slate-100 flex items-center justify-between">
+                <div>
+                  <h2 className="font-semibold">Payouts</h2>
+                  <p className="text-sm text-slate-600 mt-1">
+                    Connect a bank account so we can pay you for completed shifts.
+                  </p>
+                </div>
+                <Link
+                  href="/dashboard/payouts"
+                  className="px-4 py-2 rounded-xl bg-brand text-white text-sm font-medium hover:bg-brand-600 transition shrink-0"
+                >
+                  Set up
+                </Link>
+              </div>
             </div>
           ) : (
             <div className="mt-8 p-5 rounded-2xl bg-white border border-slate-100 flex items-center justify-between">

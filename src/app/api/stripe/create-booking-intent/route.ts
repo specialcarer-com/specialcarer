@@ -95,6 +95,26 @@ export async function POST(req: Request) {
     );
   }
 
+  // Verify caregiver has cleared all required UK background checks
+  const ukRequired = [
+    "enhanced_dbs_barred",
+    "right_to_work",
+    "digital_id",
+  ];
+  const { data: bgRows } = await admin
+    .from("background_checks")
+    .select("check_type, status")
+    .eq("user_id", body.caregiver_id!)
+    .eq("vendor", "uchecks")
+    .eq("status", "cleared");
+  const cleared = new Set((bgRows ?? []).map((r) => r.check_type));
+  if (!ukRequired.every((t) => cleared.has(t))) {
+    return NextResponse.json(
+      { error: "Caregiver is not yet fully verified" },
+      { status: 400 }
+    );
+  }
+
   const subtotalCents = Math.round(
     body.hours! * body.hourly_rate_cents!
   );
