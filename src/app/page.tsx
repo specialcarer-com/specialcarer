@@ -2,7 +2,9 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import MarketingShell from "@/components/marketing-shell";
 import CaregiverCard from "@/components/caregiver-card";
-import { searchCaregivers } from "@/lib/care/search";
+import HeroSearch from "@/components/hero-search";
+import { searchCaregivers, listPublishedCities } from "@/lib/care/search";
+import { CITIES } from "@/lib/care/cities";
 import { getAllPosts } from "@/lib/blog/posts";
 
 export const metadata: Metadata = {
@@ -25,8 +27,24 @@ export const metadata: Metadata = {
 export const revalidate = 60;
 
 export default async function Home() {
-  const featured = (await searchCaregivers({ limit: 6 })).slice(0, 6);
+  const [featured, publishedCities] = await Promise.all([
+    searchCaregivers({ limit: 6 }).then((r) => r.slice(0, 6)),
+    listPublishedCities(),
+  ]);
   const recentPosts = getAllPosts().slice(0, 3);
+
+  // Only surface cities in the hero search that have at least one published caregiver
+  const liveCityNames = new Set(
+    publishedCities.map((c) => `${c.country}|${c.city.toLowerCase()}`),
+  );
+  const heroCities = CITIES.filter((c) =>
+    liveCityNames.has(`${c.country}|${c.city.toLowerCase()}`),
+  ).map((c) => ({
+    city: c.city,
+    country: c.country,
+    slug: c.slug,
+    countrySlug: c.countrySlug,
+  }));
 
   // JSON-LD: Organization + WebSite + small FAQ
   const ld = {
@@ -94,24 +112,53 @@ export default async function Home() {
           Track, message, and pay in one place.
         </p>
 
-        <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
+        <HeroSearch cities={heroCities} />
+
+        <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center text-sm">
           <Link
             href="/find-care"
-            className="px-6 py-3 rounded-xl bg-brand text-white font-medium hover:bg-brand-600 transition"
+            className="text-slate-600 hover:text-slate-900 transition"
           >
-            Find care near me
+            Browse all caregivers
           </Link>
+          <span className="hidden sm:inline text-slate-300">·</span>
           <Link
             href="/become-a-caregiver"
-            className="px-6 py-3 rounded-xl bg-white border border-slate-200 text-slate-900 font-medium hover:bg-slate-50 transition"
+            className="text-slate-600 hover:text-slate-900 transition"
           >
             Apply as a caregiver
           </Link>
         </div>
-        <p className="mt-3 text-xs text-slate-500">
+        <p className="mt-4 text-xs text-slate-500">
           Background checks via uCheck (UK) and Checkr (US). Payments held in
           escrow until shifts complete.
         </p>
+      </section>
+
+      {/* Pricing transparency strip */}
+      <section className="px-6">
+        <div className="max-w-5xl mx-auto rounded-2xl bg-brand-50 border border-brand-100 px-6 py-4 sm:px-8 sm:py-5">
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-slate-700">
+            <span className="font-semibold text-brand-700">
+              Honest pricing.
+            </span>
+            <span>From £15/hr in the UK</span>
+            <span className="text-slate-300">•</span>
+            <span>From $25/hr in the US</span>
+            <span className="text-slate-300">•</span>
+            <span>No subscription</span>
+            <span className="text-slate-300">•</span>
+            <span>Pay only for shifts you book</span>
+            <span className="text-slate-300">•</span>
+            <span>24h escrow before payout</span>
+            <Link
+              href="/pricing"
+              className="text-brand-700 font-medium hover:underline"
+            >
+              See pricing →
+            </Link>
+          </div>
+        </div>
       </section>
 
       {/* Quick stats / credibility strip */}
