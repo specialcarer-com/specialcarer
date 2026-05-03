@@ -428,13 +428,12 @@ export default async function Home() {
           <p className="text-center text-xs uppercase tracking-wider text-slate-500">
             Backed by, partnered with &amp; built on
           </p>
-          <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 items-center justify-center">
+          <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 items-center justify-center">
             {[
               { name: "Stripe", note: "Payments + escrow" },
               { name: "uCheck", note: "UK background checks" },
               { name: "Checkr", note: "US background checks" },
               { name: "Mapbox", note: "Live shift tracking" },
-              { name: "Companies House", note: "Reg. 09428739" },
             ].map((p) => (
               <div
                 key={p.name}
