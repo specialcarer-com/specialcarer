@@ -12,6 +12,7 @@ export function HeroBanner({ isUS }: HeroBannerProps) {
   return (
     <div className="relative w-full overflow-hidden bg-slate-900">
       <video
+        key="hero-banner-v2"
         className="block w-full h-[280px] sm:h-[360px] lg:h-[440px] object-cover"
         autoPlay
         loop
