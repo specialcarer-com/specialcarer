@@ -108,6 +108,11 @@ export default function SiteFooter() {
               </Link>
             </li>
             <li>
+              <Link href="/press" className="hover:text-slate-900">
+                Press &amp; media
+              </Link>
+            </li>
+            <li>
               <Link href="/contact" className="hover:text-slate-900">
                 Contact
               </Link>
