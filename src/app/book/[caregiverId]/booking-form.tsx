@@ -30,10 +30,12 @@ export default function BookingForm({
   caregiverId,
   caregiverName,
   defaultCurrency,
+  defaultHourlyRate = 20,
 }: {
   caregiverId: string;
   caregiverName: string;
   defaultCurrency: Currency;
+  defaultHourlyRate?: number;
 }) {
   const today = new Date();
   const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
@@ -46,7 +48,7 @@ export default function BookingForm({
   const [date, setDate] = useState(tomorrowStr);
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("13:00");
-  const [hourlyRate, setHourlyRate] = useState(20);
+  const [hourlyRate, setHourlyRate] = useState(defaultHourlyRate);
   const [currency] = useState<Currency>(defaultCurrency);
   const [notes, setNotes] = useState("");
 

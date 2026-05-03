@@ -1,10 +1,27 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import BookingTrackingClient from "./tracking-client";
+import MessagesPanel from "./messages-panel";
+import BookingActions from "./booking-actions";
+import ReviewPanel from "./review-panel";
 
+export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Booking — SpecialCarer",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  pending: "Pending",
+  accepted: "Awaiting payment",
+  paid: "Confirmed",
+  in_progress: "In progress",
+  completed: "Completed",
+  paid_out: "Paid out",
+  cancelled: "Cancelled",
+  refunded: "Refunded",
+  disputed: "Disputed",
 };
 
 export default async function BookingDetailPage({
@@ -19,27 +36,39 @@ export default async function BookingDetailPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: booking } = await supabase
+  const admin = createAdminClient();
+
+  const { data: booking } = await admin
     .from("bookings")
     .select(
-      "id, seeker_id, caregiver_id, status, starts_at, ends_at, hours, total_cents, currency, location_city, location_country, paid_at, shift_completed_at"
+      "id, seeker_id, caregiver_id, status, starts_at, ends_at, hours, total_cents, subtotal_cents, currency, location_city, location_country, paid_at, shift_completed_at, payout_eligible_at, paid_out_at, service_type, notes",
     )
     .eq("id", id)
     .maybeSingle();
-
   if (!booking) notFound();
 
   const isSeeker = booking.seeker_id === user.id;
   const isCaregiver = booking.caregiver_id === user.id;
   if (!isSeeker && !isCaregiver) notFound();
 
-  const { data: caregiverProfile } = booking.caregiver_id
-    ? await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", booking.caregiver_id)
-        .maybeSingle()
-    : { data: null };
+  const otherId = isSeeker ? booking.caregiver_id : booking.seeker_id;
+  const { data: otherProfile } = await admin
+    .from("profiles")
+    .select("full_name")
+    .eq("id", otherId)
+    .maybeSingle();
+
+  // Existing review (if seeker)
+  let existingReview: { rating: number; body: string | null } | null = null;
+  if (isSeeker) {
+    const { data } = await admin
+      .from("reviews")
+      .select("rating, body")
+      .eq("booking_id", id)
+      .eq("reviewer_id", user.id)
+      .maybeSingle();
+    if (data) existingReview = { rating: data.rating, body: data.body };
+  }
 
   const startsAt = new Date(booking.starts_at);
   const endsAt = new Date(booking.ends_at);
@@ -51,6 +80,10 @@ export default async function BookingDetailPage({
 
   const currencySymbol = booking.currency?.toLowerCase() === "usd" ? "$" : "£";
   const total = (booking.total_cents ?? 0) / 100;
+
+  const role = isCaregiver ? "caregiver" : "seeker";
+  const reviewable =
+    isSeeker && ["completed", "paid_out"].includes(booking.status);
 
   return (
     <main className="min-h-screen flex flex-col bg-slate-50">
@@ -76,15 +109,21 @@ export default async function BookingDetailPage({
           >
             ← Back to dashboard
           </Link>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight">
-            Shift on {startsAt.toLocaleDateString()}
-          </h1>
+
+          <div className="mt-3 flex flex-wrap items-baseline justify-between gap-3">
+            <h1 className="text-3xl font-semibold tracking-tight">
+              Shift on {startsAt.toLocaleDateString()}
+            </h1>
+            <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-medium">
+              {STATUS_LABEL[booking.status] ?? booking.status}
+            </span>
+          </div>
           <p className="mt-1 text-slate-600">
             {startsAt.toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
-            })}{" "}
-            –{" "}
+            })}
+            {" – "}
             {endsAt.toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
@@ -94,42 +133,77 @@ export default async function BookingDetailPage({
           </p>
 
           <div className="mt-6 p-5 rounded-2xl bg-white border border-slate-100 grid sm:grid-cols-2 gap-4 text-sm">
-            <div>
-              <div className="text-slate-500">Caregiver</div>
-              <div className="font-medium">
-                {caregiverProfile?.full_name ?? "—"}
+            <Row label={isCaregiver ? "Family" : "Caregiver"}>
+              {isSeeker && booking.caregiver_id ? (
+                <Link
+                  href={`/caregiver/${booking.caregiver_id}`}
+                  className="text-brand-700 hover:underline"
+                >
+                  {otherProfile?.full_name ?? "—"}
+                </Link>
+              ) : (
+                otherProfile?.full_name ?? "—"
+              )}
+            </Row>
+            <Row label="Service">{booking.service_type ?? "—"}</Row>
+            <Row label="Location">
+              {booking.location_city ?? "—"}
+              {booking.location_country ? `, ${booking.location_country}` : ""}
+            </Row>
+            <Row label="Paid">{booking.paid_at ? "Yes" : "Pending"}</Row>
+            {booking.notes && (
+              <div className="sm:col-span-2">
+                <div className="text-slate-500">Notes from family</div>
+                <div className="font-medium mt-0.5 whitespace-pre-line">
+                  {booking.notes}
+                </div>
               </div>
-            </div>
-            <div>
-              <div className="text-slate-500">Status</div>
-              <div className="font-medium capitalize">{booking.status}</div>
-            </div>
-            <div>
-              <div className="text-slate-500">Location</div>
-              <div className="font-medium">
-                {booking.location_city ?? "—"}
-                {booking.location_country ? `, ${booking.location_country}` : ""}
-              </div>
-            </div>
-            <div>
-              <div className="text-slate-500">Paid</div>
-              <div className="font-medium">
-                {booking.paid_at ? "Yes" : "Pending"}
-              </div>
-            </div>
+            )}
           </div>
+
+          {/* Actions */}
+          <BookingActions
+            bookingId={booking.id}
+            status={booking.status}
+            role={role}
+          />
 
           <BookingTrackingClient
             bookingId={booking.id}
-            role={isCaregiver ? "caregiver" : "seeker"}
+            role={role}
             scheduledStart={booking.starts_at}
             scheduledEnd={booking.ends_at}
             trackingWindowEnd={trackingWindowEnd.toISOString()}
             initiallyOpen={trackingWindowOpen}
             paid={!!booking.paid_at}
           />
+
+          {/* Review (seeker only, post-shift) */}
+          {reviewable && (
+            <ReviewPanel
+              bookingId={booking.id}
+              caregiverName={otherProfile?.full_name ?? "your caregiver"}
+              existing={existingReview}
+            />
+          )}
+
+          {/* Messages */}
+          <MessagesPanel
+            bookingId={booking.id}
+            currentUserId={user.id}
+            counterpartyName={otherProfile?.full_name ?? "the other party"}
+          />
         </div>
       </section>
     </main>
+  );
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-slate-500">{label}</div>
+      <div className="font-medium mt-0.5">{children}</div>
+    </div>
   );
 }

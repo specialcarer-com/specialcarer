@@ -1,8 +1,9 @@
 import type { MetadataRoute } from "next";
 import { getAllPosts } from "@/lib/blog/posts";
 import { CITIES } from "@/lib/care/cities";
+import { createAdminClient } from "@/lib/supabase/admin";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = "https://specialcarer.com";
   const now = new Date();
 
@@ -45,5 +46,25 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }));
 
-  return [...staticEntries, ...blogEntries, ...cityEntries];
+  // Public caregiver profiles
+  let caregiverEntries: MetadataRoute.Sitemap = [];
+  try {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("caregiver_profiles")
+      .select("user_id, updated_at, is_published")
+      .eq("is_published", true)
+      .limit(5000);
+    caregiverEntries = (data ?? []).map((c) => ({
+      url: `${base}/caregiver/${c.user_id}`,
+      lastModified: c.updated_at ? new Date(c.updated_at) : now,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    }));
+  } catch {
+    // sitemap should never fail; if Supabase is unreachable, omit caregivers
+    caregiverEntries = [];
+  }
+
+  return [...staticEntries, ...blogEntries, ...cityEntries, ...caregiverEntries];
 }

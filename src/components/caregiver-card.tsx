@@ -44,12 +44,21 @@ export default function CaregiverCard({
   return (
     <article className="bg-white p-5 rounded-2xl border border-slate-100 hover:border-brand-100 hover:shadow-sm transition flex flex-col">
       <div className="flex items-start gap-4">
-        <div className="w-14 h-14 rounded-full bg-brand-50 text-brand-700 flex items-center justify-center font-semibold text-lg flex-none">
+        <Link
+          href={`/caregiver/${c.user_id}`}
+          className="w-14 h-14 rounded-full bg-brand-50 text-brand-700 flex items-center justify-center font-semibold text-lg flex-none hover:bg-brand-100 transition"
+          aria-label={`View ${c.display_name ?? "caregiver"} profile`}
+        >
           {initials(c.display_name)}
-        </div>
+        </Link>
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-slate-900 truncate">
-            {c.display_name ?? "Caregiver"}
+            <Link
+              href={`/caregiver/${c.user_id}`}
+              className="hover:text-brand-700 transition"
+            >
+              {c.display_name ?? "Caregiver"}
+            </Link>
           </h3>
           {c.headline && (
             <p className="text-sm text-slate-600 truncate">{c.headline}</p>
@@ -105,6 +114,12 @@ export default function CaregiverCard({
       </div>
 
       <div className="mt-5 flex gap-2">
+        <Link
+          href={`/caregiver/${c.user_id}`}
+          className="flex-1 text-center px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 transition"
+        >
+          View
+        </Link>
         {bookable ? (
           <Link
             href={`/book/${c.user_id}`}

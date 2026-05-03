@@ -2,6 +2,8 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCaregiverProfile } from "@/lib/care/profile";
+import { formatMoney } from "@/lib/care/services";
 import BookingForm from "./booking-form";
 
 export const dynamic = "force-dynamic";
@@ -21,15 +23,17 @@ export default async function BookPage({
 
   const admin = createAdminClient();
 
-  const { data: caregiverProfile } = await admin
+  const { data: caregiverAuthProfile } = await admin
     .from("profiles")
     .select("id, full_name, country, role")
     .eq("id", caregiverId)
     .maybeSingle();
 
-  if (!caregiverProfile || caregiverProfile.role !== "caregiver") {
+  if (!caregiverAuthProfile || caregiverAuthProfile.role !== "caregiver") {
     notFound();
   }
+
+  const caregiverProfile = await getCaregiverProfile(caregiverId);
 
   const { data: caregiverStripe } = await admin
     .from("caregiver_stripe_accounts")
@@ -38,24 +42,71 @@ export default async function BookPage({
     .maybeSingle();
 
   const ready = Boolean(
-    caregiverStripe?.charges_enabled && caregiverStripe?.payouts_enabled
+    caregiverStripe?.charges_enabled && caregiverStripe?.payouts_enabled,
   );
+
+  const country =
+    (caregiverProfile?.country ??
+      (caregiverAuthProfile.country as "GB" | "US" | null) ??
+      "GB") as "GB" | "US";
+  const defaultCurrency: "gbp" | "usd" = country === "US" ? "usd" : "gbp";
+  const defaultRate = caregiverProfile?.hourly_rate_cents
+    ? Math.round(caregiverProfile.hourly_rate_cents / 100)
+    : country === "US"
+      ? 30
+      : 20;
+
+  const displayName =
+    caregiverProfile?.display_name ??
+    caregiverAuthProfile.full_name ??
+    "Caregiver";
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-12">
       <Link
-        href="/dashboard"
+        href={`/caregiver/${caregiverId}`}
         className="text-sm text-slate-500 hover:text-slate-700"
       >
-        ← Dashboard
+        ← Back to profile
       </Link>
 
-      <h1 className="text-3xl font-semibold tracking-tight mt-2">
-        Book {caregiverProfile.full_name || "this caregiver"}
-      </h1>
-      <p className="text-slate-600 mt-1">
+      <div className="mt-3 flex items-center gap-4">
+        {caregiverProfile?.photo_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={caregiverProfile.photo_url}
+            alt=""
+            className="w-14 h-14 rounded-full object-cover bg-brand-50 flex-none"
+          />
+        ) : null}
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Book {displayName}
+          </h1>
+          {caregiverProfile?.headline && (
+            <p className="text-slate-600 mt-1 text-sm">
+              {caregiverProfile.headline}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <p className="text-slate-600 mt-3">
         Funds are held securely until 24 hours after the shift completes, then
         released to your caregiver.
+        {caregiverProfile?.hourly_rate_cents && caregiverProfile.currency && (
+          <>
+            {" "}Listed rate:{" "}
+            <span className="font-medium text-slate-900">
+              {formatMoney(
+                caregiverProfile.hourly_rate_cents,
+                caregiverProfile.currency,
+              )}
+              /hr
+            </span>
+            .
+          </>
+        )}
       </p>
 
       {!ready ? (
@@ -66,12 +117,9 @@ export default async function BookPage({
       ) : (
         <BookingForm
           caregiverId={caregiverId}
-          caregiverName={caregiverProfile.full_name || "Caregiver"}
-          defaultCurrency={
-            (caregiverStripe?.country as "GB" | "US" | undefined) === "US"
-              ? "usd"
-              : "gbp"
-          }
+          caregiverName={displayName}
+          defaultCurrency={defaultCurrency}
+          defaultHourlyRate={defaultRate}
         />
       )}
     </div>
