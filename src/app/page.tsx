@@ -5,6 +5,7 @@ import MarketingShell from "@/components/marketing-shell";
 import CaregiverCard from "@/components/caregiver-card";
 import HeroSearch from "@/components/hero-search";
 import { ExplainerVideo } from "@/components/explainer-video";
+import { HeroBanner } from "@/components/hero-banner";
 import { searchCaregivers, listPublishedCities } from "@/lib/care/search";
 import { CITIES } from "@/lib/care/cities";
 import { getAllPosts } from "@/lib/blog/posts";
@@ -109,13 +110,11 @@ export default async function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
       />
 
+      {/* Hero banner video */}
+      <HeroBanner isUS={isUS} />
+
       {/* Hero */}
-      <section className="px-6 py-20 sm:py-28 max-w-5xl mx-auto text-center">
-        <span className="inline-block px-3 py-1 rounded-full bg-brand-50 text-brand-700 text-xs font-medium mb-6">
-          {isUS
-            ? "Now in the US — also available across the UK"
-            : "Across the UK — and now in the US"}
-        </span>
+      <section className="px-6 pt-12 pb-20 sm:pt-16 sm:pb-28 max-w-5xl mx-auto text-center">
         <h1 className="text-4xl sm:text-6xl font-semibold tracking-tight text-slate-900">
           {isUS
             ? "Background-checked carers, on your schedule."
