@@ -63,6 +63,11 @@ export default function SiteFooter() {
                 Find care now
               </Link>
             </li>
+            <li>
+              <Link href="/care-in" className="hover:text-slate-900">
+                Cities
+              </Link>
+            </li>
           </ul>
         </div>
 

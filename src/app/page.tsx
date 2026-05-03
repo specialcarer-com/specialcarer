@@ -210,6 +210,43 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Where we cover */}
+      <section className="px-6 py-16">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto">
+            <h2 className="text-3xl font-semibold text-slate-900">
+              Where we cover
+            </h2>
+            <p className="mt-3 text-slate-600">
+              Live in cities across the UK and US, with new ones every month.
+            </p>
+          </div>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            {[
+              { slug: "london", country: "uk", label: "London" },
+              { slug: "manchester", country: "uk", label: "Manchester" },
+              { slug: "birmingham", country: "uk", label: "Birmingham" },
+              { slug: "new-york", country: "us", label: "New York" },
+              { slug: "los-angeles", country: "us", label: "Los Angeles" },
+            ].map((c) => (
+              <Link
+                key={c.slug}
+                href={`/care-in/${c.country}/${c.slug}`}
+                className="px-4 py-2 rounded-full bg-white border border-slate-200 text-sm text-slate-700 hover:bg-slate-100 transition"
+              >
+                {c.label}
+              </Link>
+            ))}
+            <Link
+              href="/care-in"
+              className="px-4 py-2 rounded-full bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition"
+            >
+              All cities →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Caregiver acquisition */}
       <section className="px-6 py-16 bg-brand-50">
         <div className="max-w-5xl mx-auto text-center">

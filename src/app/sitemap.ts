@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getAllPosts } from "@/lib/blog/posts";
+import { CITIES } from "@/lib/care/cities";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = "https://specialcarer.com";
@@ -21,6 +22,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       { url: `${base}/employers/contact`, changeFrequency: "monthly", priority: 0.5 },
       { url: `${base}/about`, changeFrequency: "monthly", priority: 0.5 },
       { url: `${base}/blog`, changeFrequency: "weekly", priority: 0.7 },
+      { url: `${base}/care-in`, changeFrequency: "weekly", priority: 0.7 },
       { url: `${base}/contact`, changeFrequency: "monthly", priority: 0.6 },
       { url: `${base}/login`, changeFrequency: "monthly", priority: 0.4 },
       { url: `${base}/privacy`, changeFrequency: "monthly", priority: 0.3 },
@@ -36,5 +38,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
-  return [...staticEntries, ...blogEntries];
+  const cityEntries: MetadataRoute.Sitemap = CITIES.map((c) => ({
+    url: `${base}/care-in/${c.countrySlug}/${c.slug}`,
+    lastModified: now,
+    changeFrequency: "weekly" as const,
+    priority: 0.8,
+  }));
+
+  return [...staticEntries, ...blogEntries, ...cityEntries];
 }
