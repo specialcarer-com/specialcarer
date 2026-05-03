@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import MarketingShell from "@/components/marketing-shell";
+import { ExplainerVideo } from "@/components/explainer-video";
 
 export const metadata: Metadata = {
   title: "How it works — SpecialCarer",
@@ -87,6 +88,15 @@ export default function Page() {
         <p className="mt-6 text-lg text-slate-600 leading-relaxed">
           Same platform, two sides. Here&rsquo;s the full workflow for both.
         </p>
+      </section>
+
+      <section className="px-6 pb-12">
+        <div className="max-w-5xl mx-auto">
+          <ExplainerVideo />
+          <p className="mt-3 text-center text-sm text-slate-500">
+            45 seconds: how a family goes from worried search to a vetted carer at the door.
+          </p>
+        </div>
       </section>
 
       <section className="px-6 py-12 bg-slate-50">

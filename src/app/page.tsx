@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import MarketingShell from "@/components/marketing-shell";
 import CaregiverCard from "@/components/caregiver-card";
 import HeroSearch from "@/components/hero-search";
+import { ExplainerVideo } from "@/components/explainer-video";
 import { searchCaregivers, listPublishedCities } from "@/lib/care/search";
 import { CITIES } from "@/lib/care/cities";
 import { getAllPosts } from "@/lib/blog/posts";
@@ -161,8 +162,23 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Explainer video */}
+      <section className="px-6 pt-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-4">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-slate-900">
+              How SpecialCarer works
+            </h2>
+            <p className="mt-2 text-slate-600">
+              From worried search to trusted carer at your door — in 45 seconds.
+            </p>
+          </div>
+          <ExplainerVideo />
+        </div>
+      </section>
+
       {/* Quick stats / credibility strip */}
-      <section className="px-6 pb-4">
+      <section className="px-6 pb-4 pt-4">
         <div className="max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
           {[
             { k: "100%", v: "Background-checked" },

@@ -37,3 +37,6 @@ next-env.d.ts
 # IDE
 .vscode/
 .idea/
+
+# Video production source files (final MP4 lives in public/video)
+/video/
