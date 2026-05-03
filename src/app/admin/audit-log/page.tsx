@@ -83,6 +83,78 @@ function ratingStars(n: number): string {
   return filled + empty;
 }
 
+// ---- Detail key humanisation ------------------------------------------------
+// Keys that duplicate info already shown elsewhere in the row.
+const DETAIL_KEYS_HIDDEN = new Set([
+  "reason", // shown above the list
+  "target_id",
+  "target_type",
+  // duplicate of target column for review/kyc/booking
+  "caregiver_id",
+  "reviewer_id",
+  "user_id",
+  "override", // shown as a badge next to the action
+]);
+
+// Friendly labels for detail keys.
+const DETAIL_KEY_LABELS: Record<string, string> = {
+  rating: "Rating",
+  prior_hidden_at: "Previously hidden",
+  prior_status: "Previous status",
+  prior_role: "Previous role",
+  new_role: "New role",
+  target_name: "User",
+  display_name: "Caregiver",
+  country: "Country",
+  ready: "Ready to publish",
+  blockers: "Blockers",
+  payouts_enabled: "Payouts enabled",
+  bg_required: "Required checks",
+  bg_cleared: "Cleared checks",
+  vendor: "Vendor",
+  check_type: "Check type",
+  decision: "Decision",
+  notes: "Notes",
+  event_type: "Event",
+  prior_processed_at: "Previously processed",
+  prior_error: "Previous error",
+  status: "Status",
+  amount_cents: "Amount",
+  currency: "Currency",
+};
+
+function humaniseKey(key: string): string {
+  return (
+    DETAIL_KEY_LABELS[key] ??
+    key
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+  );
+}
+
+function formatDetailValue(key: string, value: unknown): string {
+  if (value === null || value === undefined) return "—";
+  if (key === "rating" && typeof value === "number") return ratingStars(value);
+  if (key === "prior_hidden_at") {
+    return value === null || value === undefined ? "No" : `Yes (${fmtDateTime(String(value))})`;
+  }
+  if (
+    typeof value === "string" &&
+    /^\d{4}-\d{2}-\d{2}T/.test(value)
+  ) {
+    return fmtDateTime(value);
+  }
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "None";
+    return value.map((v) => String(v)).join(", ");
+  }
+  if (typeof value === "object") {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
 // ---- Target resolver --------------------------------------------------------
 async function resolveTargets(
   rows: AuditRow[]
@@ -381,30 +453,69 @@ export default async function AdminAuditLog({
                       )}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-600 max-w-md">
-                      {typeof reason === "string" && reason && (
+                      {typeof reason === "string" && reason ? (
                         <div className="mb-1">
                           <span className="text-slate-400">Reason: </span>
                           {reason}
                         </div>
+                      ) : (
+                        <div className="mb-1 text-slate-400 italic">
+                          No reason provided
+                        </div>
                       )}
-                      {r.details && Object.keys(r.details).length > 0 && (
-                        <details className="text-[11px]">
-                          <summary className="cursor-pointer text-slate-500 hover:text-slate-700">
-                            View JSON
-                          </summary>
-                          <pre className="mt-2 p-2 bg-slate-50 border border-slate-100 rounded overflow-x-auto whitespace-pre-wrap">
-                            {JSON.stringify(
-                              {
-                                ...r.details,
-                                target_id: r.target_id,
-                                target_type: r.target_type,
-                              },
-                              null,
-                              2
+                      {(() => {
+                        const detailEntries = Object.entries(r.details ?? {})
+                          .filter(([k]) => !DETAIL_KEYS_HIDDEN.has(k))
+                          .filter(
+                            ([, v]) =>
+                              !(Array.isArray(v) && v.length === 0)
+                          );
+                        if (detailEntries.length === 0 && !r.details)
+                          return null;
+                        return (
+                          <details className="text-[11px] mt-1">
+                            <summary className="cursor-pointer text-slate-500 hover:text-slate-700 list-none flex items-center gap-1">
+                              <span className="inline-block transition-transform [details[open]_&]:rotate-90">
+                                ▸
+                              </span>
+                              More details
+                            </summary>
+                            {detailEntries.length > 0 && (
+                              <dl className="mt-2 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1">
+                                {detailEntries.map(([k, v]) => (
+                                  <div
+                                    key={k}
+                                    className="contents"
+                                  >
+                                    <dt className="text-slate-400">
+                                      {humaniseKey(k)}
+                                    </dt>
+                                    <dd className="text-slate-700">
+                                      {formatDetailValue(k, v)}
+                                    </dd>
+                                  </div>
+                                ))}
+                              </dl>
                             )}
-                          </pre>
-                        </details>
-                      )}
+                            <details className="mt-2">
+                              <summary className="cursor-pointer text-slate-400 hover:text-slate-600 text-[10px] uppercase tracking-wider">
+                                Raw payload
+                              </summary>
+                              <pre className="mt-1 p-2 bg-slate-50 border border-slate-100 rounded overflow-x-auto whitespace-pre-wrap text-[10px]">
+                                {JSON.stringify(
+                                  {
+                                    ...r.details,
+                                    target_id: r.target_id,
+                                    target_type: r.target_type,
+                                  },
+                                  null,
+                                  2
+                                )}
+                              </pre>
+                            </details>
+                          </details>
+                        );
+                      })()}
                     </td>
                   </tr>
                 );
