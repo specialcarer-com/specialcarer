@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import SiteFooter from "@/components/site-footer";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -134,17 +135,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="mt-auto px-6 py-10 border-t border-slate-100 text-sm text-slate-500">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between gap-3">
-          <div>&copy; {new Date().getFullYear()} SpecialCarer. All rights reserved.</div>
-          <div className="flex gap-5">
-            <a href="#" className="hover:text-slate-700">Privacy</a>
-            <a href="#" className="hover:text-slate-700">Terms</a>
-            <a href="mailto:hello@specialcarer.com" className="hover:text-slate-700">hello@specialcarer.com</a>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </main>
   );
 }
