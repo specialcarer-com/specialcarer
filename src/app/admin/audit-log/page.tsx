@@ -69,12 +69,11 @@ function fmtDate(iso: string) {
 }
 
 function profileName(p: {
-  display_name?: string | null;
   full_name?: string | null;
   email?: string | null;
 } | null | undefined): string {
   if (!p) return "Unknown user";
-  return p.display_name || p.full_name || p.email || "Unknown user";
+  return p.full_name || p.email || "Unknown user";
 }
 
 function ratingStars(n: number): string {
@@ -199,7 +198,7 @@ async function resolveTargets(
     const { data } = await admin
       .from("reviews")
       .select(
-        "id, rating, caregiver_id, reviewer_id, created_at, body, hidden_at"
+        "id, rating, caregiver_id, reviewer_id, created_at, hidden_at"
       )
       .in("id", reviewIds);
     const reviews = data ?? [];
@@ -263,15 +262,15 @@ async function resolveTargets(
   if (bgIds.length > 0) {
     const { data } = await admin
       .from("background_checks")
-      .select("id, profile_id, status, vendor, created_at")
+      .select("id, user_id, status, vendor, created_at")
       .in("id", bgIds);
     const bcs = data ?? [];
     const profileMap = await fetchProfiles(
       admin,
-      bcs.map((b) => b.profile_id).filter(Boolean) as string[]
+      bcs.map((b) => b.user_id).filter(Boolean) as string[]
     );
     for (const bc of bcs) {
-      const p = profileMap.get(bc.profile_id);
+      const p = profileMap.get(bc.user_id);
       out.set(bc.id, {
         label: `${profileName(p)} · KYC`,
         sublabel: `${bc.vendor ?? "vendor"} · ${bc.status}`,
@@ -304,7 +303,6 @@ async function fetchProfiles(
     string,
     {
       id: string;
-      display_name: string | null;
       full_name: string | null;
       email: string | null;
     }
@@ -314,18 +312,39 @@ async function fetchProfiles(
     string,
     {
       id: string;
-      display_name: string | null;
       full_name: string | null;
       email: string | null;
     }
   >();
   if (ids.length === 0) return map;
-  const { data } = await admin
+  // profiles table has full_name; email lives in auth.users
+  const { data: profileRows } = await admin
     .from("profiles")
-    .select("id, display_name, full_name, email")
+    .select("id, full_name")
     .in("id", ids);
-  for (const row of data ?? []) {
-    map.set(row.id, row);
+  const emailMap = new Map<string, string | null>();
+  // Fetch emails via the admin auth API (one round-trip)
+  try {
+    const { data: authList } = await admin.auth.admin.listUsers({
+      perPage: 200,
+    });
+    for (const u of authList?.users ?? []) {
+      if (ids.includes(u.id)) emailMap.set(u.id, u.email ?? null);
+    }
+  } catch {
+    // best-effort — if listUsers fails we just skip emails
+  }
+  for (const row of profileRows ?? []) {
+    map.set(row.id, {
+      id: row.id,
+      full_name: row.full_name,
+      email: emailMap.get(row.id) ?? null,
+    });
+  }
+  // Ensure ids without a profile row still appear (rare)
+  for (const id of ids) {
+    if (!map.has(id))
+      map.set(id, { id, full_name: null, email: emailMap.get(id) ?? null });
   }
   return map;
 }
