@@ -142,7 +142,7 @@ export default async function Home() {
             <span className="font-semibold text-brand-700">
               Honest pricing.
             </span>
-            <span>From £15/hr in the UK</span>
+            <span>From £18/hr in the UK</span>
             <span className="text-slate-300">•</span>
             <span>From $25/hr in the US</span>
             <span className="text-slate-300">•</span>
