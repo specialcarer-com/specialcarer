@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import MarketingShell from "@/components/marketing-shell";
 import CaregiverCard from "@/components/caregiver-card";
 import HeroSearch from "@/components/hero-search";
@@ -24,10 +25,19 @@ export const metadata: Metadata = {
   },
 };
 
-// Re-fetch caregivers on every request so freshly-published profiles surface
-export const revalidate = 60;
+// Geo-personalisation reads request headers, so each render must be dynamic
+export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  // Detect visitor country via Vercel's edge header (falls back to GB)
+  const reqHeaders = await headers();
+  const ipCountry = (
+    reqHeaders.get("x-vercel-ip-country") ||
+    reqHeaders.get("cf-ipcountry") ||
+    ""
+  ).toUpperCase();
+  const isUS = ipCountry === "US";
+
   const [featured, publishedCities] = await Promise.all([
     searchCaregivers({ limit: 6 }).then((r) => r.slice(0, 6)),
     listPublishedCities(),
@@ -102,15 +112,19 @@ export default async function Home() {
       {/* Hero */}
       <section className="px-6 py-20 sm:py-28 max-w-5xl mx-auto text-center">
         <span className="inline-block px-3 py-1 rounded-full bg-brand-50 text-brand-700 text-xs font-medium mb-6">
-          Available across the UK and US
+          {isUS
+            ? "Now in the US — also available across the UK"
+            : "Across the UK — and now in the US"}
         </span>
         <h1 className="text-4xl sm:text-6xl font-semibold tracking-tight text-slate-900">
-          Trusted care, on your schedule.
+          {isUS
+            ? "Background-checked carers, on your schedule."
+            : "Trusted care, on your schedule."}
         </h1>
         <p className="mt-6 text-lg sm:text-xl text-slate-600 max-w-2xl mx-auto">
-          On-demand and scheduled childcare, elder care, and special-needs
-          support from vetted, background-checked caregivers. Book in minutes.
-          Track, message, and pay in one place.
+          {isUS
+            ? "On-demand and scheduled childcare, elder care, and special-needs support from Checkr-verified caregivers. Book in minutes. Track, message, and pay in one place."
+            : "On-demand and scheduled childcare, elder care, and special-needs support from vetted, background-checked caregivers. Book in minutes. Track, message, and pay in one place."}
         </p>
 
         <HeroSearch cities={heroCities} />
@@ -143,9 +157,13 @@ export default async function Home() {
             <span className="font-semibold text-brand-700">
               Honest pricing.
             </span>
-            <span>From £18/hr in the UK</span>
+            <span className={isUS ? "order-2" : "order-1"}>
+              From £18/hr in the UK
+            </span>
             <span className="text-slate-300">•</span>
-            <span>From $25/hr in the US</span>
+            <span className={isUS ? "order-1" : "order-2"}>
+              From $25/hr in the US
+            </span>
             <span className="text-slate-300">•</span>
             <span>No subscription</span>
             <span className="text-slate-300">•</span>
@@ -422,6 +440,184 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Comparison: SpecialCarer vs Care.com vs traditional agency */}
+      <section className="px-6 py-16 sm:py-20 bg-slate-50 border-t border-slate-100">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto">
+            <span className="inline-block px-3 py-1 rounded-full bg-brand-50 text-brand-700 text-xs font-medium">
+              How we compare
+            </span>
+            <h2 className="mt-4 text-3xl sm:text-4xl font-semibold tracking-tight text-slate-900">
+              Pick the option that respects your time and money.
+            </h2>
+            <p className="mt-3 text-slate-600">
+              Honest side-by-side. No hidden subscriptions, no eye-watering
+              agency markups.
+            </p>
+          </div>
+
+          <div className="mt-10 overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+            <table className="w-full text-sm text-left min-w-[640px]">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th
+                    scope="col"
+                    className="px-5 py-4 font-semibold text-slate-700"
+                  >
+                    &nbsp;
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-5 py-4 font-semibold text-brand-700 bg-brand-50/60"
+                  >
+                    SpecialCarer
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-5 py-4 font-semibold text-slate-700"
+                  >
+                    Traditional agency
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-5 py-4 font-semibold text-slate-700"
+                  >
+                    Care.com
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {[
+                  {
+                    label: "Subscription to message carers",
+                    sc: { v: "None — free to browse and message", good: true },
+                    ag: { v: "Usually free upfront, packaged into hourly markup" },
+                    cc: {
+                      v: "Premium required to message most carers ($38.99/mo)",
+                      bad: true,
+                    },
+                  },
+                  {
+                    label: "Background checks",
+                    sc: {
+                      v: "Enhanced DBS (uCheck, UK) or Checkr (US) — we pay",
+                      good: true,
+                    },
+                    ag: { v: "Included — cost baked into agency fee" },
+                    cc: {
+                      v: "CareCheck offered as paid add-on; basic check only",
+                    },
+                  },
+                  {
+                    label: "Platform fee on each booking",
+                    sc: { v: "20% flat — transparent at checkout", good: true },
+                    ag: {
+                      v: "Often 50–100% markup over carer's take-home",
+                      bad: true,
+                    },
+                    cc: { v: "You pay carers directly — no booking guardrails" },
+                  },
+                  {
+                    label: "Payments & dispute window",
+                    sc: {
+                      v: "Held in escrow, released 24h after shift ends",
+                      good: true,
+                    },
+                    ag: { v: "Invoiced after; agency mediates" },
+                    cc: {
+                      v: "Off-platform, peer-to-peer — no escrow",
+                      bad: true,
+                    },
+                  },
+                  {
+                    label: "Live shift tracking & SOS",
+                    sc: { v: "Built in for every shift", good: true },
+                    ag: { v: "Rare — phone the office during hours" },
+                    cc: { v: "Not provided" },
+                  },
+                  {
+                    label: "Cancel anytime",
+                    sc: { v: "Yes — no contract", good: true },
+                    ag: { v: "Often locked into minimum hours per week" },
+                    cc: {
+                      v: "Annual plans auto-renew; FTC settled with Care.com over cancellation practices in 2024",
+                      bad: true,
+                    },
+                  },
+                ].map((row) => (
+                  <tr key={row.label}>
+                    <th
+                      scope="row"
+                      className="px-5 py-4 font-medium text-slate-900 align-top"
+                    >
+                      {row.label}
+                    </th>
+                    <td className="px-5 py-4 align-top bg-brand-50/30">
+                      <span
+                        className={
+                          row.sc.good
+                            ? "text-emerald-700"
+                            : "text-slate-700"
+                        }
+                      >
+                        {row.sc.good && <Tick />}
+                        {row.sc.v}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 align-top text-slate-600">
+                      {row.ag.v}
+                    </td>
+                    <td className="px-5 py-4 align-top">
+                      <span
+                        className={
+                          row.cc.bad
+                            ? "text-rose-700"
+                            : "text-slate-600"
+                        }
+                      >
+                        {row.cc.v}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="mt-4 text-xs text-slate-500 max-w-3xl">
+            Care.com pricing as published on their{" "}
+            <a
+              href="https://www.care.com/app/vhp/plans-and-pricing"
+              target="_blank"
+              rel="noopener nofollow"
+              className="underline hover:text-slate-700"
+            >
+              Plans &amp; Pricing page
+            </a>
+            . FTC settlement reference:{" "}
+            <a
+              href="https://consumer.ftc.gov/consumer-alerts/2024/08/ftc-says-carecom-misled-workers"
+              target="_blank"
+              rel="noopener nofollow"
+              className="underline hover:text-slate-700"
+            >
+              FTC Consumer Alert, August 2024
+            </a>
+            . Agency markup ranges based on UK CQC and US senior-care
+            industry averages; your local agency may differ.
+          </p>
+
+          <div className="mt-8 text-center">
+            <Link
+              href="/find-care"
+              className="inline-block px-6 py-3 rounded-xl bg-brand text-white font-medium hover:bg-brand-600 transition"
+            >
+              See vetted carers near you
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Recognition / press strip */}
       <section className="px-6 py-12 border-t border-slate-100">
         <div className="max-w-5xl mx-auto">
@@ -666,6 +862,23 @@ export default async function Home() {
         </div>
       </section>
     </MarketingShell>
+  );
+}
+
+function Tick() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      className="inline-block w-4 h-4 mr-1.5 -mt-0.5 text-emerald-600"
+      fill="currentColor"
+    >
+      <path
+        fillRule="evenodd"
+        d="M16.704 5.29a1 1 0 010 1.42l-7.5 7.5a1 1 0 01-1.42 0l-3.5-3.5a1 1 0 011.42-1.42l2.79 2.79 6.79-6.79a1 1 0 011.42 0z"
+        clipRule="evenodd"
+      />
+    </svg>
   );
 }
 

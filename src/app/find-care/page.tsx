@@ -21,6 +21,7 @@ type SearchParams = {
   min?: string;
   max?: string;
   q?: string;
+  date?: string;
 };
 
 export default async function FindCarePage({
@@ -36,6 +37,15 @@ export default async function FindCarePage({
   const minRate = sp.min ? Math.max(0, Number(sp.min)) * 100 : undefined;
   const maxRate = sp.max ? Math.max(0, Number(sp.max)) * 100 : undefined;
   const q = sp.q?.trim() || undefined;
+  const requestedDate =
+    sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : undefined;
+  const requestedDateLabel = requestedDate
+    ? new Date(requestedDate + "T00:00:00").toLocaleDateString("en-GB", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      })
+    : undefined;
 
   const [results, supabase, citiesAll] = await Promise.all([
     searchCaregivers({ service, city, country, minRate, maxRate, query: q }),
@@ -71,6 +81,13 @@ export default async function FindCarePage({
               Every caregiver here is identity-verified, background-checked,
               and ready to take bookings.
             </p>
+            {requestedDateLabel && (
+              <p className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 text-brand-700 text-xs font-medium">
+                <span aria-hidden>→</span>
+                Showing carers for {requestedDateLabel}. Confirm exact times when
+                you message them.
+              </p>
+            )}
           </div>
           {!user && (
             <div className="text-sm text-slate-500">

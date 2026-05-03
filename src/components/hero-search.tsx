@@ -15,7 +15,17 @@ export default function HeroSearch({ cities }: { cities: CityOpt[] }) {
   const router = useRouter();
   const [service, setService] = useState<string>("");
   const [cityKey, setCityKey] = useState<string>(""); // `${countrySlug}|${city}`
+  const [date, setDate] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Min date = today (local) so users can't pick the past
+  const today = useMemo(() => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }, []);
 
   const cityIndex = useMemo(() => {
     const m = new Map<string, CityOpt>();
@@ -44,6 +54,7 @@ export default function HeroSearch({ cities }: { cities: CityOpt[] }) {
         params.set("country", c.country);
       }
     }
+    if (date) params.set("date", date);
 
     const qs = params.toString();
     router.push(qs ? `/find-care?${qs}` : "/find-care");
@@ -52,7 +63,7 @@ export default function HeroSearch({ cities }: { cities: CityOpt[] }) {
   return (
     <form
       onSubmit={onSubmit}
-      className="mt-10 mx-auto max-w-3xl bg-white border border-slate-200 rounded-2xl shadow-sm p-3 sm:p-2 grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 text-left"
+      className="mt-10 mx-auto max-w-4xl bg-white border border-slate-200 rounded-2xl shadow-sm p-3 sm:p-2 grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-2 text-left"
       aria-label="Find care"
     >
       <label className="sr-only" htmlFor="hero-service">
@@ -120,6 +131,24 @@ export default function HeroSearch({ cities }: { cities: CityOpt[] }) {
           )}
         </select>
         <Chevron />
+      </div>
+
+      <label className="sr-only" htmlFor="hero-date">
+        When?
+      </label>
+      <div className="relative">
+        <span className="absolute left-3 top-2 text-[10px] uppercase tracking-wider text-slate-500 pointer-events-none">
+          When?
+        </span>
+        <input
+          id="hero-date"
+          name="date"
+          type="date"
+          min={today}
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="w-full h-14 pl-3 pr-3 pt-5 pb-1 rounded-xl bg-slate-50 sm:bg-white text-slate-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-100"
+        />
       </div>
 
       <button
