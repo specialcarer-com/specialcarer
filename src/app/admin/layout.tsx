@@ -10,8 +10,9 @@ export const metadata = {
 const NAV: { href: string; label: string; soon?: boolean }[] = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/caregivers", label: "Caregivers" },
-  { href: "/admin/bookings", label: "Bookings", soon: true },
-  { href: "/admin/users", label: "Users", soon: true },
+  { href: "/admin/bookings", label: "Bookings" },
+  { href: "/admin/users", label: "Users" },
+  { href: "/admin/webhooks", label: "Webhooks" },
   { href: "/admin/trust-safety", label: "Trust & safety", soon: true },
   { href: "/admin/finance", label: "Finance", soon: true },
   { href: "/admin/audit-log", label: "Audit log" },
