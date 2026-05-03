@@ -4,7 +4,9 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 type CookieToSet = { name: string; value: string; options?: CookieOptions };
 
 // Routes that require an authenticated user
-const PROTECTED_PREFIXES = ["/dashboard", "/onboarding"];
+const PROTECTED_PREFIXES = ["/dashboard", "/onboarding", "/admin"];
+// Routes that require an admin role on top of being signed in
+const ADMIN_PREFIXES = ["/admin"];
 
 export async function middleware(req: NextRequest) {
   let res = NextResponse.next({ request: req });
@@ -43,6 +45,22 @@ export async function middleware(req: NextRequest) {
     url.pathname = "/login";
     url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
+  }
+
+  // Admin-only routes — verify role on profiles
+  const isAdminRoute = ADMIN_PREFIXES.some((p) => pathname.startsWith(p));
+  if (isAdminRoute && user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (!profile || profile.role !== "admin") {
+      const url = req.nextUrl.clone();
+      url.pathname = "/dashboard";
+      url.searchParams.set("forbidden", "1");
+      return NextResponse.redirect(url);
+    }
   }
 
   // If user is on /login but already signed in, send them onward

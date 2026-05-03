@@ -7,6 +7,16 @@ export default async function SiteHeader() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  let isAdmin = false;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+    isAdmin = profile?.role === "admin";
+  }
+
   return (
     <header className="px-6 py-5 flex items-center justify-between border-b border-slate-100 bg-white">
       <Link href="/" className="flex items-center gap-2">
@@ -78,6 +88,14 @@ export default async function SiteHeader() {
         </Link>
       </nav>
       <div className="flex items-center gap-3">
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-50 text-amber-700 border border-amber-100 text-xs font-semibold uppercase tracking-wider hover:bg-amber-100"
+          >
+            Admin
+          </Link>
+        )}
         {user ? (
           <Link
             href="/dashboard"
