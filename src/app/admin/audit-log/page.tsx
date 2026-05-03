@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -18,6 +19,37 @@ type AuditRow = {
   created_at: string;
 };
 
+type TargetSummary = {
+  label: string; // human-friendly headline, e.g. "Steve Gis · ★★★★★ review"
+  sublabel?: string; // smaller secondary line, e.g. "from Test Family · 09 May 2026"
+  href?: string; // optional deep-link to the relevant admin page
+};
+
+// ---- Action label map -------------------------------------------------------
+// Add new entries as new audit actions are introduced.
+const ACTION_LABELS: Record<
+  string,
+  { label: string; tone: "neutral" | "warn" | "danger" | "success" }
+> = {
+  "review.hide": { label: "Hid review", tone: "warn" },
+  "review.unhide": { label: "Restored review", tone: "success" },
+  "booking.mark_disputed": { label: "Marked booking disputed", tone: "warn" },
+  "booking.force_release": { label: "Force-released payout", tone: "danger" },
+  "booking.refund": { label: "Refunded booking", tone: "danger" },
+  "kyc.decision": { label: "KYC decision", tone: "neutral" },
+  "user.change_role": { label: "Changed user role", tone: "warn" },
+  "webhook.reset": { label: "Reset webhook", tone: "neutral" },
+  "caregiver.publish": { label: "Published caregiver", tone: "success" },
+  "caregiver.unpublish": { label: "Unpublished caregiver", tone: "warn" },
+};
+
+const TONE_CLASSES: Record<string, string> = {
+  neutral: "bg-slate-100 text-slate-700 border-slate-200",
+  warn: "bg-amber-50 text-amber-800 border-amber-200",
+  danger: "bg-rose-50 text-rose-800 border-rose-200",
+  success: "bg-emerald-50 text-emerald-800 border-emerald-200",
+};
+
 function fmtDateTime(iso: string) {
   return new Date(iso).toLocaleString("en-GB", {
     day: "2-digit",
@@ -26,6 +58,204 @@ function fmtDateTime(iso: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function profileName(p: {
+  display_name?: string | null;
+  full_name?: string | null;
+  email?: string | null;
+} | null | undefined): string {
+  if (!p) return "Unknown user";
+  return p.display_name || p.full_name || p.email || "Unknown user";
+}
+
+function ratingStars(n: number): string {
+  const filled = "★".repeat(Math.max(0, Math.min(5, n)));
+  const empty = "☆".repeat(5 - Math.max(0, Math.min(5, n)));
+  return filled + empty;
+}
+
+// ---- Target resolver --------------------------------------------------------
+async function resolveTargets(
+  rows: AuditRow[]
+): Promise<Map<string, TargetSummary>> {
+  const out = new Map<string, TargetSummary>();
+  if (rows.length === 0) return out;
+
+  const admin = createAdminClient();
+
+  const reviewIds: string[] = [];
+  const bookingIds: string[] = [];
+  const userIds: string[] = [];
+  const bgIds: string[] = [];
+  const caregiverIds: string[] = [];
+
+  for (const r of rows) {
+    if (!r.target_id) continue;
+    switch (r.target_type) {
+      case "review":
+        reviewIds.push(r.target_id);
+        break;
+      case "booking":
+        bookingIds.push(r.target_id);
+        break;
+      case "user":
+      case "profile":
+        userIds.push(r.target_id);
+        break;
+      case "background_check":
+        bgIds.push(r.target_id);
+        break;
+      case "caregiver":
+        caregiverIds.push(r.target_id);
+        break;
+      default:
+        break;
+    }
+  }
+
+  // Reviews → join to caregiver + reviewer profile
+  if (reviewIds.length > 0) {
+    const { data } = await admin
+      .from("reviews")
+      .select(
+        "id, rating, caregiver_id, reviewer_id, created_at, body, hidden_at"
+      )
+      .in("id", reviewIds);
+    const reviews = data ?? [];
+    const profileIdsSet = new Set<string>();
+    for (const rv of reviews) {
+      if (rv.caregiver_id) profileIdsSet.add(rv.caregiver_id);
+      if (rv.reviewer_id) profileIdsSet.add(rv.reviewer_id);
+    }
+    const profileMap = await fetchProfiles(admin, Array.from(profileIdsSet));
+    for (const rv of reviews) {
+      const cg = profileMap.get(rv.caregiver_id);
+      const rv2 = profileMap.get(rv.reviewer_id);
+      out.set(rv.id, {
+        label: `${profileName(cg)} · ${ratingStars(rv.rating)} review`,
+        sublabel: `from ${profileName(rv2)} · ${fmtDate(rv.created_at)}`,
+        href: `/admin/trust-safety/reviews`,
+      });
+    }
+  }
+
+  // Bookings
+  if (bookingIds.length > 0) {
+    const { data } = await admin
+      .from("bookings")
+      .select(
+        "id, seeker_id, caregiver_id, starts_at, total_cents, currency, status"
+      )
+      .in("id", bookingIds);
+    const bookings = data ?? [];
+    const profileIdsSet = new Set<string>();
+    for (const b of bookings) {
+      if (b.seeker_id) profileIdsSet.add(b.seeker_id);
+      if (b.caregiver_id) profileIdsSet.add(b.caregiver_id);
+    }
+    const profileMap = await fetchProfiles(admin, Array.from(profileIdsSet));
+    for (const b of bookings) {
+      const cg = profileMap.get(b.caregiver_id);
+      const sk = profileMap.get(b.seeker_id);
+      out.set(b.id, {
+        label: `Booking · ${profileName(sk)} → ${profileName(cg)}`,
+        sublabel: `${fmtDate(b.starts_at)} · ${b.status}`,
+        href: `/admin/bookings/${b.id}`,
+      });
+    }
+  }
+
+  // Users / profiles
+  if (userIds.length > 0) {
+    const profileMap = await fetchProfiles(admin, userIds);
+    for (const id of userIds) {
+      const p = profileMap.get(id);
+      out.set(id, {
+        label: profileName(p),
+        sublabel: p?.email ?? undefined,
+        href: `/admin/users`,
+      });
+    }
+  }
+
+  // Background checks → resolve to profile
+  if (bgIds.length > 0) {
+    const { data } = await admin
+      .from("background_checks")
+      .select("id, profile_id, status, vendor, created_at")
+      .in("id", bgIds);
+    const bcs = data ?? [];
+    const profileMap = await fetchProfiles(
+      admin,
+      bcs.map((b) => b.profile_id).filter(Boolean) as string[]
+    );
+    for (const bc of bcs) {
+      const p = profileMap.get(bc.profile_id);
+      out.set(bc.id, {
+        label: `${profileName(p)} · KYC`,
+        sublabel: `${bc.vendor ?? "vendor"} · ${bc.status}`,
+        href: `/admin/trust-safety/kyc`,
+      });
+    }
+  }
+
+  // Caregivers (publish/unpublish)
+  if (caregiverIds.length > 0) {
+    const profileMap = await fetchProfiles(admin, caregiverIds);
+    for (const id of caregiverIds) {
+      const p = profileMap.get(id);
+      out.set(id, {
+        label: profileName(p),
+        sublabel: "Caregiver profile",
+        href: `/admin/caregivers/${id}`,
+      });
+    }
+  }
+
+  return out;
+}
+
+async function fetchProfiles(
+  admin: ReturnType<typeof createAdminClient>,
+  ids: string[]
+): Promise<
+  Map<
+    string,
+    {
+      id: string;
+      display_name: string | null;
+      full_name: string | null;
+      email: string | null;
+    }
+  >
+> {
+  const map = new Map<
+    string,
+    {
+      id: string;
+      display_name: string | null;
+      full_name: string | null;
+      email: string | null;
+    }
+  >();
+  if (ids.length === 0) return map;
+  const { data } = await admin
+    .from("profiles")
+    .select("id, display_name, full_name, email")
+    .in("id", ids);
+  for (const row of data ?? []) {
+    map.set(row.id, row);
+  }
+  return map;
 }
 
 export default async function AdminAuditLog({
@@ -48,6 +278,7 @@ export default async function AdminAuditLog({
 
   const rows = (data ?? []) as AuditRow[];
   const totalPages = Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE));
+  const targetMap = await resolveTargets(rows);
 
   return (
     <div className="space-y-6">
@@ -81,6 +312,15 @@ export default async function AdminAuditLog({
                 const override =
                   (r.details as { override?: unknown } | null)?.override ===
                   true;
+                const meta = ACTION_LABELS[r.action] ?? {
+                  label: r.action,
+                  tone: "neutral" as const,
+                };
+                const toneClass =
+                  TONE_CLASSES[meta.tone] ?? TONE_CLASSES.neutral;
+                const target = r.target_id
+                  ? targetMap.get(r.target_id)
+                  : undefined;
                 return (
                   <tr key={r.id} className="align-top">
                     <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">
@@ -90,25 +330,54 @@ export default async function AdminAuditLog({
                       {r.admin_email ?? r.admin_id.slice(0, 8)}
                     </td>
                     <td className="px-4 py-3">
-                      <code className="text-xs bg-slate-100 px-2 py-0.5 rounded">
-                        {r.action}
-                      </code>
+                      <span
+                        className={`inline-block text-xs font-medium px-2 py-0.5 rounded-md border ${toneClass}`}
+                      >
+                        {meta.label}
+                      </span>
                       {override && (
                         <span className="ml-2 inline-block text-[10px] uppercase tracking-wider font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
                           Override
                         </span>
                       )}
+                      <div className="mt-1 font-mono text-[10px] text-slate-400">
+                        {r.action}
+                      </div>
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-600">
-                      {r.target_type && (
-                        <div className="font-medium text-slate-700">
-                          {r.target_type}
-                        </div>
-                      )}
-                      {r.target_id && (
-                        <div className="font-mono text-[11px] text-slate-500 break-all">
-                          {r.target_id}
-                        </div>
+                    <td className="px-4 py-3 text-xs text-slate-600 max-w-xs">
+                      {target ? (
+                        <>
+                          {target.href ? (
+                            <Link
+                              href={target.href}
+                              className="font-medium text-slate-800 hover:text-slate-950 hover:underline"
+                            >
+                              {target.label}
+                            </Link>
+                          ) : (
+                            <div className="font-medium text-slate-800">
+                              {target.label}
+                            </div>
+                          )}
+                          {target.sublabel && (
+                            <div className="text-[11px] text-slate-500">
+                              {target.sublabel}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {r.target_type && (
+                            <div className="font-medium text-slate-700 capitalize">
+                              {r.target_type.replace(/_/g, " ")}
+                            </div>
+                          )}
+                          {r.target_id && (
+                            <div className="font-mono text-[11px] text-slate-400">
+                              {r.target_id.slice(0, 8)}…
+                            </div>
+                          )}
+                        </>
                       )}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-600 max-w-md">
@@ -124,7 +393,15 @@ export default async function AdminAuditLog({
                             View JSON
                           </summary>
                           <pre className="mt-2 p-2 bg-slate-50 border border-slate-100 rounded overflow-x-auto whitespace-pre-wrap">
-                            {JSON.stringify(r.details, null, 2)}
+                            {JSON.stringify(
+                              {
+                                ...r.details,
+                                target_id: r.target_id,
+                                target_type: r.target_type,
+                              },
+                              null,
+                              2
+                            )}
                           </pre>
                         </details>
                       )}
