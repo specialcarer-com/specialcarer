@@ -1,0 +1,179 @@
+# Codemagic CI/CD — SpecialCarer iOS (Capacitor)
+# ================================================
+# Builds the Capacitor iOS app and uploads to TestFlight.
+# Runs on every push to `main` (configurable via Codemagic UI).
+#
+# Apple identifiers (static for SpecialCarer):
+#   Team ID:     2HU3MZAKN7  (ALL CARE 4 U GROUP LTD)
+#   Bundle ID:   com.allcare4ugroup.specialcarer
+#   App name:    Special Carer
+#   ASC App ID:  6766242271
+#
+# Environment variables that must be set in Codemagic UI BEFORE first run:
+#   ─────────────────────────────────────────────────────────────────────
+#   Group: app_store_credentials  (Codemagic ▸ Teams ▸ Integrations ▸ Apple Developer Portal)
+#     APP_STORE_CONNECT_PRIVATE_KEY      (.p8 file contents — full PEM)
+#     APP_STORE_CONNECT_KEY_IDENTIFIER   (Key ID, e.g. ABCD1234EF)
+#     APP_STORE_CONNECT_ISSUER_ID        (Issuer ID UUID)
+#
+#   Group: signing
+#     CERTIFICATE_PRIVATE_KEY            (PEM of the signing cert private key
+#                                         — Codemagic generates this for you
+#                                         on first run if you let it)
+#
+#   Group: apns  (already provided to Vercel — same values reused for runtime push)
+#     # NOT needed at build time. Listed here for reference only.
+
+workflows:
+  ios-testflight:
+    name: iOS · TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: SpecialCarer ASC API key
+
+    environment:
+      ios_signing:
+        # Codemagic auto-fetches/creates the iOS Distribution certificate
+        # and provisioning profile from App Store Connect using the API key
+        # configured in `integrations.app_store_connect`.
+        distribution_type: app_store
+        bundle_identifier: com.allcare4ugroup.specialcarer
+      vars:
+        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
+        APP_STORE_APP_ID: 6766242271
+        BUNDLE_ID: "com.allcare4ugroup.specialcarer"
+      node: 20
+      xcode: latest
+      cocoapods: default
+
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: "main"
+          include: true
+          source: true
+      cancel_previous_builds: true
+
+    scripts:
+      - name: Install Node dependencies
+        script: |
+          npm ci
+
+      - name: Generate iOS native project (idempotent)
+        script: |
+          if [ ! -d "ios" ]; then
+            echo "First run — generating iOS project via Capacitor CLI"
+            npx cap add ios
+          else
+            echo "iOS project already exists — skipping cap add"
+          fi
+
+      - name: Generate app icons + splash from source assets
+        script: |
+          # Only generate if the resources have changed since the last build.
+          # `@capacitor/assets` reads mobile/resources/* and writes into ios/.
+          npx capacitor-assets generate --ios || echo "asset generation skipped"
+
+      - name: Apply iOS overlay (PrivacyInfo + Info.plist usage strings)
+        script: |
+          set -e
+          # Drop the privacy manifest into the app target.
+          cp mobile/ios-overlay/App/App/PrivacyInfo.xcprivacy ios/App/App/PrivacyInfo.xcprivacy
+
+          # Merge required usage-description keys into the generated Info.plist.
+          # `plutil -insert` is idempotent: re-inserting an existing key is a no-op
+          # only if -replace is used, so we use `plutil -replace` with `|| -insert`.
+          INFO_PLIST="ios/App/App/Info.plist"
+
+          merge_string () {
+            local KEY="$1"
+            local VALUE="$2"
+            /usr/libexec/PlistBuddy -c "Set :${KEY} ${VALUE}" "${INFO_PLIST}" 2>/dev/null \
+              || /usr/libexec/PlistBuddy -c "Add :${KEY} string ${VALUE}" "${INFO_PLIST}"
+          }
+
+          merge_string "NSLocationWhenInUseUsageDescription" \
+            "Special Carer uses your location to find nearby caregivers and to share live shift updates with the family during an active booking."
+          merge_string "NSLocationAlwaysAndWhenInUseUsageDescription" \
+            "Special Carer needs background location access so the family can see live shift progress even if the carer locks their phone during a booking. Tracking only runs while a booking is active."
+          merge_string "NSLocationAlwaysUsageDescription" \
+            "Special Carer needs background location access so the family can see live shift progress while a booking is active."
+          merge_string "NSCameraUsageDescription" \
+            "Special Carer uses the camera to capture your ID document for identity verification and to take a profile photo during onboarding."
+          merge_string "NSPhotoLibraryUsageDescription" \
+            "Special Carer accesses your photo library so you can choose a profile picture or upload an existing photo of your ID document."
+          merge_string "NSPhotoLibraryAddUsageDescription" \
+            "Special Carer saves booking receipts and shift summaries to your photo library when you tap Save."
+          merge_string "NSContactsUsageDescription" \
+            "Special Carer accesses your contacts only when you choose to invite friends or family. Contact data is never uploaded or shared without your action."
+          merge_string "NSFaceIDUsageDescription" \
+            "Special Carer uses Face ID to keep your account secure without typing a password each time."
+          merge_string "NSMicrophoneUsageDescription" \
+            "Special Carer uses the microphone if you record a voice note during an active booking or trigger an SOS audio alert."
+          merge_string "NSUserTrackingUsageDescription" \
+            "Special Carer does not track you across apps or websites. This permission would only be requested if a future feature needs it, and you can decline at any time."
+
+          # Background modes (remote-notification, fetch, location)
+          /usr/libexec/PlistBuddy -c "Delete :UIBackgroundModes" "${INFO_PLIST}" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "${INFO_PLIST}"
+          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string remote-notification" "${INFO_PLIST}"
+          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:1 string fetch" "${INFO_PLIST}"
+          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:2 string location" "${INFO_PLIST}"
+
+      - name: Capacitor sync (copies plugins + web assets into iOS project)
+        script: |
+          npx cap sync ios
+
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios/App
+          pod install --repo-update
+
+      - name: Set build number to Codemagic build sequence
+        script: |
+          cd ios/App
+          # Marketing version stays as defined in the Xcode project (1.0).
+          # Build number = monotonically increasing CI build counter.
+          agvtool new-version -all "$BUILD_NUMBER"
+
+      - name: Build, archive, and export .ipa
+        script: |
+          xcode-project use-profiles
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM.zip
+
+    publishing:
+      app_store_connect:
+        # Codemagic uploads the .ipa to App Store Connect using the
+        # `app_store_connect` integration credentials.
+        auth: integration
+
+        # Submit to TestFlight automatically. Internal testers (Account Holder,
+        # Admins, App Manager, etc. invited in App Store Connect) get the build
+        # immediately. External testers require a separate Beta App Review.
+        submit_to_testflight: true
+        beta_groups:
+          - SpecialCarer Internal
+
+        # Do NOT auto-submit to App Review — keep that as a manual step until
+        # the privacy questionnaire and screenshots are filled in.
+        submit_to_app_store: false
+
+      email:
+        # Codemagic's free tier sends a build-status email to the address on
+        # the account. Listed explicitly here so multiple addresses can opt in.
+        recipients:
+          - 5fnb47bs5d@privaterelay.appleid.com
+        notify:
+          success: true
+          failure: true

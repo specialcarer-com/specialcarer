@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "cap:add:ios": "cap add ios",
+    "cap:sync": "cap sync ios",
+    "cap:copy": "cap copy ios",
+    "cap:assets": "capacitor-assets generate --ios",
+    "mobile:build": "echo \"v1 uses remote web; webDir is offline shell only\""
   },
   "dependencies": {
     "@capacitor/android": "^8.3.1",
