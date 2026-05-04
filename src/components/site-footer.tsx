@@ -100,7 +100,7 @@ const SOCIAL_LINKS: { href: string; label: string; Icon: SocialIcon }[] = [
 
 export default function SiteFooter() {
   return (
-    <footer className="mt-16 border-t border-slate-100 bg-slate-50">
+    <footer className="border-t border-slate-100 bg-slate-50">
       <div className="max-w-6xl mx-auto px-6 py-10 text-sm">
         {/* Brand block */}
         <div className="max-w-xl">
