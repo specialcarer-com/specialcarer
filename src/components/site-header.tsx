@@ -27,7 +27,7 @@ export default async function SiteHeader() {
           width={322}
           height={242}
           priority
-          className="h-14 md:h-16 w-auto"
+          className="h-16 md:h-20 w-auto"
         />
       </Link>
       <nav className="hidden md:flex items-center gap-6 text-sm text-slate-600">
