@@ -61,6 +61,22 @@ export default function SiteFooter() {
               </Link>
             </li>
             <li>
+              <Link
+                href="/care-formats/live-in"
+                className="hover:text-slate-900"
+              >
+                Live-in care
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/care-formats/visiting"
+                className="hover:text-slate-900"
+              >
+                Visiting care
+              </Link>
+            </li>
+            <li>
               <Link href="/find-care" className="hover:text-slate-900">
                 Find care now
               </Link>

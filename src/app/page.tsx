@@ -267,6 +267,56 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Care formats — how care is delivered */}
+      <section id="care-formats" className="px-6 py-16">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto">
+            <h2 className="text-3xl font-semibold">
+              Live-in or visiting — your call
+            </h2>
+            <p className="mt-3 text-slate-600">
+              Every type of care above can be delivered as a live-in placement
+              or as scheduled visits. Many of our caregivers offer both.
+            </p>
+          </div>
+          <div className="mt-12 grid sm:grid-cols-2 gap-6">
+            {[
+              {
+                title: "Live-in care",
+                copy: "A caregiver moves in for a placement of several days at a time — round-the-clock support without leaving home.",
+                meta: "Paid as a weekly rate",
+                href: "/care-formats/live-in",
+              },
+              {
+                title: "Visiting care",
+                copy: "Scheduled visits — from a single hour a week to several visits a day, on a recurring schedule or one-off.",
+                meta: "Paid by the hour",
+                href: "/care-formats/visiting",
+              },
+            ].map((s) => (
+              <Link
+                key={s.title}
+                href={s.href}
+                className="group bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-100 hover:shadow-sm transition"
+              >
+                <h3 className="font-semibold text-lg text-slate-900">
+                  {s.title}
+                </h3>
+                <p className="mt-2 text-slate-600 text-sm leading-relaxed">
+                  {s.copy}
+                </p>
+                <span className="mt-3 inline-block text-xs text-slate-500 font-medium">
+                  {s.meta}
+                </span>
+                <span className="mt-4 block text-sm text-brand-700 font-medium group-hover:underline">
+                  Learn more →
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Featured caregivers — live data */}
       {featured.length > 0 && (
         <section className="px-6 py-16">

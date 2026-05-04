@@ -48,7 +48,10 @@ export default async function SiteHeader() {
             </svg>
           </button>
           <div className="absolute top-full left-0 pt-3 hidden group-hover:block">
-            <div className="bg-white rounded-xl border border-slate-100 shadow-lg p-2 w-56">
+            <div className="bg-white rounded-xl border border-slate-100 shadow-lg p-2 w-60">
+              <p className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wider uppercase text-slate-400">
+                Type of care
+              </p>
               <Link
                 href="/services/elderly-care"
                 className="block px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50"
@@ -72,6 +75,22 @@ export default async function SiteHeader() {
                 className="block px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50"
               >
                 Postnatal &amp; newborn
+              </Link>
+              <div className="my-2 border-t border-slate-100" />
+              <p className="px-3 pt-1 pb-1 text-[10px] font-semibold tracking-wider uppercase text-slate-400">
+                How it&rsquo;s delivered
+              </p>
+              <Link
+                href="/care-formats/live-in"
+                className="block px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50"
+              >
+                Live-in care
+              </Link>
+              <Link
+                href="/care-formats/visiting"
+                className="block px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50"
+              >
+                Visiting care
               </Link>
             </div>
           </div>
