@@ -25,7 +25,7 @@ export default async function SiteHeader() {
           src="/brand/logo.svg"
           alt="SpecialCarer"
           width={322}
-          height={202}
+          height={242}
           priority
           className="h-14 md:h-16 w-auto"
         />

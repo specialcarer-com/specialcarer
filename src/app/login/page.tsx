@@ -21,7 +21,7 @@ export default async function LoginPage({
     <main className="min-h-screen flex flex-col">
       <header className="px-6 py-5 border-b border-slate-100">
         <Link href="/" className="flex items-center gap-2 w-fit">
-          <Image src="/brand/logo.svg" alt="SpecialCarer" width={161} height={101} className="h-9 w-auto" priority />
+          <Image src="/brand/logo.svg" alt="SpecialCarer" width={161} height={121} className="h-9 w-auto" priority />
         </Link>
       </header>
 

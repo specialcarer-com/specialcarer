@@ -11,7 +11,7 @@ export default function SiteFooter() {
               src="/brand/logo.svg"
               alt="SpecialCarer"
               width={161}
-              height={101}
+              height={121}
               className="h-12 w-auto"
             />
           </Link>

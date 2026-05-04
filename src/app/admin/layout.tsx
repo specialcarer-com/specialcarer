@@ -33,7 +33,7 @@ export default async function AdminLayout({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/admin" className="flex items-center" aria-label="SpecialCarer Admin">
-              <Image src="/brand/logo.svg" alt="SpecialCarer" width={161} height={101} className="h-8 w-auto" priority />
+              <Image src="/brand/logo.svg" alt="SpecialCarer" width={161} height={121} className="h-8 w-auto" priority />
             </Link>
             <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-100 text-[11px] font-semibold uppercase tracking-wider">
               Admin
