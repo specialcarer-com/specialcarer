@@ -194,9 +194,12 @@ workflows:
           # provisioning profile. --create makes the CLI provision new
           # signing assets when no usable ones are found in App Store
           # Connect for this bundle id.
+          #
+          # The Codemagic CLI accepts the private key via --certificate-key
+          # and supports an @<path> shorthand for reading from a file.
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
-            --certificate-key-path "$CERT_KEY_PATH" \
+            --certificate-key "@file:$CERT_KEY_PATH" \
             --create
 
           # Install the freshly-fetched cert into the temp keychain so
