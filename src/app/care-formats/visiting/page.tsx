@@ -37,7 +37,7 @@ export default function Page() {
       faqs={[
         {
           q: "How are visiting carers paid?",
-          a: "Visits are billed by the hour at the rate set by the caregiver — typically from £18/hour in the UK and $25/hour in the US. SpecialCarer's 20% service fee is added on top. Final price is shown clearly before you confirm a booking.",
+          a: "Visits are billed by the hour at the rate set by the caregiver — typically from £18/hour in the UK and $25/hour in the US. SpecialCarer's 30% service fee is added on top. Final price is shown clearly before you confirm a booking.",
         },
         {
           q: "What's the minimum visit length?",

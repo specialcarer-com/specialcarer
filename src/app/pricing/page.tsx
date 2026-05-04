@@ -5,7 +5,7 @@ import MarketingShell from "@/components/marketing-shell";
 export const metadata: Metadata = {
   title: "Pricing — SpecialCarer",
   description:
-    "Transparent pricing. Caregivers set their own rates and keep 80%. SpecialCarer adds a 20% service fee covering verification, insurance, support, and payments.",
+    "Transparent pricing. Caregivers set their own rates and keep 70%. SpecialCarer adds a 30% service fee covering verification, insurance, support, and payments.",
 };
 
 const tiers = [
@@ -13,10 +13,10 @@ const tiers = [
     name: "Family — pay-as-you-go",
     price: "Free to use",
     description:
-      "Browse, message, and book caregivers with no monthly fees. Pay per booking with our 20% service fee built into the displayed hourly rate.",
+      "Browse, message, and book caregivers with no monthly fees. Pay per booking with our 30% service fee built into the displayed hourly rate.",
     bullets: [
       "Free profile and search",
-      "Caregivers' displayed rate is the all-in cost (rate + 20% service fee shown clearly)",
+      "Caregivers' displayed rate is the all-in cost (rate + 30% service fee shown clearly)",
       "Escrow payments — released 24h after shift completes",
       "24/7 trust & safety support",
       "Live shift tracking",
@@ -26,27 +26,12 @@ const tiers = [
     highlight: false,
   },
   {
-    name: "Family — Plus",
-    price: "Coming soon",
-    description:
-      "Discounted service fees for regular bookers, priority support, and a guaranteed-replacement policy.",
-    bullets: [
-      "Reduced service fee (12% instead of 20%)",
-      "Priority match queue for short-notice bookings",
-      "Guaranteed-replacement caregiver within 2 hours",
-      "Phone support",
-      "Family wallet — share booking budget with partner",
-    ],
-    cta: { label: "Join the waitlist", href: "/contact" },
-    highlight: true,
-  },
-  {
     name: "Caregiver",
     price: "Free to apply",
     description:
-      "No subscription, no listing fees. We deduct 20% from each shift to fund verification, insurance, payments, and support.",
+      "No subscription, no listing fees. We deduct 30% from each shift to fund verification, insurance, payments, and support.",
     bullets: [
-      "Keep 80% of every shift",
+      "Keep 70% of every shift",
       "Background check paid by SpecialCarer",
       "Same-day payouts via Stripe (when bank supports)",
       "Free training resources",
@@ -68,7 +53,7 @@ export default function Page() {
           Honest pricing. No surprise fees.
         </h1>
         <p className="mt-6 text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto">
-          Caregivers set their own hourly rate. Our 20% service fee — which
+          Caregivers set their own hourly rate. Our 30% service fee — which
           covers verification, insurance, payments, and support — is built into
           the price you see when you book. No subscriptions for families. No
           listing fees for caregivers.
@@ -76,7 +61,7 @@ export default function Page() {
       </section>
 
       <section className="px-6 py-12 bg-slate-50">
-        <div className="max-w-6xl mx-auto grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="max-w-4xl mx-auto grid sm:grid-cols-2 gap-6">
           {tiers.map((t) => (
             <div
               key={t.name}
@@ -144,13 +129,13 @@ export default function Page() {
             <div className="mt-6 grid sm:grid-cols-2 gap-x-12 gap-y-3 text-sm">
               <div className="text-slate-600">Caregiver rate (4 × £18)</div>
               <div className="text-slate-900 sm:text-right">£72.00</div>
-              <div className="text-slate-600">SpecialCarer service fee (20%)</div>
-              <div className="text-slate-900 sm:text-right">£14.40</div>
+              <div className="text-slate-600">SpecialCarer service fee (30%)</div>
+              <div className="text-slate-900 sm:text-right">£21.60</div>
               <div className="text-slate-900 font-semibold border-t border-slate-200 pt-3">
                 Sarah pays
               </div>
               <div className="text-slate-900 font-semibold sm:text-right border-t border-slate-200 pt-3">
-                £86.40
+                £93.60
               </div>
               <div className="text-slate-600 mt-3">Caregiver receives</div>
               <div className="text-slate-900 sm:text-right mt-3">£72.00</div>

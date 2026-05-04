@@ -66,7 +66,7 @@ const caregiver = [
   {
     n: "5",
     t: "Accept shifts and get paid",
-    c: "Accept the bookings that work for you. Stripe Connect deposits earnings to your bank within 24 hours of shift completion. You keep 80%.",
+    c: "Accept the bookings that work for you. Stripe Connect deposits earnings to your bank within 24 hours of shift completion. You keep 70%.",
   },
   {
     n: "6",

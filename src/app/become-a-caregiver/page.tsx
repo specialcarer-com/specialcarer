@@ -5,13 +5,13 @@ import MarketingShell from "@/components/marketing-shell";
 export const metadata: Metadata = {
   title: "Become a caregiver — SpecialCarer",
   description:
-    "Apply to caregive on SpecialCarer. Keep 80% of every shift. Free background check. Same-day payouts. UK + US.",
+    "Apply to caregive on SpecialCarer. Keep 70% of every shift. Free background check. Same-day payouts. UK + US.",
 };
 
 const reasons = [
   {
-    t: "Keep 80% of every shift",
-    c: "Most agencies take 40–60%. We take 20%, and that covers your background check, insurance backstop, payment processing, and 24/7 support.",
+    t: "Keep 70% of every shift",
+    c: "Our 30% service fee covers your background check, insurance backstop, payment processing, and 24/7 support — so you keep 70% of every shift, transparently.",
   },
   {
     t: "Free background check",
@@ -80,7 +80,7 @@ export default function Page() {
           </div>
           <div className="bg-slate-900 text-white rounded-3xl p-8 lg:p-10 grid grid-cols-2 gap-6">
             <div>
-              <div className="text-4xl font-semibold">80%</div>
+              <div className="text-4xl font-semibold">70%</div>
               <div className="mt-1 text-sm text-slate-300">of every shift</div>
             </div>
             <div>

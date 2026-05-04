@@ -37,7 +37,7 @@ export default function Page() {
       faqs={[
         {
           q: "How are live-in carers paid?",
-          a: "Live-in placements are billed as a weekly rate set by the caregiver, not by the hour. Indicative ranges are £700–£900/week in the UK and $1,000–$1,400/week in the US, depending on complexity of care and whether nights are sleeping or waking. SpecialCarer's 20% service fee is added on top.",
+          a: "Live-in placements are billed as a weekly rate set by the caregiver, not by the hour. Indicative ranges are £700–£900/week in the UK and $1,000–$1,400/week in the US, depending on complexity of care and whether nights are sleeping or waking. SpecialCarer's 30% service fee is added on top.",
         },
         {
           q: "How long does a live-in caregiver stay?",

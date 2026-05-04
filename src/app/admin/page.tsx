@@ -27,7 +27,7 @@ export default async function AdminOverview() {
         {
           label: "Platform fee · 7d",
           value: `${fmtCents(k.feeLast7dByCurrency.gbp, "gbp")} · ${fmtCents(k.feeLast7dByCurrency.usd, "usd")}`,
-          help: "20% take-rate revenue, 7d window",
+          help: "30% take-rate revenue, 7d window",
         },
         {
           label: "GMV · MTD",

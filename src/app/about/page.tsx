@@ -46,7 +46,7 @@ export default function Page() {
               <strong className="text-slate-900">
                 Care work is real work.
               </strong>{" "}
-              80% of every shift goes to the caregiver. Not 50%. Not 60%. 80%.
+              70% of every shift goes to the caregiver — transparently, with no hidden agency markup.
             </li>
             <li>
               <strong className="text-slate-900">

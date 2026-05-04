@@ -280,7 +280,7 @@ export default async function FindCarePage({
           <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
             <h3 className="font-semibold text-slate-900">What you&rsquo;ll pay</h3>
             <p className="mt-1 text-slate-600">
-              Caregiver rate + 20% service fee, all-in.{" "}
+              Caregiver rate + 30% service fee, all-in.{" "}
               <Link href="/pricing" className="text-brand-700 hover:underline">
                 Pricing detail
               </Link>

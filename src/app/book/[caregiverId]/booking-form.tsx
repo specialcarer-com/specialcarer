@@ -69,7 +69,7 @@ export default function BookingForm({
   }, [startTime, endTime]);
 
   const subtotalCents = Math.round(hours * hourlyRate * 100);
-  const platformFeeCents = Math.round(subtotalCents * 0.2);
+  const platformFeeCents = Math.round(subtotalCents * 0.3);
   const totalCents = subtotalCents + platformFeeCents;
 
   async function handleStartPayment(e: React.FormEvent) {
@@ -227,7 +227,7 @@ export default function BookingForm({
               value={fmtMoney(subtotalCents, currency)}
             />
             <Row
-              label="Platform fee (20%)"
+              label="Platform fee (30%)"
               value={fmtMoney(platformFeeCents, currency)}
             />
             <Row

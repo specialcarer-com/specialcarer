@@ -16,7 +16,7 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 });
 
 export const PLATFORM_FEE_PERCENT = Number(
-  process.env.STRIPE_PLATFORM_FEE_PERCENT ?? "20"
+  process.env.STRIPE_PLATFORM_FEE_PERCENT ?? "30"
 );
 export const PAYOUT_HOLD_HOURS = Number(
   process.env.STRIPE_PAYOUT_HOLD_HOURS ?? "24"

@@ -41,7 +41,7 @@ export default async function AdminFinancePage() {
         <h1 className="text-2xl font-semibold text-slate-900">Finance</h1>
         <p className="text-sm text-slate-500 mt-1">
           GMV, platform fee revenue, payout schedule, and refund metrics by
-          currency. SpecialCarer charges a 20% platform fee and holds funds
+          currency. SpecialCarer charges a 30% platform fee and holds funds
           until the shift completes plus a 24-hour cool-off window.
         </p>
         <p className="mt-1 text-[11px] text-slate-400">
@@ -81,7 +81,7 @@ export default async function AdminFinancePage() {
 
             <div>
               <div className="text-xs uppercase tracking-wider text-slate-500 mb-2">
-                Platform fee revenue (20% of GMV)
+                Platform fee revenue (30% of GMV)
               </div>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <KpiCard
@@ -162,7 +162,7 @@ export default async function AdminFinancePage() {
                   label="Net retained · 30d"
                   value={fmtMoney(
                     b.fees_30d_cents -
-                      Math.round(b.refunded_30d_cents * 0.2),
+                      Math.round(b.refunded_30d_cents * 0.3),
                     b.currency,
                   )}
                   sub="fees minus est. refunded fees"

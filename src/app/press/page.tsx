@@ -27,7 +27,7 @@ const FACTS: { k: string; v: string }[] = [
   { k: "Background checks", v: "uCheck (UK Enhanced DBS, right-to-work, digital ID), Checkr (US national + county criminal, healthcare sanctions)" },
   { k: "Payments", v: "Stripe Connect — manual capture, 24-hour escrow hold post-shift" },
   { k: "Live tracking", v: "Mapbox — real-time location during active bookings" },
-  { k: "Take rate", v: "Flat 20% platform fee. Caregivers keep 80%." },
+  { k: "Take rate", v: "Flat 30% platform fee. Caregivers keep 70%." },
 ];
 
 const STORIES: { angle: string; pitch: string }[] = [
@@ -37,9 +37,9 @@ const STORIES: { angle: string; pitch: string }[] = [
       "Most family hires of carers happen via word-of-mouth or social media, with little formal vetting. SpecialCarer publishes the ID-verification, background-check, and right-to-work evidence inside every caregiver profile.",
   },
   {
-    angle: "What a 20% platform fee actually buys",
+    angle: "What a 30% platform fee actually buys",
     pitch:
-      "We can break down the unit economics: how the 20% covers Stripe processing, escrow, background-check costs, dispute resolution, insurance support, and engineering — and what caregivers actually take home compared with traditional agencies.",
+      "We can break down the unit economics: how the 30% covers Stripe processing, escrow, background-check costs, dispute resolution, insurance support, and engineering — and what caregivers actually take home compared with traditional agencies.",
   },
   {
     angle: "Backup care as employee benefit",
@@ -189,7 +189,7 @@ export default function Page() {
             caregivers across the United Kingdom and United States. Families
             book elderly care, childcare, special-needs and postnatal support
             in minutes, with live shift tracking, escrow payments, and a flat
-            20% platform fee. SpecialCarer is a product of All Care 4 U Group
+            30% platform fee. SpecialCarer is a product of All Care 4 U Group
             Limited.
           </p>
           <h2 className="mt-10 text-2xl font-semibold text-slate-900">
@@ -210,7 +210,7 @@ export default function Page() {
               Bookings are paid through Stripe in escrow: payments are
               authorised when a shift is booked, captured when it ends, and
               held for 24 hours before payout — giving families a window to
-              raise disputes. Caregivers keep 80% of every shift. The platform
+              raise disputes. Caregivers keep 70% of every shift. The platform
               also includes live shift tracking via Mapbox, in-app
               per-booking messaging, post-shift reviews, and an in-app SOS
               button for active-shift emergencies.

@@ -67,7 +67,7 @@ create table if not exists public.bookings (
   hours numeric(6,2) not null,
   hourly_rate_cents integer not null,                    -- per-hour rate (smallest currency unit)
   subtotal_cents integer not null,                       -- hours * rate
-  platform_fee_cents integer not null,                   -- 20% of subtotal
+  platform_fee_cents integer not null,                   -- platform fee at booking time (currently 30% of subtotal)
   total_cents integer not null,                          -- subtotal + platform_fee
   currency text not null check (currency in ('gbp','usd')),
 

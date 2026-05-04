@@ -45,7 +45,7 @@ export default function Page() {
         },
         {
           q: "How much do caregivers cost?",
-          a: "Caregivers set their own rates, typically £14–£22/hour in the UK and $20–$35/hour in the US. SpecialCarer adds a 20% service fee that covers verification, insurance, support, and payment processing. See our Pricing page for full transparency.",
+          a: "Caregivers set their own rates, typically £14–£22/hour in the UK and $20–$35/hour in the US. SpecialCarer adds a 30% service fee that covers verification, insurance, support, and payment processing. See our Pricing page for full transparency.",
         },
         {
           q: "Can caregivers drive my children?",

@@ -95,7 +95,7 @@ export default async function AdminBookingDetail({
             <Row k="Total charged" v={fmtMoney(booking.total_cents, currency)} />
             <Row k="Subtotal" v={fmtMoney(booking.subtotal_cents, currency)} />
             <Row
-              k="Platform fee (20%)"
+              k="Platform fee (30%)"
               v={fmtMoney(booking.platform_fee_cents, currency)}
             />
             <Row k="Hours" v={String(booking.hours)} />

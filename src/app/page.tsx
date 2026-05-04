@@ -200,7 +200,7 @@ export default async function Home() {
           {[
             { k: "100%", v: "Background-checked" },
             { k: "24h", v: "Average match time" },
-            { k: "20%", v: "Flat platform fee" },
+            { k: "30%", v: "Flat platform fee" },
             { k: "UK + US", v: "Day-one coverage" },
           ].map((s) => (
             <div
@@ -559,7 +559,7 @@ export default async function Home() {
                   },
                   {
                     label: "Platform fee on each booking",
-                    sc: { v: "20% flat — transparent at checkout", good: true },
+                    sc: { v: "30% flat — transparent at checkout", good: true },
                     ag: {
                       v: "Often 50–100% markup over carer's take-home",
                       bad: true,
@@ -872,7 +872,7 @@ export default async function Home() {
             Earn more. Pick your shifts.
           </h2>
           <p className="mt-3 text-slate-700 max-w-2xl mx-auto">
-            Caregivers keep 80% of every shift. We handle scheduling, payments,
+            Caregivers keep 70% of every shift. We handle scheduling, payments,
             insurance support, and disputes — so you can focus on care.
           </p>
           <Link
@@ -942,7 +942,7 @@ const HOMEPAGE_FAQ = [
   },
   {
     q: "What does it cost?",
-    a: "There\u2019s no subscription fee. Caregivers set their own hourly rate, and SpecialCarer takes a flat 20% platform fee — that covers payments, insurance support, dispute resolution, background checks, and live shift tracking. Caregivers keep 80%.",
+    a: "There\u2019s no subscription fee. Caregivers set their own hourly rate, and SpecialCarer takes a flat 30% platform fee — that covers payments, insurance support, dispute resolution, background checks, and live shift tracking. Caregivers keep 70%.",
   },
   {
     q: "What happens during a live shift?",

@@ -165,7 +165,7 @@ export default function TermsPage() {
       <ul>
         <li>
           The booking total includes the caregiver&apos;s rate × hours,
-          plus our platform commission (currently <strong>20%</strong>).
+          plus our platform commission (currently <strong>30%</strong>).
         </li>
         <li>
           Payment is captured at the time of booking via Stripe.
