@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import CookieBanner from "@/components/cookie-banner";
@@ -11,7 +11,6 @@ export const metadata: Metadata = {
     "On-demand and scheduled childcare, elder care, and home support from vetted, background-checked caregivers. UK & US.",
   metadataBase: new URL("https://specialcarer.com"),
   manifest: "/site.webmanifest",
-  themeColor: "#039EA0",
   icons: {
     icon: [
       { url: "/brand/favicon.ico", sizes: "any" },
@@ -42,6 +41,10 @@ export const metadata: Metadata = {
     description: "Trusted care, on your schedule.",
     images: ["/brand/og-image.png"],
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#039EA0",
 };
 
 export default function RootLayout({
