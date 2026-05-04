@@ -19,15 +19,15 @@ export default async function SiteHeader() {
   }
 
   return (
-    <header className="px-6 py-5 flex items-center justify-between border-b border-slate-100 bg-white">
+    <header className="px-6 py-4 flex items-center justify-between border-b border-slate-100 bg-white">
       <Link href="/" className="flex items-center" aria-label="SpecialCarer — home">
         <Image
           src="/brand/logo.svg"
           alt="SpecialCarer"
-          width={161}
-          height={101}
+          width={322}
+          height={202}
           priority
-          className="h-10 w-auto"
+          className="h-14 md:h-16 w-auto"
         />
       </Link>
       <nav className="hidden md:flex items-center gap-6 text-sm text-slate-600">
