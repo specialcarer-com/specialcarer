@@ -53,6 +53,30 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className="font-sans antialiased bg-white text-slate-900">
+        {/* Site-wide "Beta is live" banner — only renders when
+            NEXT_PUBLIC_TESTFLIGHT_URL is set in the deploy env. */}
+        {process.env.NEXT_PUBLIC_TESTFLIGHT_URL ? (
+          <div className="bg-brand-600 text-white text-sm">
+            <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 py-2 text-center">
+              <span className="inline-flex items-center gap-2">
+                <span className="relative flex h-2 w-2" aria-hidden="true">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white/70" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+                </span>
+                <span className="font-semibold">Beta is live on iOS.</span>
+              </span>
+              <a
+                href={process.env.NEXT_PUBLIC_TESTFLIGHT_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline decoration-white/60 underline-offset-2 hover:decoration-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-1 focus:ring-offset-brand-600 rounded"
+              >
+                Join via TestFlight →
+              </a>
+            </div>
+          </div>
+        ) : null}
+
         {children}
         <CookieBanner />
       </body>
