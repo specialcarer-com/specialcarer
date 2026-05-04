@@ -804,14 +804,14 @@ export default async function Home() {
               and genuine connection.
             </p>
 
-            <div className="mt-8 flex flex-wrap items-center gap-4">
+            <div className="mt-8 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-4">
               {/* App Store — TestFlight beta if URL set, else Coming soon */}
               {process.env.NEXT_PUBLIC_TESTFLIGHT_URL ? (
                 <a
                   href={process.env.NEXT_PUBLIC_TESTFLIGHT_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 rounded-xl bg-slate-900 px-5 py-3 text-white shadow-sm hover:bg-slate-800 transition focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+                  className="flex w-full sm:w-auto items-center justify-center sm:justify-start gap-3 rounded-xl bg-slate-900 px-5 py-3 text-white shadow-sm hover:bg-slate-800 transition focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
                   aria-label="Join the TestFlight beta on iOS"
                 >
                   <svg
@@ -832,7 +832,7 @@ export default async function Home() {
                 <button
                   type="button"
                   disabled
-                  className="flex items-center gap-3 rounded-xl bg-slate-900 px-5 py-3 text-white shadow-sm cursor-not-allowed opacity-90"
+                  className="flex w-full sm:w-auto items-center justify-center sm:justify-start gap-3 rounded-xl bg-slate-900 px-5 py-3 text-white shadow-sm cursor-not-allowed opacity-90"
                   aria-label="Download on the App Store — coming soon"
                 >
                   <svg
@@ -852,11 +852,11 @@ export default async function Home() {
               )}
 
               {/* Google Play — Coming soon */}
-              <div className="relative group">
+              <div className="w-full sm:w-auto relative group">
                 <button
                   type="button"
                   disabled
-                  className="flex items-center gap-3 rounded-xl bg-slate-900 px-5 py-3 text-white shadow-sm cursor-not-allowed opacity-90 hover:opacity-100 transition"
+                  className="flex w-full sm:w-auto items-center justify-center sm:justify-start gap-3 rounded-xl bg-slate-900 px-5 py-3 text-white shadow-sm cursor-not-allowed opacity-90 hover:opacity-100 transition"
                   aria-label="Get it on Google Play — coming soon"
                 >
                   <svg
@@ -932,15 +932,15 @@ export default async function Home() {
               />
               <div
                 aria-hidden="true"
-                className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-brand-500/15 blur-xl"
+                className="sc-blob-drift-a absolute -top-6 -right-6 w-24 h-24 rounded-full bg-brand-500/15 blur-xl"
               />
               <div
                 aria-hidden="true"
-                className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-brand-700/10 blur-xl"
+                className="sc-blob-drift-b absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-brand-700/10 blur-xl"
               />
 
-              {/* Phone frame */}
-              <div className="relative w-[260px] sm:w-[300px] aspect-[9/19] rounded-[3rem] bg-slate-900 p-3 shadow-2xl shadow-brand-900/20 ring-1 ring-slate-800">
+              {/* Phone frame — gentle floating motion */}
+              <div className="sc-phone-float relative w-[260px] sm:w-[300px] aspect-[9/19] rounded-[3rem] bg-slate-900 p-3 shadow-2xl shadow-brand-900/20 ring-1 ring-slate-800">
                 <div className="relative h-full w-full rounded-[2.4rem] overflow-hidden bg-white">
                   {/* Status bar */}
                   <div className="flex items-center justify-between px-6 pt-3 pb-2 text-[10px] font-semibold text-slate-700">
@@ -957,14 +957,26 @@ export default async function Home() {
 
                   {/* App content mock */}
                   <div className="px-5 pt-6 pb-4">
+                    {/* Real SpecialCarer brand mark with breathing animation */}
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center">
+                      <div
+                        aria-label="SpecialCarer"
+                        className="sc-logo-breathe w-9 h-9 rounded-xl bg-white ring-1 ring-brand-100 shadow-sm flex items-center justify-center"
+                      >
                         <svg
-                          viewBox="0 0 161 121"
-                          className="w-5 h-5 fill-white"
+                          viewBox="20 8 120 75"
+                          className="w-7 h-7"
                           aria-hidden="true"
+                          fill="none"
                         >
-                          <path d="M80.5 0C36 0 0 27.1 0 60.5S36 121 80.5 121 161 93.9 161 60.5 125 0 80.5 0zm0 102.4c-32.5 0-58.9-18.8-58.9-41.9s26.4-41.9 58.9-41.9 58.9 18.8 58.9 41.9-26.4 41.9-58.9 41.9z" />
+                          <path
+                            fill="#039EA0"
+                            d="M44.6227 66.5641C50.1119 62.2817 53.0352 51.5727 53.6328 47.677C54.2303 43.7753 55.7125 38.7606 57.3176 36.0307C58.9228 33.3066 62.4319 28.0048 60.8736 25.4565C60.8736 25.4565 61.1372 23.8044 60.0417 23.0077C58.9462 22.211 57.3645 23.7986 57.054 24.3024C57.054 24.3024 56.4682 24.2321 55.4078 25.8021C54.3475 27.3721 52.1565 30.8578 51.5003 31.842C50.8442 32.8262 50.2935 34.7243 49.8659 35.5386C49.4441 36.3529 48.7938 39.0946 45.6245 41.6664C45.6245 41.6664 48.1846 38.8544 49.198 35.234C50.2115 31.6135 51.7874 30.1255 52.3381 29.3464C52.8888 28.5672 54.9919 25.4447 55.5777 24.73C56.1577 24.0153 56.9134 23.8513 56.9134 23.8513C56.9134 23.8513 57.798 22.6269 59.0048 22.3633C60.2116 22.0997 61.7348 23.2127 61.272 25.3276C61.272 25.3276 62.8772 27.1729 61.0435 30.5063C59.2099 33.8397 56.7377 38.2275 55.8706 40.4947C55.0095 42.756 54.7107 44.0097 54.7107 44.0097C54.7107 44.0097 57.3176 42.4982 58.501 41.8011C59.6902 41.104 62.8654 39.364 64.3652 38.1338C65.8649 36.9036 69.7197 34.2322 69.6142 32.1642C69.6142 32.1642 63.7032 35.3687 62.4319 36.0893C61.1665 36.804 58.8174 38.2803 57.757 38.7489C57.757 38.7489 59.5438 37.3781 60.6451 36.6341C61.7465 35.8901 68.2375 32.4747 69.9598 31.5608C71.688 30.6411 78.6535 27.4131 76.5914 23.74C76.5914 23.74 72.6664 26.1595 70.1883 27.3604C67.7103 28.5614 65.1912 29.7096 64.6874 30.0025C64.1777 30.2954 61.3774 32.0412 60.5045 32.5509C60.5045 32.5509 62.7834 30.8637 63.4688 30.4184C64.1543 29.9673 71.6705 25.8958 72.9241 25.2221C74.1837 24.5484 77.8217 23.0136 78.7238 21.3732C79.6319 19.7329 79.4151 17.7294 78.1732 17.1728C76.9254 16.6104 71.8169 20.6937 68.7823 22.0352C65.7419 23.3768 63.6915 23.6345 62.76 24.2555C61.8285 24.8823 61.5649 25.1343 61.5649 25.1343C61.5649 25.1343 62.6253 24.0622 63.1408 23.5877C63.6563 23.1131 68.7472 18.2918 69.9247 16.5929C71.1022 14.894 70.9557 12.1991 69.8251 11.1505C68.6944 10.1019 66.5034 13.5114 65.4255 14.6479C64.3476 15.7844 57.757 20.5589 55.6597 22.3984C53.5625 24.2379 49.0692 28.8894 47.3058 30.0552C45.5425 31.221 44.2478 31.6252 43.0175 34.2673C41.7873 36.9094 38.5652 45.5973 37.458 51.0338C34.4234 65.9021 28.8522 71.5202 28.858 71.5202C32.455 70.8993 39.1218 70.8524 44.611 66.57L44.6227 66.5641Z"
+                          />
+                          <path
+                            fill="#039EA0"
+                            d="M81.7934 21.3736C82.7014 23.0139 86.3394 24.5488 87.5931 25.2225C88.8526 25.8962 96.363 29.9677 97.0484 30.4188C97.7338 30.8699 100.013 32.5512 100.013 32.5512C99.1398 32.0415 96.3337 30.2899 95.8299 30.0028C95.3202 29.7099 92.8011 28.5617 90.3289 27.3607C87.8509 26.1598 83.9258 23.7403 83.9258 23.7403C81.8637 27.4135 88.8351 30.6472 90.5574 31.5611C92.2856 32.4809 98.7707 35.8963 99.8721 36.6344C100.973 37.3784 102.76 38.7493 102.76 38.7493C101.7 38.2806 99.3507 36.8043 98.0853 36.0896C96.8199 35.3749 90.903 32.1645 90.903 32.1645C90.7976 34.2325 94.6582 36.9098 96.1521 38.1341C97.6518 39.3644 100.827 41.1043 102.016 41.8014C103.205 42.4986 105.807 44.01 105.807 44.01C105.807 44.01 105.508 42.7563 104.647 40.495C103.785 38.2337 101.307 33.84 99.4737 30.5066C97.6401 27.1733 99.2453 25.3279 99.2453 25.3279C98.7883 23.2131 100.311 22.1 101.512 22.3636C102.719 22.6272 103.604 23.8516 103.604 23.8516C103.604 23.8516 104.354 24.0215 104.94 24.7304C105.519 25.4451 107.628 28.5617 108.179 29.3467C108.73 30.1259 110.306 31.6139 111.319 35.2343C112.339 38.8547 114.893 41.6667 114.893 41.6667C111.723 39.0891 111.073 36.3532 110.651 35.5389C110.23 34.7246 109.679 32.8265 109.017 31.8423C108.361 30.8581 106.17 27.3725 105.109 25.8024C104.049 24.2324 103.463 24.3027 103.463 24.3027C103.153 23.7989 101.571 22.2113 100.475 23.008C99.38 23.8048 99.6436 25.4568 99.6436 25.4568C98.0853 28.0052 101.6 33.3011 103.2 36.031C104.805 38.7551 106.287 43.7757 106.884 47.6773C107.482 51.5789 110.405 62.282 115.895 66.5645C121.384 70.8469 128.05 70.8937 131.647 71.5147C131.647 71.5147 126.082 65.8966 123.048 51.0283C121.934 45.5918 118.718 36.9098 117.488 34.2618C116.258 31.6197 114.963 31.2155 113.2 30.0497C111.436 28.8839 106.943 24.2383 104.846 22.3929C102.749 20.5534 96.1579 15.7789 95.08 14.6424C94.0021 13.5059 91.8111 10.0964 90.6804 11.145C89.5498 12.1936 89.4033 14.8826 90.5808 16.5873C91.7584 18.2862 96.8492 23.1135 97.3647 23.5821C97.8803 24.0567 98.9406 25.1287 98.9406 25.1287C98.9406 25.1287 98.677 24.8768 97.7455 24.25C96.8141 23.6232 94.7637 23.3712 91.7232 22.0297C88.6827 20.6881 83.5743 16.6049 82.3324 17.1673C81.0845 17.7297 80.8736 19.7274 81.7817 21.3677L81.7934 21.3736Z"
+                          />
                         </svg>
                       </div>
                       <span className="text-sm font-semibold text-slate-900">
@@ -991,15 +1003,17 @@ export default async function Home() {
                       </span>
                     </div>
 
+                    {/* Carer cards — staggered rise */}
                     <div className="mt-4 space-y-2">
                       {[
                         { n: "Aisha R.", t: "Childcare · Verified", r: "4.9" },
                         { n: "Steve G.", t: "Elderly care · DBS", r: "4.8" },
                         { n: "Maria K.", t: "Special needs", r: "5.0" },
-                      ].map((c) => (
+                      ].map((c, i) => (
                         <div
                           key={c.n}
-                          className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white p-2.5 shadow-sm"
+                          className="sc-card-rise flex items-center gap-3 rounded-xl border border-slate-100 bg-white p-2.5 shadow-sm"
+                          style={{ animationDelay: `${0.2 + i * 0.18}s` }}
                         >
                           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-100 to-brand-300" />
                           <div className="flex-1 min-w-0">
@@ -1017,7 +1031,8 @@ export default async function Home() {
                       ))}
                     </div>
 
-                    <button className="mt-4 w-full rounded-xl bg-brand-600 text-white text-xs font-semibold py-2.5 shadow-sm">
+                    {/* CTA — subtle teal shimmer */}
+                    <button className="sc-cta-shimmer mt-4 w-full rounded-xl text-white text-xs font-semibold py-2.5 shadow-sm">
                       Book a visit
                     </button>
                   </div>

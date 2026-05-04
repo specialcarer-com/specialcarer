@@ -8,3 +8,57 @@
 }
 
 html, body { height: 100%; }
+
+/* ─────────────────────────────────────────────────────────────────────
+   Homepage 'Download the App' phone-mockup animations.
+   All animations respect prefers-reduced-motion.
+   ───────────────────────────────────────────────────────────────────── */
+@keyframes sc-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+@keyframes sc-logo-breathe {
+  0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(3, 158, 160, 0.55); }
+  50%      { transform: scale(1.06); box-shadow: 0 0 0 8px rgba(3, 158, 160, 0); }
+}
+@keyframes sc-card-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes sc-blob-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(6px, -8px) scale(1.05); }
+}
+@keyframes sc-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes sc-bob {
+  0%, 100% { transform: translateY(0) rotate(var(--sc-rot, 0deg)); }
+  50%      { transform: translateY(-6px) rotate(var(--sc-rot, 0deg)); }
+}
+
+.sc-phone-float    { animation: sc-float 6s ease-in-out infinite; }
+.sc-logo-breathe   { animation: sc-logo-breathe 2.8s ease-in-out infinite; }
+.sc-card-rise      { animation: sc-card-rise 0.6s ease-out both; }
+.sc-blob-drift-a   { animation: sc-blob-drift 9s ease-in-out infinite; }
+.sc-blob-drift-b   { animation: sc-blob-drift 11s ease-in-out infinite reverse; }
+.sc-people-bob     { animation: sc-bob 5s ease-in-out infinite; }
+.sc-cta-shimmer {
+  background-image: linear-gradient(90deg, #039EA0 0%, #0BB7B9 50%, #039EA0 100%);
+  background-size: 200% 100%;
+  animation: sc-shimmer 3.5s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-phone-float,
+  .sc-logo-breathe,
+  .sc-card-rise,
+  .sc-blob-drift-a,
+  .sc-blob-drift-b,
+  .sc-cta-shimmer,
+  .sc-people-bob {
+    animation: none !important;
+  }
+  .sc-cta-shimmer { background-image: none; background-color: #039EA0; }
+}
