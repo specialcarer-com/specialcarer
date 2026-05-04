@@ -774,6 +774,145 @@ export default async function Home() {
       </section>
 
       {/* Download the App */}
+
+      {/* FAQ */}
+      <section className="px-6 py-16 bg-slate-50">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto">
+            <h2 className="text-3xl font-semibold text-slate-900">
+              Frequently asked
+            </h2>
+            <p className="mt-3 text-slate-600">
+              The most common questions from families and caregivers.
+            </p>
+          </div>
+          <div className="mt-10 space-y-3">
+            {HOMEPAGE_FAQ.map((f) => (
+              <details
+                key={f.q}
+                className="group rounded-2xl border border-slate-100 bg-white px-5 py-4 open:shadow-sm"
+              >
+                <summary className="cursor-pointer list-none flex items-center justify-between gap-4 font-medium text-slate-900">
+                  <span>{f.q}</span>
+                  <span className="text-slate-400 group-open:rotate-45 transition-transform">
+                    +
+                  </span>
+                </summary>
+                <p className="mt-3 text-sm text-slate-600 leading-relaxed">
+                  {f.a}
+                </p>
+              </details>
+            ))}
+          </div>
+          <div className="mt-8 text-center text-sm text-slate-500">
+            Still have a question?{" "}
+            <Link href="/contact" className="text-brand-700 hover:underline">
+              Get in touch
+            </Link>
+            .
+          </div>
+        </div>
+      </section>
+
+      {/* Latest from blog */}
+      {recentPosts.length > 0 && (
+        <section className="px-6 py-16">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex items-end justify-between gap-6 flex-wrap">
+              <div>
+                <h2 className="text-3xl font-semibold text-slate-900">
+                  From the SpecialCarer blog
+                </h2>
+                <p className="mt-3 text-slate-600 max-w-2xl">
+                  Practical guides, policy updates, and stories from inside the
+                  care economy.
+                </p>
+              </div>
+              <Link
+                href="/blog"
+                className="text-sm text-brand-700 font-medium hover:underline"
+              >
+                Read all posts →
+              </Link>
+            </div>
+            <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {recentPosts.map((p) => (
+                <Link
+                  key={p.slug}
+                  href={`/blog/${p.slug}`}
+                  className="group bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-100 hover:shadow-sm transition flex flex-col"
+                >
+                  <div className="text-xs text-slate-500">
+                    {new Date(p.publishedAt).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                    {p.readingTimeMin ? ` · ${p.readingTimeMin} min read` : ""}
+                  </div>
+                  <h3 className="mt-2 font-semibold text-lg text-slate-900 group-hover:text-brand-700 transition">
+                    {p.title}
+                  </h3>
+                  {p.excerpt && (
+                    <p className="mt-2 text-sm text-slate-600 leading-relaxed line-clamp-3">
+                      {p.excerpt}
+                    </p>
+                  )}
+                  <span className="mt-4 inline-block text-sm text-brand-700 font-medium group-hover:underline">
+                    Read more →
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Caregiver acquisition */}
+      <section className="px-6 py-16 bg-brand-50">
+        <div className="max-w-5xl mx-auto text-center">
+          <h2 className="text-3xl font-semibold text-slate-900">
+            Earn more. Pick your shifts.
+          </h2>
+          <p className="mt-3 text-slate-700 max-w-2xl mx-auto">
+            Caregivers keep 70% of every shift. We handle scheduling, payments,
+            insurance support, and disputes — so you can focus on care.
+          </p>
+          <Link
+            href="/become-a-caregiver"
+            className="mt-8 inline-block px-6 py-3 rounded-xl bg-brand text-white font-medium hover:bg-brand-600 transition"
+          >
+            Apply to caregive
+          </Link>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="px-6 py-20">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl sm:text-4xl font-semibold text-slate-900">
+            Ready when you are.
+          </h2>
+          <p className="mt-4 text-slate-600 max-w-xl mx-auto">
+            Find a vetted caregiver near you in minutes. No subscription, no
+            hidden fees — pay only for the shifts you book.
+          </p>
+          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+            <Link
+              href="/find-care"
+              className="px-6 py-3 rounded-xl bg-brand text-white font-medium hover:bg-brand-600 transition"
+            >
+              Find care near me
+            </Link>
+            <Link
+              href="/how-it-works"
+              className="px-6 py-3 rounded-xl bg-white border border-slate-200 text-slate-900 font-medium hover:bg-slate-50 transition"
+            >
+              How it works
+            </Link>
+          </div>
+        </div>
+      </section>
       <section className="relative overflow-hidden px-6 py-20 bg-gradient-to-br from-brand-700 via-brand-600 to-brand-500 text-white">
         {/* Decorative blobs */}
         <div aria-hidden="true" className="sc-blob-drift-a pointer-events-none absolute -top-24 -left-16 w-72 h-72 rounded-full bg-white/5 blur-3xl" />
@@ -965,6 +1104,16 @@ export default async function Home() {
                     {/* Bottom dark gradient with copy */}
                     <div className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-slate-900 via-slate-900/90 to-transparent" />
                     <div className="absolute inset-x-0 bottom-0 px-4 pb-6 z-20 text-white">
+                      <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur px-2 py-1 ring-1 ring-white/30">
+                        <Image
+                          src="/brand/logo.svg"
+                          alt="Special Carer"
+                          width={28}
+                          height={21}
+                          className="h-3.5 w-auto"
+                        />
+                        <span className="text-[7px] font-semibold uppercase tracking-wider">Special Carer</span>
+                      </div>
                       <h4 className="text-[13px] font-semibold leading-tight">
                         Let&apos;s Bring
                         <br />
@@ -1006,17 +1155,17 @@ export default async function Home() {
                       {/* Top bar: avatar + name + cart */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
-                          <div className="h-6 w-6 rounded-full overflow-hidden ring-1 ring-slate-200 bg-brand-100">
+                          <div className="h-6 w-6 rounded-md bg-white ring-1 ring-brand-100 shadow-sm flex items-center justify-center">
                             <Image
-                              src="/brand/people/family-portrait.png"
-                              alt=""
-                              width={48}
-                              height={48}
-                              className="h-full w-full object-cover"
+                              src="/brand/logo.svg"
+                              alt="Special Carer"
+                              width={28}
+                              height={21}
+                              className="h-4 w-auto"
                             />
                           </div>
                           <div className="leading-tight">
-                            <div className="text-[6px] uppercase tracking-wider text-slate-500">Welcome</div>
+                            <div className="text-[6px] uppercase tracking-wider text-slate-500">Special Carer</div>
                             <div className="text-[9px] font-semibold text-slate-900">Rachel Green</div>
                           </div>
                         </div>
@@ -1147,145 +1296,6 @@ export default async function Home() {
             </div>
           </div>
 
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="px-6 py-16 bg-slate-50">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center max-w-2xl mx-auto">
-            <h2 className="text-3xl font-semibold text-slate-900">
-              Frequently asked
-            </h2>
-            <p className="mt-3 text-slate-600">
-              The most common questions from families and caregivers.
-            </p>
-          </div>
-          <div className="mt-10 space-y-3">
-            {HOMEPAGE_FAQ.map((f) => (
-              <details
-                key={f.q}
-                className="group rounded-2xl border border-slate-100 bg-white px-5 py-4 open:shadow-sm"
-              >
-                <summary className="cursor-pointer list-none flex items-center justify-between gap-4 font-medium text-slate-900">
-                  <span>{f.q}</span>
-                  <span className="text-slate-400 group-open:rotate-45 transition-transform">
-                    +
-                  </span>
-                </summary>
-                <p className="mt-3 text-sm text-slate-600 leading-relaxed">
-                  {f.a}
-                </p>
-              </details>
-            ))}
-          </div>
-          <div className="mt-8 text-center text-sm text-slate-500">
-            Still have a question?{" "}
-            <Link href="/contact" className="text-brand-700 hover:underline">
-              Get in touch
-            </Link>
-            .
-          </div>
-        </div>
-      </section>
-
-      {/* Latest from blog */}
-      {recentPosts.length > 0 && (
-        <section className="px-6 py-16">
-          <div className="max-w-6xl mx-auto">
-            <div className="flex items-end justify-between gap-6 flex-wrap">
-              <div>
-                <h2 className="text-3xl font-semibold text-slate-900">
-                  From the SpecialCarer blog
-                </h2>
-                <p className="mt-3 text-slate-600 max-w-2xl">
-                  Practical guides, policy updates, and stories from inside the
-                  care economy.
-                </p>
-              </div>
-              <Link
-                href="/blog"
-                className="text-sm text-brand-700 font-medium hover:underline"
-              >
-                Read all posts →
-              </Link>
-            </div>
-            <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {recentPosts.map((p) => (
-                <Link
-                  key={p.slug}
-                  href={`/blog/${p.slug}`}
-                  className="group bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-100 hover:shadow-sm transition flex flex-col"
-                >
-                  <div className="text-xs text-slate-500">
-                    {new Date(p.publishedAt).toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                    {p.readingTimeMin ? ` · ${p.readingTimeMin} min read` : ""}
-                  </div>
-                  <h3 className="mt-2 font-semibold text-lg text-slate-900 group-hover:text-brand-700 transition">
-                    {p.title}
-                  </h3>
-                  {p.excerpt && (
-                    <p className="mt-2 text-sm text-slate-600 leading-relaxed line-clamp-3">
-                      {p.excerpt}
-                    </p>
-                  )}
-                  <span className="mt-4 inline-block text-sm text-brand-700 font-medium group-hover:underline">
-                    Read more →
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Caregiver acquisition */}
-      <section className="px-6 py-16 bg-brand-50">
-        <div className="max-w-5xl mx-auto text-center">
-          <h2 className="text-3xl font-semibold text-slate-900">
-            Earn more. Pick your shifts.
-          </h2>
-          <p className="mt-3 text-slate-700 max-w-2xl mx-auto">
-            Caregivers keep 70% of every shift. We handle scheduling, payments,
-            insurance support, and disputes — so you can focus on care.
-          </p>
-          <Link
-            href="/become-a-caregiver"
-            className="mt-8 inline-block px-6 py-3 rounded-xl bg-brand text-white font-medium hover:bg-brand-600 transition"
-          >
-            Apply to caregive
-          </Link>
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section className="px-6 py-20">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl font-semibold text-slate-900">
-            Ready when you are.
-          </h2>
-          <p className="mt-4 text-slate-600 max-w-xl mx-auto">
-            Find a vetted caregiver near you in minutes. No subscription, no
-            hidden fees — pay only for the shifts you book.
-          </p>
-          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link
-              href="/find-care"
-              className="px-6 py-3 rounded-xl bg-brand text-white font-medium hover:bg-brand-600 transition"
-            >
-              Find care near me
-            </Link>
-            <Link
-              href="/how-it-works"
-              className="px-6 py-3 rounded-xl bg-white border border-slate-200 text-slate-900 font-medium hover:bg-slate-50 transition"
-            >
-              How it works
-            </Link>
-          </div>
         </div>
       </section>
     </MarketingShell>
