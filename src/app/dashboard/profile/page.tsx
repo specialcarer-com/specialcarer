@@ -42,7 +42,9 @@ export default async function CaregiverProfileEditPage() {
     region: null,
     country: (profileRow?.country as "GB" | "US") ?? "GB",
     services: [],
+    care_formats: [],
     hourly_rate_cents: null,
+    weekly_rate_cents: null,
     currency:
       (profileRow?.country === "US" ? "USD" : "GBP") as "GBP" | "USD",
     years_experience: null,

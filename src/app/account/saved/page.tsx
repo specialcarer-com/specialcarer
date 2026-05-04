@@ -31,7 +31,7 @@ export default async function SavedPage() {
     const { data: profiles } = await admin
       .from("caregiver_profiles")
       .select(
-        "user_id, display_name, headline, bio, city, region, country, services, hourly_rate_cents, currency, years_experience, languages, rating_avg, rating_count, is_published",
+        "user_id, display_name, headline, bio, city, region, country, services, care_formats, hourly_rate_cents, weekly_rate_cents, currency, years_experience, languages, rating_avg, rating_count, is_published",
       )
       .in("user_id", caregiverIds);
 
@@ -46,7 +46,9 @@ export default async function SavedPage() {
         region: p.region,
         country: (p.country as "GB" | "US") ?? "GB",
         services: p.services ?? [],
+        care_formats: p.care_formats ?? [],
         hourly_rate_cents: p.hourly_rate_cents,
+        weekly_rate_cents: p.weekly_rate_cents,
         currency: (p.currency as "GBP" | "USD" | null) ?? null,
         years_experience: p.years_experience,
         languages: p.languages ?? [],

@@ -10,7 +10,9 @@ export type CaregiverCardData = {
   region: string | null;
   country: "GB" | "US";
   services: string[];
+  care_formats: string[];
   hourly_rate_cents: number | null;
+  weekly_rate_cents: number | null;
   currency: "GBP" | "USD" | null;
   years_experience: number | null;
   languages: string[];
@@ -18,6 +20,24 @@ export type CaregiverCardData = {
   rating_count: number;
   match_score?: number;
 };
+
+function formatRate(c: CaregiverCardData): string {
+  if (!c.currency) return "Rate on request";
+  const offersVisiting = c.care_formats.includes("visiting");
+  const offersLiveIn = c.care_formats.includes("live_in");
+  const parts: string[] = [];
+  if (offersVisiting && c.hourly_rate_cents != null) {
+    parts.push(`${formatMoney(c.hourly_rate_cents, c.currency)}/hr`);
+  }
+  if (offersLiveIn && c.weekly_rate_cents != null) {
+    parts.push(`${formatMoney(c.weekly_rate_cents, c.currency)}/wk`);
+  }
+  // Fallback for legacy/unset format data
+  if (parts.length === 0 && c.hourly_rate_cents != null) {
+    parts.push(`${formatMoney(c.hourly_rate_cents, c.currency)}/hr`);
+  }
+  return parts.length > 0 ? parts.join(" · ") : "Rate on request";
+}
 
 function initials(name: string | null) {
   if (!name) return "C";
@@ -36,10 +56,7 @@ export default function CaregiverCard({
 }) {
   const country = c.country === "GB" ? "UK" : "US";
   const location = [c.city, country].filter(Boolean).join(", ");
-  const rate =
-    c.hourly_rate_cents != null && c.currency
-      ? `${formatMoney(c.hourly_rate_cents, c.currency)}/hr`
-      : "Rate on request";
+  const rate = formatRate(c);
 
   return (
     <article className="bg-white p-5 rounded-2xl border border-slate-100 hover:border-brand-100 hover:shadow-sm transition flex flex-col">

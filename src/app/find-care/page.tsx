@@ -4,6 +4,7 @@ import MarketingShell from "@/components/marketing-shell";
 import CaregiverCard from "@/components/caregiver-card";
 import { searchCaregivers, listPublishedCities } from "@/lib/care/search";
 import { SERVICES, isServiceKey } from "@/lib/care/services";
+import { CARE_FORMATS, isCareFormatKey } from "@/lib/care/formats";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -16,6 +17,7 @@ export const dynamic = "force-dynamic";
 
 type SearchParams = {
   service?: string;
+  format?: string;
   city?: string;
   country?: string;
   min?: string;
@@ -33,6 +35,7 @@ export default async function FindCarePage({
   const country =
     sp.country === "US" || sp.country === "GB" ? sp.country : undefined;
   const service = isServiceKey(sp.service) ? sp.service : undefined;
+  const format = isCareFormatKey(sp.format) ? sp.format : undefined;
   const city = sp.city?.trim() || undefined;
   const minRate = sp.min ? Math.max(0, Number(sp.min)) * 100 : undefined;
   const maxRate = sp.max ? Math.max(0, Number(sp.max)) * 100 : undefined;
@@ -48,7 +51,7 @@ export default async function FindCarePage({
     : undefined;
 
   const [results, supabase, citiesAll] = await Promise.all([
-    searchCaregivers({ service, city, country, minRate, maxRate, query: q }),
+    searchCaregivers({ service, format, city, country, minRate, maxRate, query: q }),
     createClient(),
     listPublishedCities(),
   ]);
@@ -106,7 +109,7 @@ export default async function FindCarePage({
         {/* Filters */}
         <form
           method="get"
-          className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 bg-white p-4 rounded-2xl border border-slate-100"
+          className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3 bg-white p-4 rounded-2xl border border-slate-100"
         >
           <label className="text-sm sm:col-span-2 lg:col-span-2">
             <span className="text-slate-700 font-medium">Search</span>
@@ -117,6 +120,21 @@ export default async function FindCarePage({
               placeholder="Name, headline, keyword…"
               className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand"
             />
+          </label>
+          <label className="text-sm">
+            <span className="text-slate-700 font-medium">Work type</span>
+            <select
+              name="format"
+              defaultValue={format ?? ""}
+              className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
+            >
+              <option value="">Any</option>
+              {CARE_FORMATS.map((f) => (
+                <option key={f.key} value={f.key}>
+                  {f.short}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="text-sm">
             <span className="text-slate-700 font-medium">Service</span>
@@ -184,7 +202,7 @@ export default async function FindCarePage({
               />
             </label>
           </div>
-          <div className="sm:col-span-2 lg:col-span-6 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between pt-1">
+          <div className="sm:col-span-2 lg:col-span-7 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between pt-1">
             <p className="text-xs text-slate-500">
               Rates are pre–service-fee. Final price shown at checkout.
             </p>

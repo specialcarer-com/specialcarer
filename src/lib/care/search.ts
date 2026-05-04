@@ -1,9 +1,11 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { CaregiverCardData } from "@/components/caregiver-card";
 import { isServiceKey } from "@/lib/care/services";
+import { isCareFormatKey, type CareFormatKey } from "@/lib/care/formats";
 
 export type CareSearchFilters = {
   service?: string;
+  format?: CareFormatKey;
   city?: string;
   country?: "GB" | "US";
   minRate?: number; // in cents
@@ -32,7 +34,7 @@ export async function searchCaregivers(
   let query = admin
     .from("caregiver_profiles")
     .select(
-      "user_id, display_name, headline, bio, city, region, country, services, hourly_rate_cents, currency, years_experience, languages, rating_avg, rating_count, is_published",
+      "user_id, display_name, headline, bio, city, region, country, services, care_formats, hourly_rate_cents, weekly_rate_cents, currency, years_experience, languages, rating_avg, rating_count, is_published",
     )
     .eq("is_published", true);
 
@@ -40,6 +42,9 @@ export async function searchCaregivers(
   if (filters.city) query = query.ilike("city", filters.city);
   if (isServiceKey(filters.service)) {
     query = query.contains("services", [filters.service]);
+  }
+  if (isCareFormatKey(filters.format)) {
+    query = query.contains("care_formats", [filters.format]);
   }
   if (filters.minRate != null)
     query = query.gte("hourly_rate_cents", filters.minRate);
@@ -102,7 +107,9 @@ export async function searchCaregivers(
     region: p.region,
     country: (p.country as "GB" | "US") ?? "GB",
     services: p.services ?? [],
+    care_formats: p.care_formats ?? [],
     hourly_rate_cents: p.hourly_rate_cents,
+    weekly_rate_cents: p.weekly_rate_cents,
     currency: (p.currency as "GBP" | "USD" | null) ?? null,
     years_experience: p.years_experience,
     languages: p.languages ?? [],
@@ -115,6 +122,7 @@ export async function searchCaregivers(
 function computeMatch(
   p: {
     services: string[] | null;
+    care_formats?: string[] | null;
     city: string | null;
     country: string | null;
     rating_avg: number | string | null;
@@ -126,6 +134,7 @@ function computeMatch(
 ): number {
   let score = 60; // base
   if (f.service && (p.services ?? []).includes(f.service)) score += 18;
+  if (f.format && (p.care_formats ?? []).includes(f.format)) score += 10;
   if (f.city && p.city && p.city.toLowerCase() === f.city.toLowerCase())
     score += 8;
   if (f.country && p.country === f.country) score += 4;

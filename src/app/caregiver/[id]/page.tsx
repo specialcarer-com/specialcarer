@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getCaregiverProfile } from "@/lib/care/profile";
 import { formatMoney, serviceLabel } from "@/lib/care/services";
+import { careFormatLabel } from "@/lib/care/formats";
 import MarketingShell from "@/components/marketing-shell";
 import SaveButton from "./save-button";
 
@@ -79,10 +80,31 @@ export default async function CaregiverPage({
   }
 
   const country = profile.country === "GB" ? "UK" : "US";
-  const rate =
-    profile.hourly_rate_cents != null && profile.currency
-      ? `${formatMoney(profile.hourly_rate_cents, profile.currency)}/hr`
-      : "Rate on request";
+  const formats = profile.care_formats ?? [];
+  const offersVisiting = formats.includes("visiting");
+  const offersLiveIn = formats.includes("live_in");
+  const rateLines: string[] = [];
+  if (profile.currency) {
+    if (offersVisiting && profile.hourly_rate_cents != null) {
+      rateLines.push(
+        `${formatMoney(profile.hourly_rate_cents, profile.currency)}/hr`,
+      );
+    }
+    if (offersLiveIn && profile.weekly_rate_cents != null) {
+      rateLines.push(
+        `${formatMoney(profile.weekly_rate_cents, profile.currency)}/wk`,
+      );
+    }
+    if (
+      rateLines.length === 0 &&
+      profile.hourly_rate_cents != null
+    ) {
+      rateLines.push(
+        `${formatMoney(profile.hourly_rate_cents, profile.currency)}/hr`,
+      );
+    }
+  }
+  if (rateLines.length === 0) rateLines.push("Rate on request");
 
   return (
     <MarketingShell>
@@ -128,7 +150,11 @@ export default async function CaregiverPage({
                 </p>
               </div>
               <div className="text-right flex-none">
-                <div className="text-2xl font-semibold text-slate-900">{rate}</div>
+                <div className="text-2xl font-semibold text-slate-900 leading-tight">
+                  {rateLines.map((line) => (
+                    <div key={line}>{line}</div>
+                  ))}
+                </div>
                 {profile.rating_count > 0 && profile.rating_avg != null && (
                   <div className="mt-1 text-sm text-slate-600">
                     ★ {profile.rating_avg.toFixed(1)} ({profile.rating_count})
@@ -214,6 +240,21 @@ export default async function CaregiverPage({
                 ))}
               </ul>
             </div>
+            {formats.length > 0 && (
+              <div className="p-5 rounded-2xl border border-slate-100 bg-white">
+                <h3 className="font-semibold text-slate-900">Work taken on</h3>
+                <ul className="mt-3 flex flex-wrap gap-1.5">
+                  {formats.map((f) => (
+                    <li
+                      key={f}
+                      className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-medium"
+                    >
+                      {careFormatLabel(f)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <div className="p-5 rounded-2xl border border-slate-100 bg-white text-sm space-y-2">
               <Row label="Experience">
                 {profile.years_experience != null

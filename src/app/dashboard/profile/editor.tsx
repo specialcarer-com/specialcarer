@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { SERVICES } from "@/lib/care/services";
+import { CARE_FORMATS } from "@/lib/care/formats";
 import type { CaregiverProfileFull, ProfileReadiness } from "@/lib/care/profile";
 
 export default function ProfileEditor({
@@ -19,8 +20,14 @@ export default function ProfileEditor({
   const [region, setRegion] = useState(initial.region ?? "");
   const [country, setCountry] = useState<"GB" | "US">(initial.country);
   const [services, setServices] = useState<string[]>(initial.services);
+  const [careFormats, setCareFormats] = useState<string[]>(
+    initial.care_formats ?? [],
+  );
   const [hourlyRate, setHourlyRate] = useState<number>(
     initial.hourly_rate_cents ? initial.hourly_rate_cents / 100 : 18,
+  );
+  const [weeklyRate, setWeeklyRate] = useState<number>(
+    initial.weekly_rate_cents ? initial.weekly_rate_cents / 100 : 750,
   );
   const [yearsExp, setYearsExp] = useState<number>(initial.years_experience ?? 0);
   const [languages, setLanguages] = useState<string>(
@@ -42,6 +49,16 @@ export default function ProfileEditor({
     );
   }
 
+  function toggleFormat(key: string) {
+    setCareFormats((prev) =>
+      prev.includes(key) ? prev.filter((f) => f !== key) : [...prev, key],
+    );
+  }
+
+  const offersVisiting = careFormats.includes("visiting");
+  const offersLiveIn = careFormats.includes("live_in");
+  const currencySymbol = country === "US" ? "$" : "£";
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -58,7 +75,13 @@ export default function ProfileEditor({
           region: region || null,
           country,
           services,
-          hourly_rate_cents: Math.round(hourlyRate * 100),
+          care_formats: careFormats,
+          hourly_rate_cents: offersVisiting
+            ? Math.round(hourlyRate * 100)
+            : null,
+          weekly_rate_cents: offersLiveIn
+            ? Math.round(weeklyRate * 100)
+            : null,
           currency: country === "US" ? "USD" : "GBP",
           years_experience: Math.max(0, Math.min(60, Math.round(yearsExp))),
           languages: languages
@@ -258,20 +281,76 @@ export default function ProfileEditor({
         </div>
       </Section>
 
+      <Section title="Work I take on">
+        <p className="text-sm text-slate-600 -mt-2">
+          Choose live-in, visiting, or both. Live-in placements are paid as a
+          weekly rate; visits are paid by the hour.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-2">
+          {CARE_FORMATS.map((f) => {
+            const on = careFormats.includes(f.key);
+            return (
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => toggleFormat(f.key)}
+                className={`text-left p-3 rounded-xl border transition ${
+                  on
+                    ? "bg-brand-50 border-brand-200 text-brand-700"
+                    : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
+                }`}
+              >
+                <span className="font-medium">{f.label}</span>
+                <span className="block text-xs text-slate-500 mt-0.5">
+                  Paid by the {f.rateUnit}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </Section>
+
       <Section title="Rate & experience">
+        {careFormats.length === 0 && (
+          <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3 -mt-2">
+            Select at least one work type above to set your rate.
+          </p>
+        )}
         <div className="grid sm:grid-cols-3 gap-4">
-          <Field label={`Hourly rate (${country === "US" ? "$" : "£"})`}>
-            <input
-              type="number"
-              min={8}
-              max={200}
-              step={1}
-              value={hourlyRate}
-              onChange={(e) => setHourlyRate(Number(e.target.value))}
-              required
-              className={INPUT_CLASS}
-            />
-          </Field>
+          {offersVisiting && (
+            <Field
+              label={`Hourly rate (${currencySymbol})`}
+              help="For visiting work"
+            >
+              <input
+                type="number"
+                min={8}
+                max={200}
+                step={1}
+                value={hourlyRate}
+                onChange={(e) => setHourlyRate(Number(e.target.value))}
+                required
+                className={INPUT_CLASS}
+              />
+            </Field>
+          )}
+          {offersLiveIn && (
+            <Field
+              label={`Weekly rate (${currencySymbol})`}
+              help="For live-in placements"
+            >
+              <input
+                type="number"
+                min={100}
+                max={5000}
+                step={10}
+                value={weeklyRate}
+                onChange={(e) => setWeeklyRate(Number(e.target.value))}
+                required
+                className={INPUT_CLASS}
+              />
+            </Field>
+          )}
           <Field label="Years experience">
             <input
               type="number"
@@ -349,7 +428,10 @@ export default function ProfileEditor({
           <Check ok={readiness.hasName}>Display name set</Check>
           <Check ok={readiness.hasBio}>Bio (60+ characters)</Check>
           <Check ok={readiness.hasService}>At least one service selected</Check>
-          <Check ok={readiness.hasRate}>Hourly rate set</Check>
+          <Check ok={readiness.hasFormat}>
+            Live-in or visiting work declared
+          </Check>
+          <Check ok={readiness.hasRate}>Rate set for each work type</Check>
           <Check ok={readiness.hasLocation}>City set</Check>
           <Check ok={readiness.payoutsEnabled}>
             Stripe payouts —{" "}

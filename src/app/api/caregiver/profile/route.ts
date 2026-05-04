@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isServiceKey } from "@/lib/care/services";
+import { isCareFormatKey } from "@/lib/care/formats";
 import { computeReadiness } from "@/lib/care/profile";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +29,9 @@ export async function PATCH(req: Request) {
     region?: string | null;
     country?: "GB" | "US";
     services?: string[];
-    hourly_rate_cents?: number;
+    care_formats?: string[];
+    hourly_rate_cents?: number | null;
+    weekly_rate_cents?: number | null;
     currency?: "GBP" | "USD";
     years_experience?: number;
     languages?: string[];
@@ -71,12 +74,44 @@ export async function PATCH(req: Request) {
     }
     update.services = body.services;
   }
-  if (body.hourly_rate_cents !== undefined) {
-    const r = Number(body.hourly_rate_cents);
-    if (!Number.isFinite(r) || r < 800 || r > 20000) {
-      return NextResponse.json({ error: "Rate must be 8.00–200.00" }, { status: 400 });
+  if (body.care_formats !== undefined) {
+    if (
+      !Array.isArray(body.care_formats) ||
+      !body.care_formats.every((f) => isCareFormatKey(f))
+    ) {
+      return NextResponse.json({ error: "Invalid care formats" }, { status: 400 });
     }
-    update.hourly_rate_cents = Math.round(r);
+    // De-dupe and persist as a clean array.
+    update.care_formats = Array.from(new Set(body.care_formats));
+  }
+  if (body.hourly_rate_cents !== undefined) {
+    if (body.hourly_rate_cents === null) {
+      update.hourly_rate_cents = null;
+    } else {
+      const r = Number(body.hourly_rate_cents);
+      if (!Number.isFinite(r) || r < 800 || r > 20000) {
+        return NextResponse.json(
+          { error: "Hourly rate must be 8.00–200.00" },
+          { status: 400 },
+        );
+      }
+      update.hourly_rate_cents = Math.round(r);
+    }
+  }
+  if (body.weekly_rate_cents !== undefined) {
+    if (body.weekly_rate_cents === null) {
+      update.weekly_rate_cents = null;
+    } else {
+      const r = Number(body.weekly_rate_cents);
+      // Match DB constraint: 100.00 to 5000.00
+      if (!Number.isFinite(r) || r < 10000 || r > 500000) {
+        return NextResponse.json(
+          { error: "Weekly rate must be 100–5,000" },
+          { status: 400 },
+        );
+      }
+      update.weekly_rate_cents = Math.round(r);
+    }
   }
   if (body.currency !== undefined) {
     if (body.currency !== "GBP" && body.currency !== "USD") {

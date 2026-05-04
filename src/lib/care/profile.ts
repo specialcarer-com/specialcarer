@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ServiceKey } from "@/lib/care/services";
+import type { CareFormatKey } from "@/lib/care/formats";
 
 const UK_REQUIRED = ["enhanced_dbs_barred", "right_to_work", "digital_id"];
 const US_REQUIRED = ["us_criminal", "us_healthcare_sanctions"];
@@ -13,7 +14,9 @@ export type CaregiverProfileFull = {
   region: string | null;
   country: "GB" | "US";
   services: string[];
+  care_formats: string[];
   hourly_rate_cents: number | null;
+  weekly_rate_cents: number | null;
   currency: "GBP" | "USD" | null;
   years_experience: number | null;
   languages: string[];
@@ -30,6 +33,7 @@ export type ProfileReadiness = {
   hasBio: boolean;
   hasRate: boolean;
   hasService: boolean;
+  hasFormat: boolean;
   hasLocation: boolean;
   payoutsEnabled: boolean;
   bgChecksCleared: boolean;
@@ -46,7 +50,7 @@ export async function getCaregiverProfile(
   const { data } = await admin
     .from("caregiver_profiles")
     .select(
-      "user_id, display_name, headline, bio, city, region, country, services, hourly_rate_cents, currency, years_experience, languages, max_radius_km, photo_url, is_published, rating_avg, rating_count",
+      "user_id, display_name, headline, bio, city, region, country, services, care_formats, hourly_rate_cents, weekly_rate_cents, currency, years_experience, languages, max_radius_km, photo_url, is_published, rating_avg, rating_count",
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -61,7 +65,9 @@ export async function getCaregiverProfile(
     region: data.region,
     country: (data.country as "GB" | "US") ?? "GB",
     services: data.services ?? [],
+    care_formats: data.care_formats ?? [],
     hourly_rate_cents: data.hourly_rate_cents,
+    weekly_rate_cents: data.weekly_rate_cents,
     currency: (data.currency as "GBP" | "USD" | null) ?? null,
     years_experience: data.years_experience,
     languages: data.languages ?? [],
@@ -81,7 +87,7 @@ export async function computeReadiness(userId: string): Promise<ProfileReadiness
     admin
       .from("caregiver_profiles")
       .select(
-        "display_name, bio, city, country, services, hourly_rate_cents, is_published",
+        "display_name, bio, city, country, services, care_formats, hourly_rate_cents, weekly_rate_cents, is_published",
       )
       .eq("user_id", userId)
       .maybeSingle(),
@@ -102,17 +108,26 @@ export async function computeReadiness(userId: string): Promise<ProfileReadiness
   const cleared = new Set((bg ?? []).map((r) => r.check_type as string));
   const missingChecks = required.filter((t) => !cleared.has(t));
 
+  const formats = (profile?.care_formats ?? []) as string[];
+  const offersVisiting = formats.includes("visiting");
+  const offersLiveIn = formats.includes("live_in");
+
   const hasProfile = !!profile;
   const hasName = !!profile?.display_name;
   const hasBio = !!profile?.bio && profile.bio.length >= 60;
-  const hasRate = profile?.hourly_rate_cents != null && profile.hourly_rate_cents > 0;
+  const hasFormat = formats.length > 0;
+  // Rate readiness depends on declared formats: each declared format must
+  // have its corresponding rate set.
+  const hourlyOk = !offersVisiting || (profile?.hourly_rate_cents != null && profile.hourly_rate_cents > 0);
+  const weeklyOk = !offersLiveIn || (profile?.weekly_rate_cents != null && profile.weekly_rate_cents > 0);
+  const hasRate = hasFormat && hourlyOk && weeklyOk;
   const hasService = (profile?.services ?? []).length > 0;
   const hasLocation = !!profile?.city;
   const payoutsEnabled = !!stripe?.payouts_enabled;
   const bgChecksCleared = missingChecks.length === 0;
 
   const isPublishable =
-    hasProfile && hasName && hasBio && hasRate && hasService && hasLocation && payoutsEnabled && bgChecksCleared;
+    hasProfile && hasName && hasBio && hasFormat && hasRate && hasService && hasLocation && payoutsEnabled && bgChecksCleared;
 
   return {
     hasProfile,
@@ -120,6 +135,7 @@ export async function computeReadiness(userId: string): Promise<ProfileReadiness
     hasBio,
     hasRate,
     hasService,
+    hasFormat,
     hasLocation,
     payoutsEnabled,
     bgChecksCleared,
@@ -137,7 +153,9 @@ export type ProfileUpdateInput = {
   region?: string | null;
   country?: "GB" | "US";
   services?: ServiceKey[];
-  hourly_rate_cents?: number;
+  care_formats?: CareFormatKey[];
+  hourly_rate_cents?: number | null;
+  weekly_rate_cents?: number | null;
   currency?: "GBP" | "USD";
   years_experience?: number;
   languages?: string[];
