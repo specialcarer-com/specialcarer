@@ -139,6 +139,19 @@ workflows:
           # Build number = monotonically increasing CI build counter.
           agvtool new-version -all "$BUILD_NUMBER"
 
+      - name: Fetch (or create) signing certificate + provisioning profile
+        script: |
+          # First-time builds need --create so Codemagic generates a fresh
+          # iOS Distribution cert + App Store provisioning profile via the
+          # App Store Connect API. Subsequent builds reuse what's there.
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+
+          # Install the freshly-fetched cert into the temporary keychain.
+          keychain initialize
+          keychain add-certificates
+
       - name: Build, archive, and export .ipa
         script: |
           xcode-project use-profiles
