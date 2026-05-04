@@ -33,12 +33,13 @@ workflows:
       app_store_connect: SpecialCarer ASC API key
 
     environment:
-      ios_signing:
-        # Codemagic auto-fetches/creates the iOS Distribution certificate
-        # and provisioning profile from App Store Connect using the API key
-        # configured in `integrations.app_store_connect`.
-        distribution_type: app_store
-        bundle_identifier: com.allcare4ugroup.specialcarer
+      # NOTE: We deliberately do NOT use the `ios_signing` block here.
+      # That block runs a pre-build profile lookup that fails on first
+      # build (when no profile exists yet), regardless of `--create`
+      # in our user scripts. Instead we run `app-store-connect
+      # fetch-signing-files <bundle_id> --type IOS_APP_STORE --create`
+      # explicitly inside scripts, which both creates the profile if
+      # missing and reuses it on subsequent runs.
       vars:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
