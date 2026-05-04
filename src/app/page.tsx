@@ -320,7 +320,7 @@ export default async function Home() {
 
       {/* Featured caregivers — live data */}
       {featured.length > 0 && (
-        <section className="px-6 py-16">
+        <section className="px-6 py-16 bg-brand-50">
           <div className="max-w-6xl mx-auto">
             <div className="flex items-end justify-between gap-6 flex-wrap">
               <div>
