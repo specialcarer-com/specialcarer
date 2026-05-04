@@ -772,6 +772,211 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Download the App */}
+      <section className="px-6 py-20 bg-white">
+        <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          {/* Copy + store badges */}
+          <div className="order-2 lg:order-1">
+            <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-slate-900">
+              Download the App
+            </h2>
+            <p className="mt-5 text-lg text-slate-700 leading-relaxed">
+              <span className="font-semibold text-slate-900">
+                Special Carer connects you with trusted, verified caregivers
+                who offer reliable and heartfelt support.
+              </span>{" "}
+              We make care simple, safe, and deeply meaningful—built on trust
+              and genuine connection.
+            </p>
+
+            <div className="mt-8 flex flex-wrap items-center gap-4">
+              {/* App Store — Coming soon */}
+              <div className="relative group">
+                <button
+                  type="button"
+                  disabled
+                  className="flex items-center gap-3 rounded-xl bg-slate-900 px-5 py-3 text-white shadow-sm cursor-not-allowed opacity-90 hover:opacity-100 transition"
+                  aria-label="Download on the App Store — coming soon"
+                >
+                  <svg
+                    viewBox="0 0 384 512"
+                    aria-hidden="true"
+                    className="h-7 w-7 fill-white"
+                  >
+                    <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
+                  </svg>
+                  <span className="text-left leading-tight">
+                    <span className="block text-[10px] uppercase tracking-wider opacity-80">
+                      Coming soon on the
+                    </span>
+                    <span className="block text-lg font-semibold">App Store</span>
+                  </span>
+                </button>
+              </div>
+
+              {/* Google Play — Coming soon */}
+              <div className="relative group">
+                <button
+                  type="button"
+                  disabled
+                  className="flex items-center gap-3 rounded-xl bg-slate-900 px-5 py-3 text-white shadow-sm cursor-not-allowed opacity-90 hover:opacity-100 transition"
+                  aria-label="Get it on Google Play — coming soon"
+                >
+                  <svg
+                    viewBox="0 0 512 512"
+                    aria-hidden="true"
+                    className="h-7 w-7"
+                  >
+                    <path
+                      fill="#039EA0"
+                      d="M325.3 234.3 104.6 13l280.8 161.2-60.1 60.1z"
+                    />
+                    <path
+                      fill="#039EA0"
+                      opacity="0.85"
+                      d="m104.6 499 220.7-221.3 60.1 60.1L104.6 499z"
+                    />
+                    <path
+                      fill="#039EA0"
+                      opacity="0.7"
+                      d="m484 256-98.6 56.6-65.4-65.4 65.4-65.4z"
+                    />
+                    <path
+                      fill="#039EA0"
+                      opacity="0.55"
+                      d="M104.6 13c-7.4 4.3-12.4 12.7-12.4 23.6v440c0 10.9 5 19.3 12.4 23.6L325.3 277.7l-60.1-60.1z"
+                    />
+                  </svg>
+                  <span className="text-left leading-tight">
+                    <span className="block text-[10px] uppercase tracking-wider opacity-80">
+                      Coming soon to
+                    </span>
+                    <span className="block text-lg font-semibold">
+                      Google Play
+                    </span>
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <p className="mt-5 text-sm text-slate-500">
+              Want to be among the first to try the app?{" "}
+              <Link
+                href="/contact?subject=app-beta"
+                className="text-brand-700 hover:underline font-medium"
+              >
+                Join the beta
+              </Link>
+              .
+            </p>
+          </div>
+
+          {/* Phone mockup */}
+          <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
+            <div className="relative">
+              {/* Soft brand backdrop */}
+              <div
+                aria-hidden="true"
+                className="absolute -inset-8 rounded-[3rem] bg-gradient-to-br from-brand-50 via-brand-100/60 to-white blur-2xl"
+              />
+              <div
+                aria-hidden="true"
+                className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-brand-500/15 blur-xl"
+              />
+              <div
+                aria-hidden="true"
+                className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-brand-700/10 blur-xl"
+              />
+
+              {/* Phone frame */}
+              <div className="relative w-[260px] sm:w-[300px] aspect-[9/19] rounded-[3rem] bg-slate-900 p-3 shadow-2xl shadow-brand-900/20 ring-1 ring-slate-800">
+                <div className="relative h-full w-full rounded-[2.4rem] overflow-hidden bg-white">
+                  {/* Status bar */}
+                  <div className="flex items-center justify-between px-6 pt-3 pb-2 text-[10px] font-semibold text-slate-700">
+                    <span>9:41</span>
+                    <div className="flex items-center gap-1">
+                      <span>●●●●</span>
+                    </div>
+                  </div>
+                  {/* Notch */}
+                  <div
+                    aria-hidden="true"
+                    className="absolute top-2 left-1/2 -translate-x-1/2 w-24 h-6 rounded-full bg-slate-900"
+                  />
+
+                  {/* App content mock */}
+                  <div className="px-5 pt-6 pb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center">
+                        <svg
+                          viewBox="0 0 161 121"
+                          className="w-5 h-5 fill-white"
+                          aria-hidden="true"
+                        >
+                          <path d="M80.5 0C36 0 0 27.1 0 60.5S36 121 80.5 121 161 93.9 161 60.5 125 0 80.5 0zm0 102.4c-32.5 0-58.9-18.8-58.9-41.9s26.4-41.9 58.9-41.9 58.9 18.8 58.9 41.9-26.4 41.9-58.9 41.9z" />
+                        </svg>
+                      </div>
+                      <span className="text-sm font-semibold text-slate-900">
+                        Special Carer
+                      </span>
+                    </div>
+                    <h3 className="mt-4 text-base font-semibold text-slate-900 leading-snug">
+                      Find a trusted carer near you
+                    </h3>
+                    <div className="mt-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="w-4 h-4 text-slate-400"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        aria-hidden="true"
+                      >
+                        <circle cx="11" cy="11" r="7" />
+                        <path d="m21 21-4.3-4.3" />
+                      </svg>
+                      <span className="text-xs text-slate-500">
+                        Postcode or city
+                      </span>
+                    </div>
+
+                    <div className="mt-4 space-y-2">
+                      {[
+                        { n: "Aisha R.", t: "Childcare · Verified", r: "4.9" },
+                        { n: "Steve G.", t: "Elderly care · DBS", r: "4.8" },
+                        { n: "Maria K.", t: "Special needs", r: "5.0" },
+                      ].map((c) => (
+                        <div
+                          key={c.n}
+                          className="flex items-center gap-3 rounded-xl border border-slate-100 bg-white p-2.5 shadow-sm"
+                        >
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-100 to-brand-300" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-semibold text-slate-900 truncate">
+                              {c.n}
+                            </div>
+                            <div className="text-[10px] text-slate-500 truncate">
+                              {c.t}
+                            </div>
+                          </div>
+                          <div className="text-[10px] font-semibold text-amber-600">
+                            ★ {c.r}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <button className="mt-4 w-full rounded-xl bg-brand-600 text-white text-xs font-semibold py-2.5 shadow-sm">
+                      Book a visit
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* FAQ */}
       <section className="px-6 py-16 bg-slate-50">
         <div className="max-w-3xl mx-auto">
