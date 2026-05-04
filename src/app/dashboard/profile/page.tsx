@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCaregiverProfile, computeReadiness } from "@/lib/care/profile";
 import ProfileEditor from "./editor";
+import Image from "next/image";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -58,10 +59,7 @@ export default async function CaregiverProfileEditPage() {
       <header className="px-6 py-5 bg-white border-b border-slate-100">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-brand flex items-center justify-center text-white font-bold">
-              S
-            </div>
-            <span className="font-semibold text-lg">SpecialCarer</span>
+            <Image src="/brand/logo.svg" alt="SpecialCarer" width={161} height={101} className="h-9 w-auto" priority />
           </Link>
           <Link href="/dashboard" className="text-sm text-slate-500 hover:text-slate-700">
             ← Dashboard

@@ -1,18 +1,20 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function SiteFooter() {
   return (
     <footer className="mt-16 border-t border-slate-100 bg-slate-50">
       <div className="max-w-6xl mx-auto px-6 py-10 grid sm:grid-cols-2 lg:grid-cols-5 gap-8 text-sm">
         <div className="lg:col-span-2">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-brand flex items-center justify-center text-white font-bold">
-              S
-            </div>
-            <span className="font-semibold text-base text-slate-900">
-              SpecialCarer
-            </span>
-          </div>
+          <Link href="/" className="inline-flex items-center" aria-label="SpecialCarer — home">
+            <Image
+              src="/brand/logo.svg"
+              alt="SpecialCarer"
+              width={161}
+              height={101}
+              className="h-12 w-auto"
+            />
+          </Link>
           <p className="mt-3 text-slate-600 max-w-sm">
             On-demand, vetted caregivers for families across the UK and US. A
             product of All Care 4 U Group Limited.

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LoginForm } from "./login-form";
+import Image from "next/image";
 
 export const metadata = {
   title: "Sign in — SpecialCarer",
@@ -20,10 +21,7 @@ export default async function LoginPage({
     <main className="min-h-screen flex flex-col">
       <header className="px-6 py-5 border-b border-slate-100">
         <Link href="/" className="flex items-center gap-2 w-fit">
-          <div className="w-8 h-8 rounded-lg bg-brand flex items-center justify-center text-white font-bold">
-            S
-          </div>
-          <span className="font-semibold text-lg">SpecialCarer</span>
+          <Image src="/brand/logo.svg" alt="SpecialCarer" width={161} height={101} className="h-9 w-auto" priority />
         </Link>
       </header>
 

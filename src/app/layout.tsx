@@ -10,12 +10,37 @@ export const metadata: Metadata = {
   description:
     "On-demand and scheduled childcare, elder care, and home support from vetted, background-checked caregivers. UK & US.",
   metadataBase: new URL("https://specialcarer.com"),
+  manifest: "/site.webmanifest",
+  themeColor: "#039EA0",
+  icons: {
+    icon: [
+      { url: "/brand/favicon.ico", sizes: "any" },
+      { url: "/brand/icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/brand/icon-512.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [{ url: "/brand/apple-touch-icon.png", sizes: "180x180" }],
+    shortcut: "/brand/favicon.ico",
+  },
   openGraph: {
     title: "SpecialCarer",
     description: "Trusted care, on your schedule.",
     url: "https://specialcarer.com",
     siteName: "SpecialCarer",
     type: "website",
+    images: [
+      {
+        url: "/brand/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "SpecialCarer — trusted care, on your schedule",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SpecialCarer",
+    description: "Trusted care, on your schedule.",
+    images: ["/brand/og-image.png"],
   },
 };
 

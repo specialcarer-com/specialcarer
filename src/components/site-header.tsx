@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function SiteHeader() {
@@ -19,11 +20,15 @@ export default async function SiteHeader() {
 
   return (
     <header className="px-6 py-5 flex items-center justify-between border-b border-slate-100 bg-white">
-      <Link href="/" className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-brand flex items-center justify-center text-white font-bold">
-          S
-        </div>
-        <span className="font-semibold text-lg">SpecialCarer</span>
+      <Link href="/" className="flex items-center" aria-label="SpecialCarer — home">
+        <Image
+          src="/brand/logo.svg"
+          alt="SpecialCarer"
+          width={161}
+          height={101}
+          priority
+          className="h-10 w-auto"
+        />
       </Link>
       <nav className="hidden md:flex items-center gap-6 text-sm text-slate-600">
         <Link href="/how-it-works" className="hover:text-slate-900">

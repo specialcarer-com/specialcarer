@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import SiteFooter from "./site-footer";
+import Image from "next/image";
 
 /**
  * Shared layout for /privacy, /terms, /cookies.
@@ -33,10 +34,7 @@ export default function LegalLayout({
       <header className="px-6 py-5 border-b border-slate-100">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-brand flex items-center justify-center text-white font-bold">
-              S
-            </div>
-            <span className="font-semibold text-lg">SpecialCarer</span>
+            <Image src="/brand/logo.svg" alt="SpecialCarer" width={161} height={101} className="h-9 w-auto" priority />
           </Link>
           <nav className="flex items-center gap-5 text-sm text-slate-600">
             <Link href="/privacy" className="hover:text-slate-900">

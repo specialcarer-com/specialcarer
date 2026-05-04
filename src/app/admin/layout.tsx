@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/auth";
 
@@ -31,11 +32,8 @@ export default async function AdminLayout({
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/admin" className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-brand flex items-center justify-center text-white font-bold text-xs">
-                S
-              </div>
-              <span className="font-semibold text-slate-900">SpecialCarer</span>
+            <Link href="/admin" className="flex items-center" aria-label="SpecialCarer Admin">
+              <Image src="/brand/logo.svg" alt="SpecialCarer" width={161} height={101} className="h-8 w-auto" priority />
             </Link>
             <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-100 text-[11px] font-semibold uppercase tracking-wider">
               Admin
