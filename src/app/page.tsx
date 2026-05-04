@@ -773,30 +773,34 @@ export default async function Home() {
       </section>
 
       {/* Download the App */}
-      <section className="px-6 py-20 bg-white">
-        <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+      <section className="relative overflow-hidden px-6 py-20 bg-gradient-to-br from-brand-700 via-brand-600 to-brand-500 text-white">
+        {/* Decorative blobs */}
+        <div aria-hidden="true" className="sc-blob-drift-a pointer-events-none absolute -top-24 -left-16 w-72 h-72 rounded-full bg-white/5 blur-3xl" />
+        <div aria-hidden="true" className="sc-blob-drift-b pointer-events-none absolute -bottom-24 -right-16 w-80 h-80 rounded-full bg-white/5 blur-3xl" />
+
+        <div className="relative max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Copy + store badges */}
           <div className="order-2 lg:order-1">
             {/* Status pill — flips automatically when NEXT_PUBLIC_TESTFLIGHT_URL is set */}
             {process.env.NEXT_PUBLIC_TESTFLIGHT_URL ? (
-              <span className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-700 ring-1 ring-brand-200">
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/15 backdrop-blur px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white ring-1 ring-white/30">
                 <span className="relative flex h-2 w-2" aria-hidden="true">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-500 opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-600" />
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
                 </span>
                 Beta is live
               </span>
             ) : (
-              <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-slate-600 ring-1 ring-slate-200">
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/15 backdrop-blur px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white ring-1 ring-white/30">
                 Coming soon
               </span>
             )}
 
-            <h2 className="mt-4 text-3xl sm:text-4xl font-semibold tracking-tight text-slate-900">
+            <h2 className="mt-4 text-3xl sm:text-4xl font-semibold tracking-tight text-white">
               Download the App
             </h2>
-            <p className="mt-5 text-lg text-slate-700 leading-relaxed">
-              <span className="font-semibold text-slate-900">
+            <p className="mt-5 text-lg text-white/90 leading-relaxed">
+              <span className="font-semibold text-white">
                 Special Carer connects you with trusted, verified caregivers
                 who offer reliable and heartfelt support.
               </span>{" "}
@@ -898,22 +902,22 @@ export default async function Home() {
 
             {/* Footer microcopy — adapts to launch state */}
             {process.env.NEXT_PUBLIC_TESTFLIGHT_URL ? (
-              <p className="mt-5 text-sm text-slate-500">
+              <p className="mt-5 text-sm text-white/80">
                 The iOS beta is open now via TestFlight. On Android?{" "}
                 <Link
                   href="/contact?subject=app-beta"
-                  className="text-brand-700 hover:underline font-medium"
+                  className="text-white underline-offset-2 hover:underline font-medium"
                 >
                   Get notified when the Android beta opens
                 </Link>
                 .
               </p>
             ) : (
-              <p className="mt-5 text-sm text-slate-500">
+              <p className="mt-5 text-sm text-white/80">
                 Want to be among the first to try the app?{" "}
                 <Link
                   href="/contact?subject=app-beta"
-                  className="text-brand-700 hover:underline font-medium"
+                  className="text-white underline-offset-2 hover:underline font-medium"
                 >
                   Join the beta
                 </Link>
@@ -925,19 +929,93 @@ export default async function Home() {
           {/* Phone mockup */}
           <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
             <div className="relative">
-              {/* Soft brand backdrop */}
+              {/* Soft halo backdrop */}
               <div
                 aria-hidden="true"
-                className="absolute -inset-8 rounded-[3rem] bg-gradient-to-br from-brand-50 via-brand-100/60 to-white blur-2xl"
+                className="absolute -inset-8 rounded-[3rem] bg-gradient-to-br from-white/15 via-white/5 to-transparent blur-2xl"
               />
               <div
                 aria-hidden="true"
-                className="sc-blob-drift-a absolute -top-6 -right-6 w-24 h-24 rounded-full bg-brand-500/15 blur-xl"
+                className="sc-blob-drift-a absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/15 blur-xl"
               />
               <div
                 aria-hidden="true"
-                className="sc-blob-drift-b absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-brand-700/10 blur-xl"
+                className="sc-blob-drift-b absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-white/10 blur-xl"
               />
+
+              {/* People portrait — carer (top-left of phone) */}
+              <div
+                aria-hidden="true"
+                className="sc-people-bob hidden sm:flex absolute -top-4 -left-10 lg:-left-16 z-20 items-center gap-2 rounded-2xl bg-white/95 backdrop-blur p-2 pr-3 shadow-xl ring-1 ring-white/40"
+              >
+                <div className="h-12 w-12 rounded-xl overflow-hidden ring-2 ring-brand-100">
+                  <svg viewBox="0 0 64 64" className="h-full w-full">
+                    <defs>
+                      <linearGradient id="sc-people-bg-1" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#C2E5E4" />
+                        <stop offset="100%" stopColor="#0E7C7B" />
+                      </linearGradient>
+                    </defs>
+                    <rect width="64" height="64" fill="url(#sc-people-bg-1)" />
+                    {/* shoulders */}
+                    <path d="M6 60c2-10 12-16 26-16s24 6 26 16v4H6z" fill="#FFFFFF" />
+                    {/* neck */}
+                    <rect x="27" y="36" width="10" height="10" rx="3" fill="#F4D0B0" />
+                    {/* face */}
+                    <circle cx="32" cy="28" r="11" fill="#F7DCC0" />
+                    {/* hair */}
+                    <path d="M21 24c0-7 5-12 11-12s11 5 11 12c0 2-1 3-1 3-1-3-3-5-5-6-3-1-7-1-10 1-3 1-5 3-5 5 0-1-1-2-1-3z" fill="#3F2A1D" />
+                    {/* smile */}
+                    <path d="M28 31c1 1.5 2.5 2.5 4 2.5s3-1 4-2.5" stroke="#7A4A2B" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+                    {/* eyes */}
+                    <circle cx="28.5" cy="27" r="1" fill="#3F2A1D" />
+                    <circle cx="35.5" cy="27" r="1" fill="#3F2A1D" />
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-brand-700">
+                    Verified carer
+                  </div>
+                  <div className="text-xs font-semibold text-slate-900">
+                    Aisha · DBS ✓
+                  </div>
+                </div>
+              </div>
+
+              {/* People portrait — family (bottom-right of phone) */}
+              <div
+                aria-hidden="true"
+                className="sc-people-bob-delayed hidden sm:flex absolute -bottom-4 -right-10 lg:-right-16 z-20 items-center gap-2 rounded-2xl bg-white/95 backdrop-blur p-2 pr-3 shadow-xl ring-1 ring-white/40"
+              >
+                <div className="h-12 w-12 rounded-xl overflow-hidden ring-2 ring-brand-100">
+                  <svg viewBox="0 0 64 64" className="h-full w-full">
+                    <defs>
+                      <linearGradient id="sc-people-bg-2" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#FFE2C7" />
+                        <stop offset="100%" stopColor="#F4A261" />
+                      </linearGradient>
+                    </defs>
+                    <rect width="64" height="64" fill="url(#sc-people-bg-2)" />
+                    <path d="M6 60c2-10 12-16 26-16s24 6 26 16v4H6z" fill="#FFFFFF" />
+                    <rect x="27" y="36" width="10" height="10" rx="3" fill="#E0B695" />
+                    <circle cx="32" cy="28" r="11" fill="#E8C3A0" />
+                    {/* short hair */}
+                    <path d="M22 23c1-6 5-10 10-10s10 4 10 10c0 1 0 2-1 3-1-1-3-3-5-3-3-0-7 0-10 1-3 1-4 2-4 2 0-1 0-2 0-3z" fill="#2A1E14" />
+                    {/* smile */}
+                    <path d="M28 31c1 1.5 2.5 2.5 4 2.5s3-1 4-2.5" stroke="#6A4022" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+                    <circle cx="28.5" cy="27" r="1" fill="#2A1E14" />
+                    <circle cx="35.5" cy="27" r="1" fill="#2A1E14" />
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-brand-700">
+                    Family
+                  </div>
+                  <div className="text-xs font-semibold text-slate-900">
+                    “Booked in 2 mins.”
+                  </div>
+                </div>
+              </div>
 
               {/* Phone frame — gentle floating motion */}
               <div className="sc-phone-float relative w-[260px] sm:w-[300px] aspect-[9/19] rounded-[3rem] bg-slate-900 p-3 shadow-2xl shadow-brand-900/20 ring-1 ring-slate-800">

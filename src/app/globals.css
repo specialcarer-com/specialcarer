@@ -43,7 +43,8 @@ html, body { height: 100%; }
 .sc-card-rise      { animation: sc-card-rise 0.6s ease-out both; }
 .sc-blob-drift-a   { animation: sc-blob-drift 9s ease-in-out infinite; }
 .sc-blob-drift-b   { animation: sc-blob-drift 11s ease-in-out infinite reverse; }
-.sc-people-bob     { animation: sc-bob 5s ease-in-out infinite; }
+.sc-people-bob         { animation: sc-bob 5s ease-in-out infinite; }
+.sc-people-bob-delayed { animation: sc-bob 5s ease-in-out infinite; animation-delay: -2.5s; }
 .sc-cta-shimmer {
   background-image: linear-gradient(90deg, #039EA0 0%, #0BB7B9 50%, #039EA0 100%);
   background-size: 200% 100%;
@@ -57,7 +58,8 @@ html, body { height: 100%; }
   .sc-blob-drift-a,
   .sc-blob-drift-b,
   .sc-cta-shimmer,
-  .sc-people-bob {
+  .sc-people-bob,
+  .sc-people-bob-delayed {
     animation: none !important;
   }
   .sc-cta-shimmer { background-image: none; background-color: #039EA0; }
