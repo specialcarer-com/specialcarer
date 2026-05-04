@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SpecialCarer — Info.plist (Capacitor iOS)
+  ==========================================
+  Bundle ID:  com.allcare4ugroup.specialcarer
+  Display:    Special Carer
+  Owner:      All Care 4 U Group Ltd
+
+  This is the full Info.plist that Capacitor would generate, with all
+  required usage-description strings added. If your existing Info.plist
+  already contains some of these keys, MERGE the *UsageDescription keys
+  below — do not overwrite the whole file.
+
+  Required usage strings (Apple will reject the build without these
+  if the matching capability is requested by any installed plugin):
+    - NSLocationWhenInUseUsageDescription      (Geolocation plugin)
+    - NSLocationAlwaysAndWhenInUseUsageDescription (background tracking)
+    - NSCameraUsageDescription                 (ID document upload)
+    - NSPhotoLibraryUsageDescription           (profile photo selection)
+    - NSPhotoLibraryAddUsageDescription        (saving booking receipts)
+    - NSContactsUsageDescription               (refer-a-friend)
+    - NSFaceIDUsageDescription                 (biometric login)
+    - NSMicrophoneUsageDescription             (in-app SOS voice notes)
+    - NSUserTrackingUsageDescription           (only if ATT is ever used)
+-->
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en_GB</string>
+    <key>CFBundleDisplayName</key>
+    <string>Special Carer</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>$(PRODUCT_NAME)</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>$(MARKETING_VERSION)</string>
+    <key>CFBundleVersion</key>
+    <string>$(CURRENT_PROJECT_VERSION)</string>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+
+    <!-- ===== Usage descriptions (Apple-required) ===== -->
+
+    <!-- Location: live shift tracking via Mapbox during active bookings -->
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Special Carer uses your location to find nearby caregivers and to share live shift updates with the family during an active booking.</string>
+
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>Special Carer needs background location access so the family can see live shift progress even if the carer locks their phone during a booking. Tracking only runs while a booking is active and stops when the shift ends.</string>
+
+    <!-- Legacy key kept for older OS levels (still required by the App Review process) -->
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>Special Carer needs background location access so the family can see live shift progress while a booking is active.</string>
+
+    <!-- Camera: ID document capture and profile photo -->
+    <key>NSCameraUsageDescription</key>
+    <string>Special Carer uses the camera to capture your ID document for identity verification and to take a profile photo during onboarding.</string>
+
+    <!-- Photo library: choose existing profile photos or upload ID -->
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Special Carer accesses your photo library so you can choose a profile picture or upload an existing photo of your ID document.</string>
+
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Special Carer saves booking receipts and shift summaries to your photo library when you tap Save.</string>
+
+    <!-- Contacts: optional, used only when the user invites a friend -->
+    <key>NSContactsUsageDescription</key>
+    <string>Special Carer accesses your contacts only when you choose to invite friends or family. Contact data is never uploaded or shared without your action.</string>
+
+    <!-- Face ID / biometric login -->
+    <key>NSFaceIDUsageDescription</key>
+    <string>Special Carer uses Face ID to keep your account secure without typing a password each time.</string>
+
+    <!-- Microphone: in-booking voice notes / SOS -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Special Carer uses the microphone if you record a voice note during an active booking or trigger an SOS audio alert.</string>
+
+    <!-- App tracking transparency placeholder. We do NOT track across apps,
+         but include a clear string in case any analytics SDK requests ATT
+         in the future. See PrivacyInfo.xcprivacy for the source of truth. -->
+    <key>NSUserTrackingUsageDescription</key>
+    <string>Special Carer does not track you across apps or websites. This permission would only be requested if a future feature needs it, and you can decline at any time.</string>
+
+    <!-- ===== App transport / scheme ===== -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <false/>
+    </dict>
+
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>com.allcare4ugroup.specialcarer</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>specialcarer</string>
+            </array>
+        </dict>
+    </array>
+
+    <!-- ===== Background modes (Push + Background Fetch + Location) ===== -->
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>remote-notification</string>
+        <string>fetch</string>
+        <string>location</string>
+    </array>
+
+    <!-- ===== Standard launch / orientation ===== -->
+    <key>UILaunchStoryboardName</key>
+    <string>LaunchScreen</string>
+    <key>UIMainStoryboardFile</key>
+    <string>Main</string>
+    <key>UIRequiredDeviceCapabilities</key>
+    <array>
+        <string>armv7</string>
+    </array>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+    </array>
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationPortraitUpsideDown</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+    <key>UIViewControllerBasedStatusBarAppearance</key>
+    <true/>
+</dict>
+</plist>
