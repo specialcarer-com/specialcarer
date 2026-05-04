@@ -19,7 +19,7 @@ export default async function SiteHeader() {
   }
 
   return (
-    <header className="px-6 py-4 flex items-center justify-between border-b border-slate-100 bg-white">
+    <header className="px-6 py-4 flex items-center justify-between bg-white">
       <Link href="/" className="flex items-center" aria-label="SpecialCarer — home">
         <Image
           src="/brand/logo.svg"
