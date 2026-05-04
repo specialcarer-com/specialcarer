@@ -166,15 +166,41 @@ workflows:
 
       - name: Fetch (or create) signing certificate + provisioning profile
         script: |
-          # First-time builds need --create so Codemagic generates a fresh
-          # iOS Distribution cert + App Store provisioning profile via the
-          # App Store Connect API. Subsequent builds reuse what's there.
+          set -euxo pipefail
+
+          # Codemagic CLI requires a private key on disk to either:
+          #   (a) install an existing cert that uses this key, or
+          #   (b) generate a brand-new iOS Distribution cert + key pair
+          #       via the App Store Connect API.
+          #
+          # On the first build no key exists yet, so we generate a fresh
+          # 2048-bit RSA key here and pass it to fetch-signing-files. The
+          # CLI then either reuses an existing cert that matches this key
+          # or (with --create) provisions a new cert tied to it. The key
+          # lives only inside this build's temp dir — we don't persist it.
+          CERT_KEY_PATH="$CM_BUILD_DIR/ios_distribution_private_key.pem"
+          ssh-keygen -t rsa -b 2048 -m PEM -f "$CERT_KEY_PATH" -q -N ""
+          # ssh-keygen writes an OpenSSH-format private key by default in
+          # newer versions; force PKCS#1/PEM so app-store-connect can read it.
+          openssl rsa -in "$CERT_KEY_PATH" -out "$CERT_KEY_PATH.pem" 2>/dev/null || cp "$CERT_KEY_PATH" "$CERT_KEY_PATH.pem"
+          mv "$CERT_KEY_PATH.pem" "$CERT_KEY_PATH"
+
+          # Initialize a clean keychain BEFORE fetching certs, so the CLI
+          # can install any matching cert it finds in addition to creating
+          # new ones.
+          keychain initialize
+
+          # Fetch (or create) the iOS Distribution cert + App Store
+          # provisioning profile. --create makes the CLI provision new
+          # signing assets when no usable ones are found in App Store
+          # Connect for this bundle id.
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
+            --certificate-key-path "$CERT_KEY_PATH" \
             --create
 
-          # Install the freshly-fetched cert into the temporary keychain.
-          keychain initialize
+          # Install the freshly-fetched cert into the temp keychain so
+          # xcodebuild can use it for code signing.
           keychain add-certificates
 
       - name: Build, archive, and export .ipa
