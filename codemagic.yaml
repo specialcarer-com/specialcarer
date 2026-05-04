@@ -65,11 +65,22 @@ workflows:
 
       - name: Generate iOS native project (idempotent)
         script: |
-          if [ ! -d "ios" ]; then
-            echo "First run — generating iOS project via Capacitor CLI"
-            npx cap add ios
+          set -euxo pipefail
+          # `cap add ios` is idempotent only if a *valid* iOS project exists.
+          # If `ios/App/Podfile` is missing, the previous run was incomplete
+          # and we must regenerate from scratch.
+          if [ -f "ios/App/Podfile" ]; then
+            echo "✅ iOS project already exists with Podfile — skipping cap add"
           else
-            echo "iOS project already exists — skipping cap add"
+            echo "⚠️  No ios/App/Podfile — generating fresh iOS project via Capacitor CLI"
+            rm -rf ios
+            # cap add ios reads webDir from capacitor.config — make sure it exists
+            mkdir -p mobile/web
+            [ -f mobile/web/index.html ] || echo '<html><body>SpecialCarer offline fallback</body></html>' > mobile/web/index.html
+            npx --yes cap add ios
+            echo "--- Verifying ios/App/Podfile was created ---"
+            ls -la ios/App/
+            test -f ios/App/Podfile || { echo "❌ cap add ios completed but Podfile is missing"; exit 1; }
           fi
 
       - name: Generate app icons + splash from source assets
@@ -130,6 +141,9 @@ workflows:
 
       - name: Install CocoaPods dependencies
         script: |
+          set -euxo pipefail
+          ls -la ios/App/
+          test -f ios/App/Podfile || { echo "❌ No Podfile in ios/App/ — cap add ios likely failed"; exit 1; }
           cd ios/App
           pod install --repo-update
 
