@@ -45,6 +45,17 @@ html, body { height: 100%; }
 .sc-blob-drift-b   { animation: sc-blob-drift 11s ease-in-out infinite reverse; }
 .sc-people-bob         { animation: sc-bob 5s ease-in-out infinite; }
 .sc-people-bob-delayed { animation: sc-bob 5s ease-in-out infinite; animation-delay: -2.5s; }
+
+@keyframes sc-tilt-left {
+  0%, 100% { transform: rotate(-14deg) translateY(0); }
+  50%      { transform: rotate(-13deg) translateY(-6px); }
+}
+@keyframes sc-tilt-right {
+  0%, 100% { transform: rotate(8deg) translateY(0); }
+  50%      { transform: rotate(7deg) translateY(-8px); }
+}
+.sc-phone-tilt-left  { animation: sc-tilt-left 7s ease-in-out infinite; }
+.sc-phone-tilt-right { animation: sc-tilt-right 7s ease-in-out infinite; animation-delay: -1.5s; }
 .sc-cta-shimmer {
   background-image: linear-gradient(90deg, #039EA0 0%, #0BB7B9 50%, #039EA0 100%);
   background-size: 200% 100%;
@@ -59,8 +70,12 @@ html, body { height: 100%; }
   .sc-blob-drift-b,
   .sc-cta-shimmer,
   .sc-people-bob,
-  .sc-people-bob-delayed {
+  .sc-people-bob-delayed,
+  .sc-phone-tilt-left,
+  .sc-phone-tilt-right {
     animation: none !important;
   }
+  .sc-phone-tilt-left  { transform: rotate(-14deg); }
+  .sc-phone-tilt-right { transform: rotate(8deg); }
   .sc-cta-shimmer { background-image: none; background-color: #039EA0; }
 }

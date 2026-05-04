@@ -927,155 +927,226 @@ export default async function Home() {
             )}
           </div>
 
-          {/* Phone mockup */}
+          {/* Phone mockups — two angled iPhones inside a teal blob */}
           <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
-            <div className="relative">
-              {/* Soft halo backdrop */}
+            <div className="relative w-full max-w-[520px] aspect-[5/4]">
+              {/* Soft teal blob */}
               <div
                 aria-hidden="true"
-                className="absolute -inset-8 rounded-[3rem] bg-gradient-to-br from-white/15 via-white/5 to-transparent blur-2xl"
+                className="absolute inset-[8%] rounded-[40%] bg-white/15 blur-2xl"
               />
               <div
                 aria-hidden="true"
-                className="sc-blob-drift-a absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/15 blur-xl"
-              />
-              <div
-                aria-hidden="true"
-                className="sc-blob-drift-b absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-white/10 blur-xl"
+                className="absolute inset-[12%] rounded-[40%] bg-white/10"
               />
 
-              {/* People portrait — carer (top-left of phone) */}
-              <div
-                className="sc-people-bob hidden sm:flex absolute -top-4 -left-10 lg:-left-16 z-20 items-center gap-2 rounded-2xl bg-white/95 backdrop-blur p-2 pr-3 shadow-xl ring-1 ring-white/40"
-              >
-                <div className="h-12 w-12 rounded-xl overflow-hidden ring-2 ring-brand-100">
-                  <Image
-                    src="/brand/people/carer-portrait.png"
-                    alt="Verified Special Carer caregiver"
-                    width={96}
-                    height={96}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <div className="text-left">
-                  <div className="text-[10px] font-semibold uppercase tracking-wider text-brand-700">
-                    Verified carer
-                  </div>
-                  <div className="text-xs font-semibold text-slate-900">
-                    Aisha · DBS ✓
+              {/* Phone 1 — back, tilted left, splash screen */}
+              <div className="sc-phone-tilt-left absolute left-[2%] top-[6%] w-[44%] aspect-[9/19] rotate-[-14deg] z-10 drop-shadow-2xl">
+                <div className="relative h-full w-full rounded-[2.4rem] bg-slate-900 p-[3px] ring-1 ring-slate-800">
+                  <div className="relative h-full w-full rounded-[2.2rem] overflow-hidden bg-slate-900">
+                    {/* Status bar */}
+                    <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 pt-1.5 text-[8px] font-semibold text-white">
+                      <span>13:36</span>
+                    </div>
+                    {/* Notch */}
+                    <div
+                      aria-hidden="true"
+                      className="absolute top-1 left-1/2 -translate-x-1/2 w-12 h-3 rounded-full bg-slate-950 z-30"
+                    />
+                    {/* Group photo */}
+                    <Image
+                      src="/brand/people/team-splash.png"
+                      alt="Special Carer team"
+                      fill
+                      sizes="(max-width: 768px) 50vw, 250px"
+                      className="object-cover"
+                      priority
+                    />
+                    {/* Bottom dark gradient with copy */}
+                    <div className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-slate-900 via-slate-900/90 to-transparent" />
+                    <div className="absolute inset-x-0 bottom-0 px-4 pb-6 z-20 text-white">
+                      <h4 className="text-[13px] font-semibold leading-tight">
+                        Let&apos;s Bring
+                        <br />
+                        Compassion to Life.
+                      </h4>
+                      <p className="mt-2 text-[8px] leading-snug text-white/85">
+                        Together, we can create a world where
+                        <br />
+                        no one feels forgotten, and everyone
+                        <br />
+                        feels valued.
+                        <br />
+                        <span className="italic">This is more than an app, it&apos;s a lifeline.</span>
+                      </p>
+                      <div className="mt-3 flex items-center gap-1" aria-hidden="true">
+                        <span className="h-1 w-1 rounded-full bg-white" />
+                        <span className="h-1 w-1 rounded-full bg-white/40" />
+                        <span className="h-1 w-1 rounded-full bg-white/40" />
+                      </div>
+                      <button className="mt-4 rounded-full bg-white/15 backdrop-blur px-3 py-1 text-[9px] font-semibold text-white ring-1 ring-white/30">
+                        Skip
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* People portrait — family (bottom-right of phone) */}
-              <div
-                className="sc-people-bob-delayed hidden sm:flex absolute -bottom-4 -right-10 lg:-right-16 z-20 items-center gap-2 rounded-2xl bg-white/95 backdrop-blur p-2 pr-3 shadow-xl ring-1 ring-white/40"
-              >
-                <div className="h-12 w-12 rounded-xl overflow-hidden ring-2 ring-brand-100">
-                  <Image
-                    src="/brand/people/family-portrait.png"
-                    alt="Special Carer family customer"
-                    width={96}
-                    height={96}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <div className="text-left">
-                  <div className="text-[10px] font-semibold uppercase tracking-wider text-brand-700">
-                    Family
-                  </div>
-                  <div className="text-xs font-semibold text-slate-900">
-                    “Booked in 2 mins.”
-                  </div>
-                </div>
-              </div>
+              {/* Phone 2 — front, tilted right, carer list screen */}
+              <div className="sc-phone-tilt-right absolute right-[2%] top-[2%] w-[50%] aspect-[9/19] rotate-[8deg] z-20 drop-shadow-2xl">
+                <div className="relative h-full w-full rounded-[2.6rem] bg-slate-900 p-[4px] ring-1 ring-slate-800">
+                  <div className="relative h-full w-full rounded-[2.4rem] overflow-hidden bg-slate-50">
+                    {/* Notch */}
+                    <div
+                      aria-hidden="true"
+                      className="absolute top-1.5 left-1/2 -translate-x-1/2 w-14 h-3.5 rounded-full bg-slate-900 z-30"
+                    />
+                    {/* App content */}
+                    <div className="px-3 pt-6 pb-2">
+                      {/* Top bar: avatar + name + cart */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-6 w-6 rounded-full overflow-hidden ring-1 ring-slate-200 bg-brand-100">
+                            <Image
+                              src="/brand/people/family-portrait.png"
+                              alt=""
+                              width={48}
+                              height={48}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          <div className="leading-tight">
+                            <div className="text-[6px] uppercase tracking-wider text-slate-500">Welcome</div>
+                            <div className="text-[9px] font-semibold text-slate-900">Rachel Green</div>
+                          </div>
+                        </div>
+                        <div className="h-5 w-5 rounded-full bg-slate-100 flex items-center justify-center" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" className="h-3 w-3 text-slate-700" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <circle cx="9" cy="20" r="1.5" />
+                            <circle cx="18" cy="20" r="1.5" />
+                            <path d="M3 4h2l3 11h11l2-7H6" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </div>
+                      </div>
 
-              {/* Phone frame — gentle floating motion */}
-              <div className="sc-phone-float relative w-[260px] sm:w-[300px] aspect-[9/19] rounded-[3rem] bg-slate-900 p-3 shadow-2xl shadow-brand-900/20 ring-1 ring-slate-800">
-                <div className="relative h-full w-full rounded-[2.4rem] overflow-hidden bg-white">
-                  {/* Status bar */}
-                  <div className="flex items-center justify-between px-6 pt-3 pb-2 text-[10px] font-semibold text-slate-700">
-                    <span>9:41</span>
-                    <div className="flex items-center gap-1">
-                      <span>●●●●</span>
-                    </div>
-                  </div>
-                  {/* Notch */}
-                  <div
-                    aria-hidden="true"
-                    className="absolute top-2 left-1/2 -translate-x-1/2 w-24 h-6 rounded-full bg-slate-900"
-                  />
+                      {/* Search */}
+                      <div className="mt-2.5 flex items-center gap-1.5">
+                        <div className="flex-1 flex items-center gap-1.5 rounded-md bg-white border border-slate-200 px-2 py-1.5">
+                          <svg viewBox="0 0 24 24" className="h-2.5 w-2.5 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <circle cx="11" cy="11" r="7" />
+                            <path d="M20 20l-3-3" strokeLinecap="round" />
+                          </svg>
+                          <span className="text-[7px] text-slate-400">Search Here...</span>
+                        </div>
+                        <div className="h-6 w-6 rounded-md bg-brand-500 flex items-center justify-center" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" className="h-3 w-3 text-white" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path d="M3 6h18M6 12h12M10 18h4" strokeLinecap="round" />
+                          </svg>
+                        </div>
+                      </div>
 
-                  {/* App content mock */}
-                  <div className="px-5 pt-6 pb-4">
-                    {/* Real SpecialCarer brand mark — full logo, centered, with breathing animation */}
-                    <div className="flex items-center justify-center">
-                      <Image
-                        src="/brand/logo.svg"
-                        alt="Special Carer"
-                        width={161}
-                        height={121}
-                        priority
-                        className="sc-logo-breathe h-12 w-auto"
-                      />
-                    </div>
-                    <h3 className="mt-4 text-base font-semibold text-slate-900 leading-snug text-center">
-                      Find a trusted carer near you
-                    </h3>
-                    <div className="mt-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                      <svg
-                        viewBox="0 0 24 24"
-                        className="w-4 h-4 text-slate-400"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        aria-hidden="true"
-                      >
-                        <circle cx="11" cy="11" r="7" />
-                        <path d="m21 21-4.3-4.3" />
-                      </svg>
-                      <span className="text-xs text-slate-500">
-                        Postcode or city
-                      </span>
+                      {/* Hero card */}
+                      <div className="mt-2.5 relative rounded-xl bg-brand-500 overflow-hidden h-[68px]">
+                        <div className="absolute inset-0 flex">
+                          <div className="flex-1 p-2 text-white">
+                            <h5 className="text-[8px] font-semibold leading-tight">
+                              Get high rated
+                              <br />
+                              Caregivers at
+                              <br />
+                              your Fingertip
+                            </h5>
+                            <button className="mt-1 rounded-full bg-white px-2 py-0.5 text-[6px] font-semibold text-brand-700">
+                              Get Started
+                            </button>
+                          </div>
+                          <div className="relative w-[55%]">
+                            <Image
+                              src="/brand/people/carer-with-child.png"
+                              alt=""
+                              fill
+                              sizes="120px"
+                              className="object-cover"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Section heading */}
+                      <div className="mt-2.5 text-[7px] font-semibold text-slate-900">
+                        Professionals
+                      </div>
+
+                      {/* Carer cards */}
+                      <div className="mt-1 space-y-1.5">
+                        {[0, 1, 2].map((i) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-1.5 rounded-md bg-white border border-slate-100 p-1.5"
+                          >
+                            <div className="h-7 w-7 rounded-md overflow-hidden bg-brand-100 shrink-0">
+                              <Image
+                                src="/brand/people/carer-portrait.png"
+                                alt=""
+                                width={56}
+                                height={56}
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <div className="text-[7px] font-semibold text-slate-900 truncate">
+                                  Rachel Green
+                                </div>
+                                <div className="flex items-center gap-0.5 text-[6px] text-slate-700">
+                                  4.6
+                                  <svg viewBox="0 0 24 24" className="h-1.5 w-1.5 text-amber-400" fill="currentColor">
+                                    <path d="M12 2l2.9 6.9L22 10l-5.5 4.8L18 22l-6-3.5L6 22l1.5-7.2L2 10l7.1-1.1z" />
+                                  </svg>
+                                </div>
+                              </div>
+                              <div className="text-[5px] text-slate-500 truncate">
+                                ⌂ 6391 Elgin St, Celina
+                              </div>
+                              <div className="text-[5px] text-slate-500">6+ years</div>
+                              <div className="mt-0.5 flex items-center justify-between">
+                                <div className="text-[7px] font-semibold text-slate-900">
+                                  $25
+                                </div>
+                                <button className="rounded-md bg-brand-500 px-1.5 py-0.5 text-[6px] font-semibold text-white">
+                                  Book Slot
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
-                    {/* Carer cards — staggered rise */}
-                    <div className="mt-4 space-y-2">
+                    {/* Bottom tab bar */}
+                    <div className="absolute bottom-0 inset-x-0 bg-white border-t border-slate-200 flex items-center justify-around py-1.5 z-20">
                       {[
-                        { n: "Aisha R.", t: "Childcare · Verified", r: "4.9" },
-                        { n: "Steve G.", t: "Elderly care · DBS", r: "4.8" },
-                        { n: "Maria K.", t: "Special needs", r: "5.0" },
-                      ].map((c, i) => (
+                        { label: "Home", active: true },
+                        { label: "Bookings" },
+                        { label: "Chat" },
+                        { label: "Review" },
+                        { label: "Profile" },
+                      ].map((t) => (
                         <div
-                          key={c.n}
-                          className="sc-card-rise flex items-center gap-3 rounded-xl border border-slate-100 bg-white p-2.5 shadow-sm"
-                          style={{ animationDelay: `${0.2 + i * 0.18}s` }}
+                          key={t.label}
+                          className={`flex flex-col items-center gap-0.5 ${t.active ? "text-brand-600" : "text-slate-400"}`}
                         >
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-100 to-brand-300" />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-xs font-semibold text-slate-900 truncate">
-                              {c.n}
-                            </div>
-                            <div className="text-[10px] text-slate-500 truncate">
-                              {c.t}
-                            </div>
-                          </div>
-                          <div className="text-[10px] font-semibold text-amber-600">
-                            ★ {c.r}
-                          </div>
+                          <div className="h-2 w-2 rounded-sm bg-current opacity-80" aria-hidden="true" />
+                          <span className="text-[5px] font-medium">{t.label}</span>
                         </div>
                       ))}
                     </div>
-
-                    {/* CTA — subtle teal shimmer */}
-                    <button className="sc-cta-shimmer mt-4 w-full rounded-xl text-white text-xs font-semibold py-2.5 shadow-sm">
-                      Book a visit
-                    </button>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+
         </div>
       </section>
 
