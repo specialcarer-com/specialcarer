@@ -40,3 +40,18 @@ next-env.d.ts
 
 # Video production source files (final MP4 lives in public/video)
 /video/
+
+# iOS / Apple Push Notification keys — NEVER commit
+*.p8
+AuthKey_*.p8
+/keys/
+/secrets/
+
+# Capacitor / native build artefacts
+/ios/App/Pods/
+/ios/App/build/
+/ios/DerivedData/
+/android/.gradle/
+/android/app/build/
+/android/build/
+/android/local.properties

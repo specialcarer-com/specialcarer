@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>Special Carer</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: #ffffff;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        color: #0f172a;
+        -webkit-font-smoothing: antialiased;
+      }
+      .wrap {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 32px;
+        box-sizing: border-box;
+      }
+      .logo {
+        width: 96px;
+        height: 96px;
+        border-radius: 24px;
+        background: #039EA0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 24px;
+        box-shadow: 0 10px 30px rgba(3, 158, 160, 0.25);
+      }
+      .logo svg { width: 56px; height: 56px; color: #fff; }
+      h1 { font-size: 22px; font-weight: 700; margin: 0 0 8px; }
+      p  { font-size: 15px; color: #475569; margin: 0 0 24px; max-width: 320px; }
+      button {
+        background: #039EA0;
+        color: white;
+        border: 0;
+        border-radius: 12px;
+        padding: 14px 24px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+      button:active { transform: scale(0.98); }
+      .small { font-size: 12px; color: #94a3b8; margin-top: 24px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+        </svg>
+      </div>
+      <h1>Special Carer</h1>
+      <p>We can't reach the network right now. Please check your connection and try again.</p>
+      <button onclick="location.href='https://www.specialcarer.com'">Try again</button>
+      <p class="small">All Care 4 U Group Ltd</p>
+    </div>
+  </body>
+</html>
