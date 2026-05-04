@@ -45,7 +45,7 @@ workflows:
         XCODE_SCHEME: "App"
         APP_STORE_APP_ID: 6766242271
         BUNDLE_ID: "com.allcare4ugroup.specialcarer"
-      node: 20
+      node: 22
       xcode: latest
       cocoapods: default
 
