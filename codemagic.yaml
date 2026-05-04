@@ -41,13 +41,14 @@ workflows:
       # explicitly inside scripts, which both creates the profile if
       # missing and reuses it on subsequent runs.
       vars:
-        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        # Capacitor 8 generates an SPM-based iOS project (no .xcworkspace,
+        # no Podfile). The build target is the .xcodeproj directly.
+        XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
         APP_STORE_APP_ID: 6766242271
         BUNDLE_ID: "com.allcare4ugroup.specialcarer"
       node: 22
       xcode: latest
-      cocoapods: default
 
     triggering:
       events:
@@ -66,21 +67,22 @@ workflows:
       - name: Generate iOS native project (idempotent)
         script: |
           set -euxo pipefail
-          # `cap add ios` is idempotent only if a *valid* iOS project exists.
-          # If `ios/App/Podfile` is missing, the previous run was incomplete
-          # and we must regenerate from scratch.
-          if [ -f "ios/App/Podfile" ]; then
-            echo "✅ iOS project already exists with Podfile — skipping cap add"
+          # Capacitor 8 + SPM plugins generates ios/App/App.xcodeproj and
+          # ios/App/CapApp-SPM/Package.swift instead of a Podfile.
+          # `cap add ios` is idempotent only if a *valid* iOS project exists —
+          # treat 'valid' as 'App.xcodeproj is present'.
+          if [ -d "ios/App/App.xcodeproj" ]; then
+            echo "✅ iOS project already exists — skipping cap add"
           else
-            echo "⚠️  No ios/App/Podfile — generating fresh iOS project via Capacitor CLI"
+            echo "⚠️  No ios/App/App.xcodeproj — generating fresh iOS project via Capacitor CLI"
             rm -rf ios
             # cap add ios reads webDir from capacitor.config — make sure it exists
             mkdir -p mobile/web
             [ -f mobile/web/index.html ] || echo '<html><body>SpecialCarer offline fallback</body></html>' > mobile/web/index.html
             npx --yes cap add ios
-            echo "--- Verifying ios/App/Podfile was created ---"
+            echo "--- Verifying ios/App was created ---"
             ls -la ios/App/
-            test -f ios/App/Podfile || { echo "❌ cap add ios completed but Podfile is missing"; exit 1; }
+            test -d ios/App/App.xcodeproj || { echo "❌ cap add ios completed but App.xcodeproj is missing"; exit 1; }
           fi
 
       - name: Generate app icons + splash from source assets
@@ -139,16 +141,24 @@ workflows:
         script: |
           npx cap sync ios
 
-      - name: Install CocoaPods dependencies
+      - name: Install iOS dependencies (CocoaPods or SPM)
         script: |
           set -euxo pipefail
           ls -la ios/App/
-          test -f ios/App/Podfile || { echo "❌ No Podfile in ios/App/ — cap add ios likely failed"; exit 1; }
-          cd ios/App
-          pod install --repo-update
+          if [ -f "ios/App/Podfile" ]; then
+            echo "📦 Podfile detected — running CocoaPods"
+            cd ios/App
+            pod install --repo-update
+          elif [ -f "ios/App/CapApp-SPM/Package.swift" ]; then
+            echo "📦 SPM Package.swift detected — Xcode will resolve packages during the build step"
+          else
+            echo "❌ Neither Podfile nor Package.swift found in ios/App — iOS project is malformed"
+            exit 1
+          fi
 
       - name: Set build number to Codemagic build sequence
         script: |
+          set -euxo pipefail
           cd ios/App
           # Marketing version stays as defined in the Xcode project (1.0).
           # Build number = monotonically increasing CI build counter.
@@ -169,9 +179,11 @@ workflows:
 
       - name: Build, archive, and export .ipa
         script: |
+          set -euxo pipefail
           xcode-project use-profiles
+          # Capacitor 8 SPM project has no .xcworkspace — build the .xcodeproj.
           xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
+            --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
 
     artifacts:
