@@ -22,7 +22,7 @@ const config: CapacitorConfig = {
 
   server: {
     // Live web app — Capacitor loads this URL inside the native WebView.
-    url: "https://www.specialcarer.com",
+    url: "https://www.specialcarer.com/m",
     // Allow https everywhere; reject mixed content.
     androidScheme: "https",
     iosScheme: "https",

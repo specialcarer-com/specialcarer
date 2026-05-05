@@ -1,0 +1,424 @@
+/**
+ * Stand-in data for the mobile app.
+ *
+ * v1 ships with a static catalog so reviewers can demo the full app
+ * flow without depending on live Supabase rows. As real /api routes
+ * land, individual screens swap from `MOCK` → `fetch` one at a time.
+ */
+
+export type Caregiver = {
+  id: string;
+  name: string;
+  photo: string;
+  city: string;
+  experienceYears: number;
+  rating: number;
+  reviewCount: number;
+  hourly: { gbp: number; usd: number };
+  services: ("child" | "elderly" | "special" | "postnatal")[];
+  languages: string[];
+  about: string;
+  certifications: { title: string; issuedAt: string }[];
+  availability: { day: string; slots: string[] }[];
+  reviews: {
+    id: string;
+    author: string;
+    avatar: string;
+    rating: number;
+    when: string;
+    service: "Child Care" | "Elderly Care" | "Postnatal" | "Special-needs";
+    text: string;
+  }[];
+};
+
+const STOCK = [
+  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400",
+  "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400",
+  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400",
+  "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400",
+  "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400",
+  "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=400",
+  "https://images.unsplash.com/photo-1607746882042-944635dfe10e?w=400",
+];
+
+const SAMPLE_AVAIL = [
+  { day: "Monday", slots: ["10:00 AM - 12:00 PM", "3:00 PM - 6:00 PM"] },
+  { day: "Tuesday", slots: ["10:00 AM - 12:00 PM", "3:00 PM - 6:00 PM"] },
+  { day: "Wednesday", slots: ["9:00 AM - 12:00 PM", "2:00 PM - 5:00 PM"] },
+  { day: "Thursday", slots: ["10:00 AM - 12:00 PM"] },
+  { day: "Friday", slots: ["10:00 AM - 12:00 PM", "3:00 PM - 6:00 PM"] },
+  { day: "Saturday", slots: ["10:00 AM - 12:00 PM"] },
+];
+
+export const CAREGIVERS: Caregiver[] = [
+  {
+    id: "carer_aisha",
+    name: "Aisha Patel",
+    photo: STOCK[0],
+    city: "Brooklyn, NY",
+    experienceYears: 6,
+    rating: 4.8,
+    reviewCount: 142,
+    hourly: { gbp: 22, usd: 29 },
+    services: ["child", "elderly", "special"],
+    languages: ["English", "Hindi", "Bengali"],
+    about:
+      "Compassionate, NEBOSH-trained caregiver with 6+ years supporting families across childcare and adult care. Specialised in dementia support and bilingual children. CRB & DBS cleared, first-aid certified.",
+    certifications: [
+      { title: "DBS Enhanced", issuedAt: "16 Apr 2024" },
+      { title: "First Aid (Pediatric)", issuedAt: "02 Jan 2025" },
+      { title: "Dementia Care Level 3", issuedAt: "11 Sep 2024" },
+    ],
+    availability: SAMPLE_AVAIL,
+    reviews: [
+      {
+        id: "r1",
+        author: "Bessie Cooper",
+        avatar: STOCK[1],
+        rating: 5,
+        when: "14 Apr 25",
+        service: "Child Care",
+        text: "She did an amazing job — she's very creative, detailed and easy to work with. Our boys adored her.",
+      },
+      {
+        id: "r2",
+        author: "Marvin McKinney",
+        avatar: STOCK[2],
+        rating: 5,
+        when: "02 Mar 25",
+        service: "Elderly Care",
+        text: "Aisha treated my dad with so much patience. Punctual every visit and kept us informed.",
+      },
+      {
+        id: "r3",
+        author: "Sara Lin",
+        avatar: STOCK[3],
+        rating: 4,
+        when: "10 Feb 25",
+        service: "Child Care",
+        text: "Lovely person. Would book again — very organised with mealtimes and the kids loved her.",
+      },
+    ],
+  },
+  {
+    id: "carer_rachel",
+    name: "Rachel Green",
+    photo: STOCK[1],
+    city: "Manchester, UK",
+    experienceYears: 8,
+    rating: 4.9,
+    reviewCount: 218,
+    hourly: { gbp: 18, usd: 25 },
+    services: ["child", "postnatal"],
+    languages: ["English", "Polish"],
+    about:
+      "Maternity-trained nurse turned postnatal carer. I help new families during the first 12 weeks — feeding routines, sleep coaching, light housekeeping while you rest.",
+    certifications: [
+      { title: "DBS Enhanced", issuedAt: "10 Jan 2025" },
+      { title: "Postnatal Support Level 4", issuedAt: "22 Jul 2024" },
+    ],
+    availability: SAMPLE_AVAIL,
+    reviews: [
+      {
+        id: "r1",
+        author: "Bessie Cooper",
+        avatar: STOCK[3],
+        rating: 5,
+        when: "14 Apr 25",
+        service: "Postnatal",
+        text: "Rachel was a lifeline in those first weeks. Calm, capable, kind.",
+      },
+    ],
+  },
+  {
+    id: "carer_marvin",
+    name: "Marvin McKinney",
+    photo: STOCK[2],
+    city: "Birmingham, UK",
+    experienceYears: 5,
+    rating: 4.6,
+    reviewCount: 88,
+    hourly: { gbp: 19, usd: 26 },
+    services: ["elderly", "special"],
+    languages: ["English"],
+    about:
+      "Adult-care specialist with experience supporting Parkinson's and post-stroke recovery. I focus on dignity, mobility and small daily wins.",
+    certifications: [
+      { title: "DBS Enhanced", issuedAt: "08 Aug 2024" },
+      { title: "Manual Handling Level 2", issuedAt: "15 Mar 2024" },
+    ],
+    availability: SAMPLE_AVAIL,
+    reviews: [],
+  },
+  {
+    id: "carer_emma",
+    name: "Emma Williams",
+    photo: STOCK[4],
+    city: "Allentown, NM",
+    experienceYears: 6,
+    rating: 4.7,
+    reviewCount: 96,
+    hourly: { gbp: 20, usd: 27 },
+    services: ["child", "elderly", "special"],
+    languages: ["English", "Spanish"],
+    about:
+      "I bring six years of bilingual care experience — equally comfortable with toddlers and seniors. Background in early-years education, current first-aid certification.",
+    certifications: [
+      { title: "DBS Enhanced", issuedAt: "05 Feb 2025" },
+      { title: "First Aid", issuedAt: "12 Apr 2024" },
+      { title: "Early Years Level 3", issuedAt: "20 Sep 2023" },
+    ],
+    availability: SAMPLE_AVAIL,
+    reviews: [
+      {
+        id: "r1",
+        author: "Wade Warren",
+        avatar: STOCK[5],
+        rating: 5,
+        when: "21 Mar 25",
+        service: "Child Care",
+        text: "Emma is patient and warm. Our daughter actually looks forward to her visits.",
+      },
+    ],
+  },
+  {
+    id: "carer_ronald",
+    name: "Ronald Richards",
+    photo: STOCK[5],
+    city: "Bristol, UK",
+    experienceYears: 4,
+    rating: 4.5,
+    reviewCount: 51,
+    hourly: { gbp: 18, usd: 24 },
+    services: ["child"],
+    languages: ["English"],
+    about:
+      "Energetic dad-of-two who loves working with active kids. Great at homework support, outdoor play and managing siblings.",
+    certifications: [
+      { title: "DBS Enhanced", issuedAt: "01 Mar 2024" },
+    ],
+    availability: SAMPLE_AVAIL,
+    reviews: [],
+  },
+];
+
+export type BookingStatus = "Requested" | "Accepted" | "Completed" | "Rejected";
+
+export type Booking = {
+  id: string;
+  carerId: string;
+  status: BookingStatus;
+  service: "Child Care" | "Elderly Care" | "Postnatal" | "Special-needs";
+  address: string;
+  date: string; // human-readable
+  time: string; // e.g. "10:00AM - 11:00AM"
+  slot: number;
+  notes?: string;
+};
+
+export const BOOKINGS: Booking[] = [
+  {
+    id: "bk_001",
+    carerId: "carer_rachel",
+    status: "Requested",
+    service: "Child Care",
+    address: "6391 Elgin St., Celina",
+    date: "14 Apr, 2026",
+    time: "10:00AM - 11:00AM",
+    slot: 1,
+    notes: "Two kids, ages 4 and 6. Lunch already prepared.",
+  },
+  {
+    id: "bk_002",
+    carerId: "carer_marvin",
+    status: "Accepted",
+    service: "Elderly Care",
+    address: "6391 Elgin St., Celina",
+    date: "14 Apr, 2026",
+    time: "10:00AM - 11:00AM",
+    slot: 1,
+  },
+  {
+    id: "bk_003",
+    carerId: "carer_aisha",
+    status: "Completed",
+    service: "Child Care",
+    address: "21 Baker Lane, Manchester",
+    date: "02 Mar, 2026",
+    time: "9:00AM - 12:00PM",
+    slot: 2,
+  },
+  {
+    id: "bk_004",
+    carerId: "carer_emma",
+    status: "Rejected",
+    service: "Special-needs",
+    address: "8 Park Avenue, Bristol",
+    date: "20 Feb, 2026",
+    time: "2:00PM - 4:00PM",
+    slot: 1,
+  },
+];
+
+/* ──────────────────────────────────────────────────────────────────
+   Helpers
+   ────────────────────────────────────────────────────────────────── */
+
+export function getCarer(id: string): Caregiver | undefined {
+  return CAREGIVERS.find((c) => c.id === id);
+}
+
+export const SERVICE_LABEL: Record<Caregiver["services"][number], string> = {
+  child: "Child Care",
+  elderly: "Elderly Care",
+  special: "Disability Care",
+  postnatal: "Postnatal",
+};
+
+export const STATUS_TONE: Record<
+  BookingStatus,
+  "amber" | "green" | "red" | "neutral"
+> = {
+  Requested: "amber",
+  Accepted: "green",
+  Completed: "neutral",
+  Rejected: "red",
+};
+
+// ---- Chat ----------------------------------------------------------------
+
+export type ChatPreview = {
+  id: string;
+  carerId: string;
+  lastMessage: string;
+  when: string;
+  unread: number;
+};
+
+export type ChatMessage = {
+  id: string;
+  fromMe: boolean;
+  text: string;
+  time: string;
+};
+
+export const CHATS: ChatPreview[] = [
+  { id: "ch1", carerId: "carer_aisha", lastMessage: "Sure, I'll be there at 10.", when: "10:24", unread: 2 },
+  { id: "ch2", carerId: "carer_marcus", lastMessage: "Thanks for booking!", when: "Yesterday", unread: 0 },
+  { id: "ch3", carerId: "carer_grace", lastMessage: "Could you share the address?", when: "Mon", unread: 1 },
+  { id: "ch4", carerId: "carer_olivia", lastMessage: "See you on Friday.", when: "21 Apr", unread: 0 },
+];
+
+export const CHAT_THREAD: Record<string, ChatMessage[]> = {
+  ch1: [
+    { id: "m1", fromMe: false, text: "Hi! Looking forward to meeting you tomorrow.", time: "09:42" },
+    { id: "m2", fromMe: true, text: "Hi Aisha, same here. The little one is excited.", time: "09:50" },
+    { id: "m3", fromMe: false, text: "Should I bring anything special?", time: "10:01" },
+    { id: "m4", fromMe: true, text: "Just yourself — we have everything ready.", time: "10:10" },
+    { id: "m5", fromMe: false, text: "Sure, I'll be there at 10.", time: "10:24" },
+  ],
+};
+
+export function getChat(id: string) {
+  const preview = CHATS.find((c) => c.id === id);
+  if (!preview) return undefined;
+  const carer = getCarer(preview.carerId);
+  const thread = CHAT_THREAD[id] ?? [];
+  return { preview, carer, thread };
+}
+
+// ---- Carer-side jobs feed -------------------------------------------------
+
+export type JobStatus = "Open" | "Applied" | "Closed";
+
+export type Job = {
+  id: string;
+  title: string;
+  service: keyof typeof SERVICE_LABEL;
+  city: string;
+  postedBy: string;
+  postedAvatar: string;
+  postedAgo: string;
+  hourly: { gbp: number; usd: number };
+  hoursPerWeek: string;
+  startDate: string;
+  description: string;
+  requirements: string[];
+  status: JobStatus;
+};
+
+export const JOBS: Job[] = [
+  {
+    id: "job_001",
+    title: "Looking for an experienced child carer",
+    service: "child",
+    city: "Camden, London",
+    postedBy: "Bessie Cooper",
+    postedAvatar: STOCK[1],
+    postedAgo: "2h ago",
+    hourly: { gbp: 22, usd: 28 },
+    hoursPerWeek: "12-15 hrs/week",
+    startDate: "Mon 11 May",
+    description:
+      "Hi, we're looking for a kind, reliable carer to look after our 4-year-old in the afternoons. School pick-up, light meals, homework help and a bit of play. We live near Regent's Park.",
+    requirements: [
+      "DBS Enhanced",
+      "Pediatric First Aid",
+      "Min 3 years experience",
+      "Non-smoker",
+    ],
+    status: "Open",
+  },
+  {
+    id: "job_002",
+    title: "Weekend elderly care companion",
+    service: "elderly",
+    city: "Manchester",
+    postedBy: "Robert Fox",
+    postedAvatar: STOCK[2],
+    postedAgo: "Yesterday",
+    hourly: { gbp: 20, usd: 26 },
+    hoursPerWeek: "8 hrs/weekend",
+    startDate: "Sat 16 May",
+    description:
+      "My mother needs a companion on Saturdays — light housekeeping, meal prep, conversation and a short walk if the weather is good.",
+    requirements: ["DBS Enhanced", "Manual Handling", "Driving licence preferred"],
+    status: "Open",
+  },
+  {
+    id: "job_003",
+    title: "Special-needs support, after school",
+    service: "special",
+    city: "Bristol",
+    postedBy: "Cody Fisher",
+    postedAvatar: STOCK[3],
+    postedAgo: "3 days ago",
+    hourly: { gbp: 24, usd: 30 },
+    hoursPerWeek: "10 hrs/week",
+    startDate: "Mon 18 May",
+    description:
+      "Our 9-year-old has autism and needs a patient, structured carer for after-school routine, homework support and play.",
+    requirements: ["DBS Enhanced", "SEN experience", "Calm temperament"],
+    status: "Applied",
+  },
+  {
+    id: "job_004",
+    title: "Postnatal night-time support",
+    service: "postnatal",
+    city: "Edinburgh",
+    postedBy: "Jenny Wilson",
+    postedAvatar: STOCK[4],
+    postedAgo: "5 days ago",
+    hourly: { gbp: 26, usd: 32 },
+    hoursPerWeek: "Nights, 4×/week",
+    startDate: "ASAP",
+    description:
+      "Looking for an experienced postnatal carer to support overnight feeds and routines. Twins, both healthy.",
+    requirements: ["Maternity Nurse cert", "Twin experience", "References"],
+    status: "Open",
+  },
+];
+
+export function getJob(id: string): Job | undefined {
+  return JOBS.find((j) => j.id === id);
+}
