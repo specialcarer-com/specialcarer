@@ -40,6 +40,14 @@ workflows:
       # fetch-signing-files <bundle_id> --type IOS_APP_STORE --create`
       # explicitly inside scripts, which both creates the profile if
       # missing and reuses it on subsequent runs.
+      # NOTE: After the first build prints a CERTIFICATE_PRIVATE_KEY,
+      # paste it into Codemagic as a regular project-scoped environment
+      # variable (Codemagic ▸ App settings ▸ Environment variables ▸
+      # Add: name=CERTIFICATE_PRIVATE_KEY, secure=on). It will be
+      # automatically injected into the workflow on subsequent runs and
+      # the script's `if [ -n "$CERTIFICATE_PRIVATE_KEY" ]` branch will
+      # reuse the same iOS Distribution cert across all future builds,
+      # avoiding Apple's 2-cert cap.
       vars:
         # Capacitor 8 generates an SPM-based iOS project (no .xcworkspace,
         # no Podfile). The build target is the .xcodeproj directly.
@@ -181,38 +189,73 @@ workflows:
           #   (b) generate a brand-new iOS Distribution cert + key pair
           #       via the App Store Connect API.
           #
-          # On the first build no key exists yet, so we generate a fresh
-          # 2048-bit RSA key here and pass it to fetch-signing-files. The
-          # CLI then either reuses an existing cert that matches this key
-          # or (with --create) provisions a new cert tied to it. The key
-          # lives only inside this build's temp dir — we don't persist it.
+          # KEY PERSISTENCE STRATEGY:
+          #   - If $CERTIFICATE_PRIVATE_KEY is set (Codemagic environment
+          #     variable group `signing`), reuse that key. Apple has the
+          #     matching cert from a previous build, so fetch-signing-files
+          #     finds it and just downloads — no new cert is created. This
+          #     is the steady state.
+          #   - If the variable is NOT set, generate a one-time key and
+          #     print it at the end so the operator can copy it into the
+          #     Codemagic environment for all future builds.
+          #
+          # Without this strategy every build provisioned a new cert and
+          # quickly hit Apple's 2-cert cap (Distribution certs are limited).
           CERT_KEY_PATH="$CM_BUILD_DIR/ios_distribution_private_key.pem"
-          ssh-keygen -t rsa -b 2048 -m PEM -f "$CERT_KEY_PATH" -q -N ""
-          # ssh-keygen writes an OpenSSH-format private key by default in
-          # newer versions; force PKCS#1/PEM so app-store-connect can read it.
-          openssl rsa -in "$CERT_KEY_PATH" -out "$CERT_KEY_PATH.pem" 2>/dev/null || cp "$CERT_KEY_PATH" "$CERT_KEY_PATH.pem"
-          mv "$CERT_KEY_PATH.pem" "$CERT_KEY_PATH"
 
-          # Initialize a clean keychain BEFORE fetching certs, so the CLI
-          # can install any matching cert it finds in addition to creating
-          # new ones.
+          if [ -n "${CERTIFICATE_PRIVATE_KEY:-}" ]; then
+            echo "🔑 Using persisted CERTIFICATE_PRIVATE_KEY from Codemagic env"
+            printf '%s' "$CERTIFICATE_PRIVATE_KEY" > "$CERT_KEY_PATH"
+            # Defensive: if the env var was uploaded with literal \n escapes
+            # (common when pasting via Codemagic UI), unescape them.
+            if ! head -1 "$CERT_KEY_PATH" | grep -q -- "-----BEGIN"; then
+              printf '%b' "$CERTIFICATE_PRIVATE_KEY" > "$CERT_KEY_PATH"
+            fi
+            chmod 600 "$CERT_KEY_PATH"
+          else
+            echo "⚠️  No persisted cert key — generating a new one (one-time bootstrap)."
+            ssh-keygen -t rsa -b 2048 -m PEM -f "$CERT_KEY_PATH" -q -N ""
+            # Force PKCS#1/PEM so app-store-connect can read it.
+            openssl rsa -in "$CERT_KEY_PATH" -out "$CERT_KEY_PATH.pem" 2>/dev/null || cp "$CERT_KEY_PATH" "$CERT_KEY_PATH.pem"
+            mv "$CERT_KEY_PATH.pem" "$CERT_KEY_PATH"
+          fi
+
+          # Initialize a clean keychain BEFORE fetching certs.
           keychain initialize
 
           # Fetch (or create) the iOS Distribution cert + App Store
-          # provisioning profile. --create makes the CLI provision new
-          # signing assets when no usable ones are found in App Store
+          # provisioning profile. --create lets the CLI provision new
+          # signing assets if no usable ones are found in App Store
           # Connect for this bundle id.
-          #
-          # The Codemagic CLI accepts the private key via --certificate-key
-          # and supports an @<path> shorthand for reading from a file.
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --certificate-key "@file:$CERT_KEY_PATH" \
             --create
 
-          # Install the freshly-fetched cert into the temp keychain so
-          # xcodebuild can use it for code signing.
+          # Install the cert into the temp keychain so xcodebuild can
+          # use it for code signing.
           keychain add-certificates
+
+          # If we just generated a fresh key, surface it so the operator
+          # can paste it into the Codemagic environment as
+          # CERTIFICATE_PRIVATE_KEY (group: signing). Future builds will
+          # then reuse it and skip cert creation entirely.
+          if [ -z "${CERTIFICATE_PRIVATE_KEY:-}" ]; then
+            echo ""
+            echo "================================================================="
+            echo "📋 ONE-TIME SETUP — copy the key below into Codemagic:"
+            echo "   Teams ▸ <team> ▸ Environment variables ▸ Add"
+            echo "     name:  CERTIFICATE_PRIVATE_KEY"
+            echo "     group: signing"
+            echo "     value: (paste the entire BEGIN/END block below, including the lines)"
+            echo "     Mark as secure: ✅"
+            echo "================================================================="
+            cat "$CERT_KEY_PATH"
+            echo "================================================================="
+            echo "After saving, future builds will reuse the existing iOS"
+            echo "Distribution cert and never hit Apple's 2-cert cap."
+            echo "================================================================="
+          fi
 
       - name: Build, archive, and export .ipa
         script: |
