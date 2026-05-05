@@ -41,7 +41,7 @@ export default function Page() {
         },
         {
           q: "Do you offer live-in care?",
-          a: "Live-in care isn't currently offered through our marketplace, but we do support overnight stays of up to 12 consecutive hours. For continuous live-in arrangements we'd recommend contacting a CQC-regulated agency (UK) or licensed home-care agency (US).",
+          a: "Yes. When booking a carer you can choose between visiting care (hourly visits, billed by the hour) and live-in care (the carer moves into your home for the placement, billed as a weekly rate). Not every carer offers live-in — the booking screen will show you which formats each carer accepts. For complex clinical needs we still recommend a CQC-regulated agency (UK) or licensed home-care agency (US) alongside our marketplace carers.",
         },
         {
           q: "Are caregivers insured?",
