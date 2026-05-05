@@ -2,7 +2,7 @@ export type Client = {
   id: string;
   name: string;
   city: string;
-  service: "Child Care" | "Elderly Care" | "Postnatal" | "Disability Care";
+  service: "Childcare" | "Elderly care" | "Postnatal support" | "Special-needs";
   avatar: string;
   status: "Active" | "Past";
   startedAt: string;
@@ -18,7 +18,7 @@ export const CLIENTS: Client[] = [
     id: "cli_001",
     name: "Bessie Cooper",
     city: "Camden, London",
-    service: "Child Care",
+    service: "Childcare",
     avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200",
     status: "Active",
     startedAt: "Mar 2025",
@@ -33,7 +33,7 @@ export const CLIENTS: Client[] = [
     id: "cli_002",
     name: "Cody Fisher",
     city: "Bristol",
-    service: "Disability Care",
+    service: "Special-needs",
     avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200",
     status: "Active",
     startedAt: "Apr 2025",
@@ -48,7 +48,7 @@ export const CLIENTS: Client[] = [
     id: "cli_003",
     name: "Robert Fox",
     city: "Manchester",
-    service: "Elderly Care",
+    service: "Elderly care",
     avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200",
     status: "Past",
     startedAt: "Jan 2025",

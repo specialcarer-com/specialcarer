@@ -25,10 +25,10 @@ import { CAREGIVERS, SERVICE_LABEL } from "../_lib/mock";
 
 const SERVICES = [
   { key: "all", label: "All" },
-  { key: "child", label: "Child Care" },
-  { key: "elderly", label: "Elderly Care" },
-  { key: "postnatal", label: "Postnatal" },
+  { key: "child", label: "Childcare" },
+  { key: "elderly", label: "Elderly care" },
   { key: "special", label: "Special-needs" },
+  { key: "postnatal", label: "Postnatal support" },
 ] as const;
 
 export default function SearchPage() {

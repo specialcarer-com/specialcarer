@@ -26,7 +26,7 @@ export type Caregiver = {
     avatar: string;
     rating: number;
     when: string;
-    service: "Child Care" | "Elderly Care" | "Postnatal" | "Special-needs";
+    service: "Childcare" | "Elderly care" | "Postnatal support" | "Special-needs";
     text: string;
   }[];
 };
@@ -77,7 +77,7 @@ export const CAREGIVERS: Caregiver[] = [
         avatar: STOCK[1],
         rating: 5,
         when: "14 Apr 25",
-        service: "Child Care",
+        service: "Childcare",
         text: "She did an amazing job — she's very creative, detailed and easy to work with. Our boys adored her.",
       },
       {
@@ -86,7 +86,7 @@ export const CAREGIVERS: Caregiver[] = [
         avatar: STOCK[2],
         rating: 5,
         when: "02 Mar 25",
-        service: "Elderly Care",
+        service: "Elderly care",
         text: "Aisha treated my dad with so much patience. Punctual every visit and kept us informed.",
       },
       {
@@ -95,7 +95,7 @@ export const CAREGIVERS: Caregiver[] = [
         avatar: STOCK[3],
         rating: 4,
         when: "10 Feb 25",
-        service: "Child Care",
+        service: "Childcare",
         text: "Lovely person. Would book again — very organised with mealtimes and the kids loved her.",
       },
     ],
@@ -125,7 +125,7 @@ export const CAREGIVERS: Caregiver[] = [
         avatar: STOCK[3],
         rating: 5,
         when: "14 Apr 25",
-        service: "Postnatal",
+        service: "Postnatal support",
         text: "Rachel was a lifeline in those first weeks. Calm, capable, kind.",
       },
     ],
@@ -176,7 +176,7 @@ export const CAREGIVERS: Caregiver[] = [
         avatar: STOCK[5],
         rating: 5,
         when: "21 Mar 25",
-        service: "Child Care",
+        service: "Childcare",
         text: "Emma is patient and warm. Our daughter actually looks forward to her visits.",
       },
     ],
@@ -208,7 +208,7 @@ export type Booking = {
   id: string;
   carerId: string;
   status: BookingStatus;
-  service: "Child Care" | "Elderly Care" | "Postnatal" | "Special-needs";
+  service: "Childcare" | "Elderly care" | "Postnatal support" | "Special-needs";
   address: string;
   date: string; // human-readable
   time: string; // e.g. "10:00AM - 11:00AM"
@@ -221,7 +221,7 @@ export const BOOKINGS: Booking[] = [
     id: "bk_001",
     carerId: "carer_rachel",
     status: "Requested",
-    service: "Child Care",
+    service: "Childcare",
     address: "6391 Elgin St., Celina",
     date: "14 Apr, 2026",
     time: "10:00AM - 11:00AM",
@@ -232,7 +232,7 @@ export const BOOKINGS: Booking[] = [
     id: "bk_002",
     carerId: "carer_marvin",
     status: "Accepted",
-    service: "Elderly Care",
+    service: "Elderly care",
     address: "6391 Elgin St., Celina",
     date: "14 Apr, 2026",
     time: "10:00AM - 11:00AM",
@@ -242,7 +242,7 @@ export const BOOKINGS: Booking[] = [
     id: "bk_003",
     carerId: "carer_aisha",
     status: "Completed",
-    service: "Child Care",
+    service: "Childcare",
     address: "21 Baker Lane, Manchester",
     date: "02 Mar, 2026",
     time: "9:00AM - 12:00PM",
@@ -268,11 +268,13 @@ export function getCarer(id: string): Caregiver | undefined {
   return CAREGIVERS.find((c) => c.id === id);
 }
 
+// Marketing-site canonical names (homepage hero + how-it-works).
+// Keep these in sync with /find-care and /how-it-works.
 export const SERVICE_LABEL: Record<Caregiver["services"][number], string> = {
-  child: "Child Care",
-  elderly: "Elderly Care",
-  special: "Disability Care",
-  postnatal: "Postnatal",
+  child: "Childcare",
+  elderly: "Elderly care",
+  special: "Special-needs",
+  postnatal: "Postnatal support",
 };
 
 export const STATUS_TONE: Record<
