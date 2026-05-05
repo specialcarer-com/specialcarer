@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import {
   ButtonHTMLAttributes,
@@ -456,32 +457,45 @@ export function Tabs({
    "Hand-cradling-house" SVG inspired by the Figma logo, recoloured
    with our brand teal + secondary navy.
    ────────────────────────────────────────────────────────────────── */
-export function AppLogo({ size = 96 }: { size?: number }) {
+/**
+ * Brand mark — the hands + heart + family illustration cradling a home,
+ * paired with the SpecialCarer wordmark.
+ *
+ * Pass `withText={false}` for tight headers / nav usage. Pass `tone="plain"`
+ * to drop the soft teal tile (e.g. when placing on a coloured hero band).
+ */
+export function AppLogo({
+  size = 96,
+  withText = true,
+  tone = "tinted",
+}: {
+  size?: number;
+  withText?: boolean;
+  tone?: "tinted" | "plain";
+}) {
+  const mark = (
+    <div
+      style={{ width: size, height: size }}
+      className={`grid place-items-center rounded-3xl ${
+        tone === "tinted" ? "bg-primary-50" : ""
+      }`}
+    >
+      <Image
+        src="/m/brand/logo-mark.png"
+        alt="SpecialCarer"
+        width={Math.round(size * 0.86)}
+        height={Math.round(size * 0.86 * 0.535)}
+        priority
+        className="h-auto w-auto"
+        style={{ maxWidth: "86%", maxHeight: "86%" }}
+      />
+    </div>
+  );
+  if (!withText) return mark;
   return (
     <div className="flex flex-col items-center gap-2">
-      <div
-        style={{ width: size, height: size }}
-        className="grid place-items-center rounded-3xl bg-primary-50"
-      >
-        <svg viewBox="0 0 64 64" width={size * 0.75} height={size * 0.75} aria-hidden>
-          <path
-            d="M32 8c-2 0-3.6 1.6-3.6 3.6v3.2h-3.2c-2 0-3.6 1.6-3.6 3.6V32H42.4V18.4c0-2-1.6-3.6-3.6-3.6h-3.2v-3.2C35.6 9.6 34 8 32 8Z"
-            fill="#039EA0"
-          />
-          <path d="M30 22h4v4h-4z" fill="#fff" />
-          <path d="M28 26h8v2h-8z" fill="#fff" />
-          <path
-            d="M10 32c0-2 1.6-3.6 3.6-3.6S17.2 30 17.2 32v6.4c0 8.4 6.6 15 15 15s15-6.6 15-15V32c0-2 1.6-3.6 3.6-3.6S54.4 30 54.4 32v6.4c0 12.4-10 22.4-22.4 22.4S9.6 50.8 9.6 38.4V32Z"
-            fill="#171E54"
-          />
-          <path
-            d="M16 50c4-2 10-3.2 16-3.2s12 1.2 16 3.2c-3.2 6-9.6 10-16 10s-12.8-4-16-10Z"
-            fill="#039EA0"
-            opacity="0.75"
-          />
-        </svg>
-      </div>
-      <p className="text-primary font-bold text-[18px]">SpecialCarer</p>
+      {mark}
+      <p className="text-primary font-bold text-[18px] tracking-tight">SpecialCarer</p>
     </div>
   );
 }

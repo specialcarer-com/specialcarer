@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { Button, Input, TopBar } from "../_components/ui";
+import { AppLogo, Button, Input, TopBar } from "../_components/ui";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -45,6 +45,9 @@ export default function ForgotPasswordPage() {
       <TopBar back="/m/login" title="Forgot Password" />
 
       <div className="px-6 mt-4">
+        <div className="flex justify-center mb-6">
+          <AppLogo size={72} />
+        </div>
         {!sent ? (
           <>
             <p className="text-subheading text-[14px] leading-relaxed">

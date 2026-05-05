@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button, Dots } from "../_components/ui";
+import { AppLogo, Button, Dots } from "../_components/ui";
 
 /**
  * Three-screen onboarding carousel.
@@ -62,8 +62,12 @@ export default function OnboardingPage() {
 
   return (
     <main className="min-h-[100dvh] bg-white flex flex-col">
-      {/* Top bar — Skip button only */}
-      <div className="sc-safe-top px-4 flex justify-end">
+      {/* Top bar — brand mark on left, Skip on right */}
+      <div className="sc-safe-top px-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <AppLogo size={36} withText={false} tone="plain" />
+          <span className="text-primary font-bold text-[15px] tracking-tight">SpecialCarer</span>
+        </div>
         <Link
           href="/m/login"
           className="text-primary font-bold text-[14px] px-5 h-9 grid place-items-center rounded-pill border border-line bg-white sc-no-select"

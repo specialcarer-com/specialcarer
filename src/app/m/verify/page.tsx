@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button, TopBar } from "../_components/ui";
+import { AppLogo, Button, TopBar } from "../_components/ui";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -97,6 +97,9 @@ function VerifyInner() {
       <TopBar back="/m/sign-up" title="Verify your account" />
 
       <div className="px-6 mt-2">
+        <div className="flex justify-center mb-6">
+          <AppLogo size={72} />
+        </div>
         <p className="text-subheading text-[14px] leading-relaxed">
           We&apos;ve sent a 6-digit verification code to{" "}
           <strong className="text-heading">{email || "your email"}</strong>.
