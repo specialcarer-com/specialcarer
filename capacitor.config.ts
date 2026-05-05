@@ -58,7 +58,9 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchShowDuration: 1200,
       launchAutoHide: true,
-      backgroundColor: "#039EA0",
+      // White matches mobile/resources/splash.png. The dark variant
+      // (splash-dark.png) ships with its own teal background baked in.
+      backgroundColor: "#FFFFFF",
       androidScaleType: "CENTER_CROP",
       showSpinner: false,
       splashFullScreen: true,
