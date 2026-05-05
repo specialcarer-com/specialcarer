@@ -11,15 +11,27 @@ import {
   TextArea,
   TopBar,
 } from "../../_components/ui";
-import { SERVICE_LABEL, getCarer } from "../../_lib/mock";
+import {
+  CARE_FORMAT_BLURB,
+  CARE_FORMAT_LABEL,
+  type CareFormat,
+  SERVICE_LABEL,
+  getCarer,
+} from "../../_lib/mock";
 
 /**
- * Create Booking — Figma 46:2379.
- * Combines: profile header, service chips, date picker, slot picker,
- * notes, then route → /m/book/[id]/checkout for Stripe payment.
+ * Create Booking — Figma 46:2379, extended for live-in.
  *
- * The calendar is intentionally simple (built from JS Date math, not a
- * heavy library) — this keeps the bundle small inside the WebView.
+ * The page now opens with a "Type of care" segmented control. The rest
+ * of the form is conditional on that choice:
+ *
+ *   • Visiting → calendar single-date + slot + From/To hours (hourly bill).
+ *   • Live-in  → calendar start-date + end-date (weekly bill).
+ *
+ * The calendar component is reused — for live-in we render two side-by-side.
+ * Both branches push to the same checkout route with disambiguating query
+ * params; the checkout page reads `careType` to switch between hourly /
+ * weekly summary maths.
  */
 
 const SLOT_OPTIONS = [
@@ -28,17 +40,39 @@ const SLOT_OPTIONS = [
   "9:00 AM - 12:00 PM",
 ];
 
+function fmtDateShort(d: Date) {
+  return d.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 export default function CreateBookingPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const carer = getCarer(params.id);
 
+  // Default to whichever format the carer offers first; falls back to visiting.
+  const offered: CareFormat[] = carer?.careFormats?.length
+    ? carer.careFormats
+    : ["visiting"];
+  const [careType, setCareType] = useState<CareFormat>(offered[0]);
+
   const [service, setService] = useState<string>(carer?.services[0] ?? "child");
+
+  // Visiting state
   const [monthOffset, setMonthOffset] = useState(0);
   const [date, setDate] = useState<Date | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+
+  // Live-in state — uses its own month nav so the user can scroll independently
+  const [liMonthOffset, setLiMonthOffset] = useState(0);
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -46,6 +80,11 @@ export default function CreateBookingPage() {
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
   }, [monthOffset]);
+
+  const liMonth = useMemo(() => {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth() + liMonthOffset, 1);
+  }, [liMonthOffset]);
 
   if (!carer) {
     return (
@@ -56,18 +95,43 @@ export default function CreateBookingPage() {
     );
   }
 
+  // Validity differs per branch.
+  const visitingValid = !!(date && slot && address);
+  const liveInValid = !!(
+    startDate &&
+    endDate &&
+    endDate.getTime() > startDate.getTime() &&
+    address
+  );
+  const canContinue = careType === "visiting" ? visitingValid : liveInValid;
+
+  // Number of weeks (rounded up) for the live-in summary preview.
+  const weeks = useMemo(() => {
+    if (careType !== "live_in" || !startDate || !endDate) return 0;
+    const days = Math.ceil(
+      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    return Math.max(1, Math.ceil(days / 7));
+  }, [careType, startDate, endDate]);
+
   const onContinue = () => {
-    if (!date || !slot || !address) return;
-    const params = new URLSearchParams({
+    if (!canContinue) return;
+    const qp = new URLSearchParams({
+      careType,
       service,
-      date: date.toISOString(),
-      slot,
-      from,
-      to,
       address,
       notes,
     });
-    router.push(`/m/book/${carer.id}/checkout?${params.toString()}`);
+    if (careType === "visiting" && date && slot) {
+      qp.set("date", date.toISOString());
+      qp.set("slot", slot);
+      qp.set("from", from);
+      qp.set("to", to);
+    } else if (careType === "live_in" && startDate && endDate) {
+      qp.set("date", startDate.toISOString());
+      qp.set("endDate", endDate.toISOString());
+    }
+    router.push(`/m/book/${carer.id}/checkout?${qp.toString()}`);
   };
 
   return (
@@ -85,6 +149,47 @@ export default function CreateBookingPage() {
       </div>
 
       <div className="px-4 pt-4 space-y-5">
+        {/* Type of care — segmented control */}
+        <div>
+          <h2 className="text-[14px] font-bold text-heading mb-2">Type of care</h2>
+          <div
+            role="tablist"
+            aria-label="Type of care"
+            className="grid grid-cols-2 gap-2 p-1 rounded-btn bg-muted"
+          >
+            {(["visiting", "live_in"] as const).map((t) => {
+              const enabled = offered.includes(t);
+              const active = careType === t;
+              return (
+                <button
+                  key={t}
+                  role="tab"
+                  aria-selected={active}
+                  disabled={!enabled}
+                  onClick={() => setCareType(t)}
+                  className={`h-11 rounded-btn text-[13px] font-semibold transition ${
+                    active
+                      ? "bg-white text-primary shadow-sm"
+                      : enabled
+                      ? "text-heading"
+                      : "text-subheading opacity-40"
+                  }`}
+                >
+                  {CARE_FORMAT_LABEL[t]}
+                  {!enabled && (
+                    <span className="block text-[10px] font-normal">
+                      not offered
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[12px] text-subheading leading-snug px-1">
+            {CARE_FORMAT_BLURB[careType]}
+          </p>
+        </div>
+
         <h2 className="text-[14px] font-bold text-heading px-1">Professional</h2>
         <div className="rounded-btn border border-line bg-white px-4 h-12 flex items-center text-heading text-[14px]">
           {carer.name}
@@ -112,58 +217,108 @@ export default function CreateBookingPage() {
           </div>
         </div>
 
-        {/* Date picker */}
-        <div>
-          <h2 className="text-[14px] font-bold text-heading mb-2">Date</h2>
-          <Calendar
-            month={month}
-            value={date}
-            onChange={setDate}
-            onPrev={() => setMonthOffset((m) => m - 1)}
-            onNext={() => setMonthOffset((m) => m + 1)}
-          />
-        </div>
+        {careType === "visiting" ? (
+          <>
+            {/* Visiting — single date + slot + hours */}
+            <div>
+              <h2 className="text-[14px] font-bold text-heading mb-2">Date</h2>
+              <Calendar
+                month={month}
+                value={date}
+                onChange={setDate}
+                onPrev={() => setMonthOffset((m) => m - 1)}
+                onNext={() => setMonthOffset((m) => m + 1)}
+              />
+            </div>
 
-        {/* Slots */}
-        <div>
-          <h2 className="text-[14px] font-bold text-heading mb-2">Slots</h2>
-          <div className="rounded-btn bg-white border border-line overflow-hidden">
-            {SLOT_OPTIONS.map((s, i) => {
-              const active = slot === s;
-              return (
-                <button
-                  key={s}
-                  onClick={() => setSlot(s)}
-                  className={`w-full text-left px-4 h-12 text-[14px] flex items-center justify-between ${
-                    i !== 0 ? "border-t border-line" : ""
-                  } ${active ? "bg-primary-50 text-primary font-bold" : "text-heading"}`}
-                >
-                  {s}
-                  {active && <IconCal />}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+            <div>
+              <h2 className="text-[14px] font-bold text-heading mb-2">Slots</h2>
+              <div className="rounded-btn bg-white border border-line overflow-hidden">
+                {SLOT_OPTIONS.map((s, i) => {
+                  const active = slot === s;
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => setSlot(s)}
+                      className={`w-full text-left px-4 h-12 text-[14px] flex items-center justify-between ${
+                        i !== 0 ? "border-t border-line" : ""
+                      } ${active ? "bg-primary-50 text-primary font-bold" : "text-heading"}`}
+                    >
+                      {s}
+                      {active && <IconCal />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-        {/* Hours */}
-        <div>
-          <h2 className="text-[14px] font-bold text-heading mb-2">Booking Hours</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="From"
-              type="time"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-            />
-            <Input
-              label="To"
-              type="time"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-            />
-          </div>
-        </div>
+            <div>
+              <h2 className="text-[14px] font-bold text-heading mb-2">Booking Hours</h2>
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="From"
+                  type="time"
+                  value={from}
+                  onChange={(e) => setFrom(e.target.value)}
+                />
+                <Input
+                  label="To"
+                  type="time"
+                  value={to}
+                  onChange={(e) => setTo(e.target.value)}
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Live-in — start + end date pickers */}
+            <div>
+              <h2 className="text-[14px] font-bold text-heading mb-2">
+                Placement dates
+              </h2>
+              <Calendar
+                month={liMonth}
+                value={null}
+                rangeStart={startDate}
+                rangeEnd={endDate}
+                onChange={(d) => {
+                  // First click sets start; second sets end; clicking again resets.
+                  if (!startDate || (startDate && endDate)) {
+                    setStartDate(d);
+                    setEndDate(null);
+                  } else if (d.getTime() <= startDate.getTime()) {
+                    setStartDate(d);
+                    setEndDate(null);
+                  } else {
+                    setEndDate(d);
+                  }
+                }}
+                onPrev={() => setLiMonthOffset((m) => m - 1)}
+                onNext={() => setLiMonthOffset((m) => m + 1)}
+              />
+              <div className="grid grid-cols-2 gap-3 mt-3">
+                <div className="rounded-btn border border-line bg-white px-3 py-2">
+                  <p className="text-[11px] text-subheading">Start</p>
+                  <p className="text-[14px] font-semibold text-heading">
+                    {startDate ? fmtDateShort(startDate) : "Select"}
+                  </p>
+                </div>
+                <div className="rounded-btn border border-line bg-white px-3 py-2">
+                  <p className="text-[11px] text-subheading">End</p>
+                  <p className="text-[14px] font-semibold text-heading">
+                    {endDate ? fmtDateShort(endDate) : "Select"}
+                  </p>
+                </div>
+              </div>
+              {weeks > 0 && (
+                <p className="mt-2 text-[12px] text-subheading px-1">
+                  {weeks} week{weeks === 1 ? "" : "s"} · billed weekly
+                </p>
+              )}
+            </div>
+          </>
+        )}
 
         <Input
           label="Address"
@@ -182,11 +337,7 @@ export default function CreateBookingPage() {
 
       {/* Sticky CTA */}
       <div className="fixed inset-x-0 bottom-0 z-30 bg-white border-t border-line px-4 pt-3 sc-safe-bottom">
-        <Button
-          block
-          disabled={!date || !slot || !address}
-          onClick={onContinue}
-        >
+        <Button block disabled={!canContinue} onClick={onContinue}>
           Continue
         </Button>
       </div>
@@ -195,18 +346,27 @@ export default function CreateBookingPage() {
 }
 
 /* ──────────────────────────────────────────────────────────────────
-   Calendar — minimal, design-system styled
+   Calendar — minimal, design-system styled.
+
+   Two modes:
+     • Single-date: pass `value`, omit range props.
+     • Range: pass `rangeStart` / `rangeEnd`; the parent decides how
+       clicks map to start vs end (see live-in branch above).
    ────────────────────────────────────────────────────────────────── */
 
 function Calendar({
   month,
   value,
+  rangeStart,
+  rangeEnd,
   onChange,
   onPrev,
   onNext,
 }: {
   month: Date;
   value: Date | null;
+  rangeStart?: Date | null;
+  rangeEnd?: Date | null;
   onChange: (d: Date) => void;
   onPrev: () => void;
   onNext: () => void;
@@ -219,6 +379,19 @@ function Calendar({
   const cells: (number | null)[] = [];
   for (let i = 0; i < firstWeekday; i++) cells.push(null);
   for (let i = 1; i <= daysInMonth; i++) cells.push(i);
+
+  const isInRange = (d: Date) => {
+    if (!rangeStart || !rangeEnd) return false;
+    const t = d.getTime();
+    return t > rangeStart.getTime() && t < rangeEnd.getTime();
+  };
+  const isRangeEdge = (d: Date) => {
+    const t = d.getTime();
+    return (
+      (rangeStart && t === rangeStart.getTime()) ||
+      (rangeEnd && t === rangeEnd.getTime())
+    );
+  };
 
   return (
     <div className="rounded-card border border-line bg-white p-3">
@@ -256,22 +429,25 @@ function Calendar({
         {cells.map((cell, i) => {
           if (cell === null) return <span key={i} />;
           const cellDate = new Date(year, month.getMonth(), cell);
-          const isToday =
-            new Date().toDateString() === cellDate.toDateString();
+          const isToday = new Date().toDateString() === cellDate.toDateString();
           const isSelected =
             value && value.toDateString() === cellDate.toDateString();
+          const inRange = isInRange(cellDate);
+          const edge = isRangeEdge(cellDate);
           const isWeekend = i % 7 >= 5;
           return (
             <button
               key={i}
               onClick={() => onChange(cellDate)}
               className={`aspect-square grid place-items-center text-[14px] rounded-full transition ${
-                isSelected
+                isSelected || edge
                   ? "bg-primary text-white font-bold"
+                  : inRange
+                  ? "bg-primary-50 text-primary"
                   : isWeekend
                   ? "text-[#E55]"
                   : "text-heading"
-              } ${isToday && !isSelected ? "ring-1 ring-primary" : ""}`}
+              } ${isToday && !isSelected && !edge ? "ring-1 ring-primary" : ""}`}
             >
               {cell}
             </button>

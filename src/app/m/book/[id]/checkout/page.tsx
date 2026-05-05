@@ -14,7 +14,12 @@ import {
   IconPin,
   TopBar,
 } from "../../../_components/ui";
-import { SERVICE_LABEL, getCarer } from "../../../_lib/mock";
+import {
+  CARE_FORMAT_LABEL,
+  type CareFormat,
+  SERVICE_LABEL,
+  getCarer,
+} from "../../../_lib/mock";
 
 /**
  * Booking Checkout — payment summary + Stripe (real) handoff.
@@ -44,24 +49,29 @@ function CheckoutInner() {
     );
   }
 
+  const careType: CareFormat =
+    (sp.get("careType") as CareFormat) === "live_in" ? "live_in" : "visiting";
   const service = sp.get("service") || carer.services[0];
   const dateRaw = sp.get("date");
+  const endDateRaw = sp.get("endDate");
   const slot = sp.get("slot") || "—";
   const from = sp.get("from") || "";
   const to = sp.get("to") || "";
   const address = sp.get("address") || "";
 
   const date = dateRaw ? new Date(dateRaw) : null;
-  const dateStr = date
-    ? date.toLocaleDateString("en-GB", {
-        weekday: "short",
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
-    : "—";
+  const endDate = endDateRaw ? new Date(endDateRaw) : null;
+  const fmtLong = (d: Date) =>
+    d.toLocaleDateString("en-GB", {
+      weekday: "short",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  const dateStr = date ? fmtLong(date) : "—";
+  const endDateStr = endDate ? fmtLong(endDate) : "—";
 
-  // crude duration from from/to (HH:MM strings); fall back to 2h
+  // Visiting — duration from from/to (HH:MM strings); fall back to 2h.
   let hours = 2;
   if (from && to) {
     const [fh, fm] = from.split(":").map(Number);
@@ -76,7 +86,21 @@ function CheckoutInner() {
     }
   }
 
-  const subtotal = carer.hourly.usd * hours;
+  // Live-in — number of weeks (rounded up), capped at 1 week min.
+  let weeks = 1;
+  if (careType === "live_in" && date && endDate) {
+    const days = Math.ceil(
+      (endDate.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    weeks = Math.max(1, Math.ceil(days / 7));
+  }
+
+  // Pricing branch — visiting bills hourly, live-in bills weekly.
+  // Live-in carers without a `weekly` rate fall back to hourly × 50.
+  const weeklyUsd =
+    carer.weekly?.usd ?? Math.round(carer.hourly.usd * 50);
+  const subtotal =
+    careType === "live_in" ? weeklyUsd * weeks : carer.hourly.usd * hours;
   const platformFee = +(subtotal * 0.05).toFixed(2);
   const total = +(subtotal + platformFee).toFixed(2);
 
@@ -150,14 +174,27 @@ function CheckoutInner() {
           </p>
           <ul className="space-y-2 text-[13px] text-heading">
             <li className="flex items-center gap-2">
-              <span className="text-subheading"><IconCal /></span>
-              {dateStr}
+              <span className="text-subheading">•</span>
+              <span className="font-semibold">{CARE_FORMAT_LABEL[careType]}</span>
             </li>
-            <li className="flex items-center gap-2">
-              <span className="text-subheading"><IconCal /></span>
-              {slot}
-              {from && to ? ` · ${from}–${to}` : ""}
-            </li>
+            {careType === "live_in" ? (
+              <li className="flex items-center gap-2">
+                <span className="text-subheading"><IconCal /></span>
+                {dateStr} → {endDateStr}
+              </li>
+            ) : (
+              <>
+                <li className="flex items-center gap-2">
+                  <span className="text-subheading"><IconCal /></span>
+                  {dateStr}
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-subheading"><IconCal /></span>
+                  {slot}
+                  {from && to ? ` · ${from}–${to}` : ""}
+                </li>
+              </>
+            )}
             <li className="flex items-center gap-2">
               <span className="text-subheading"><IconPin /></span>
               {address || "Address not set"}
@@ -170,7 +207,11 @@ function CheckoutInner() {
           <p className="text-[14px] font-bold text-heading mb-3">Price</p>
           <div className="space-y-2 text-[13px]">
             <Row
-              label={`$${carer.hourly.usd}/hr × ${hours.toFixed(1)} hrs`}
+              label={
+                careType === "live_in"
+                  ? `$${weeklyUsd}/week × ${weeks} week${weeks === 1 ? "" : "s"}`
+                  : `$${carer.hourly.usd}/hr × ${hours.toFixed(1)} hrs`
+              }
               value={`$${subtotal.toFixed(2)}`}
             />
             <Row

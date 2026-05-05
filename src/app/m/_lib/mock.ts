@@ -6,6 +6,17 @@
  * land, individual screens swap from `MOCK` → `fetch` one at a time.
  */
 
+/**
+ * The two delivery formats a caregiver can offer.
+ *  - "visiting": hourly visits, billed by the hour
+ *  - "live_in": multi-day in-home placement, billed as a weekly rate
+ *
+ * Naming kept aligned with the backend (`care_formats` column on
+ * the caregivers table — `live_in` with underscore) so the same
+ * key flows through Supabase without translation.
+ */
+export type CareFormat = "visiting" | "live_in";
+
 export type Caregiver = {
   id: string;
   name: string;
@@ -15,6 +26,18 @@ export type Caregiver = {
   rating: number;
   reviewCount: number;
   hourly: { gbp: number; usd: number };
+  /**
+   * Per-week rate for live-in placements. Optional: only set when
+   * the carer has opted into live-in via `careFormats`. Industry
+   * convention in the UK is to bill live-in as a weekly rate (sleep
+   * period included), not by the hour or by the day.
+   */
+  weekly?: { gbp: number; usd: number };
+  /**
+   * Which delivery formats this carer offers. Defaults to ["visiting"]
+   * when not set. A carer that does live-in placements will list both.
+   */
+  careFormats: CareFormat[];
   services: ("child" | "elderly" | "special" | "postnatal")[];
   languages: string[];
   about: string;
@@ -29,6 +52,18 @@ export type Caregiver = {
     service: "Childcare" | "Elderly care" | "Postnatal support" | "Special-needs";
     text: string;
   }[];
+};
+
+export const CARE_FORMAT_LABEL: Record<CareFormat, string> = {
+  visiting: "Visiting care",
+  live_in: "Live-in care",
+};
+
+export const CARE_FORMAT_BLURB: Record<CareFormat, string> = {
+  visiting:
+    "A carer comes to your home for booked hours, then leaves at the end of the visit. Billed by the hour.",
+  live_in:
+    "A carer moves into your home for the placement, providing daytime support and overnight peace of mind. Billed as a weekly rate.",
 };
 
 const STOCK = [
@@ -60,6 +95,8 @@ export const CAREGIVERS: Caregiver[] = [
     rating: 4.8,
     reviewCount: 142,
     hourly: { gbp: 22, usd: 29 },
+    weekly: { gbp: 1100, usd: 1450 },
+    careFormats: ["visiting", "live_in"],
     services: ["child", "elderly", "special"],
     languages: ["English", "Hindi", "Bengali"],
     about:
@@ -109,6 +146,7 @@ export const CAREGIVERS: Caregiver[] = [
     rating: 4.9,
     reviewCount: 218,
     hourly: { gbp: 18, usd: 25 },
+    careFormats: ["visiting"],
     services: ["child", "postnatal"],
     languages: ["English", "Polish"],
     about:
@@ -139,6 +177,8 @@ export const CAREGIVERS: Caregiver[] = [
     rating: 4.6,
     reviewCount: 88,
     hourly: { gbp: 19, usd: 26 },
+    weekly: { gbp: 950, usd: 1300 },
+    careFormats: ["visiting", "live_in"],
     services: ["elderly", "special"],
     languages: ["English"],
     about:
@@ -159,6 +199,8 @@ export const CAREGIVERS: Caregiver[] = [
     rating: 4.7,
     reviewCount: 96,
     hourly: { gbp: 20, usd: 27 },
+    weekly: { gbp: 1000, usd: 1350 },
+    careFormats: ["visiting", "live_in"],
     services: ["child", "elderly", "special"],
     languages: ["English", "Spanish"],
     about:
@@ -190,6 +232,7 @@ export const CAREGIVERS: Caregiver[] = [
     rating: 4.5,
     reviewCount: 51,
     hourly: { gbp: 18, usd: 24 },
+    careFormats: ["visiting"],
     services: ["child"],
     languages: ["English"],
     about:

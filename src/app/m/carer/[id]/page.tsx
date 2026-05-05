@@ -19,7 +19,11 @@ import {
   Tabs,
   TopBar,
 } from "../../_components/ui";
-import { SERVICE_LABEL, getCarer } from "../../_lib/mock";
+import {
+  CARE_FORMAT_LABEL,
+  SERVICE_LABEL,
+  getCarer,
+} from "../../_lib/mock";
 
 /**
  * Carer profile — Figma 31:445 (About), 35:1155 (Availability),
@@ -95,6 +99,42 @@ export default function CarerDetailPage() {
               <p className="text-[13px] text-subheading leading-relaxed">
                 {carer.about}
               </p>
+            </PanelCard>
+
+            <PanelCard icon={<IconClock />} title="Rates">
+              <ul className="grid grid-cols-2 gap-2">
+                {carer.careFormats.includes("visiting") && (
+                  <li className="rounded-btn border border-line p-3">
+                    <p className="text-[18px] font-bold text-heading leading-none">
+                      £{carer.hourly.gbp}
+                      <span className="text-[12px] text-subheading font-normal">
+                        {" "}/ hr
+                      </span>
+                    </p>
+                    <p className="mt-1 text-[11px] text-subheading">
+                      {CARE_FORMAT_LABEL.visiting}
+                    </p>
+                  </li>
+                )}
+                {carer.careFormats.includes("live_in") && carer.weekly && (
+                  <li className="rounded-btn border border-line p-3">
+                    <p className="text-[18px] font-bold text-heading leading-none">
+                      £{carer.weekly.gbp}
+                      <span className="text-[12px] text-subheading font-normal">
+                        {" "}/ wk
+                      </span>
+                    </p>
+                    <p className="mt-1 text-[11px] text-subheading">
+                      {CARE_FORMAT_LABEL.live_in}
+                    </p>
+                  </li>
+                )}
+              </ul>
+              {!carer.careFormats.includes("live_in") && (
+                <p className="mt-2 text-[11px] text-subheading">
+                  This carer offers visiting care only.
+                </p>
+              )}
             </PanelCard>
 
             <PanelCard icon={<IconLanguage />} title="Languages Known">
