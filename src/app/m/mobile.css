@@ -1,0 +1,66 @@
+/* ─────────────────────────────────────────────────────────────────────
+   Mobile app (/m) — global tweaks.
+   These rules ONLY scope to .sc-mobile-root so the marketing site
+   pages keep their existing styling untouched.
+   ───────────────────────────────────────────────────────────────────── */
+
+.sc-mobile-root {
+  --sc-bottom-nav-h: 76px;
+}
+
+/* Safe-area helpers (iOS notch / home indicator) */
+.sc-safe-top    { padding-top: max(env(safe-area-inset-top), 12px); }
+.sc-safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 16px); }
+
+/* Reserves space at the bottom of scrollable screens that have a fixed nav */
+.sc-with-bottom-nav { padding-bottom: calc(var(--sc-bottom-nav-h) + env(safe-area-inset-bottom)); }
+
+/* Disable text selection on UI chrome (icons, nav, buttons) */
+.sc-mobile-root .sc-no-select {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Tighter type scale for the app */
+.sc-mobile-root h1 { letter-spacing: -0.02em; }
+.sc-mobile-root h2 { letter-spacing: -0.01em; }
+
+/* Hide native input outlines, we provide our own focus ring */
+.sc-mobile-root input:focus,
+.sc-mobile-root textarea:focus,
+.sc-mobile-root select:focus { outline: none; }
+
+/* iOS keyboard kicks the page up — keep buttons above it */
+.sc-mobile-root .sc-keyboard-aware { padding-bottom: env(keyboard-inset-height, 0px); }
+
+/* Onboarding: blob mask for hero image */
+.sc-onb-blob {
+  -webkit-mask-image: radial-gradient(closest-side at 50% 50%, #000 95%, transparent 100%);
+          mask-image: radial-gradient(closest-side at 50% 50%, #000 95%, transparent 100%);
+  border-radius: 48% 52% 70% 30% / 30% 30% 70% 70%;
+  overflow: hidden;
+}
+
+/* Subtle pulse for notification dot */
+@keyframes sc-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.15); }
+}
+.sc-pulse { animation: sc-pulse 1.6s ease-in-out infinite; }
+
+/* Skeleton shimmer for loading lists */
+@keyframes sc-skel {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.sc-skel {
+  background: linear-gradient(90deg, #EDF1F1 0%, #F7FAFA 50%, #EDF1F1 100%);
+  background-size: 200% 100%;
+  animation: sc-skel 1.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-pulse, .sc-skel { animation: none !important; }
+}

@@ -43,13 +43,13 @@ const GROUPS: FooterGroup[] = [
 
 function LinkList({ links }: { links: FooterLink[] }) {
   return (
-    <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-slate-600 sm:grid-cols-1">
+    <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-slate-300 sm:grid-cols-1">
       {links.map((l) =>
         l.external ? (
           <li key={l.href} className="min-w-0">
             <a
               href={l.href}
-              className="block truncate hover:text-slate-900"
+              className="block truncate hover:text-white transition"
             >
               {l.label}
             </a>
@@ -58,7 +58,7 @@ function LinkList({ links }: { links: FooterLink[] }) {
           <li key={l.href} className="min-w-0">
             <Link
               href={l.href}
-              className="block truncate hover:text-slate-900"
+              className="block truncate hover:text-white transition"
             >
               {l.label}
             </Link>
@@ -100,13 +100,13 @@ const SOCIAL_LINKS: { href: string; label: string; Icon: SocialIcon }[] = [
 
 export default function SiteFooter() {
   return (
-    <footer className="border-t border-slate-100 bg-slate-50">
-      <div className="max-w-6xl mx-auto px-6 py-10 text-sm">
+    <footer className="bg-brand-700 text-slate-100">
+      <div className="max-w-6xl mx-auto px-6 py-12 text-sm">
         {/* Brand block */}
         <div className="max-w-xl">
           <Link
             href="/"
-            className="inline-flex items-center"
+            className="inline-flex items-center bg-white rounded-lg px-3 py-2"
             aria-label="SpecialCarer — home"
           >
             <Image
@@ -114,14 +114,14 @@ export default function SiteFooter() {
               alt="SpecialCarer"
               width={161}
               height={121}
-              className="h-12 w-auto"
+              className="h-10 w-auto"
             />
           </Link>
-          <p className="mt-3 text-slate-600">
+          <p className="mt-4 text-slate-200">
             On-demand, vetted caregivers for families across the UK and US. A
             product of All Care 4 U Group Limited.
           </p>
-          <p className="mt-4 text-xs text-slate-500">
+          <p className="mt-4 text-xs text-slate-300">
             For care emergencies dial 999 (UK) or 911 (US). Use the in-app SOS
             button for active-shift incidents.
           </p>
@@ -135,7 +135,7 @@ export default function SiteFooter() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={label}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-600 ring-1 ring-slate-200 hover:text-brand-700 hover:ring-brand-300 transition"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white ring-1 ring-white/20 hover:bg-white hover:text-brand-700 transition"
                 >
                   <Icon className="h-4 w-4" />
                 </a>
@@ -149,15 +149,15 @@ export default function SiteFooter() {
         <div className="mt-10 grid gap-8 sm:grid-cols-3">
           {GROUPS.map((g) => (
             <nav key={g.id} aria-label={g.heading}>
-              <h3 className="text-slate-900 font-semibold">{g.heading}</h3>
+              <h3 className="text-white font-semibold">{g.heading}</h3>
               <LinkList links={g.links} />
             </nav>
           ))}
         </div>
       </div>
 
-      <div className="border-t border-slate-200">
-        <div className="max-w-6xl mx-auto px-6 py-5 text-xs text-slate-500 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <div className="border-t border-white/10">
+        <div className="max-w-6xl mx-auto px-6 py-5 text-xs text-slate-300 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <p>
             © {new Date().getFullYear()} All Care 4 U Group Limited. Registered
             in England &amp; Wales, company no. 09428739.
