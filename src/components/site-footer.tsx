@@ -100,7 +100,7 @@ const SOCIAL_LINKS: { href: string; label: string; Icon: SocialIcon }[] = [
 
 export default function SiteFooter() {
   return (
-    <footer className="bg-brand-700 text-slate-100">
+    <footer className="bg-brand-600 text-slate-100">
       <div className="max-w-6xl mx-auto px-6 py-12 text-sm">
         {/* Brand block */}
         <div className="max-w-xl">
@@ -135,7 +135,7 @@ export default function SiteFooter() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={label}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white ring-1 ring-white/20 hover:bg-white hover:text-brand-700 transition"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white ring-1 ring-white/20 hover:bg-white hover:text-brand-600 transition"
                 >
                   <Icon className="h-4 w-4" />
                 </a>
