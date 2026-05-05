@@ -37,11 +37,11 @@ export default function Page() {
       faqs={[
         {
           q: "Can your caregivers administer medication?",
-          a: "Caregivers can offer medication reminders and help with self-administration. Administration of prescription medication (including injections, controlled drugs, and PEG feeds) is only performed by caregivers explicitly licensed and engaged for clinical care — typically RNs or HCAs operating under a regulated agency. Tell us about specific medication needs at booking and we'll only match you with appropriately credentialed caregivers.",
+          a: "Caregivers can offer medication reminders and help with self-administration. Administration of prescription medication (including injections, controlled drugs, and PEG feeds) is only performed by carers and nurses on our platform with the relevant clinical credentials — typically RNs or HCAs whose qualifications we have verified. Tell us about specific medication needs at booking and we'll only match you with appropriately credentialed caregivers.",
         },
         {
           q: "Do you offer live-in care?",
-          a: "Yes. When booking a carer you can choose between visiting care (hourly visits, billed by the hour) and live-in care (the carer moves into your home for the placement, billed as a weekly rate). Not every carer offers live-in — the booking screen will show you which formats each carer accepts. For complex clinical needs we still recommend a CQC-regulated agency (UK) or licensed home-care agency (US) alongside our marketplace carers.",
+          a: "Yes. When booking a carer you can choose between visiting care (hourly visits, billed by the hour) and live-in care (the carer moves into your home for the placement, billed as a weekly rate). Not every carer offers live-in — the booking screen will show you which formats each carer accepts. For complex clinical needs (PEG feeds, injections, controlled drugs, post-operative care) bookings are routed only to carers and nurses on our platform with the relevant clinical credentials — e.g. RNs, HCAs, and care-certified specialists.",
         },
         {
           q: "Are caregivers insured?",
