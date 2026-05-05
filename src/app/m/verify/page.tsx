@@ -7,7 +7,14 @@ import { createClient } from "@/lib/supabase/client";
 
 /**
  * Verify Account — Figma 22:425.
- * Six-digit OTP entry that talks to Supabase auth.verifyOtp({type:'email'}).
+ *
+ * Single text field that accepts the full Supabase OTP range (6–10
+ * digits). Earlier we used a six-box grid which silently truncated
+ * 7-digit codes (some Supabase email templates render extra digits if
+ * the project's auth.otp_length is changed) and produced "Token has
+ * invalid format" errors. Single field handles paste, autofill, and
+ * any length cleanly.
+ *
  * The user's email is passed in via ?email=... after sign-up.
  */
 
@@ -15,12 +22,12 @@ function VerifyInner() {
   const router = useRouter();
   const params = useSearchParams();
   const email = params.get("email") || "";
-  const [code, setCode] = useState<string[]>(Array(6).fill(""));
+  const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resentAt, setResentAt] = useState<number | null>(null);
   const [tick, setTick] = useState(0);
-  const inputs = useRef<(HTMLInputElement | null)[]>([]);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   // Resend cooldown timer
   useEffect(() => {
@@ -32,32 +39,24 @@ function VerifyInner() {
   const cooldown = resentAt
     ? Math.max(0, 30 - Math.floor((Date.now() - resentAt) / 1000))
     : 0;
-  // ensures `tick` is "used" so the timer above triggers re-renders
+  // ensures `tick` is referenced so the timer re-renders the cooldown
   void tick;
 
-  const setDigit = (i: number, v: string) => {
-    const clean = v.replace(/\D/g, "").slice(0, 1);
-    const next = [...code];
-    next[i] = clean;
-    setCode(next);
-    if (clean && i < 5) inputs.current[i + 1]?.focus();
-  };
+  // Autofocus on mount so iOS/Android jump straight into entry.
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
-  const onPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    if (pasted.length === 0) return;
-    e.preventDefault();
-    const next = Array(6).fill("");
-    pasted.split("").forEach((c, i) => (next[i] = c));
-    setCode(next);
-    inputs.current[Math.min(pasted.length, 5)]?.focus();
+  const onChange = (raw: string) => {
+    // Strip spaces, dashes, anything non-digit. Cap at 10 (Supabase max).
+    const cleaned = raw.replace(/\D/g, "").slice(0, 10);
+    setCode(cleaned);
   };
 
   const submit = async () => {
     setError(null);
-    const token = code.join("");
-    if (token.length !== 6) {
-      setError("Please enter all six digits.");
+    if (code.length < 6) {
+      setError("Please enter the full verification code from your email.");
       return;
     }
     setBusy(true);
@@ -65,7 +64,7 @@ function VerifyInner() {
       const supabase = createClient();
       const { error } = await supabase.auth.verifyOtp({
         email,
-        token,
+        token: code,
         type: "email",
       });
       if (error) {
@@ -87,6 +86,8 @@ function VerifyInner() {
       const supabase = createClient();
       await supabase.auth.resend({ type: "signup", email });
       setResentAt(Date.now());
+      setCode("");
+      inputRef.current?.focus();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not resend code.");
     }
@@ -101,33 +102,45 @@ function VerifyInner() {
           <AppLogo size={72} />
         </div>
         <p className="text-subheading text-[14px] leading-relaxed">
-          We&apos;ve sent a 6-digit verification code to{" "}
+          We&apos;ve emailed a verification code to{" "}
           <strong className="text-heading">{email || "your email"}</strong>.
-          Enter it below to continue.
+          Enter it below to continue. The code expires in 1 hour.
         </p>
 
-        <div className="mt-8 flex items-center justify-between gap-2">
-          {code.map((d, i) => (
-            <input
-              key={i}
-              ref={(el) => {
-                inputs.current[i] = el;
-              }}
-              value={d}
-              onChange={(e) => setDigit(i, e.target.value)}
-              onPaste={onPaste}
-              onKeyDown={(e) => {
-                if (e.key === "Backspace" && !d && i > 0) {
-                  inputs.current[i - 1]?.focus();
-                }
-              }}
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={1}
-              aria-label={`Digit ${i + 1} of 6`}
-              className="w-12 h-14 text-center text-[22px] font-bold text-heading rounded-btn border border-line bg-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
-            />
-          ))}
+        <div className="mt-2">
+          <p className="text-[13px] text-subheading">
+            Tip: the email may land in your spam or junk folder.
+          </p>
+        </div>
+
+        <div className="mt-7">
+          <label
+            htmlFor="otp"
+            className="block text-[13px] font-semibold text-heading mb-2"
+          >
+            Verification code
+          </label>
+          <input
+            id="otp"
+            ref={inputRef}
+            value={code}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submit();
+            }}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            // Hint for iOS to surface the SMS/email autofill suggestion
+            // even though Supabase delivers via email.
+            pattern="[0-9]*"
+            maxLength={10}
+            placeholder="123456"
+            aria-label="Verification code"
+            className="w-full text-center tracking-[0.6em] text-[26px] font-bold text-heading rounded-btn border border-line bg-white px-4 py-4 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none"
+          />
+          <p className="mt-2 text-[12px] text-subheading">
+            Paste the full code from your email — any length between 6 and 10 digits.
+          </p>
         </div>
 
         {error && (
@@ -136,7 +149,7 @@ function VerifyInner() {
           </p>
         )}
 
-        <div className="mt-8">
+        <div className="mt-7">
           <Button block onClick={submit} disabled={busy}>
             {busy ? "Verifying…" : "Verify"}
           </Button>
