@@ -130,6 +130,14 @@ workflows:
           merge_string "NSUserTrackingUsageDescription" \
             "Special Carer does not track you across apps or websites. This permission would only be requested if a future feature needs it, and you can decline at any time."
 
+          # Export-compliance exemption — declares we use only standard
+          # encryption (HTTPS) which is exempt under US export rules.
+          # This stops App Store Connect from prompting for compliance
+          # info on every TestFlight upload. Equivalent to selecting
+          # "None of the algorithms / standard exempt encryption" in the UI.
+          /usr/libexec/PlistBuddy -c "Delete :ITSAppUsesNonExemptEncryption" "${INFO_PLIST}" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "${INFO_PLIST}"
+
           # Background modes (remote-notification, fetch, location)
           /usr/libexec/PlistBuddy -c "Delete :UIBackgroundModes" "${INFO_PLIST}" 2>/dev/null || true
           /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "${INFO_PLIST}"
