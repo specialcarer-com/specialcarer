@@ -106,19 +106,45 @@ export default function CarerDetailPage() {
             </PanelCard>
 
             <PanelCard icon={<IconCert />} title="Certifications">
-              <ul className="grid grid-cols-3 gap-3">
-                {carer.certifications.slice(0, 3).map((c, i) => (
-                  <li key={i} className="text-center">
-                    <div className="aspect-[4/5] rounded-md bg-[#F8E6BD] grid place-items-center text-[10px] font-bold text-[#8C5C00] p-1 leading-tight">
-                      {c.title}
+              <ul className="divide-y divide-line -mx-1">
+                {carer.certifications.map((c, i) => (
+                  <li key={i} className="flex items-center gap-3 px-1 py-3 first:pt-1 last:pb-1">
+                    <span
+                      className="shrink-0 w-10 h-10 rounded-full grid place-items-center text-primary"
+                      style={{ background: "rgba(3,158,160,0.1)" }}
+                      aria-hidden
+                    >
+                      <CertIcon title={c.title} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[14px] font-semibold text-heading leading-tight">
+                        {c.title}
+                      </p>
+                      <p className="text-[12px] text-subheading mt-0.5">
+                        Issued {c.issuedAt}
+                      </p>
                     </div>
-                    <p className="mt-1.5 text-[12px] text-heading font-semibold leading-tight">
-                      {c.title}
-                    </p>
-                    <p className="text-[10px] text-subheading">{c.issuedAt}</p>
+                    <span
+                      className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#E8F6EC] px-2 py-1 text-[11px] font-semibold text-[#1F7A3F]"
+                      aria-label="Verified"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      Verified
+                    </span>
                   </li>
                 ))}
               </ul>
+              <div className="mt-3 -mx-1 -mb-1 rounded-card bg-bg-screen px-3 py-2.5 flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#039EA0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <polyline points="9 12 11 14 15 10" />
+                </svg>
+                <p className="text-[12px] text-subheading">
+                  Background-checked by SpecialCarer
+                </p>
+              </div>
             </PanelCard>
           </>
         )}
@@ -241,5 +267,68 @@ function PanelCard({
       </div>
       <div className="p-4">{children}</div>
     </div>
+  );
+}
+
+/**
+ * Picks a glyph that matches the certification type. Falls back to a
+ * generic shield. We match on lowercase substrings so e.g.
+ * "First Aid (Pediatric)" → cross, "Dementia Care Level 3" → brain.
+ */
+function CertIcon({ title }: { title: string }) {
+  const t = title.toLowerCase();
+  const props = {
+    width: 18,
+    height: 18,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+  if (t.includes("first aid") || t.includes("cpr") || t.includes("pediatric")) {
+    return (
+      <svg {...props} aria-hidden>
+        <path d="M12 5v14M5 12h14" />
+      </svg>
+    );
+  }
+  if (t.includes("dementia") || t.includes("mental") || t.includes("autism")) {
+    return (
+      <svg {...props} aria-hidden>
+        <path d="M9 4a4 4 0 00-4 4 4 4 0 00-1 6 4 4 0 002 5 4 4 0 008 0V4a3 3 0 00-3 0z" />
+        <path d="M15 4a3 3 0 013 0v15a4 4 0 11-8 0" />
+      </svg>
+    );
+  }
+  if (t.includes("heart") || t.includes("cardio") || t.includes("life support")) {
+    return (
+      <svg {...props} aria-hidden>
+        <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+      </svg>
+    );
+  }
+  if (t.includes("child") || t.includes("baby") || t.includes("newborn") || t.includes("postnatal")) {
+    return (
+      <svg {...props} aria-hidden>
+        <circle cx="12" cy="7" r="3" />
+        <path d="M5 21v-2a4 4 0 014-4h6a4 4 0 014 4v2" />
+      </svg>
+    );
+  }
+  if (t.includes("food") || t.includes("hygiene") || t.includes("safeguard") || t.includes("manual")) {
+    return (
+      <svg {...props} aria-hidden>
+        <path d="M9 11l3 3L22 4" />
+        <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+      </svg>
+    );
+  }
+  // Default: shield (DBS, CRB, RQF, NVQ, etc.)
+  return (
+    <svg {...props} aria-hidden>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
   );
 }
