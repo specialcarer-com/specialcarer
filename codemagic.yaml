@@ -95,9 +95,22 @@ workflows:
 
       - name: Generate app icons + splash from source assets
         script: |
-          # Only generate if the resources have changed since the last build.
-          # `@capacitor/assets` reads mobile/resources/* and writes into ios/.
-          npx capacitor-assets generate --ios || echo "asset generation skipped"
+          set -euxo pipefail
+          # `@capacitor/assets` v3 looks for `assets/` or `resources/` at
+          # project root by default. Our source PNGs live in
+          # `mobile/resources/`, so we MUST pass --assetPath explicitly.
+          # Without it the command silently exits 0 having generated
+          # nothing, which is how the default Capacitor placeholder icon
+          # ended up shipping in TestFlight build 30.
+          test -f mobile/resources/icon.png || { echo "❌ mobile/resources/icon.png missing"; exit 1; }
+          npx --yes capacitor-assets generate --ios --assetPath mobile/resources
+          echo "--- Verifying AppIcon.appiconset was populated ---"
+          ls -la ios/App/App/Assets.xcassets/AppIcon.appiconset/
+          # The 1024x1024 marketing icon is the one App Store / TestFlight
+          # email previews show. If it's missing, fail the build now
+          # rather than ship another placeholder.
+          test -f ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png \
+            || { echo "❌ AppIcon-512@2x.png not generated — icon would ship as placeholder"; exit 1; }
 
       - name: Apply iOS overlay (PrivacyInfo + Info.plist usage strings)
         script: |
