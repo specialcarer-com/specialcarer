@@ -62,11 +62,30 @@ function VerifyInner() {
     setBusy(true);
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.verifyOtp({
+      // IMPORTANT: type must be "signup" for new-user email confirmation.
+      // type: "email" is for *email-change* verification on an existing
+      // user and will always return otp_expired here even when the
+      // token in the email is valid — Supabase looks up tokens scoped
+      // by type, finds nothing under "email", and returns the generic
+      // expired-or-invalid error. This was the root cause of the
+      // "Token has expired or is invalid" error users hit on TestFlight
+      // build 30 within seconds of receiving the code.
+      let { error } = await supabase.auth.verifyOtp({
         email,
         token: code,
-        type: "email",
+        type: "signup",
       });
+      // Defensive fallback: if the user is verifying after a password-
+      // reset link or an email-change request, fall back to "email"
+      // so this single screen handles both flows.
+      if (error && /expired|invalid/i.test(error.message)) {
+        const retry = await supabase.auth.verifyOtp({
+          email,
+          token: code,
+          type: "email",
+        });
+        error = retry.error;
+      }
       if (error) {
         setError(error.message);
         return;
