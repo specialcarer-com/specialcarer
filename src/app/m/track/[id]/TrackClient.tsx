@@ -14,6 +14,7 @@ import {
 import type { CarerPosition } from "@/lib/tracking/types";
 import { POSITION_STALE_AFTER_MS } from "@/lib/tracking/types";
 import JobActivityPanel from "./_components/JobActivityPanel";
+import SosButton from "./_components/SosButton";
 
 type Props = {
   bookingId: string;
@@ -262,6 +263,9 @@ export default function TrackClient(props: Props) {
       <p className="text-center text-[11px] text-subhead">
         Booking #{bookingId.slice(0, 8)}
       </p>
+
+      {/* Floating SOS — both roles, fixed bottom-right */}
+      <SosButton bookingId={bookingId} />
     </div>
   );
 }

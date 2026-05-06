@@ -8,6 +8,14 @@ export default async function TrustSafetyHub() {
 
   const cards = [
     {
+      href: "/admin/trust-safety/sos",
+      title: "SOS alerts",
+      blurb:
+        "In-app SOS triggers raised by users. Acknowledge promptly and follow up — every alert page goes to the on-call admin.",
+      counter: `${c.sosOpen} open`,
+      tone: c.sosOpen > 0 ? "danger" : "default",
+    },
+    {
       href: "/admin/trust-safety/reviews",
       title: "Reviews",
       blurb:
@@ -38,8 +46,9 @@ export default async function TrustSafetyHub() {
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">Trust &amp; safety</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Three queues: review moderation, booking disputes, and background-check
-          escalations. All decisions are recorded in the audit log.
+          Four queues: SOS alerts, review moderation, booking disputes, and
+          background-check escalations. All decisions are recorded in the
+          audit log.
         </p>
       </div>
 

@@ -249,7 +249,7 @@ export async function listKycEscalations(
 
 export async function getTrustSafetyCounts() {
   const admin = createAdminClient();
-  const [reviewsLow, disputes, kycOpen] = await Promise.all([
+  const [reviewsLow, disputes, kycOpen, sosOpen] = await Promise.all([
     admin
       .from("reviews")
       .select("id", { count: "exact", head: true })
@@ -263,6 +263,10 @@ export async function getTrustSafetyCounts() {
       .from("background_checks")
       .select("id", { count: "exact", head: true })
       .in("status", ["consider", "failed"]),
+    admin
+      .from("sos_alerts")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "open"),
   ]);
 
   // KYC open = bg_checks in consider/failed that have NO decision yet.
@@ -271,5 +275,74 @@ export async function getTrustSafetyCounts() {
     reviewsLowRating: reviewsLow.count ?? 0,
     disputes: disputes.count ?? 0,
     kycEscalations: kycOpen.count ?? 0,
+    sosOpen: sosOpen.count ?? 0,
   };
+}
+
+// -------------------- SOS queue --------------------
+
+export type AdminSosRow = {
+  id: string;
+  user_id: string;
+  booking_id: string | null;
+  lat: number | null;
+  lng: number | null;
+  accuracy_m: number | null;
+  note: string | null;
+  status: "open" | "acknowledged" | "resolved";
+  acknowledged_by: string | null;
+  acknowledged_at: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  user_name: string | null;
+  user_email: string | null;
+};
+
+export type SosFilter = "open" | "all";
+
+export async function listSosForAdmin(
+  filter: SosFilter = "open",
+): Promise<AdminSosRow[]> {
+  const admin = createAdminClient();
+  let q = admin
+    .from("sos_alerts")
+    .select(
+      "id, user_id, booking_id, lat, lng, accuracy_m, note, status, acknowledged_by, acknowledged_at, resolved_at, created_at",
+    )
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (filter === "open") q = q.eq("status", "open");
+
+  const { data: rows } = await q;
+  if (!rows?.length) return [];
+
+  const userIds = Array.from(new Set(rows.map((r) => r.user_id as string)));
+  const [profilesRes, emailRes] = await Promise.all([
+    admin.from("profiles").select("id, full_name").in("id", userIds),
+    Promise.all(userIds.map((id) => admin.auth.admin.getUserById(id))),
+  ]);
+  const nameById = new Map<string, string | null>();
+  for (const p of profilesRes.data ?? [])
+    nameById.set(p.id, p.full_name ?? null);
+  const emailById = new Map<string, string | null>();
+  emailRes.forEach((res, i) => {
+    emailById.set(userIds[i], res.data?.user?.email ?? null);
+  });
+
+  return rows.map((r) => ({
+    id: r.id as string,
+    user_id: r.user_id as string,
+    booking_id: r.booking_id as string | null,
+    lat: r.lat as number | null,
+    lng: r.lng as number | null,
+    accuracy_m: r.accuracy_m as number | null,
+    note: r.note as string | null,
+    status: r.status as "open" | "acknowledged" | "resolved",
+    acknowledged_by: r.acknowledged_by as string | null,
+    acknowledged_at: r.acknowledged_at as string | null,
+    resolved_at: r.resolved_at as string | null,
+    created_at: r.created_at as string,
+    user_name: nameById.get(r.user_id as string) ?? null,
+    user_email: emailById.get(r.user_id as string) ?? null,
+  }));
 }
