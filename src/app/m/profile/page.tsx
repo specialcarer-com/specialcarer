@@ -18,6 +18,9 @@ import {
   IconBag,
   IconLogout,
   IconTrash,
+  IconFamily,
+  IconCrown,
+  IconJournal,
 } from "../_components/ui";
 import { createClient } from "@/lib/supabase/client";
 
@@ -45,6 +48,18 @@ const SECTIONS: { title: string; rows: Row[] }[] = [
       { href: "/m/profile/availability", icon: <IconClock />, label: "Availability" },
       { href: "/m/profile/reviews", icon: <IconStar />, label: "My reviews" },
       { href: "/m/profile/my-clients", icon: <IconUser />, label: "My clients" },
+    ],
+  },
+  {
+    // Forward-looking section. Each route is a polished "Coming soon"
+    // page today; same URLs will host the real features once the
+    // backend (Supabase RLS rewrite for family, Stripe Subscriptions
+    // for memberships, photo storage for the journal) is in place.
+    title: "Family",
+    rows: [
+      { href: "/m/journal", icon: <IconJournal />, label: "Care journal" },
+      { href: "/m/family", icon: <IconFamily />, label: "Family sharing" },
+      { href: "/m/memberships", icon: <IconCrown />, label: "Memberships" },
     ],
   },
 ];

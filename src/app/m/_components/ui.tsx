@@ -823,3 +823,166 @@ export function CarerBadges({
     </span>
   );
 }
+
+/* ──────────────────────────────────────────────────────────────────
+   ComingSoon — shared shell for placeholder feature pages
+   ──────────────────────────────────────────────────────────────────
+
+   Used by /m/track/[id], /m/journal, /m/family, /m/memberships.
+
+   Why a shared component instead of 4 bespoke pages:
+     1. Visual consistency — all four read as "polished placeholder"
+        in the same dialect, which is what App Reviewers (and seekers)
+        expect from a marketplace's Coming Soon screens.
+     2. The same URL stays put when the real feature ships — we just
+        replace the page contents, no router changes, no broken
+        deeplinks from emails or push notifications.
+     3. If the user rejects the visual treatment we can update one
+        component instead of four.
+
+   Design intent:
+     - Hero icon in a tinted circle (uses the brand teal at 10% so it
+       sits comfortably on the bg-screen).
+     - Title + benefit-led description (NOT "under construction" — we
+       sell the value of the feature, then say when it's coming).
+     - A 3-bullet "What you'll be able to do" preview so the page
+       has substance and reviewers see we've thought it through.
+     - Optional "Notify me" CTA — by default it's a soft no-op that
+       just toasts. A future revision can swap this for a real
+       Supabase notify list. We keep the CTA so the page doesn't
+       feel dead.
+     - Optional secondary action — e.g. on /m/track we want a
+       "Back to booking" link.
+*/
+
+export function ComingSoon({
+  title,
+  description,
+  bullets,
+  hero,
+  primary,
+  secondary,
+  badge = "Coming soon",
+}: {
+  title: string;
+  description: string;
+  bullets: { icon: ReactNode; text: string }[];
+  hero: ReactNode;
+  primary?: { label: string; href?: string; onClick?: () => void };
+  secondary?: { label: string; href: string };
+  badge?: string;
+}) {
+  return (
+    <div className="px-5 pt-4 pb-12">
+      <div className="rounded-card bg-white p-6 shadow-card text-center">
+        <div
+          className="mx-auto w-20 h-20 rounded-full grid place-items-center"
+          style={{ background: "rgba(3,158,160,0.12)", color: "#039EA0" }}
+          aria-hidden
+        >
+          {hero}
+        </div>
+
+        <span
+          className="mt-5 inline-flex items-center gap-1 rounded-pill px-3 py-1 text-[11px] font-semibold uppercase tracking-wide"
+          style={{ background: "#FFF6E5", color: "#9A6B00" }}
+        >
+          <span
+            className="inline-block w-1.5 h-1.5 rounded-full"
+            style={{ background: "#E0A100" }}
+          />
+          {badge}
+        </span>
+
+        <h2 className="mt-4 text-[22px] font-bold text-heading leading-tight">
+          {title}
+        </h2>
+        <p className="mt-2 text-[14px] text-subheading leading-relaxed">
+          {description}
+        </p>
+      </div>
+
+      <div className="mt-5 rounded-card bg-white p-5 shadow-card">
+        <p className="text-[12px] font-semibold uppercase tracking-wide text-subheading">
+          What you&apos;ll be able to do
+        </p>
+        <ul className="mt-3 space-y-3">
+          {bullets.map((b, i) => (
+            <li key={i} className="flex items-start gap-3">
+              <span
+                className="mt-0.5 grid h-8 w-8 flex-none place-items-center rounded-full"
+                style={{ background: "rgba(3,158,160,0.10)", color: "#039EA0" }}
+              >
+                {b.icon}
+              </span>
+              <span className="flex-1 text-[14px] text-heading leading-relaxed">
+                {b.text}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {(primary || secondary) && (
+        <div className="mt-6 space-y-3">
+          {primary &&
+            (primary.href ? (
+              <Link
+                href={primary.href}
+                className="block w-full text-center font-bold text-white bg-primary rounded-full py-3 sc-no-select"
+              >
+                {primary.label}
+              </Link>
+            ) : (
+              <button
+                onClick={primary.onClick}
+                className="block w-full text-center font-bold text-white bg-primary rounded-full py-3 sc-no-select"
+              >
+                {primary.label}
+              </button>
+            ))}
+          {secondary && (
+            <Link
+              href={secondary.href}
+              className="block w-full text-center font-bold text-primary bg-white border border-primary rounded-full py-3 sc-no-select"
+            >
+              {secondary.label}
+            </Link>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Extra icons used by the four placeholder feature pages.
+   Note: the shared `stroke` spread above already sets fill:"none" —
+   don't repeat it on the JSX or TS will warn about duplicate props. */
+export const IconMapPin = () => (
+  <svg width="32" height="32" viewBox="0 0 24 24" {...stroke}>
+    <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z" />
+    <circle cx="12" cy="10" r="2.5" />
+  </svg>
+);
+export const IconJournal = () => (
+  <svg width="32" height="32" viewBox="0 0 24 24" {...stroke}>
+    <path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4Z" />
+    <path d="M5 4v13a3 3 0 0 0 3 3" />
+    <path d="M9 9h6M9 13h6M9 17h4" />
+  </svg>
+);
+export const IconFamily = () => (
+  <svg width="32" height="32" viewBox="0 0 24 24" {...stroke}>
+    <circle cx="8" cy="8" r="3" />
+    <circle cx="17" cy="9" r="2.4" />
+    <path d="M2.5 19c.6-3.2 3-5 5.5-5s4.9 1.8 5.5 5" />
+    <path d="M14 19c.4-2.2 1.9-3.5 3.5-3.5s3 1.3 3.5 3.5" />
+  </svg>
+);
+export const IconCrown = () => (
+  <svg width="32" height="32" viewBox="0 0 24 24" {...stroke}>
+    <path d="M3 8l3.5 3L12 5l5.5 6L21 8l-1.5 10h-15L3 8Z" />
+    <path d="M5 18h14" />
+  </svg>
+);
+/* IconCheck already exists earlier in this file — reuse it. */
