@@ -71,12 +71,17 @@ export default async function TrackPage({
   const mapboxToken = getPublicToken();
   const mapStyle = getStyle();
 
-  // Fetch booking address for map centering fallback when no position yet.
+  // Fetch booking address for map centering fallback when no position yet,
+  // and the family-supplied match preferences (jsonb, may be {}).
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, location_city, location_country, status")
+    .select("id, location_city, location_country, status, preferences")
     .eq("id", id)
     .maybeSingle();
+
+  const preferences =
+    (booking as { preferences?: Record<string, unknown> } | null)?.preferences ??
+    null;
 
   return (
     <main className="min-h-[100dvh] bg-bg-screen">
@@ -90,6 +95,7 @@ export default async function TrackPage({
         mapStyle={mapStyle}
         locationCity={booking?.location_city ?? null}
         locationCountry={booking?.location_country ?? null}
+        preferences={preferences}
       />
     </main>
   );

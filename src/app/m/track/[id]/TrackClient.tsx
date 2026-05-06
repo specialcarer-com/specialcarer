@@ -15,6 +15,7 @@ import type { CarerPosition } from "@/lib/tracking/types";
 import { POSITION_STALE_AFTER_MS } from "@/lib/tracking/types";
 import JobActivityPanel from "./_components/JobActivityPanel";
 import SosButton from "./_components/SosButton";
+import BookingPreferencesPanel from "./_components/BookingPreferencesPanel";
 
 type Props = {
   bookingId: string;
@@ -25,6 +26,7 @@ type Props = {
   mapStyle: string;
   locationCity: string | null;
   locationCountry: string | null;
+  preferences: Record<string, unknown> | null;
 };
 
 const REFRESH_MS = 6_000;
@@ -45,6 +47,7 @@ export default function TrackClient(props: Props) {
     initialPosition,
     mapboxToken,
     mapStyle,
+    preferences,
   } = props;
 
   const [position, setPosition] = useState<CarerPosition | null>(
@@ -256,6 +259,9 @@ export default function TrackClient(props: Props) {
           </Link>
         </Card>
       )}
+
+      {/* Family-supplied match preferences (read-only) */}
+      <BookingPreferencesPanel preferences={preferences} role={role} />
 
       {/* Active-job checklist + quick-log + feed (both roles) */}
       <JobActivityPanel bookingId={bookingId} role={role} />
