@@ -33,6 +33,14 @@ workflows:
       app_store_connect: SpecialCarer ASC API key
 
     environment:
+      # Pull in the `signing` group so $CERTIFICATE_PRIVATE_KEY is
+      # injected into the build. Without this opt-in, Codemagic
+      # silently leaves group-scoped vars unset at runtime — which is
+      # exactly what bit us on build 41 (the env check fell through to
+      # the bootstrap branch and tried to register a brand-new cert,
+      # then hit Apple's 409 cert-limit error).
+      groups:
+        - signing
       # NOTE: We deliberately do NOT use the `ios_signing` block here.
       # That block runs a pre-build profile lookup that fails on first
       # build (when no profile exists yet), regardless of `--create`
