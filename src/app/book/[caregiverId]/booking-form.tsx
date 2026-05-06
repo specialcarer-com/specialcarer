@@ -60,6 +60,7 @@ export default function BookingForm({
   const [hourlyRate, setHourlyRate] = useState(defaultHourlyRate);
   const [currency] = useState<Currency>(defaultCurrency);
   const [notes, setNotes] = useState("");
+  const [locationPostcode, setLocationPostcode] = useState("");
 
   // Optional booking preferences — recorded against the booking so the
   // carer (and our admin) can see what the family asked for at request time.
@@ -119,6 +120,7 @@ export default function BookingForm({
           service_type: serviceType,
           notes: notes || undefined,
           location_country: currency === "usd" ? "US" : "GB",
+          location_postcode: locationPostcode.trim() || undefined,
           preferences: {
             genders: prefGenders,
             require_driver: prefDriver,
@@ -244,6 +246,24 @@ export default function BookingForm({
               required
               className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200"
             />
+          </label>
+
+          <label className="block text-sm">
+            <span className="text-slate-700 font-medium">
+              {currency === "usd" ? "Care location ZIP" : "Care location postcode"}
+            </span>
+            <input
+              type="text"
+              value={locationPostcode}
+              onChange={(e) => setLocationPostcode(e.target.value.toUpperCase())}
+              autoComplete="postal-code"
+              maxLength={10}
+              placeholder={currency === "usd" ? "10001" : "SW1A 1AA"}
+              className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200"
+            />
+            <span className="mt-1 block text-xs text-slate-500">
+              Where the carer should arrive. Full address is exchanged once the booking is confirmed.
+            </span>
           </label>
 
           <label className="block text-sm">

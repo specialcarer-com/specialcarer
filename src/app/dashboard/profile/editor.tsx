@@ -42,6 +42,10 @@ export default function ProfileEditor({
   const [city, setCity] = useState(initial.city ?? "");
   const [region, setRegion] = useState(initial.region ?? "");
   const [country, setCountry] = useState<"GB" | "US">(initial.country);
+  const [postcode, setPostcode] = useState(initial.postcode ?? "");
+  const [hidePreciseLocation, setHidePreciseLocation] = useState<boolean>(
+    initial.hide_precise_location !== false,
+  );
   const [services, setServices] = useState<string[]>(initial.services);
   const [careFormats, setCareFormats] = useState<string[]>(
     initial.care_formats ?? [],
@@ -365,6 +369,23 @@ export default function ProfileEditor({
               className={INPUT_CLASS}
             />
           </Field>
+        </div>
+        <div className="mt-4">
+          <label className="flex items-start gap-2 text-sm text-slate-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={hidePreciseLocation}
+              onChange={(e) => setHidePreciseLocation(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-brand"
+            />
+            <span>
+              Hide my exact location on the map.{" "}
+              <span className="text-slate-500">
+                Recommended — your pin is shown at district level only until a
+                booking is confirmed.
+              </span>
+            </span>
+          </label>
         </div>
       </Section>
 

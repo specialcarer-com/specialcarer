@@ -41,6 +41,8 @@ export default async function CaregiverProfileEditPage() {
     city: "",
     region: null,
     country: (profileRow?.country as "GB" | "US") ?? "GB",
+    postcode: null,
+    hide_precise_location: true,
     services: [],
     care_formats: [],
     hourly_rate_cents: null,

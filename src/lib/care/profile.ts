@@ -14,6 +14,8 @@ export type CaregiverProfileFull = {
   city: string | null;
   region: string | null;
   country: "GB" | "US";
+  postcode: string | null;
+  hide_precise_location: boolean;
   services: string[];
   care_formats: string[];
   hourly_rate_cents: number | null;
@@ -57,7 +59,7 @@ export async function getCaregiverProfile(
   const { data } = await admin
     .from("caregiver_profiles")
     .select(
-      "user_id, display_name, headline, bio, city, region, country, services, care_formats, hourly_rate_cents, weekly_rate_cents, currency, years_experience, languages, max_radius_km, photo_url, is_published, rating_avg, rating_count, gender, has_drivers_license, has_own_vehicle, tags, certifications",
+      "user_id, display_name, headline, bio, city, region, country, postcode, hide_precise_location, services, care_formats, hourly_rate_cents, weekly_rate_cents, currency, years_experience, languages, max_radius_km, photo_url, is_published, rating_avg, rating_count, gender, has_drivers_license, has_own_vehicle, tags, certifications",
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -72,6 +74,8 @@ export async function getCaregiverProfile(
     city: data.city,
     region: data.region,
     country: (data.country as "GB" | "US") ?? "GB",
+    postcode: (d.postcode as string | null) ?? null,
+    hide_precise_location: d.hide_precise_location === false ? false : true,
     services: data.services ?? [],
     care_formats: data.care_formats ?? [],
     hourly_rate_cents: data.hourly_rate_cents,

@@ -12,6 +12,12 @@ import {
   isGenderKey,
   type GenderKey,
 } from "@/lib/care/attributes";
+import {
+  isValidPostcode,
+  normalisePostcode,
+  inferCountryFromPostcode,
+} from "@/lib/care/postcode";
+import { geocodePostcode } from "@/lib/mapbox/server";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -31,6 +37,9 @@ type SearchParams = {
   max?: string;
   q?: string;
   date?: string;
+  // Postcode-driven geo search
+  postcode?: string;
+  radius?: string; // km
   // Booking preference filters
   genders?: string | string[];
   driver?: string;
@@ -92,6 +101,30 @@ export default async function FindCarePage({
     requiredLanguages.length > 0 ||
     requiredTags.length > 0;
 
+  // Postcode + radius (additive, optional). Country inferred from the
+  // postcode shape when the user hasn't explicitly chosen one.
+  const postcodeRaw = sp.postcode?.trim() || undefined;
+  const inferredCountry = postcodeRaw
+    ? inferCountryFromPostcode(postcodeRaw)
+    : null;
+  const geoCountry: "GB" | "US" | null = country ?? inferredCountry ?? null;
+  const postcode =
+    postcodeRaw && isValidPostcode(postcodeRaw, geoCountry ?? "GB")
+      ? normalisePostcode(postcodeRaw, geoCountry ?? "GB")
+      : null;
+  const radiusKm = (() => {
+    const n = sp.radius ? Number(sp.radius) : NaN;
+    if (!Number.isFinite(n) || n <= 0) return 10; // default 10 km
+    return Math.min(50, Math.max(1, Math.round(n)));
+  })();
+  const geocoded = postcode
+    ? await geocodePostcode(postcode, geoCountry ?? "GB")
+    : null;
+  const near =
+    geocoded != null
+      ? { lat: geocoded.lat, lng: geocoded.lng, radiusKm }
+      : undefined;
+
   const [results, supabase, citiesAll] = await Promise.all([
     searchCaregivers({
       service,
@@ -107,6 +140,7 @@ export default async function FindCarePage({
       requiredCertifications: certsSelected,
       requiredLanguages,
       tags: requiredTags,
+      near,
     }),
     createClient(),
     listPublishedCities(),
@@ -165,7 +199,7 @@ export default async function FindCarePage({
         {/* Filters */}
         <form
           method="get"
-          className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3 bg-white p-4 rounded-2xl border border-slate-100"
+          className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-8 gap-3 bg-white p-4 rounded-2xl border border-slate-100"
         >
           <label className="text-sm sm:col-span-2 lg:col-span-2">
             <span className="text-slate-700 font-medium">Search</span>
@@ -176,6 +210,31 @@ export default async function FindCarePage({
               placeholder="Name, headline, keyword…"
               className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand"
             />
+          </label>
+          <label className="text-sm sm:col-span-1 lg:col-span-2">
+            <span className="text-slate-700 font-medium">Postcode / ZIP</span>
+            <input
+              type="text"
+              name="postcode"
+              defaultValue={sp.postcode ?? ""}
+              placeholder="e.g. SW1A 1AA or 10001"
+              autoComplete="postal-code"
+              className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand"
+            />
+          </label>
+          <label className="text-sm">
+            <span className="text-slate-700 font-medium">Within</span>
+            <select
+              name="radius"
+              defaultValue={String(radiusKm)}
+              className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
+            >
+              <option value="5">5 km</option>
+              <option value="10">10 km</option>
+              <option value="20">20 km</option>
+              <option value="30">30 km</option>
+              <option value="50">50 km</option>
+            </select>
           </label>
           <label className="text-sm">
             <span className="text-slate-700 font-medium">Work type</span>
@@ -261,7 +320,7 @@ export default async function FindCarePage({
           {/* More filters (collapsible) */}
           <details
             open={moreOpen}
-            className="sm:col-span-2 lg:col-span-7 mt-1 group"
+            className="sm:col-span-2 lg:col-span-8 mt-1 group"
           >
             <summary className="cursor-pointer text-sm font-medium text-brand-700 hover:underline list-none flex items-center gap-1.5">
               <span aria-hidden className="transition-transform group-open:rotate-90">›</span>
@@ -414,11 +473,11 @@ export default async function FindCarePage({
             </div>
           </details>
 
-          <div className="sm:col-span-2 lg:col-span-7 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between pt-1">
+          <div className="sm:col-span-2 lg:col-span-8 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between pt-1">
             <p className="text-xs text-slate-500">
               Rates are pre–service-fee. Final price shown at checkout.
             </p>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Link
                 href="/find-care"
                 className="px-4 py-2 rounded-lg bg-white border border-slate-200 text-sm text-slate-700 hover:bg-slate-50 transition"
@@ -434,6 +493,37 @@ export default async function FindCarePage({
             </div>
           </div>
         </form>
+
+        {/* List ↔ Map view toggle */}
+        <div className="mt-6 flex items-center gap-2">
+          <span aria-hidden className="px-3 py-1.5 rounded-full bg-brand-50 text-brand-700 text-sm font-semibold">
+            List view
+          </span>
+          <Link
+            href={(() => {
+              const qs = new URLSearchParams();
+              if (postcode) qs.set("postcode", postcode);
+              qs.set("radius", String(radiusKm));
+              if (service) qs.set("service", service);
+              if (format) qs.set("format", format);
+              if (city) qs.set("city", city);
+              if (country) qs.set("country", country);
+              return `/find-care/map${qs.toString() ? `?${qs}` : ""}`;
+            })()}
+            className="px-3 py-1.5 rounded-full border border-slate-200 text-slate-700 text-sm hover:bg-slate-50 transition"
+          >
+            Map view →
+          </Link>
+          {near && geocoded && (
+            <span className="ml-auto text-xs text-slate-500">
+              Showing carers within {radiusKm} km of{" "}
+              <strong className="text-slate-700">
+                {postcode}
+                {geocoded.city ? ` · ${geocoded.city}` : ""}
+              </strong>
+            </span>
+          )}
+        </div>
 
         {/* Results */}
         <div className="mt-8 flex items-baseline justify-between">

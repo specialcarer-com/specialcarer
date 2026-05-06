@@ -9,6 +9,12 @@ import {
   isGenderKey,
   sanitiseFreeText,
 } from "@/lib/care/attributes";
+import {
+  isValidPostcode,
+  normalisePostcode,
+  inferCountryFromPostcode,
+} from "@/lib/care/postcode";
+import { geocodePostcode } from "@/lib/mapbox/server";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +53,8 @@ export async function PATCH(req: Request) {
     has_own_vehicle?: boolean;
     tags?: string[];
     certifications?: string[];
+    postcode?: string | null;
+    hide_precise_location?: boolean;
   };
   const body = (await req.json()) as Body;
 
@@ -186,6 +194,53 @@ export async function PATCH(req: Request) {
       ),
     ).slice(0, 32);
     update.certifications = cleaned;
+  }
+
+  // Postcode + auto-geocode to home_point. Country-aware validation.
+  // Falls back gracefully if Mapbox is unreachable / stub mode — postcode
+  // still saves, home_point just isn't refreshed.
+  if (body.postcode !== undefined) {
+    if (body.postcode === null || body.postcode === "") {
+      update.postcode = null;
+      update.home_point = null;
+    } else {
+      const trimmed = String(body.postcode).trim();
+      // Country preference: explicit body.country wins, else infer from postcode
+      const targetCountry =
+        body.country === "GB" || body.country === "US"
+          ? body.country
+          : inferCountryFromPostcode(trimmed);
+      if (!targetCountry || !isValidPostcode(trimmed, targetCountry)) {
+        return NextResponse.json(
+          { error: "Invalid postcode for selected country" },
+          { status: 400 },
+        );
+      }
+      const normalised = normalisePostcode(trimmed, targetCountry);
+      if (!normalised) {
+        return NextResponse.json(
+          { error: "Invalid postcode for selected country" },
+          { status: 400 },
+        );
+      }
+      update.postcode = normalised;
+      try {
+        const geo = await geocodePostcode(normalised, targetCountry);
+        if (geo) {
+          // PostGIS geography(Point,4326) accepts WKT 'SRID=4326;POINT(lng lat)'
+          update.home_point = `SRID=4326;POINT(${geo.lng} ${geo.lat})`;
+          // City auto-fill if user didn't override and we got one back
+          if (geo.city && body.city === undefined) {
+            update.city = geo.city;
+          }
+        }
+      } catch {
+        // Soft-fail: keep the postcode, leave home_point as-is
+      }
+    }
+  }
+  if (body.hide_precise_location !== undefined) {
+    update.hide_precise_location = !!body.hide_precise_location;
   }
 
   update.updated_at = new Date().toISOString();

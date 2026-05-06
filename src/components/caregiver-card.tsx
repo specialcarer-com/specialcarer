@@ -26,7 +26,17 @@ export type CaregiverCardData = {
   has_own_vehicle?: boolean;
   tags?: string[];
   certifications?: string[];
+  // Geo search annotations (only present when search ran with `near`)
+  distance_m?: number | null;
+  hide_precise_location?: boolean;
 };
+
+function formatDistance(m: number): string {
+  if (m < 1000) return `${Math.round(m)} m away`;
+  const km = m / 1000;
+  if (km < 10) return `${km.toFixed(1)} km away`;
+  return `${Math.round(km)} km away`;
+}
 
 function formatRate(c: CaregiverCardData): string {
   if (!c.currency) return "Rate on request";
@@ -87,7 +97,14 @@ export default function CaregiverCard({
           {c.headline && (
             <p className="text-sm text-slate-600 truncate">{c.headline}</p>
           )}
-          <div className="mt-1 text-xs text-slate-500">{location}</div>
+          <div className="mt-1 text-xs text-slate-500 flex items-center gap-2 flex-wrap">
+            <span>{location}</span>
+            {typeof c.distance_m === "number" && Number.isFinite(c.distance_m) && (
+              <span className="px-1.5 py-0.5 rounded-full bg-brand-50 text-brand-700 text-[11px] font-medium">
+                {formatDistance(c.distance_m)}
+              </span>
+            )}
+          </div>
         </div>
         <div className="text-right flex-none">
           <div className="font-semibold text-slate-900">{rate}</div>

@@ -17,6 +17,11 @@ import {
 } from "../_components/ui";
 import { CAREGIVERS, SERVICE_LABEL } from "../_lib/mock";
 import { CERTIFICATIONS, GENDERS } from "@/lib/care/attributes";
+import {
+  classifyPostcode,
+  inferCountryFromPostcode,
+  normalisePostcode,
+} from "@/lib/care/postcode";
 
 /**
  * Search / discovery — there's no Figma frame for this exact screen
@@ -44,6 +49,13 @@ export default function SearchPage() {
   const [needClinical, setNeedClinical] = useState(false);
   const [needNurse, setNeedNurse] = useState(false);
 
+  // Postcode + radius filter (additive). Mobile uses mock data, so the
+  // postcode acts as a textual prefix match against carer city/postcode
+  // metadata for now — the same UI sends the value to the real geo search
+  // when wired through to /find-care/map.
+  const [postcode, setPostcode] = useState("");
+  const [radiusKm, setRadiusKm] = useState<number>(10);
+
   // Booking preference filters (additive, work alongside the existing
   // credential filters). Backed by an opt-in bottom-sheet panel.
   const [filterOpen, setFilterOpen] = useState(false);
@@ -60,7 +72,30 @@ export default function SearchPage() {
     (needDriver ? 1 : 0) +
     (needVehicle ? 1 : 0) +
     requiredLangs.split(",").map((s) => s.trim()).filter(Boolean).length +
-    requiredTags.split(",").map((s) => s.trim()).filter(Boolean).length;
+    requiredTags.split(",").map((s) => s.trim()).filter(Boolean).length +
+    (postcode.trim().length > 0 ? 1 : 0);
+
+  // Postcode classification — used to decide whether to show the radius
+  // selector and to build the deep link to the desktop map view (which has
+  // server-side geo search wired in).
+  const postcodeShape = useMemo(
+    () => classifyPostcode(postcode, inferCountryFromPostcode(postcode) ?? undefined),
+    [postcode],
+  );
+  const postcodeValid = postcodeShape !== "invalid";
+  const inferredCountry = inferCountryFromPostcode(postcode);
+  const mapHref = useMemo(() => {
+    const params = new URLSearchParams();
+    if (postcodeValid && inferredCountry) {
+      const norm = normalisePostcode(postcode, inferredCountry);
+      if (norm) {
+        params.set("postcode", norm);
+        params.set("radius", String(radiusKm));
+      }
+    }
+    if (service !== "all") params.set("service", String(service));
+    return `/find-care/map${params.toString() ? "?" + params.toString() : ""}`;
+  }, [postcode, postcodeValid, inferredCountry, radiusKm, service]);
 
   function toggleGender(k: string) {
     setGenders((prev) => (prev.includes(k) ? prev.filter((g) => g !== k) : [...prev, k]));
@@ -77,6 +112,8 @@ export default function SearchPage() {
     setRequiredCerts([]);
     setRequiredLangs("");
     setRequiredTags("");
+    setPostcode("");
+    setRadiusKm(10);
   }
 
   const results = useMemo(() => {
@@ -89,8 +126,28 @@ export default function SearchPage() {
       .map((s) => s.trim().toLowerCase())
       .filter(Boolean);
 
+    const pcTrim = postcode.trim().toUpperCase();
     return CAREGIVERS.filter((c) => {
       if (service !== "all" && !c.services.includes(service as never)) return false;
+      // Mock data lacks postcodes — we use the city as a soft proxy so the
+      // input still narrows results in dev. Real geo search runs on the
+      // server (used by /find-care + /find-care/map) once the user taps
+      // 'View on map'.
+      if (pcTrim) {
+        const country = inferCountryFromPostcode(pcTrim);
+        const knownUkCity =
+          country === "GB" &&
+          /^E|^EC|^N|^NW|^SE|^SW|^W|^WC/.test(pcTrim) ? "London" :
+          country === "GB" && pcTrim.startsWith("M") ? "Manchester" :
+          country === "GB" && pcTrim.startsWith("B") ? "Birmingham" :
+          null;
+        const knownUsCity =
+          country === "US" && pcTrim.startsWith("100") ? "New York" :
+          country === "US" && pcTrim.startsWith("900") ? "Los Angeles" :
+          null;
+        const targetCity = knownUkCity ?? knownUsCity;
+        if (targetCity && c.city !== targetCity) return false;
+      }
       if (needNurse && !c.isNurse) return false;
       if (needClinical && !(c.isClinical || c.isNurse)) return false;
       // Booking preference filters — mock data may not have these fields,
@@ -139,6 +196,7 @@ export default function SearchPage() {
     requiredCerts,
     requiredLangs,
     requiredTags,
+    postcode,
   ]);
 
   return (
@@ -222,9 +280,53 @@ export default function SearchPage() {
           </button>
         </div>
 
-        <p className="mt-3 text-[12px] text-subheading">
-          {results.length} {results.length === 1 ? "carer" : "carers"} found
-        </p>
+        {/* Postcode + radius (additive) */}
+        <div className="mt-2 flex items-center gap-2">
+          <div className="flex-1 h-11 rounded-btn border border-line bg-white px-3 flex items-center gap-2">
+            <IconPin />
+            <input
+              value={postcode}
+              onChange={(e) => setPostcode(e.target.value.toUpperCase())}
+              inputMode="text"
+              autoComplete="postal-code"
+              maxLength={10}
+              placeholder="Postcode or ZIP"
+              className="flex-1 bg-transparent outline-none text-[14px] text-heading placeholder:text-[#A3A3A3]"
+              aria-label="Postcode or ZIP"
+            />
+          </div>
+          <select
+            value={radiusKm}
+            onChange={(e) => setRadiusKm(Number(e.target.value))}
+            aria-label="Search radius"
+            disabled={!postcodeValid || !postcode.trim()}
+            className="h-11 px-2 rounded-btn border border-line bg-white text-[13px] font-semibold text-heading disabled:opacity-50"
+          >
+            <option value={5}>5 km</option>
+            <option value={10}>10 km</option>
+            <option value={20}>20 km</option>
+            <option value={30}>30 km</option>
+            <option value={50}>50 km</option>
+          </select>
+        </div>
+        {!postcodeValid && postcode.trim().length > 0 && (
+          <p className="mt-1 text-[12px] text-status-error-fg">
+            Enter a valid UK postcode (e.g. SW1A 1AA) or US ZIP (e.g. 10001).
+          </p>
+        )}
+
+        <div className="mt-3 flex items-center justify-between">
+          <p className="text-[12px] text-subheading">
+            {results.length} {results.length === 1 ? "carer" : "carers"} found
+          </p>
+          <Link
+            href={mapHref}
+            className="text-[13px] font-semibold text-primary inline-flex items-center gap-1"
+            aria-label="View on map"
+          >
+            <IconPin /> View on map
+          </Link>
+        </div>
       </div>
 
       <div className="px-4 mt-3 space-y-4">

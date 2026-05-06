@@ -20,6 +20,10 @@ export type CareSearchFilters = {
   requiredCertifications?: string[];
   requiredLanguages?: string[];
   tags?: string[];
+  // Geo search (optional). When set, restricts to carers within radiusKm of
+  // the origin and adds distance_m to each card. Used by /find-care/map and
+  // postcode-driven search bars.
+  near?: { lat: number; lng: number; radiusKm: number };
 };
 
 const UK_REQUIRED = ["enhanced_dbs_barred", "right_to_work", "digital_id"];
@@ -39,12 +43,38 @@ export async function searchCaregivers(
 ): Promise<CaregiverCardData[]> {
   const admin = createAdminClient();
 
+  // Geo pre-filter: when a near origin is provided, ask Postgres for the
+  // user_ids within radius and their distance. Empty result short-circuits.
+  let nearById: Map<string, number> | null = null;
+  if (filters.near) {
+    const radiusM = Math.max(
+      500,
+      Math.min(200_000, filters.near.radiusKm * 1000),
+    );
+    type Row = { user_id: string; distance_m: number };
+    const { data: rows, error: rpcErr } = (await admin.rpc(
+      "caregivers_within_radius",
+      {
+        origin_lng: filters.near.lng,
+        origin_lat: filters.near.lat,
+        radius_m: radiusM,
+      },
+    )) as unknown as { data: Row[] | null; error: unknown };
+    if (rpcErr || !rows || rows.length === 0) return [];
+    nearById = new Map(rows.map((r) => [r.user_id, Number(r.distance_m)]));
+  }
+
   let query = admin
     .from("caregiver_profiles")
     .select(
-      "user_id, display_name, headline, bio, city, region, country, services, care_formats, hourly_rate_cents, weekly_rate_cents, currency, years_experience, languages, rating_avg, rating_count, is_published, gender, has_drivers_license, has_own_vehicle, tags, certifications",
+      "user_id, display_name, headline, bio, city, region, country, services, care_formats, hourly_rate_cents, weekly_rate_cents, currency, years_experience, languages, rating_avg, rating_count, is_published, gender, has_drivers_license, has_own_vehicle, tags, certifications, hide_precise_location",
     )
     .eq("is_published", true);
+
+  // Restrict to the geo-pre-filtered set when applicable.
+  if (nearById) {
+    query = query.in("user_id", Array.from(nearById.keys()));
+  }
 
   if (filters.country) query = query.eq("country", filters.country);
   if (filters.city) query = query.ilike("city", filters.city);
@@ -98,10 +128,14 @@ export async function searchCaregivers(
     query = query.contains("tags", reqTags);
   }
 
-  query = query
-    .order("rating_avg", { ascending: false, nullsFirst: false })
-    .order("years_experience", { ascending: false, nullsFirst: false })
-    .limit(filters.limit ?? 100);
+  // When geo searching we'll resort by distance after fetching, so just cap
+  // the working set. Otherwise keep the rating/experience ordering.
+  if (!nearById) {
+    query = query
+      .order("rating_avg", { ascending: false, nullsFirst: false })
+      .order("years_experience", { ascending: false, nullsFirst: false });
+  }
+  query = query.limit(filters.limit ?? 100);
 
   const { data: profiles, error } = await query;
   if (error || !profiles || profiles.length === 0) return [];
@@ -139,31 +173,48 @@ export async function searchCaregivers(
     return required.every((t) => set.has(t));
   });
 
-  return filtered.map((p) => ({
-    user_id: p.user_id,
-    display_name: p.display_name,
-    headline: p.headline,
-    bio: p.bio,
-    city: p.city,
-    region: p.region,
-    country: (p.country as "GB" | "US") ?? "GB",
-    services: p.services ?? [],
-    care_formats: p.care_formats ?? [],
-    hourly_rate_cents: p.hourly_rate_cents,
-    weekly_rate_cents: p.weekly_rate_cents,
-    currency: (p.currency as "GBP" | "USD" | null) ?? null,
-    years_experience: p.years_experience,
-    languages: p.languages ?? [],
-    rating_avg: p.rating_avg ? Number(p.rating_avg) : null,
-    rating_count: p.rating_count ?? 0,
-    match_score: computeMatch(p, filters),
-    // Surface filter attributes to cards so we can render badges later.
-    gender: (p as { gender?: string | null }).gender ?? null,
-    has_drivers_license: !!(p as { has_drivers_license?: boolean }).has_drivers_license,
-    has_own_vehicle: !!(p as { has_own_vehicle?: boolean }).has_own_vehicle,
-    tags: ((p as { tags?: string[] | null }).tags ?? []) as string[],
-    certifications: ((p as { certifications?: string[] | null }).certifications ?? []) as string[],
-  }));
+  const cards = filtered.map((p) => {
+    const distance_m = nearById ? (nearById.get(p.user_id) ?? null) : null;
+    return {
+      user_id: p.user_id,
+      display_name: p.display_name,
+      headline: p.headline,
+      bio: p.bio,
+      city: p.city,
+      region: p.region,
+      country: (p.country as "GB" | "US") ?? "GB",
+      services: p.services ?? [],
+      care_formats: p.care_formats ?? [],
+      hourly_rate_cents: p.hourly_rate_cents,
+      weekly_rate_cents: p.weekly_rate_cents,
+      currency: (p.currency as "GBP" | "USD" | null) ?? null,
+      years_experience: p.years_experience,
+      languages: p.languages ?? [],
+      rating_avg: p.rating_avg ? Number(p.rating_avg) : null,
+      rating_count: p.rating_count ?? 0,
+      match_score: computeMatch(p, filters, distance_m),
+      // Surface filter attributes to cards so we can render badges later.
+      gender: (p as { gender?: string | null }).gender ?? null,
+      has_drivers_license: !!(p as { has_drivers_license?: boolean }).has_drivers_license,
+      has_own_vehicle: !!(p as { has_own_vehicle?: boolean }).has_own_vehicle,
+      tags: ((p as { tags?: string[] | null }).tags ?? []) as string[],
+      certifications: ((p as { certifications?: string[] | null }).certifications ?? []) as string[],
+      distance_m,
+      hide_precise_location: !!(p as { hide_precise_location?: boolean }).hide_precise_location,
+    };
+  });
+
+  // When geo searching, sort by distance ascending (RPC already returns
+  // sorted but the .in() rewrite above can scramble the order).
+  if (nearById) {
+    cards.sort(
+      (a, b) =>
+        (a.distance_m ?? Number.POSITIVE_INFINITY) -
+        (b.distance_m ?? Number.POSITIVE_INFINITY),
+    );
+  }
+
+  return cards;
 }
 
 function computeMatch(
@@ -178,6 +229,7 @@ function computeMatch(
     hourly_rate_cents: number | null;
   },
   f: CareSearchFilters,
+  distanceM: number | null = null,
 ): number {
   let score = 60; // base
   if (f.service && (p.services ?? []).includes(f.service)) score += 18;
@@ -199,6 +251,13 @@ function computeMatch(
     p.hourly_rate_cents <= f.maxRate
   )
     score += 2;
+  // Proximity boost: 0–10km → +12, 10–20km → +6, 20–40km → +2, beyond → 0.
+  if (distanceM != null && Number.isFinite(distanceM)) {
+    const km = distanceM / 1000;
+    if (km <= 10) score += 12;
+    else if (km <= 20) score += 6;
+    else if (km <= 40) score += 2;
+  }
   return Math.min(99, score);
 }
 

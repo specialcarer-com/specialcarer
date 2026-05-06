@@ -6,6 +6,12 @@ import {
   calculatePlatformFeeCents,
   calculateTotalCents,
 } from "@/lib/stripe/server";
+import {
+  isValidPostcode,
+  normalisePostcode,
+  inferCountryFromPostcode,
+} from "@/lib/care/postcode";
+import { geocodePostcode } from "@/lib/mapbox/server";
 
 /**
  * POST /api/stripe/create-booking-intent
@@ -58,6 +64,7 @@ export async function POST(req: Request) {
     notes?: string;
     location_city?: string;
     location_country?: "GB" | "US";
+    location_postcode?: string;
     recipient_ids?: string[];
     preferences?: BookingPreferences;
   };
@@ -205,6 +212,28 @@ export async function POST(req: Request) {
       notes: body.notes,
       location_city: body.location_city,
       location_country: body.location_country,
+      ...(body.location_postcode && (() => {
+        const trimmed = String(body.location_postcode).trim();
+        const targetCountry =
+          body.location_country === "GB" || body.location_country === "US"
+            ? body.location_country
+            : inferCountryFromPostcode(trimmed);
+        if (targetCountry && isValidPostcode(trimmed, targetCountry)) {
+          return true;
+        }
+        return false;
+      })()
+        ? {
+            location_postcode: normalisePostcode(
+              body.location_postcode!.trim(),
+              (body.location_country === "GB" || body.location_country === "US"
+                ? body.location_country
+                : inferCountryFromPostcode(body.location_postcode!.trim())) as
+                | "GB"
+                | "US",
+            ),
+          }
+        : {}),
       recipient_ids: recipientIds,
       preferences: sanitisePrefs(body.preferences),
     })
@@ -215,6 +244,36 @@ export async function POST(req: Request) {
       { error: bookingError?.message ?? "Booking creation failed" },
       { status: 500 }
     );
+  }
+
+  // Best-effort: geocode the booking postcode to a service_point so we can
+  // do distance-based matching and route the carer on the day. Soft-fails.
+  if (body.location_postcode) {
+    try {
+      const trimmed = String(body.location_postcode).trim();
+      const targetCountry =
+        body.location_country === "GB" || body.location_country === "US"
+          ? body.location_country
+          : inferCountryFromPostcode(trimmed);
+      if (targetCountry && isValidPostcode(trimmed, targetCountry)) {
+        const normalised = normalisePostcode(trimmed, targetCountry);
+        if (normalised) {
+        const geo = await geocodePostcode(normalised, targetCountry);
+        if (geo) {
+          await admin
+            .from("bookings")
+            // service_point is a geography(Point,4326) column — supabase-js
+            // generated types don't know about it, so we cast.
+            .update({
+              service_point: `SRID=4326;POINT(${geo.lng} ${geo.lat})`,
+            } as unknown as Record<string, unknown>)
+            .eq("id", booking.id);
+        }
+        }
+      }
+    } catch {
+      // soft-fail; booking already created
+    }
   }
 
   // Create PaymentIntent with manual capture — funds held in escrow
