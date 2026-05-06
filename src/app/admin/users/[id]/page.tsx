@@ -9,6 +9,8 @@ import {
   type BookingStatus,
 } from "@/lib/admin/bookings";
 import RoleChange from "./_components/RoleChange";
+import EditUser from "./_components/EditUser";
+import DeleteUser from "./_components/DeleteUser";
 
 export const dynamic = "force-dynamic";
 
@@ -294,17 +296,31 @@ export default async function AdminUserDetail({
         </div>
       )}
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
         <h2 className="text-xs uppercase tracking-wider text-slate-500">
           Admin actions
         </h2>
-        <RoleChange
-          userId={user.id}
-          currentRole={user.role}
-          isSelf={isSelf}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <EditUser
+            userId={user.id}
+            currentEmail={user.email}
+            currentName={user.full_name}
+            currentPhone={user.phone}
+            currentCountry={user.country}
+          />
+          <RoleChange
+            userId={user.id}
+            currentRole={user.role}
+            isSelf={isSelf}
+          />
+          <DeleteUser
+            userId={user.id}
+            userEmail={user.email}
+            isSelf={isSelf}
+          />
+        </div>
         <p className="text-xs text-slate-400">
-          Role changes require a reason and are recorded in the audit log.
+          All edits require a reason and are recorded in the audit log.
         </p>
       </div>
     </div>
