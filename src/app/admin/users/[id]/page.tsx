@@ -11,6 +11,7 @@ import {
 import RoleChange from "./_components/RoleChange";
 import EditUser from "./_components/EditUser";
 import DeleteUser from "./_components/DeleteUser";
+import BlockUser from "./_components/BlockUser";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,7 @@ export default async function AdminUserDetail({
     data;
 
   const isSelf = user.id === me.id;
+  const isBlocked = !!user.banned_until && user.banned_until !== "none";
 
   return (
     <div className="space-y-6">
@@ -69,6 +71,11 @@ export default async function AdminUserDetail({
               {isSelf && (
                 <span className="ml-2 inline-block text-[10px] uppercase tracking-wider font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
                   This is you
+                </span>
+              )}
+              {isBlocked && (
+                <span className="ml-2 inline-block text-[10px] uppercase tracking-wider font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded">
+                  Blocked
                 </span>
               )}
             </p>
@@ -312,6 +319,12 @@ export default async function AdminUserDetail({
             userId={user.id}
             currentRole={user.role}
             isSelf={isSelf}
+          />
+          <BlockUser
+            userId={user.id}
+            isBlocked={isBlocked}
+            isSelf={isSelf}
+            userEmail={user.email}
           />
           <DeleteUser
             userId={user.id}

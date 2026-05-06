@@ -12,6 +12,7 @@ export type AdminUserRow = {
   role: UserRole | null;
   country: string | null;
   phone: string | null;
+  banned_until: string | null; // null = active; ISO8601 string = banned (incl. 'infinity')
   // caregiver-only
   is_published?: boolean;
   city?: string | null;
@@ -82,6 +83,8 @@ export async function listUsersForAdmin(
   let rows: AdminUserRow[] = allUsers.map((u) => {
     const p = profileById.get(u.id);
     const c = cgById.get(u.id);
+    const banned = (u as unknown as { banned_until?: string | null })
+      .banned_until;
     return {
       id: u.id,
       email: u.email ?? null,
@@ -92,6 +95,7 @@ export async function listUsersForAdmin(
       role: p?.role ?? null,
       country: p?.country ?? null,
       phone: p?.phone ?? null,
+      banned_until: banned ?? null,
       is_published: c?.is_published,
       city: c?.city,
     };
@@ -238,6 +242,8 @@ export async function getUserDetail(userId: string): Promise<UserDetail | null> 
     (a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime(),
   );
 
+  const bannedDetail = (u as unknown as { banned_until?: string | null })
+    .banned_until;
   return {
     user: {
       id: u.id,
@@ -249,6 +255,7 @@ export async function getUserDetail(userId: string): Promise<UserDetail | null> 
       role: (p?.role as UserRole) ?? null,
       country: p?.country ?? null,
       phone: p?.phone ?? null,
+      banned_until: bannedDetail ?? null,
       is_published: cgRes.data?.is_published ?? undefined,
       city: cgRes.data?.city ?? undefined,
     },

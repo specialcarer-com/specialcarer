@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { listUsersForAdmin, type UsersFilter, type UserRole } from "@/lib/admin/users";
+import AddUser from "./_components/AddUser";
 
 export const dynamic = "force-dynamic";
 
@@ -57,12 +58,15 @@ export default async function AdminUsers({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Users</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          All accounts (seekers, caregivers, admins). Click a row for full
-          profile, KYC, and bookings.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Users</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            All accounts (seekers, caregivers, admins). Click a row for full
+            profile, KYC, and bookings.
+          </p>
+        </div>
+        <AddUser />
       </div>
 
       <div className="flex flex-wrap items-center gap-1 border-b border-slate-200">
@@ -195,7 +199,11 @@ export default async function AdminUsers({
                     {fmtDate(u.last_sign_in_at)}
                   </td>
                   <td className="px-4 py-3">
-                    {u.email_confirmed_at ? (
+                    {u.banned_until && u.banned_until !== "none" ? (
+                      <span className="text-xs text-rose-700 font-medium">
+                        Blocked
+                      </span>
+                    ) : u.email_confirmed_at ? (
                       <span className="text-xs text-emerald-700 font-medium">
                         Verified
                       </span>
