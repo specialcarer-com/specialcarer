@@ -485,3 +485,69 @@ export const JOBS: Job[] = [
 export function getJob(id: string): Job | undefined {
   return JOBS.find((j) => j.id === id);
 }
+
+// ---- Notifications --------------------------------------------------------
+
+/**
+ * Notification feed shown when the seeker taps the bell. Real data
+ * will come from a `notifications` table on Supabase keyed by user_id;
+ * for now we stub a representative mix of booking-status updates,
+ * messages, and platform announcements so reviewers can see the
+ * empty/non-empty branches of the UI.
+ */
+export type NotificationKind =
+  | "booking_accepted"
+  | "booking_completed"
+  | "booking_requested"
+  | "message"
+  | "system";
+
+export type AppNotification = {
+  id: string;
+  kind: NotificationKind;
+  title: string;
+  body: string;
+  /** Relative time string for v1; switch to ISO + client-side fmt later. */
+  when: string;
+  /** Optional deeplink \u2014 tapping the notification routes here. */
+  href?: string;
+  read: boolean;
+};
+
+export const NOTIFICATIONS: AppNotification[] = [
+  {
+    id: "n1",
+    kind: "booking_accepted",
+    title: "Marvin accepted your booking",
+    body: "Elderly care · 14 Apr · 10:00 AM \u2013 11:00 AM. Your card has been authorised.",
+    when: "10 min ago",
+    href: "/m/bookings/bk_002",
+    read: false,
+  },
+  {
+    id: "n2",
+    kind: "message",
+    title: "New message from Aisha",
+    body: "Sure, I'll be there at 10. Looking forward to meeting the kids.",
+    when: "1 hr ago",
+    href: "/m/chat/ch1",
+    read: false,
+  },
+  {
+    id: "n3",
+    kind: "booking_completed",
+    title: "Booking complete",
+    body: "Your booking with Aisha on 02 Mar is complete. Tap to leave a review.",
+    when: "Yesterday",
+    href: "/m/bookings/bk_003",
+    read: true,
+  },
+  {
+    id: "n4",
+    kind: "system",
+    title: "Welcome to SpecialCarer",
+    body: "Verified carers, transparent pricing, and 24/7 support \u2014 we're glad you're here.",
+    when: "3 days ago",
+    read: true,
+  },
+];
