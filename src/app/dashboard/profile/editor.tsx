@@ -4,7 +4,24 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { SERVICES } from "@/lib/care/services";
 import { CARE_FORMATS } from "@/lib/care/formats";
+import { createClient as createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { CaregiverProfileFull, ProfileReadiness } from "@/lib/care/profile";
+
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp"] as const;
+
+async function safeReadError(res: Response): Promise<string> {
+  try {
+    const ct = res.headers.get("content-type") ?? "";
+    if (ct.includes("application/json")) {
+      const j = (await res.json()) as { error?: string };
+      if (j?.error) return j.error;
+    }
+    const text = await res.text();
+    if (text) return text.slice(0, 240);
+  } catch {}
+  return `Request failed (${res.status})`;
+}
 
 export default function ProfileEditor({
   initial,
@@ -108,20 +125,73 @@ export default function ProfileEditor({
   }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+    const input = e.target;
+    const file = input.files?.[0];
     if (!file) return;
-    const fd = new FormData();
-    fd.append("file", file);
     setErr(null);
+
+    // Client-side guards (mirror server)
+    if (!ALLOWED_MIME.includes(file.type as (typeof ALLOWED_MIME)[number])) {
+      setErr("Photo must be JPG, PNG, or WebP.");
+      input.value = "";
+      return;
+    }
+    if (file.size > MAX_PHOTO_BYTES) {
+      setErr("Photo must be 5 MB or smaller.");
+      input.value = "";
+      return;
+    }
+
     setSaving(true);
     try {
-      const res = await fetch("/api/caregiver/photo", { method: "POST", body: fd });
-      const json = (await res.json()) as { photo_url?: string; error?: string };
-      if (!res.ok || !json.photo_url) throw new Error(json.error ?? "Upload failed");
-      setPhotoUrl(json.photo_url);
+      // Step 1: ask server for a signed upload URL
+      const ext =
+        file.type === "image/png"
+          ? "png"
+          : file.type === "image/webp"
+            ? "webp"
+            : "jpg";
+      const issueRes = await fetch(`/api/caregiver/photo?ext=${ext}`, {
+        method: "GET",
+        cache: "no-store",
+      });
+      if (!issueRes.ok) throw new Error(await safeReadError(issueRes));
+      const issued = (await issueRes.json()) as {
+        path?: string;
+        token?: string;
+        signedUrl?: string;
+      };
+      if (!issued.path || !issued.token) throw new Error("Could not start upload");
+
+      // Step 2: upload the file directly to Supabase Storage
+      const sb = createSupabaseBrowserClient();
+      const { error: upErr } = await sb.storage
+        .from("caregiver-photos")
+        .uploadToSignedUrl(issued.path, issued.token, file, {
+          contentType: file.type,
+          upsert: true,
+        });
+      if (upErr) throw new Error(upErr.message);
+
+      // Step 3: confirm — server records photo_url
+      const confirmRes = await fetch("/api/caregiver/photo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: issued.path }),
+      });
+      if (!confirmRes.ok) throw new Error(await safeReadError(confirmRes));
+      const json = (await confirmRes.json()) as {
+        photo_url?: string;
+        error?: string;
+      };
+      if (!json.photo_url) throw new Error(json.error ?? "Upload failed");
+
+      // Cache-bust to force the new image to render immediately
+      setPhotoUrl(`${json.photo_url}?t=${Date.now()}`);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Upload error");
     } finally {
+      input.value = "";
       setSaving(false);
     }
   }
