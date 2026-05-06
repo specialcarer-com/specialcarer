@@ -13,6 +13,7 @@ import {
 } from "../../_components/ui";
 import type { CarerPosition } from "@/lib/tracking/types";
 import { POSITION_STALE_AFTER_MS } from "@/lib/tracking/types";
+import JobActivityPanel from "./_components/JobActivityPanel";
 
 type Props = {
   bookingId: string;
@@ -254,6 +255,9 @@ export default function TrackClient(props: Props) {
           </Link>
         </Card>
       )}
+
+      {/* Active-job checklist + quick-log + feed (both roles) */}
+      <JobActivityPanel bookingId={bookingId} role={role} />
 
       <p className="text-center text-[11px] text-subhead">
         Booking #{bookingId.slice(0, 8)}
