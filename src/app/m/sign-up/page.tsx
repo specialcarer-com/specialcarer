@@ -40,9 +40,13 @@ export default function SignUpPage() {
         email: email.trim(),
         password,
         options: {
+          // Where the email's "Confirm your account" button should land.
+          // Supabase rewrites this through /auth/callback; we pass
+          // ?flow=mobile so the callback hands the user back to /m/* even
+          // if Site URL points at the web canvas.
           emailRedirectTo:
             typeof window !== "undefined"
-              ? `${window.location.origin}/m/verify`
+              ? `${window.location.origin}/auth/callback?flow=mobile&next=/m/home`
               : undefined,
           data: { role: "seeker" },
         },
