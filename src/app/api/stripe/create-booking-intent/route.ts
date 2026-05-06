@@ -50,6 +50,7 @@ export async function POST(req: Request) {
     notes?: string;
     location_city?: string;
     location_country?: "GB" | "US";
+    recipient_ids?: string[];
   };
   const body = (await req.json()) as BookingBody;
 
@@ -119,6 +120,30 @@ export async function POST(req: Request) {
     );
   }
 
+  // Validate any provided recipient_ids actually belong to the seeker
+  let recipientIds: string[] = [];
+  if (Array.isArray(body.recipient_ids) && body.recipient_ids.length > 0) {
+    const requested = body.recipient_ids.filter(
+      (id): id is string => typeof id === "string" && id.length > 0,
+    );
+    if (requested.length > 0) {
+      const { data: ownedRows } = await admin
+        .from("household_recipients")
+        .select("id")
+        .eq("owner_id", user.id)
+        .in("id", requested);
+      const ownedSet = new Set((ownedRows ?? []).map((r) => r.id));
+      const allOwned = requested.every((id) => ownedSet.has(id));
+      if (!allOwned) {
+        return NextResponse.json(
+          { error: "One or more recipient_ids are invalid" },
+          { status: 400 },
+        );
+      }
+      recipientIds = requested;
+    }
+  }
+
   const subtotalCents = Math.round(
     body.hours! * body.hourly_rate_cents!
   );
@@ -144,6 +169,7 @@ export async function POST(req: Request) {
       notes: body.notes,
       location_city: body.location_city,
       location_country: body.location_country,
+      recipient_ids: recipientIds,
     })
     .select()
     .single();

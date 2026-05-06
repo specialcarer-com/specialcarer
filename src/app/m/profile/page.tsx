@@ -21,6 +21,7 @@ import {
   IconFamily,
   IconCrown,
   IconJournal,
+  IconHome,
 } from "../_components/ui";
 import { createClient } from "@/lib/supabase/client";
 import SwitchRole from "./_components/SwitchRole";
@@ -85,6 +86,7 @@ const CAREGIVER_SECTION: Section = {
 const SEEKER_SECTION: Section = {
   title: "Care & family",
   rows: [
+    { href: "/m/household", icon: <IconHome />, label: "My household" },
     { href: "/m/journal", icon: <IconJournal />, label: "Care journal" },
     { href: "/m/family", icon: <IconFamily />, label: "Family sharing" },
     { href: "/m/memberships", icon: <IconCrown />, label: "Memberships" },
