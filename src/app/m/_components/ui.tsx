@@ -726,3 +726,100 @@ export const IconCheck = () => (
     <path d="M4 12l5 5 11-11" />
   </svg>
 );
+
+/* ──────────────────────────────────────────────────────────────────
+   Credential badges — clinical & nurse
+
+   Two small pills used wherever a carer is rendered in a list or
+   header. They communicate, at a glance, that this carer is allowed
+   to take complex clinical bookings. Designed to sit next to (not
+   on top of) the existing "Verified" pill — distinct colours so a
+   nurse displays both badges without visual collision.
+
+     • Clinical → indigo, stethoscope icon (RN/HCA-certified)
+     • Nurse    → burgundy, cross-in-shield (NMC PIN / state RN)
+
+   `compact` strips the label so the icon-only chip can ride inside
+   tight cards (search results).
+   ────────────────────────────────────────────────────────────────── */
+
+export type CredentialKind = "clinical" | "nurse";
+
+const CRED_STYLES: Record<
+  CredentialKind,
+  { bg: string; text: string; label: string }
+> = {
+  clinical: { bg: "#E8EEF8", text: "#1F4FA8", label: "Clinical" },
+  nurse: { bg: "#F8E9EC", text: "#8B2A3D", label: "Nurse" },
+};
+
+function IconStethoscope() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M5 3v6a4 4 0 008 0V3" />
+      <path d="M9 13v3a5 5 0 0010 0v-2" />
+      <circle cx="19" cy="11" r="2" />
+    </svg>
+  );
+}
+
+function IconNurseCross() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5l8-3z" />
+      <path d="M12 8v8M8 12h8" />
+    </svg>
+  );
+}
+
+export function CredentialBadge({
+  kind,
+  compact = false,
+  className = "",
+}: {
+  kind: CredentialKind;
+  compact?: boolean;
+  className?: string;
+}) {
+  const style = CRED_STYLES[kind];
+  return (
+    <span
+      role="img"
+      aria-label={`${style.label} credentialed`}
+      title={`${style.label} credentialed`}
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold leading-none ${className}`}
+      style={{ background: style.bg, color: style.text }}
+    >
+      {kind === "nurse" ? <IconNurseCross /> : <IconStethoscope />}
+      {!compact && <span>{style.label}</span>}
+    </span>
+  );
+}
+
+/**
+ * Convenience wrapper: pass a carer's flags and we render the right
+ * combination. A nurse always implies clinical, but only one nurse
+ * badge is shown (with the clinical badge alongside) so there's no
+ * visual stacking problem.
+ */
+export function CarerBadges({
+  isClinical,
+  isNurse,
+  compact = false,
+  className = "",
+}: {
+  isClinical?: boolean;
+  isNurse?: boolean;
+  compact?: boolean;
+  className?: string;
+}) {
+  if (!isClinical && !isNurse) return null;
+  return (
+    <span className={`inline-flex items-center gap-1 ${className}`}>
+      {isNurse && <CredentialBadge kind="nurse" compact={compact} />}
+      {(isClinical || isNurse) && (
+        <CredentialBadge kind="clinical" compact={compact} />
+      )}
+    </span>
+  );
+}

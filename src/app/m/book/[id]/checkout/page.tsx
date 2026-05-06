@@ -7,6 +7,7 @@ import {
   Avatar,
   Button,
   Card,
+  CarerBadges,
   IconCal,
   IconCard,
   IconCheck,
@@ -159,7 +160,14 @@ function CheckoutInner() {
           <div className="flex items-center gap-3">
             <Avatar src={carer.photo} name={carer.name} size={56} />
             <div className="flex-1 min-w-0">
-              <p className="text-[16px] font-bold text-heading">{carer.name}</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-[16px] font-bold text-heading">{carer.name}</p>
+                <CarerBadges
+                  isClinical={carer.isClinical}
+                  isNurse={carer.isNurse}
+                  compact
+                />
+              </div>
               <p className="text-[12px] text-subheading">
                 {SERVICE_LABEL[service as keyof typeof SERVICE_LABEL] || service}
               </p>

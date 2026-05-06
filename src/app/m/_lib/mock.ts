@@ -38,6 +38,18 @@ export type Caregiver = {
    * when not set. A carer that does live-in placements will list both.
    */
   careFormats: CareFormat[];
+  /**
+   * Whether this carer holds verified clinical credentials — i.e.
+   * can be assigned bookings that involve PEG feeds, injections,
+   * controlled drugs, post-operative care, etc. RNs and HCAs with
+   * verified Care Certificates qualify; standard companions don't.
+   */
+  isClinical?: boolean;
+  /**
+   * Subset of clinical: this carer is a licensed nurse (NMC PIN in
+   * the UK; state RN license in the US). Always implies `isClinical`.
+   */
+  isNurse?: boolean;
   services: ("child" | "elderly" | "special" | "postnatal")[];
   languages: string[];
   about: string;
@@ -97,11 +109,14 @@ export const CAREGIVERS: Caregiver[] = [
     hourly: { gbp: 22, usd: 29 },
     weekly: { gbp: 1100, usd: 1450 },
     careFormats: ["visiting", "live_in"],
+    isClinical: true,
+    isNurse: true,
     services: ["child", "elderly", "special"],
     languages: ["English", "Hindi", "Bengali"],
     about:
-      "Compassionate, NEBOSH-trained caregiver with 6+ years supporting families across childcare and adult care. Specialised in dementia support and bilingual children. CRB & DBS cleared, first-aid certified.",
+      "NMC-registered nurse turned community carer. 6+ years supporting families across childcare and adult care, with clinical experience in dementia care, post-operative recovery, and medication administration. CRB & DBS cleared, first-aid certified, bilingual (English / Hindi / Bengali).",
     certifications: [
+      { title: "NMC Registered Nurse", issuedAt: "05 Jun 2018" },
       { title: "DBS Enhanced", issuedAt: "16 Apr 2024" },
       { title: "First Aid (Pediatric)", issuedAt: "02 Jan 2025" },
       { title: "Dementia Care Level 3", issuedAt: "11 Sep 2024" },
@@ -179,11 +194,14 @@ export const CAREGIVERS: Caregiver[] = [
     hourly: { gbp: 19, usd: 26 },
     weekly: { gbp: 950, usd: 1300 },
     careFormats: ["visiting", "live_in"],
+    isClinical: true,
     services: ["elderly", "special"],
     languages: ["English"],
     about:
-      "Adult-care specialist with experience supporting Parkinson's and post-stroke recovery. I focus on dignity, mobility and small daily wins.",
+      "HCA-trained adult-care specialist with verified clinical credentials. Experienced supporting Parkinson's, post-stroke recovery, PEG-feed routines and controlled-drug administration. I focus on dignity, mobility and small daily wins.",
     certifications: [
+      { title: "Care Certificate", issuedAt: "22 May 2023" },
+      { title: "PEG Feeding (RCN-certified)", issuedAt: "10 Oct 2024" },
       { title: "DBS Enhanced", issuedAt: "08 Aug 2024" },
       { title: "Manual Handling Level 2", issuedAt: "15 Mar 2024" },
     ],

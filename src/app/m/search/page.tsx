@@ -7,6 +7,7 @@ import {
   BottomNav,
   Button,
   Card,
+  CarerBadges,
   IconFilter,
   IconPin,
   IconSearch,
@@ -34,10 +35,18 @@ const SERVICES = [
 export default function SearchPage() {
   const [q, setQ] = useState("");
   const [service, setService] = useState<(typeof SERVICES)[number]["key"]>("all");
+  // Credential filters — honour the FAQ promise that complex clinical
+  // bookings only land with credentialed carers. Both default off so
+  // the filter is opt-in; selecting nurse implies clinical at the
+  // matcher level (a nurse always satisfies the clinical filter).
+  const [needClinical, setNeedClinical] = useState(false);
+  const [needNurse, setNeedNurse] = useState(false);
 
   const results = useMemo(() => {
     return CAREGIVERS.filter((c) => {
       if (service !== "all" && !c.services.includes(service as never)) return false;
+      if (needNurse && !c.isNurse) return false;
+      if (needClinical && !(c.isClinical || c.isNurse)) return false;
       if (!q.trim()) return true;
       const needle = q.trim().toLowerCase();
       return (
@@ -46,7 +55,7 @@ export default function SearchPage() {
         c.languages.some((l) => l.toLowerCase().includes(needle))
       );
     });
-  }, [q, service]);
+  }, [q, service, needClinical, needNurse]);
 
   return (
     <main className="min-h-[100dvh] bg-bg-screen sc-with-bottom-nav">
@@ -92,6 +101,34 @@ export default function SearchPage() {
           })}
         </div>
 
+        {/* Credential filters */}
+        <div className="-mx-4 px-4 flex gap-2 overflow-x-auto pb-2 sc-no-select">
+          <button
+            onClick={() => setNeedClinical((v) => !v)}
+            aria-pressed={needClinical}
+            className={`shrink-0 h-9 px-3 rounded-pill text-[13px] font-semibold transition inline-flex items-center gap-1.5 ${
+              needClinical
+                ? "text-white"
+                : "bg-white text-subheading border border-line"
+            }`}
+            style={needClinical ? { background: "#1F4FA8" } : undefined}
+          >
+            <span>⚕</span> Clinical experience
+          </button>
+          <button
+            onClick={() => setNeedNurse((v) => !v)}
+            aria-pressed={needNurse}
+            className={`shrink-0 h-9 px-3 rounded-pill text-[13px] font-semibold transition inline-flex items-center gap-1.5 ${
+              needNurse
+                ? "text-white"
+                : "bg-white text-subheading border border-line"
+            }`}
+            style={needNurse ? { background: "#8B2A3D" } : undefined}
+          >
+            <span>✚</span> Qualified nurse
+          </button>
+        </div>
+
         <p className="mt-3 text-[12px] text-subheading">
           {results.length} {results.length === 1 ? "carer" : "carers"} found
         </p>
@@ -117,6 +154,11 @@ export default function SearchPage() {
                       {SERVICE_LABEL[s]}
                     </Tag>
                   ))}
+                  <CarerBadges
+                    isClinical={c.isClinical}
+                    isNurse={c.isNurse}
+                    compact
+                  />
                 </div>
               </div>
             </div>

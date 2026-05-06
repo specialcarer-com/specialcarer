@@ -7,6 +7,7 @@ import {
   Avatar,
   Button,
   Card,
+  CarerBadges,
   IconAward,
   IconCert,
   IconClock,
@@ -67,6 +68,14 @@ export default function CarerDetailPage() {
         <p className="mt-1 inline-flex items-center gap-1 text-[13px] text-subheading">
           <IconPin /> {carer.city}
         </p>
+        {(carer.isClinical || carer.isNurse) && (
+          <div className="mt-2">
+            <CarerBadges
+              isClinical={carer.isClinical}
+              isNurse={carer.isNurse}
+            />
+          </div>
+        )}
         <p className="mt-1 inline-flex items-center gap-3 text-[13px] text-subheading">
           <span className="inline-flex items-center gap-1">
             <IconAward /> {carer.experienceYears}+ years

@@ -7,6 +7,7 @@ import {
   BottomNav,
   Button,
   Card,
+  CarerBadges,
   IconCal,
   IconChatBubble,
   IconFilter,
@@ -240,6 +241,11 @@ function CarerCard({ carer }: { carer: (typeof CAREGIVERS)[number] }) {
                 &amp; more
               </span>
             )}
+            <CarerBadges
+              isClinical={carer.isClinical}
+              isNurse={carer.isNurse}
+              compact
+            />
           </div>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import {
   Avatar,
   Button,
+  CarerBadges,
   IconCal,
   IconStar,
   Input,
@@ -143,6 +144,14 @@ export default function CreateBookingPage() {
         <Avatar src={carer.photo} name={carer.name} size={88} />
         <p className="mt-3 text-[18px] font-bold text-heading">{carer.name}</p>
         <p className="text-[12px] text-subheading">{carer.city}</p>
+        {(carer.isClinical || carer.isNurse) && (
+          <div className="mt-1.5">
+            <CarerBadges
+              isClinical={carer.isClinical}
+              isNurse={carer.isNurse}
+            />
+          </div>
+        )}
         <p className="mt-1 inline-flex items-center gap-1 text-[12px] text-heading font-semibold">
           <IconStar /> {carer.rating.toFixed(1)} · {carer.experienceYears}+ years
         </p>
