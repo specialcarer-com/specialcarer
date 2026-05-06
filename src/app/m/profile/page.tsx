@@ -31,54 +31,104 @@ type Row = {
   destructive?: boolean;
 };
 
-const SECTIONS: { title: string; rows: Row[] }[] = [
-  {
-    title: "Account",
-    rows: [
-      { href: "/m/profile/edit", icon: <IconUser />, label: "Edit profile" },
-      { href: "/m/profile/change-password", icon: <IconLock />, label: "Change password" },
-      { href: "/m/profile/payment-method", icon: <IconCard />, label: "Payment method" },
-      { href: "/m/profile/invoices", icon: <IconBag />, label: "Invoices" },
-    ],
-  },
-  {
-    title: "Care profile",
-    rows: [
-      { href: "/m/profile/certifications", icon: <IconCert />, label: "Certifications" },
-      { href: "/m/profile/availability", icon: <IconClock />, label: "Availability" },
-      { href: "/m/profile/reviews", icon: <IconStar />, label: "My reviews" },
-      { href: "/m/profile/my-clients", icon: <IconUser />, label: "My clients" },
-    ],
-  },
-  {
-    // Forward-looking section. Each route is a polished "Coming soon"
-    // page today; same URLs will host the real features once the
-    // backend (Supabase RLS rewrite for family, Stripe Subscriptions
-    // for memberships, photo storage for the journal) is in place.
-    title: "Family",
-    rows: [
-      { href: "/m/journal", icon: <IconJournal />, label: "Care journal" },
-      { href: "/m/family", icon: <IconFamily />, label: "Family sharing" },
-      { href: "/m/memberships", icon: <IconCrown />, label: "Memberships" },
-    ],
-  },
-];
+type Section = { title: string; rows: Row[] };
+
+type Role = "seeker" | "caregiver" | "admin";
+
+/**
+ * Sections common to every signed-in user.
+ *
+ * "Payment method" and "Invoices" stay in Account for everyone:
+ * - seekers use Payment method to pay for bookings
+ * - caregivers use Payment method for Stripe Connect payouts
+ * - both groups can have invoices (paid or earned)
+ */
+const COMMON_ACCOUNT: Section = {
+  title: "Account",
+  rows: [
+    { href: "/m/profile/edit", icon: <IconUser />, label: "Edit profile" },
+    {
+      href: "/m/profile/change-password",
+      icon: <IconLock />,
+      label: "Change password",
+    },
+    {
+      href: "/m/profile/payment-method",
+      icon: <IconCard />,
+      label: "Payment method",
+    },
+    { href: "/m/profile/invoices", icon: <IconBag />, label: "Invoices" },
+  ],
+};
+
+/** Caregiver-only: provider tools. */
+const CAREGIVER_SECTION: Section = {
+  title: "Care profile",
+  rows: [
+    {
+      href: "/m/profile/certifications",
+      icon: <IconCert />,
+      label: "Certifications",
+    },
+    {
+      href: "/m/profile/availability",
+      icon: <IconClock />,
+      label: "Availability",
+    },
+    { href: "/m/profile/reviews", icon: <IconStar />, label: "My reviews" },
+    { href: "/m/profile/my-clients", icon: <IconUser />, label: "My clients" },
+  ],
+};
+
+/** Seeker-only: care recipient and family tools. */
+const SEEKER_SECTION: Section = {
+  title: "Care & family",
+  rows: [
+    { href: "/m/journal", icon: <IconJournal />, label: "Care journal" },
+    { href: "/m/family", icon: <IconFamily />, label: "Family sharing" },
+    { href: "/m/memberships", icon: <IconCrown />, label: "Memberships" },
+  ],
+};
+
+function sectionsForRole(role: Role | null): Section[] {
+  if (role === "caregiver") {
+    return [COMMON_ACCOUNT, CAREGIVER_SECTION];
+  }
+  // Default to seeker view for seeker, admin, or unknown role.
+  return [COMMON_ACCOUNT, SEEKER_SECTION];
+}
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [name, setName] = useState("Jane Cooper");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [role, setRole] = useState<Role | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        setEmail(data.user.email ?? "");
-        const meta = (data.user.user_metadata || {}) as Record<string, unknown>;
-        const fullName = (meta.full_name as string) || (meta.name as string);
-        if (fullName) setName(fullName);
+    (async () => {
+      const { data: userRes } = await supabase.auth.getUser();
+      const user = userRes.user;
+      if (!user) {
+        setLoaded(true);
+        return;
       }
-    });
+      setEmail(user.email ?? "");
+      const meta = (user.user_metadata || {}) as Record<string, unknown>;
+      const fullName =
+        (meta.full_name as string) || (meta.name as string) || "";
+      if (fullName) setName(fullName);
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role, full_name")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (profile?.full_name && !fullName) setName(profile.full_name);
+      if (profile?.role) setRole(profile.role as Role);
+      setLoaded(true);
+    })();
   }, []);
 
   async function logout() {
@@ -86,6 +136,8 @@ export default function ProfilePage() {
     await supabase.auth.signOut();
     router.replace("/m/login");
   }
+
+  const sections = sectionsForRole(role);
 
   return (
     <div className="min-h-screen bg-bg-screen sc-with-bottom-nav">
@@ -95,12 +147,23 @@ export default function ProfilePage() {
       <div className="px-5 pt-2">
         <div className="rounded-card bg-white p-4 shadow-card">
           <div className="flex items-center gap-4">
-            <Avatar size={64} name={name} />
+            <Avatar size={64} name={name || "—"} />
             <div className="min-w-0 flex-1">
-              <p className="text-[16px] font-bold text-heading">{name}</p>
-              <p className="truncate text-[12.5px] text-subheading">
-                {email || "Loading…"}
+              <p className="text-[16px] font-bold text-heading">
+                {name || "Your profile"}
               </p>
+              <p className="truncate text-[12.5px] text-subheading">
+                {email || (loaded ? "Not signed in" : "Loading…")}
+              </p>
+              {loaded && role && (
+                <p className="mt-1 inline-block rounded-pill bg-primary-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+                  {role === "caregiver"
+                    ? "Carer"
+                    : role === "admin"
+                      ? "Admin"
+                      : "Care receiver"}
+                </p>
+              )}
             </div>
           </div>
           <Link
@@ -113,7 +176,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Sections */}
-      {SECTIONS.map((s) => (
+      {sections.map((s) => (
         <div key={s.title} className="px-5 pt-6">
           <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-subheading">
             {s.title}
