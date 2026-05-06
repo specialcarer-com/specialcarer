@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatMoney, serviceLabel } from "@/lib/care/services";
+import { certLabel } from "@/lib/care/attributes";
 
 export type CaregiverCardData = {
   user_id: string;
@@ -19,6 +20,12 @@ export type CaregiverCardData = {
   rating_avg: number | null;
   rating_count: number;
   match_score?: number;
+  // Booking preference filter attributes (optional, additive)
+  gender?: string | null;
+  has_drivers_license?: boolean;
+  has_own_vehicle?: boolean;
+  tags?: string[];
+  certifications?: string[];
 };
 
 function formatRate(c: CaregiverCardData): string {
@@ -106,6 +113,37 @@ export default function CaregiverCard({
           </span>
         ))}
       </div>
+
+      {(c.has_drivers_license || c.has_own_vehicle || (c.certifications && c.certifications.length > 0) || (c.tags && c.tags.length > 0)) && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {c.has_drivers_license && (
+            <span className="px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 text-[11px] font-medium">
+              Driver
+            </span>
+          )}
+          {c.has_own_vehicle && (
+            <span className="px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 text-[11px] font-medium">
+              Has vehicle
+            </span>
+          )}
+          {(c.certifications ?? []).slice(0, 3).map((k) => (
+            <span
+              key={k}
+              className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-medium"
+            >
+              {certLabel(k)}
+            </span>
+          ))}
+          {(c.tags ?? []).slice(0, 2).map((t) => (
+            <span
+              key={t}
+              className="px-2 py-0.5 rounded-full bg-slate-50 text-slate-600 text-[11px]"
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="mt-4 grid grid-cols-3 gap-2 text-xs text-slate-600">
         <div>

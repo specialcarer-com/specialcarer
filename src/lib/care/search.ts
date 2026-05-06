@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { CaregiverCardData } from "@/components/caregiver-card";
 import { isServiceKey } from "@/lib/care/services";
 import { isCareFormatKey, type CareFormatKey } from "@/lib/care/formats";
+import { isGenderKey, type GenderKey } from "@/lib/care/attributes";
 
 export type CareSearchFilters = {
   service?: string;
@@ -12,6 +13,13 @@ export type CareSearchFilters = {
   maxRate?: number; // in cents
   query?: string;
   limit?: number;
+  // Booking preference filters (all optional, additive)
+  genders?: GenderKey[];
+  requireDriver?: boolean;
+  requireVehicle?: boolean;
+  requiredCertifications?: string[];
+  requiredLanguages?: string[];
+  tags?: string[];
 };
 
 const UK_REQUIRED = ["enhanced_dbs_barred", "right_to_work", "digital_id"];
@@ -34,7 +42,7 @@ export async function searchCaregivers(
   let query = admin
     .from("caregiver_profiles")
     .select(
-      "user_id, display_name, headline, bio, city, region, country, services, care_formats, hourly_rate_cents, weekly_rate_cents, currency, years_experience, languages, rating_avg, rating_count, is_published",
+      "user_id, display_name, headline, bio, city, region, country, services, care_formats, hourly_rate_cents, weekly_rate_cents, currency, years_experience, languages, rating_avg, rating_count, is_published, gender, has_drivers_license, has_own_vehicle, tags, certifications",
     )
     .eq("is_published", true);
 
@@ -55,6 +63,39 @@ export async function searchCaregivers(
     query = query.or(
       `display_name.ilike.${q},headline.ilike.${q},bio.ilike.${q}`,
     );
+  }
+
+  // --- Booking preference filters (additive, optional) ---
+  const genders = (filters.genders ?? []).filter(isGenderKey);
+  if (genders.length > 0) {
+    query = query.in("gender", genders);
+  }
+  if (filters.requireDriver) {
+    query = query.eq("has_drivers_license", true);
+  }
+  if (filters.requireVehicle) {
+    query = query.eq("has_own_vehicle", true);
+  }
+  // certifications/languages/tags: every requested item must be present
+  // on the profile ("contains" = array <@ on Postgres). Gives families
+  // a strict-AND filter — fewer false positives.
+  const reqCerts = (filters.requiredCertifications ?? []).filter(
+    (c) => typeof c === "string" && c.length > 0 && c.length <= 60,
+  );
+  if (reqCerts.length > 0) {
+    query = query.contains("certifications", reqCerts);
+  }
+  const reqLangs = (filters.requiredLanguages ?? []).filter(
+    (l) => typeof l === "string" && l.length > 0 && l.length <= 30,
+  );
+  if (reqLangs.length > 0) {
+    query = query.contains("languages", reqLangs);
+  }
+  const reqTags = (filters.tags ?? []).filter(
+    (t) => typeof t === "string" && t.length > 0 && t.length <= 30,
+  );
+  if (reqTags.length > 0) {
+    query = query.contains("tags", reqTags);
   }
 
   query = query
@@ -116,6 +157,12 @@ export async function searchCaregivers(
     rating_avg: p.rating_avg ? Number(p.rating_avg) : null,
     rating_count: p.rating_count ?? 0,
     match_score: computeMatch(p, filters),
+    // Surface filter attributes to cards so we can render badges later.
+    gender: (p as { gender?: string | null }).gender ?? null,
+    has_drivers_license: !!(p as { has_drivers_license?: boolean }).has_drivers_license,
+    has_own_vehicle: !!(p as { has_own_vehicle?: boolean }).has_own_vehicle,
+    tags: ((p as { tags?: string[] | null }).tags ?? []) as string[],
+    certifications: ((p as { certifications?: string[] | null }).certifications ?? []) as string[],
   }));
 }
 

@@ -39,6 +39,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  type BookingPreferences = {
+    genders?: string[];
+    require_driver?: boolean;
+    require_vehicle?: boolean;
+    required_certifications?: string[];
+    required_languages?: string[];
+    tags?: string[];
+  };
   type BookingBody = {
     caregiver_id?: string;
     starts_at?: string;
@@ -51,8 +59,36 @@ export async function POST(req: Request) {
     location_city?: string;
     location_country?: "GB" | "US";
     recipient_ids?: string[];
+    preferences?: BookingPreferences;
   };
   const body = (await req.json()) as BookingBody;
+
+  // Sanitise booking preferences — stored as jsonb on the booking so we
+  // have an audit trail of what the seeker required at request time.
+  // Validation here is intentionally lenient: this is a record of intent,
+  // not an enforcement gate. Length caps prevent abuse.
+  function sanitisePrefs(p?: BookingPreferences): Record<string, unknown> {
+    if (!p || typeof p !== "object") return {};
+    const cleanArr = (a: unknown, max: number, len: number): string[] => {
+      if (!Array.isArray(a)) return [];
+      return Array.from(
+        new Set(
+          a
+            .filter((s): s is string => typeof s === "string")
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0 && s.length <= len),
+        ),
+      ).slice(0, max);
+    };
+    return {
+      genders: cleanArr(p.genders, 4, 30),
+      require_driver: !!p.require_driver,
+      require_vehicle: !!p.require_vehicle,
+      required_certifications: cleanArr(p.required_certifications, 16, 60),
+      required_languages: cleanArr(p.required_languages, 5, 30),
+      tags: cleanArr(p.tags, 8, 30),
+    };
+  }
 
   const required: (keyof BookingBody)[] = [
     "caregiver_id",
@@ -170,6 +206,7 @@ export async function POST(req: Request) {
       location_city: body.location_city,
       location_country: body.location_country,
       recipient_ids: recipientIds,
+      preferences: sanitisePrefs(body.preferences),
     })
     .select()
     .single();

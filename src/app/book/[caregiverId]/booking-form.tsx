@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import type { Appearance } from "@stripe/stripe-js";
 import { getStripe } from "@/lib/stripe/client";
+import { CERTIFICATIONS, GENDERS } from "@/lib/care/attributes";
 
 type Currency = "gbp" | "usd";
 // Aligned with src/lib/care/services.ts so caregiver listings, search,
@@ -60,6 +61,22 @@ export default function BookingForm({
   const [currency] = useState<Currency>(defaultCurrency);
   const [notes, setNotes] = useState("");
 
+  // Optional booking preferences — recorded against the booking so the
+  // carer (and our admin) can see what the family asked for at request time.
+  const [prefGenders, setPrefGenders] = useState<string[]>([]);
+  const [prefDriver, setPrefDriver] = useState(false);
+  const [prefVehicle, setPrefVehicle] = useState(false);
+  const [prefCerts, setPrefCerts] = useState<string[]>([]);
+  const [prefLangs, setPrefLangs] = useState("");
+  const [prefTags, setPrefTags] = useState("");
+
+  function togglePrefGender(k: string) {
+    setPrefGenders((p) => (p.includes(k) ? p.filter((x) => x !== k) : [...p, k]));
+  }
+  function togglePrefCert(k: string) {
+    setPrefCerts((p) => (p.includes(k) ? p.filter((x) => x !== k) : [...p, k]));
+  }
+
   const [stage, setStage] = useState<"details" | "payment" | "success">(
     "details"
   );
@@ -102,6 +119,20 @@ export default function BookingForm({
           service_type: serviceType,
           notes: notes || undefined,
           location_country: currency === "usd" ? "US" : "GB",
+          preferences: {
+            genders: prefGenders,
+            require_driver: prefDriver,
+            require_vehicle: prefVehicle,
+            required_certifications: prefCerts,
+            required_languages: prefLangs
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean),
+            tags: prefTags
+              .split(",")
+              .map((s) => s.trim().toLowerCase())
+              .filter(Boolean),
+          },
         }),
       });
       const json = (await res.json()) as {
@@ -225,6 +256,110 @@ export default function BookingForm({
               placeholder="Anything the caregiver should know"
             />
           </label>
+
+          <details className="group rounded-xl border border-slate-200 p-3">
+            <summary className="cursor-pointer text-sm font-medium text-slate-700 list-none flex items-center gap-1.5">
+              <span aria-hidden className="transition-transform group-open:rotate-90">›</span>
+              Match preferences (optional)
+            </summary>
+            <p className="mt-2 text-xs text-slate-500">
+              These help us flag a better match if you ever change carer.
+              They&rsquo;re saved against this booking and shared with the carer.
+            </p>
+
+            <fieldset className="mt-3">
+              <legend className="text-xs font-semibold text-slate-700">Gender</legend>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {GENDERS.map((g) => {
+                  const on = prefGenders.includes(g.key);
+                  return (
+                    <button
+                      type="button"
+                      key={g.key}
+                      onClick={() => togglePrefGender(g.key)}
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium border transition ${
+                        on
+                          ? "bg-brand text-white border-brand"
+                          : "bg-white text-slate-700 border-slate-200"
+                      }`}
+                    >
+                      {g.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+
+            <fieldset className="mt-3">
+              <legend className="text-xs font-semibold text-slate-700">Travel</legend>
+              <div className="mt-1.5 flex flex-wrap gap-3 text-sm">
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={prefDriver}
+                    onChange={(e) => setPrefDriver(e.target.checked)}
+                    className="h-4 w-4 accent-brand"
+                  />
+                  Driver&rsquo;s licence
+                </label>
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={prefVehicle}
+                    onChange={(e) => setPrefVehicle(e.target.checked)}
+                    className="h-4 w-4 accent-brand"
+                  />
+                  Has own vehicle
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset className="mt-3">
+              <legend className="text-xs font-semibold text-slate-700">Certifications</legend>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {CERTIFICATIONS.map((c) => {
+                  const on = prefCerts.includes(c.key);
+                  return (
+                    <button
+                      type="button"
+                      key={c.key}
+                      onClick={() => togglePrefCert(c.key)}
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition ${
+                        on
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : "bg-white text-slate-700 border-slate-200"
+                      }`}
+                    >
+                      {c.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="text-xs">
+                <span className="font-semibold text-slate-700">Languages</span>
+                <input
+                  type="text"
+                  value={prefLangs}
+                  onChange={(e) => setPrefLangs(e.target.value)}
+                  placeholder="Polish, Urdu"
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                />
+              </label>
+              <label className="text-xs">
+                <span className="font-semibold text-slate-700">Tags</span>
+                <input
+                  type="text"
+                  value={prefTags}
+                  onChange={(e) => setPrefTags(e.target.value)}
+                  placeholder="non-smoker, pet-friendly"
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                />
+              </label>
+            </div>
+          </details>
         </div>
 
         <div className="p-5 rounded-2xl bg-white border border-slate-200">

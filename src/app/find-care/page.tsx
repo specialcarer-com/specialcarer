@@ -5,6 +5,13 @@ import CaregiverCard from "@/components/caregiver-card";
 import { searchCaregivers, listPublishedCities } from "@/lib/care/search";
 import { SERVICES, isServiceKey } from "@/lib/care/services";
 import { CARE_FORMATS, isCareFormatKey } from "@/lib/care/formats";
+import {
+  CERTIFICATIONS,
+  GENDERS,
+  isCertKey,
+  isGenderKey,
+  type GenderKey,
+} from "@/lib/care/attributes";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -24,6 +31,14 @@ type SearchParams = {
   max?: string;
   q?: string;
   date?: string;
+  // Booking preference filters
+  genders?: string | string[];
+  driver?: string;
+  vehicle?: string;
+  certs?: string | string[];
+  langs?: string;
+  tags?: string;
+  more?: string;
 };
 
 export default async function FindCarePage({
@@ -50,8 +65,49 @@ export default async function FindCarePage({
       })
     : undefined;
 
+  // Booking preference filters
+  const sel = (v: string | string[] | undefined): string[] =>
+    Array.isArray(v) ? v : v ? [v] : [];
+  const genders = sel(sp.genders).filter(isGenderKey) as GenderKey[];
+  const certsSelected = sel(sp.certs).filter(isCertKey);
+  const requireDriver = sp.driver === "1" || sp.driver === "on";
+  const requireVehicle = sp.vehicle === "1" || sp.vehicle === "on";
+  const requiredLanguages = (sp.langs ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s && s.length <= 30)
+    .slice(0, 5);
+  const requiredTags = (sp.tags ?? "")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter((s) => s && s.length <= 30)
+    .slice(0, 8);
+  // "More filters" section auto-expands if any of those filters are active.
+  const moreOpen =
+    sp.more === "1" ||
+    genders.length > 0 ||
+    certsSelected.length > 0 ||
+    requireDriver ||
+    requireVehicle ||
+    requiredLanguages.length > 0 ||
+    requiredTags.length > 0;
+
   const [results, supabase, citiesAll] = await Promise.all([
-    searchCaregivers({ service, format, city, country, minRate, maxRate, query: q }),
+    searchCaregivers({
+      service,
+      format,
+      city,
+      country,
+      minRate,
+      maxRate,
+      query: q,
+      genders,
+      requireDriver,
+      requireVehicle,
+      requiredCertifications: certsSelected,
+      requiredLanguages,
+      tags: requiredTags,
+    }),
     createClient(),
     listPublishedCities(),
   ]);
@@ -202,6 +258,162 @@ export default async function FindCarePage({
               />
             </label>
           </div>
+          {/* More filters (collapsible) */}
+          <details
+            open={moreOpen}
+            className="sm:col-span-2 lg:col-span-7 mt-1 group"
+          >
+            <summary className="cursor-pointer text-sm font-medium text-brand-700 hover:underline list-none flex items-center gap-1.5">
+              <span aria-hidden className="transition-transform group-open:rotate-90">›</span>
+              More filters
+              {(genders.length +
+                certsSelected.length +
+                (requireDriver ? 1 : 0) +
+                (requireVehicle ? 1 : 0) +
+                requiredLanguages.length +
+                requiredTags.length) > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-brand text-white text-[11px]">
+                  {genders.length +
+                    certsSelected.length +
+                    (requireDriver ? 1 : 0) +
+                    (requireVehicle ? 1 : 0) +
+                    requiredLanguages.length +
+                    requiredTags.length}
+                </span>
+              )}
+            </summary>
+            {/* hidden input keeps the section open after submit */}
+            <input type="hidden" name="more" value="1" />
+
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
+              <fieldset>
+                <legend className="text-sm font-medium text-slate-700">
+                  Gender
+                </legend>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Tick any that work — leave blank for all.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {GENDERS.map((g) => {
+                    const on = (genders as string[]).includes(g.key);
+                    return (
+                      <label
+                        key={g.key}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer border transition ${
+                          on
+                            ? "bg-brand text-white border-brand"
+                            : "bg-white text-slate-700 border-slate-200 hover:border-slate-300"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          name="genders"
+                          value={g.key}
+                          defaultChecked={on}
+                          className="sr-only"
+                        />
+                        {g.label}
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend className="text-sm font-medium text-slate-700">
+                  Travel
+                </legend>
+                <div className="mt-2 flex flex-col gap-1.5">
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      name="driver"
+                      value="1"
+                      defaultChecked={requireDriver}
+                      className="h-4 w-4 accent-brand"
+                    />
+                    Has a driver&rsquo;s licence
+                  </label>
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      name="vehicle"
+                      value="1"
+                      defaultChecked={requireVehicle}
+                      className="h-4 w-4 accent-brand"
+                    />
+                    Has own vehicle
+                  </label>
+                </div>
+              </fieldset>
+
+              <fieldset className="sm:col-span-2">
+                <legend className="text-sm font-medium text-slate-700">
+                  Required certifications
+                </legend>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Carer must hold every one ticked.
+                </p>
+                <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5">
+                  {CERTIFICATIONS.map((c) => {
+                    const on = certsSelected.includes(c.key);
+                    return (
+                      <label
+                        key={c.key}
+                        className={`px-2.5 py-1.5 rounded-lg text-xs cursor-pointer border transition ${
+                          on
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-white text-slate-700 border-slate-200 hover:border-slate-300"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          name="certs"
+                          value={c.key}
+                          defaultChecked={on}
+                          className="sr-only"
+                        />
+                        {c.label}
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
+
+              <label className="text-sm">
+                <span className="text-slate-700 font-medium">
+                  Languages required
+                </span>
+                <span className="block text-xs text-slate-500 mb-1">
+                  Comma-separated. e.g. Polish, Urdu
+                </span>
+                <input
+                  type="text"
+                  name="langs"
+                  defaultValue={requiredLanguages.join(", ")}
+                  placeholder="Polish, Urdu"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200"
+                />
+              </label>
+
+              <label className="text-sm">
+                <span className="text-slate-700 font-medium">
+                  Carer tags
+                </span>
+                <span className="block text-xs text-slate-500 mb-1">
+                  e.g. non-smoker, pet-friendly
+                </span>
+                <input
+                  type="text"
+                  name="tags"
+                  defaultValue={requiredTags.join(", ")}
+                  placeholder="non-smoker, pet-friendly"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200"
+                />
+              </label>
+            </div>
+          </details>
+
           <div className="sm:col-span-2 lg:col-span-7 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between pt-1">
             <p className="text-xs text-slate-500">
               Rates are pre–service-fee. Final price shown at checkout.

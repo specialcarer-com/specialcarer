@@ -16,6 +16,7 @@ import {
   TopBar,
 } from "../_components/ui";
 import { CAREGIVERS, SERVICE_LABEL } from "../_lib/mock";
+import { CERTIFICATIONS, GENDERS } from "@/lib/care/attributes";
 
 /**
  * Search / discovery — there's no Figma frame for this exact screen
@@ -43,11 +44,82 @@ export default function SearchPage() {
   const [needClinical, setNeedClinical] = useState(false);
   const [needNurse, setNeedNurse] = useState(false);
 
+  // Booking preference filters (additive, work alongside the existing
+  // credential filters). Backed by an opt-in bottom-sheet panel.
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [genders, setGenders] = useState<string[]>([]);
+  const [needDriver, setNeedDriver] = useState(false);
+  const [needVehicle, setNeedVehicle] = useState(false);
+  const [requiredCerts, setRequiredCerts] = useState<string[]>([]);
+  const [requiredLangs, setRequiredLangs] = useState<string>("");
+  const [requiredTags, setRequiredTags] = useState<string>("");
+
+  const activeExtraCount =
+    genders.length +
+    requiredCerts.length +
+    (needDriver ? 1 : 0) +
+    (needVehicle ? 1 : 0) +
+    requiredLangs.split(",").map((s) => s.trim()).filter(Boolean).length +
+    requiredTags.split(",").map((s) => s.trim()).filter(Boolean).length;
+
+  function toggleGender(k: string) {
+    setGenders((prev) => (prev.includes(k) ? prev.filter((g) => g !== k) : [...prev, k]));
+  }
+  function toggleCert(k: string) {
+    setRequiredCerts((prev) =>
+      prev.includes(k) ? prev.filter((c) => c !== k) : [...prev, k],
+    );
+  }
+  function clearExtras() {
+    setGenders([]);
+    setNeedDriver(false);
+    setNeedVehicle(false);
+    setRequiredCerts([]);
+    setRequiredLangs("");
+    setRequiredTags("");
+  }
+
   const results = useMemo(() => {
+    const reqLangs = requiredLangs
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+    const reqTags = requiredTags
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+
     return CAREGIVERS.filter((c) => {
       if (service !== "all" && !c.services.includes(service as never)) return false;
       if (needNurse && !c.isNurse) return false;
       if (needClinical && !(c.isClinical || c.isNurse)) return false;
+      // Booking preference filters — mock data may not have these fields,
+      // so we treat missing fields as "no info" and let them through unless
+      // strict requirements (driver/vehicle/certs) cannot be satisfied.
+      const cAny = c as unknown as {
+        gender?: string;
+        hasLicense?: boolean;
+        hasVehicle?: boolean;
+        certifications?: string[];
+        tags?: string[];
+      };
+      if (genders.length > 0 && cAny.gender && !genders.includes(cAny.gender)) {
+        return false;
+      }
+      if (needDriver && cAny.hasLicense === false) return false;
+      if (needVehicle && cAny.hasVehicle === false) return false;
+      if (requiredCerts.length > 0) {
+        const have = new Set(cAny.certifications ?? []);
+        if (!requiredCerts.every((k) => have.has(k))) return false;
+      }
+      if (reqLangs.length > 0) {
+        const have = c.languages.map((l) => l.toLowerCase());
+        if (!reqLangs.every((l) => have.includes(l))) return false;
+      }
+      if (reqTags.length > 0) {
+        const have = (cAny.tags ?? []).map((t) => t.toLowerCase());
+        if (!reqTags.every((t) => have.includes(t))) return false;
+      }
       if (!q.trim()) return true;
       const needle = q.trim().toLowerCase();
       return (
@@ -56,7 +128,18 @@ export default function SearchPage() {
         c.languages.some((l) => l.toLowerCase().includes(needle))
       );
     });
-  }, [q, service, needClinical, needNurse]);
+  }, [
+    q,
+    service,
+    needClinical,
+    needNurse,
+    genders,
+    needDriver,
+    needVehicle,
+    requiredCerts,
+    requiredLangs,
+    requiredTags,
+  ]);
 
   return (
     <main className="min-h-[100dvh] bg-bg-screen sc-with-bottom-nav">
@@ -76,9 +159,18 @@ export default function SearchPage() {
           </div>
           <button
             aria-label="Filter"
-            className="h-12 w-12 rounded-btn bg-primary text-white grid place-items-center sc-no-select"
+            onClick={() => setFilterOpen(true)}
+            className="relative h-12 w-12 rounded-btn bg-primary text-white grid place-items-center sc-no-select"
           >
             <IconFilter />
+            {activeExtraCount > 0 && (
+              <span
+                aria-hidden
+                className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-white text-primary text-[11px] font-bold grid place-items-center border border-primary"
+              >
+                {activeExtraCount}
+              </span>
+            )}
           </button>
         </div>
 
@@ -194,6 +286,138 @@ export default function SearchPage() {
           </Card>
         )}
       </div>
+
+      {filterOpen && (
+        <div
+          className="fixed inset-0 z-30 flex items-end"
+          onClick={() => setFilterOpen(false)}
+        >
+          <div className="absolute inset-0 bg-black/40" />
+          <div
+            role="dialog"
+            aria-label="More filters"
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-h-[85dvh] overflow-y-auto bg-white rounded-t-3xl px-5 pt-4 pb-6 shadow-card"
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-[16px] font-bold text-heading">More filters</h2>
+              <button
+                onClick={() => setFilterOpen(false)}
+                className="h-9 px-3 rounded-pill bg-muted text-subheading text-[13px] font-semibold"
+              >
+                Close
+              </button>
+            </div>
+
+            <section className="mt-4">
+              <p className="text-[12px] font-semibold text-subheading uppercase tracking-wide">
+                Gender
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {GENDERS.map((g) => {
+                  const on = genders.includes(g.key);
+                  return (
+                    <button
+                      key={g.key}
+                      onClick={() => toggleGender(g.key)}
+                      className={`px-3 h-8 rounded-pill text-[12px] font-semibold ${
+                        on
+                          ? "bg-primary text-white"
+                          : "bg-white text-subheading border border-line"
+                      }`}
+                    >
+                      {g.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="mt-4">
+              <p className="text-[12px] font-semibold text-subheading uppercase tracking-wide">
+                Travel
+              </p>
+              <div className="mt-2 flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-[14px] text-heading">
+                  <input
+                    type="checkbox"
+                    checked={needDriver}
+                    onChange={(e) => setNeedDriver(e.target.checked)}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  Has driver&rsquo;s licence
+                </label>
+                <label className="flex items-center gap-2 text-[14px] text-heading">
+                  <input
+                    type="checkbox"
+                    checked={needVehicle}
+                    onChange={(e) => setNeedVehicle(e.target.checked)}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  Has own vehicle
+                </label>
+              </div>
+            </section>
+
+            <section className="mt-4">
+              <p className="text-[12px] font-semibold text-subheading uppercase tracking-wide">
+                Certifications
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {CERTIFICATIONS.map((c) => {
+                  const on = requiredCerts.includes(c.key);
+                  return (
+                    <button
+                      key={c.key}
+                      onClick={() => toggleCert(c.key)}
+                      className={`px-3 h-8 rounded-pill text-[12px] font-semibold border ${
+                        on
+                          ? "bg-status-completed text-[#2C7A3F] border-[#A7D9B0]"
+                          : "bg-white text-subheading border-line"
+                      }`}
+                    >
+                      {c.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="mt-4">
+              <label className="block text-[12px] font-semibold text-subheading uppercase tracking-wide">
+                Languages
+              </label>
+              <input
+                value={requiredLangs}
+                onChange={(e) => setRequiredLangs(e.target.value)}
+                placeholder="Polish, Urdu"
+                className="mt-2 w-full h-10 px-3 rounded-btn border border-line bg-white text-[14px] text-heading"
+              />
+            </section>
+
+            <section className="mt-4">
+              <label className="block text-[12px] font-semibold text-subheading uppercase tracking-wide">
+                Carer tags
+              </label>
+              <input
+                value={requiredTags}
+                onChange={(e) => setRequiredTags(e.target.value)}
+                placeholder="non-smoker, pet-friendly"
+                className="mt-2 w-full h-10 px-3 rounded-btn border border-line bg-white text-[14px] text-heading"
+              />
+            </section>
+
+            <div className="mt-6 flex items-center gap-2">
+              <Button variant="outline" block onClick={clearExtras}>
+                Clear
+              </Button>
+              <Button block onClick={() => setFilterOpen(false)}>
+                Show {results.length} {results.length === 1 ? "carer" : "carers"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <BottomNav active="home" role="seeker" />
     </main>

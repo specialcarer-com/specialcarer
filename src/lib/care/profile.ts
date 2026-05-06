@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ServiceKey } from "@/lib/care/services";
 import type { CareFormatKey } from "@/lib/care/formats";
+import type { GenderKey } from "@/lib/care/attributes";
 
 const UK_REQUIRED = ["enhanced_dbs_barred", "right_to_work", "digital_id"];
 const US_REQUIRED = ["us_criminal", "us_healthcare_sanctions"];
@@ -25,6 +26,12 @@ export type CaregiverProfileFull = {
   is_published: boolean;
   rating_avg: number | null;
   rating_count: number;
+  // Booking preference attributes (additive)
+  gender: GenderKey | null;
+  has_drivers_license: boolean;
+  has_own_vehicle: boolean;
+  tags: string[];
+  certifications: string[];
 };
 
 export type ProfileReadiness = {
@@ -50,12 +57,13 @@ export async function getCaregiverProfile(
   const { data } = await admin
     .from("caregiver_profiles")
     .select(
-      "user_id, display_name, headline, bio, city, region, country, services, care_formats, hourly_rate_cents, weekly_rate_cents, currency, years_experience, languages, max_radius_km, photo_url, is_published, rating_avg, rating_count",
+      "user_id, display_name, headline, bio, city, region, country, services, care_formats, hourly_rate_cents, weekly_rate_cents, currency, years_experience, languages, max_radius_km, photo_url, is_published, rating_avg, rating_count, gender, has_drivers_license, has_own_vehicle, tags, certifications",
     )
     .eq("user_id", userId)
     .maybeSingle();
 
   if (!data) return null;
+  const d = data as unknown as Record<string, unknown>;
   return {
     user_id: data.user_id,
     display_name: data.display_name,
@@ -76,6 +84,11 @@ export async function getCaregiverProfile(
     is_published: !!data.is_published,
     rating_avg: data.rating_avg ? Number(data.rating_avg) : null,
     rating_count: data.rating_count ?? 0,
+    gender: (d.gender as GenderKey | null) ?? null,
+    has_drivers_license: !!d.has_drivers_license,
+    has_own_vehicle: !!d.has_own_vehicle,
+    tags: (d.tags as string[] | null) ?? [],
+    certifications: (d.certifications as string[] | null) ?? [],
   };
 }
 
@@ -161,4 +174,9 @@ export type ProfileUpdateInput = {
   languages?: string[];
   max_radius_km?: number;
   photo_url?: string | null;
+  gender?: GenderKey | null;
+  has_drivers_license?: boolean;
+  has_own_vehicle?: boolean;
+  tags?: string[];
+  certifications?: string[];
 };

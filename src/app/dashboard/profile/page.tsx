@@ -54,6 +54,11 @@ export default async function CaregiverProfileEditPage() {
     is_published: false,
     rating_avg: null,
     rating_count: 0,
+    gender: null,
+    has_drivers_license: false,
+    has_own_vehicle: false,
+    tags: [],
+    certifications: [],
   };
 
   return (

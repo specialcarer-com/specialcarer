@@ -6,6 +6,12 @@ import { SERVICES } from "@/lib/care/services";
 import { CARE_FORMATS } from "@/lib/care/formats";
 import { createClient as createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { CaregiverProfileFull, ProfileReadiness } from "@/lib/care/profile";
+import {
+  CERTIFICATIONS,
+  GENDERS,
+  SUGGESTED_TAGS,
+  type GenderKey,
+} from "@/lib/care/attributes";
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp"] as const;
@@ -54,6 +60,14 @@ export default function ProfileEditor({
   const [photoUrl, setPhotoUrl] = useState<string | null>(initial.photo_url);
   const [isPublished, setIsPublished] = useState(initial.is_published);
   const [readiness, setReadiness] = useState<ProfileReadiness>(initialReadiness);
+  // Booking preference attributes (additive)
+  const [gender, setGender] = useState<GenderKey | "">(initial.gender ?? "");
+  const [hasLicense, setHasLicense] = useState<boolean>(initial.has_drivers_license);
+  const [hasVehicle, setHasVehicle] = useState<boolean>(initial.has_own_vehicle);
+  const [tagsInput, setTagsInput] = useState<string>(
+    (initial.tags ?? []).join(", "),
+  );
+  const [certs, setCerts] = useState<string[]>(initial.certifications ?? []);
 
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -70,6 +84,23 @@ export default function ProfileEditor({
     setCareFormats((prev) =>
       prev.includes(key) ? prev.filter((f) => f !== key) : [...prev, key],
     );
+  }
+
+  function toggleCert(key: string) {
+    setCerts((prev) =>
+      prev.includes(key) ? prev.filter((c) => c !== key) : [...prev, key],
+    );
+  }
+
+  function addTag(t: string) {
+    const clean = t.trim().toLowerCase();
+    if (!clean) return;
+    const current = tagsInput
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+    if (current.includes(clean)) return;
+    setTagsInput([...current, clean].join(", "));
   }
 
   const offersVisiting = careFormats.includes("visiting");
@@ -107,6 +138,15 @@ export default function ProfileEditor({
             .filter(Boolean)
             .slice(0, 8),
           max_radius_km: Math.max(1, Math.min(200, Math.round(maxRadius))),
+          gender: gender || null,
+          has_drivers_license: hasLicense,
+          has_own_vehicle: hasVehicle,
+          tags: tagsInput
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean)
+            .slice(0, 24),
+          certifications: certs,
         }),
       });
       const json = (await res.json()) as {
@@ -440,6 +480,106 @@ export default function ProfileEditor({
             />
           </Field>
         </div>
+      </Section>
+
+      <Section title="Personal & extras">
+        <p className="text-sm text-slate-600 -mt-2">
+          Optional. These help families filter to the right match. None are
+          required to publish.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <Field label="Gender" help="Some families request gender-matched care">
+            <select
+              value={gender}
+              onChange={(e) => setGender(e.target.value as GenderKey | "")}
+              className={INPUT_CLASS}
+            >
+              <option value="">Not specified</option>
+              {GENDERS.map((g) => (
+                <option key={g.key} value={g.key}>
+                  {g.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Driving">
+            <div className="flex flex-col gap-2 mt-1">
+              <label className="inline-flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={hasLicense}
+                  onChange={(e) => setHasLicense(e.target.checked)}
+                  className="h-4 w-4 accent-brand"
+                />
+                I have a valid driver&rsquo;s licence
+              </label>
+              <label className="inline-flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={hasVehicle}
+                  onChange={(e) => setHasVehicle(e.target.checked)}
+                  className="h-4 w-4 accent-brand"
+                />
+                I have my own vehicle (insured for work use)
+              </label>
+            </div>
+          </Field>
+        </div>
+
+        <Field
+          label="Certifications"
+          help="Tick everything you hold. Background checks are tracked separately."
+        >
+          <div className="mt-1 grid sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+            {CERTIFICATIONS.map((c) => {
+              const on = certs.includes(c.key);
+              return (
+                <button
+                  key={c.key}
+                  type="button"
+                  onClick={() => toggleCert(c.key)}
+                  className={`text-left px-3 py-2 rounded-xl border text-sm transition ${
+                    on
+                      ? "bg-brand-50 border-brand-200 text-brand-700"
+                      : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
+                  }`}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <span
+                      aria-hidden
+                      className={`h-3.5 w-3.5 rounded border ${on ? "bg-brand border-brand" : "border-slate-300"}`}
+                    />
+                    {c.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </Field>
+
+        <Field
+          label="Tags (comma-separated)"
+          help="Free-form keywords. e.g. non-smoker, pet-friendly, school-runs."
+        >
+          <input
+            value={tagsInput}
+            onChange={(e) => setTagsInput(e.target.value)}
+            className={INPUT_CLASS}
+            placeholder="non-smoker, pet-friendly, school-runs"
+          />
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {SUGGESTED_TAGS.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => addTag(t)}
+                className="px-2 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs transition"
+              >
+                + {t}
+              </button>
+            ))}
+          </div>
+        </Field>
       </Section>
 
       {err && (

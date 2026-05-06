@@ -4,6 +4,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isServiceKey } from "@/lib/care/services";
 import { isCareFormatKey } from "@/lib/care/formats";
 import { computeReadiness } from "@/lib/care/profile";
+import {
+  isCertKey,
+  isGenderKey,
+  sanitiseFreeText,
+} from "@/lib/care/attributes";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +42,11 @@ export async function PATCH(req: Request) {
     languages?: string[];
     max_radius_km?: number;
     photo_url?: string | null;
+    gender?: string | null;
+    has_drivers_license?: boolean;
+    has_own_vehicle?: boolean;
+    tags?: string[];
+    certifications?: string[];
   };
   const body = (await req.json()) as Body;
 
@@ -143,6 +153,40 @@ export async function PATCH(req: Request) {
     update.max_radius_km = Math.round(km);
   }
   if (body.photo_url !== undefined) update.photo_url = body.photo_url;
+
+  if (body.gender !== undefined) {
+    if (body.gender === null) {
+      update.gender = null;
+    } else if (!isGenderKey(body.gender)) {
+      return NextResponse.json({ error: "Invalid gender" }, { status: 400 });
+    } else {
+      update.gender = body.gender;
+    }
+  }
+  if (body.has_drivers_license !== undefined) {
+    update.has_drivers_license = !!body.has_drivers_license;
+  }
+  if (body.has_own_vehicle !== undefined) {
+    update.has_own_vehicle = !!body.has_own_vehicle;
+  }
+  if (body.tags !== undefined) {
+    update.tags = sanitiseFreeText(body.tags, 30, 24);
+  }
+  if (body.certifications !== undefined) {
+    if (!Array.isArray(body.certifications)) {
+      return NextResponse.json(
+        { error: "Invalid certifications" },
+        { status: 400 },
+      );
+    }
+    // Keep only known cert keys (so the column stays a clean enum-ish list).
+    const cleaned = Array.from(
+      new Set(
+        body.certifications.filter((c): c is string => typeof c === "string" && isCertKey(c)),
+      ),
+    ).slice(0, 32);
+    update.certifications = cleaned;
+  }
 
   update.updated_at = new Date().toISOString();
 
