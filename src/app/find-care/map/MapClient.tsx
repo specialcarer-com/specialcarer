@@ -26,6 +26,7 @@ type Marker = {
   distance_m: number | null;
   lat: number;
   lng: number;
+  instant_ready?: boolean;
 };
 
 type Props = {
@@ -127,13 +128,18 @@ export default function FindCareMapClient({
 
       // Carer markers
       for (const m of markers) {
+        // Wrapper allows positioning a corner badge without rotating it.
+        const wrap = document.createElement("div");
+        wrap.style.cssText =
+          "position:relative;width:34px;height:34px;cursor:pointer;";
+
         const el = document.createElement("div");
         el.style.cssText = [
           "width:34px",
           "height:34px",
           "border-radius:50% 50% 50% 0",
           "transform:rotate(-45deg)",
-          "background:#039EA0",
+          m.instant_ready ? "background:#FFB300" : "background:#039EA0",
           "border:3px solid #fff",
           "box-shadow:0 2px 4px rgba(0,0,0,0.25)",
           "display:flex",
@@ -142,16 +148,41 @@ export default function FindCareMapClient({
           "color:#fff",
           "font-weight:600",
           "font-size:11px",
-          "cursor:pointer",
         ].join(";");
         const inner = document.createElement("span");
         inner.style.cssText = "transform:rotate(45deg);";
         inner.textContent = initials(m.display_name);
         el.appendChild(inner);
+        wrap.appendChild(el);
+
+        if (m.instant_ready) {
+          const badge = document.createElement("div");
+          badge.title = "Instant booking available";
+          badge.style.cssText = [
+            "position:absolute",
+            "top:-6px",
+            "right:-6px",
+            "width:18px",
+            "height:18px",
+            "border-radius:50%",
+            "background:#171E54",
+            "color:#fff",
+            "font-size:11px",
+            "font-weight:700",
+            "display:flex",
+            "align-items:center",
+            "justify-content:center",
+            "border:2px solid #fff",
+            "box-shadow:0 1px 2px rgba(0,0,0,0.25)",
+            "line-height:1",
+          ].join(";");
+          badge.textContent = "⚡";
+          wrap.appendChild(badge);
+        }
 
         const popup = new mapboxgl.Popup({ offset: 24, maxWidth: "280px" })
           .setHTML(carerPopup(m));
-        new mapboxgl.Marker({ element: el, anchor: "bottom" })
+        new mapboxgl.Marker({ element: wrap, anchor: "bottom" })
           .setLngLat([m.lng, m.lat])
           .setPopup(popup)
           .addTo(map);
@@ -216,10 +247,13 @@ function carerPopup(m: Marker): string {
       : "New";
   const dist = distanceLabel(m.distance_m);
   const rate = rateLabel(m);
+  const instantBadge = m.instant_ready
+    ? `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:999px;background:#FFF4D6;color:#7A4F00;font-weight:700;font-size:10px;margin-left:6px;">⚡ Instant</span>`
+    : "";
   return `
     <div style="font-family:system-ui,-apple-system,sans-serif;padding:6px 4px;min-width:220px;">
-      <div style="font-weight:700;color:#171E54;font-size:14px;">
-        ${escapeHtml(m.display_name)}
+      <div style="font-weight:700;color:#171E54;font-size:14px;display:flex;align-items:center;flex-wrap:wrap;">
+        <span>${escapeHtml(m.display_name)}</span>${instantBadge}
       </div>
       ${m.headline ? `<div style="font-size:12px;color:#575757;margin-top:2px;">${escapeHtml(m.headline)}</div>` : ""}
       <div style="display:flex;gap:8px;align-items:center;margin-top:6px;font-size:11px;color:#575757;flex-wrap:wrap;">

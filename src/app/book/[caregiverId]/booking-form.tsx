@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import type { Appearance } from "@stripe/stripe-js";
 import { getStripe } from "@/lib/stripe/client";
@@ -61,6 +62,37 @@ export default function BookingForm({
   const [currency] = useState<Currency>(defaultCurrency);
   const [notes, setNotes] = useState("");
   const [locationPostcode, setLocationPostcode] = useState("");
+
+  // Allow query-param prefill so /book/instant (and other entry points) can
+  // deep-link straight into a payment-ready booking form.
+  const sp = useSearchParams();
+  // Whether this booking originated from the Instant flow — used to flag
+  // the booking server-side so the carer is notified immediately.
+  const [isInstant, setIsInstant] = useState(false);
+  useEffect(() => {
+    if (!sp) return;
+    const qSvc = sp.get("service");
+    if (
+      qSvc === "elderly_care" ||
+      qSvc === "childcare" ||
+      qSvc === "special_needs" ||
+      qSvc === "postnatal" ||
+      qSvc === "complex_care"
+    ) {
+      setServiceType(qSvc);
+    }
+    const qDate = sp.get("date");
+    if (qDate && /^\d{4}-\d{2}-\d{2}$/.test(qDate)) setDate(qDate);
+    const qStart = sp.get("start");
+    if (qStart && /^\d{2}:\d{2}$/.test(qStart)) setStartTime(qStart);
+    const qEnd = sp.get("end");
+    if (qEnd && /^\d{2}:\d{2}$/.test(qEnd)) setEndTime(qEnd);
+    const qPostcode = sp.get("postcode");
+    if (qPostcode) setLocationPostcode(qPostcode);
+    if (sp.get("instant") === "1") setIsInstant(true);
+    // intentionally only on first render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Optional booking preferences — recorded against the booking so the
   // carer (and our admin) can see what the family asked for at request time.
@@ -135,6 +167,7 @@ export default function BookingForm({
               .map((s) => s.trim().toLowerCase())
               .filter(Boolean),
           },
+          is_instant: isInstant,
         }),
       });
       const json = (await res.json()) as {

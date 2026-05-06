@@ -5,6 +5,7 @@ import Link from "next/link";
 import { SERVICES } from "@/lib/care/services";
 import { CARE_FORMATS } from "@/lib/care/formats";
 import { createClient as createSupabaseBrowserClient } from "@/lib/supabase/client";
+import InstantBookingSection from "./InstantBookingSection";
 import type { CaregiverProfileFull, ProfileReadiness } from "@/lib/care/profile";
 import {
   CERTIFICATIONS,
@@ -623,6 +624,9 @@ export default function ProfileEditor({
           </span>
         )}
       </div>
+
+      {/* Instant booking (additive) */}
+      <InstantBookingSection />
 
       {/* Publish gate */}
       <div className="mt-8 p-6 rounded-2xl border border-slate-100 bg-white">

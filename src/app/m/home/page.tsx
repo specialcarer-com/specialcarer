@@ -133,6 +133,36 @@ export default function HomePage() {
         </div>
       </header>
 
+      {/* Instant booking entry — Uber-style "book the nearest carer now". */}
+      <div className="px-4 pt-3">
+        <Link href="/m/book/instant" className="block sc-no-select">
+          <div
+            className="rounded-card p-4 flex items-center gap-3"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(3,158,160,0.10) 0%, rgba(23,30,84,0.06) 100%)",
+              border: "1px solid rgba(3,158,160,0.20)",
+            }}
+          >
+            <span
+              className="grid h-11 w-11 flex-none place-items-center rounded-full bg-primary text-white text-[18px]"
+              aria-hidden
+            >
+              ⚡
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] font-bold text-heading">
+                Need a carer right now?
+              </p>
+              <p className="text-[12px] text-subheading">
+                Find the nearest available carer · book in 1 tap.
+              </p>
+            </div>
+            <span className="text-primary font-bold text-[13px]">Start</span>
+          </div>
+        </Link>
+      </div>
+
       {/* Upcoming Bookings */}
       {upcoming && upcomingCarer && (
         <>

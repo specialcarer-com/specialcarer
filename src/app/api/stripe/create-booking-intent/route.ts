@@ -67,6 +67,7 @@ export async function POST(req: Request) {
     location_postcode?: string;
     recipient_ids?: string[];
     preferences?: BookingPreferences;
+    is_instant?: boolean;
   };
   const body = (await req.json()) as BookingBody;
 
@@ -235,7 +236,10 @@ export async function POST(req: Request) {
           }
         : {}),
       recipient_ids: recipientIds,
-      preferences: sanitisePrefs(body.preferences),
+      preferences: {
+        ...sanitisePrefs(body.preferences),
+        ...(body.is_instant ? { is_instant: true } : {}),
+      },
     })
     .select()
     .single();
@@ -303,6 +307,31 @@ export async function POST(req: Request) {
     destination_account_id: caregiverStripe.stripe_account_id,
     raw: intent as unknown as Record<string, unknown>,
   });
+
+  // Instant bookings: notify the carer right away (best-effort, soft-fail).
+  // The booking is in `accepted` state; the seeker still has to authorize
+  // payment to confirm — but for instant we want the carer to start
+  // preparing immediately.
+  if (body.is_instant) {
+    try {
+      const { notifyCarerInstantBooking } = await import(
+        "@/lib/care/instant-notify"
+      );
+      await notifyCarerInstantBooking({
+        bookingId: booking.id,
+        caregiverId: body.caregiver_id!,
+        seekerId: user.id,
+        startsAt: body.starts_at!,
+        endsAt: body.ends_at!,
+        serviceType: body.service_type!,
+        locationCity: body.location_city,
+        totalCents,
+        currency: body.currency,
+      });
+    } catch (err) {
+      console.error("[instant-notify] failed", err);
+    }
+  }
 
   return NextResponse.json({
     booking_id: booking.id,

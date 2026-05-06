@@ -131,6 +131,7 @@ export default async function FindCareMapPage({
   // the city centroid + a stable hash of user_id when hide_precise_location is on.
   // (Real coordinates only ship when the carer has explicitly opted in.)
   const points = await loadPoints(results.map((r) => r.user_id));
+  const instantReady = await loadInstantReady(results.map((r) => r.user_id));
   const markers = results
     .map((r) => {
       const p = points.get(r.user_id);
@@ -152,6 +153,7 @@ export default async function FindCareMapPage({
         distance_m: r.distance_m ?? null,
         lat: fuzzed.lat,
         lng: fuzzed.lng,
+        instant_ready: instantReady.has(r.user_id),
       };
     })
     .filter(<T,>(v: T | null): v is T => v != null);
@@ -286,6 +288,26 @@ async function loadPoints(
     map.set(row.user_id, { lat: Number(row.lat), lng: Number(row.lng) });
   });
   return map;
+}
+
+/**
+ * Returns the subset of user_ids whose instant booking is currently enabled
+ * (per the v_instant_ready_carers view). Best-effort — if it fails, no
+ * badges are shown but the rest of the map still renders.
+ */
+async function loadInstantReady(userIds: string[]): Promise<Set<string>> {
+  const set = new Set<string>();
+  if (userIds.length === 0) return set;
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("v_instant_ready_carers")
+    .select("user_id")
+    .in("user_id", userIds);
+  (data as Array<{ user_id: string }> | null)?.forEach((r) =>
+    set.add(r.user_id),
+  );
+  return set;
 }
 
 /**
