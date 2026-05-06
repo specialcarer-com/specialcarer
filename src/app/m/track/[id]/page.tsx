@@ -1,65 +1,96 @@
-"use client";
+/**
+ * Live tracking — seeker / family view.
+ *
+ * Server-renders the booking + initial eligibility, then hands off to the
+ * client component which mounts a Mapbox GL map and polls the latest
+ * position every few seconds. Falls back to a clear status message when
+ * not eligible (booking finished, cancelled, etc.).
+ */
 
-import { use } from "react";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import {
+  getTrackingEligibility,
+  getLatestPosition,
+} from "@/lib/tracking/server";
+import { getPublicToken, getStyle } from "@/lib/mapbox/server";
 import {
   TopBar,
   ComingSoon,
   IconMapPin,
   IconClock,
   IconBell,
-  IconCheck,
 } from "../../_components/ui";
+import TrackClient from "./TrackClient";
 
-/**
- * Live tracking placeholder.
- *
- * Real implementation lands in the next session:
- *   - Mapbox GL JS (web) + Maps SDK for iOS via Capacitor plugin
- *   - Supabase realtime channel `carer_positions:<bookingId>`
- *   - Carer side broadcasts at ~1 Hz while booking.status === 'OnTheWay'
- *   - Seeker side subscribes + animates a marker along the polyline
- *   - ETA derived from Mapbox Directions API on each significant move
- *
- * Same URL stays put when real shipping happens — no router or
- * deeplink changes needed in messages, push notifications, or
- * booking detail's existing sticky CTA wire.
- */
-export default function TrackPage({
+export const dynamic = "force-dynamic";
+
+export default async function TrackPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = use(params);
+  const { id } = await params;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect(`/m/login?redirect=/m/track/${id}`);
+  }
+
+  const eligibility = await getTrackingEligibility(id);
+
+  if (!eligibility.eligible) {
+    return (
+      <main className="min-h-[100dvh] bg-bg-screen">
+        <TopBar title="Live tracking" back={`/m/bookings/${id}`} />
+        <ComingSoon
+          hero={<IconMapPin />}
+          title="Tracking not available right now"
+          description={eligibility.reason}
+          bullets={[
+            {
+              icon: <IconClock />,
+              text: "Tracking turns on automatically once the booking is paid and the carer is on the way.",
+            },
+            {
+              icon: <IconBell />,
+              text: "We'll send a notification when sharing starts.",
+            },
+          ]}
+          primary={{ label: "Back to booking", href: `/m/bookings/${id}` }}
+          secondary={{ label: "Message the carer", href: `/m/chat` }}
+        />
+      </main>
+    );
+  }
+
+  const initialPosition = await getLatestPosition(id);
+  const mapboxToken = getPublicToken();
+  const mapStyle = getStyle();
+
+  // Fetch booking address for map centering fallback when no position yet.
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("id, location_city, location_country, status")
+    .eq("id", id)
+    .maybeSingle();
 
   return (
     <main className="min-h-[100dvh] bg-bg-screen">
       <TopBar title="Live tracking" back={`/m/bookings/${id}`} />
-
-      <ComingSoon
-        hero={<IconMapPin />}
-        title="See your carer on the map"
-        description="Once your booking is confirmed and the carer is on the way, you'll see their live location, route and minute-by-minute ETA right here — so you always know when to expect them at the door."
-        bullets={[
-          {
-            icon: <IconMapPin />,
-            text: "Live map with the carer's current location and route to your address.",
-          },
-          {
-            icon: <IconClock />,
-            text: "Continuously updated ETA — no more guessing or texting for updates.",
-          },
-          {
-            icon: <IconBell />,
-            text: "Optional arrival notification when they're 5 minutes away.",
-          },
-        ]}
-        primary={{ label: "Back to booking", href: `/m/bookings/${id}` }}
-        secondary={{ label: "Message the carer", href: `/m/chat` }}
+      <TrackClient
+        bookingId={id}
+        role={eligibility.role}
+        bookingStatus={eligibility.bookingStatus}
+        initialPosition={initialPosition}
+        mapboxToken={mapboxToken}
+        mapStyle={mapStyle}
+        locationCity={booking?.location_city ?? null}
+        locationCountry={booking?.location_country ?? null}
       />
-
-      <p className="text-center text-[11px] text-subheading pb-8">
-        Booking #{id}
-      </p>
     </main>
   );
 }
