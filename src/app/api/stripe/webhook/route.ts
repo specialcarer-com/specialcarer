@@ -127,6 +127,19 @@ export async function POST(req: Request) {
         }
         break;
       }
+      // ---------------------------------------------------------------
+      // Memberships (consumer subscriptions, NOT Connect)
+      // ---------------------------------------------------------------
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
+      case "customer.subscription.deleted":
+      case "customer.subscription.paused":
+      case "customer.subscription.resumed": {
+        const sub = event.data.object as Stripe.Subscription;
+        await upsertMembershipFromStripeSubscription(admin, sub);
+        break;
+      }
+
       default:
         // Unhandled event type — just log
         break;
@@ -147,3 +160,134 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ received: true });
 }
+
+// ---------------------------------------------------------------------------
+// Memberships helpers
+// ---------------------------------------------------------------------------
+
+type MembershipPlanCode = "lite" | "plus" | "premium";
+
+/**
+ * Map a Stripe Product ID to one of our internal plan codes.
+ * The Product IDs come from env vars set during Stripe catalog setup.
+ */
+function productIdToPlan(productId: string): MembershipPlanCode | null {
+  if (productId === process.env.STRIPE_PRODUCT_LITE) return "lite";
+  if (productId === process.env.STRIPE_PRODUCT_PLUS) return "plus";
+  if (productId === process.env.STRIPE_PRODUCT_PREMIUM) return "premium";
+  return null;
+}
+
+/**
+ * Map a Stripe subscription status to our enum.
+ * Our enum mirrors Stripe's, so this is a 1:1 cast with a fallback.
+ */
+function mapSubscriptionStatus(s: Stripe.Subscription.Status): string {
+  // Stripe statuses: active | past_due | unpaid | canceled | incomplete
+  // | incomplete_expired | trialing | paused
+  return s;
+}
+
+/**
+ * Insert or update a public.subscriptions row from a Stripe subscription.
+ * Idempotent: keyed on stripe_subscription_id (unique).
+ *
+ * The user_id is found via the Stripe customer's metadata.user_id (set when
+ * we create the customer in /api/memberships/create-checkout). If that's
+ * absent (e.g. someone subscribed via the Stripe dashboard manually) we
+ * fall back to looking up the customer's email in auth.users.
+ */
+async function upsertMembershipFromStripeSubscription(
+  admin: ReturnType<typeof createAdminClient>,
+  sub: Stripe.Subscription
+): Promise<void> {
+  const customerId =
+    typeof sub.customer === "string" ? sub.customer : sub.customer.id;
+
+  // The Subscription object's items[0] tells us which Price (and therefore
+  // which Product/plan + interval) this is.
+  const item = sub.items.data[0];
+  if (!item) {
+    console.warn("[memberships] subscription has no items", sub.id);
+    return;
+  }
+  const price = item.price;
+  const productId =
+    typeof price.product === "string" ? price.product : price.product.id;
+  const plan = productIdToPlan(productId);
+  if (!plan) {
+    console.warn(
+      "[memberships] unknown product",
+      productId,
+      "on subscription",
+      sub.id
+    );
+    return;
+  }
+  const interval =
+    price.recurring?.interval === "year" ? "year" : "month";
+
+  // Resolve user_id: prefer customer.metadata.user_id, fall back to email.
+  let userId: string | null = null;
+  try {
+    const customer = await stripe.customers.retrieve(customerId);
+    if (!("deleted" in customer && customer.deleted)) {
+      const c = customer as Stripe.Customer;
+      userId = c.metadata?.user_id ?? null;
+      if (!userId && c.email) {
+        const { data: usersList } = await admin.auth.admin.listUsers({
+          page: 1,
+          perPage: 200,
+        });
+        const match = usersList?.users.find(
+          (u) => u.email?.toLowerCase() === c.email!.toLowerCase()
+        );
+        userId = match?.id ?? null;
+      }
+    }
+  } catch {
+    // ignore — handled below
+  }
+  if (!userId) {
+    console.warn(
+      "[memberships] could not resolve user_id for stripe customer",
+      customerId
+    );
+    return;
+  }
+
+  const periodStart = sub.items.data[0]?.current_period_start;
+  const periodEnd = sub.items.data[0]?.current_period_end;
+
+  const row = {
+    user_id: userId,
+    plan,
+    billing_interval: interval,
+    status: mapSubscriptionStatus(sub.status),
+    source: "stripe" as const,
+    stripe_customer_id: customerId,
+    stripe_subscription_id: sub.id,
+    stripe_price_id: price.id,
+    current_period_start: periodStart
+      ? new Date(periodStart * 1000).toISOString()
+      : null,
+    current_period_end: periodEnd
+      ? new Date(periodEnd * 1000).toISOString()
+      : null,
+    cancel_at_period_end: Boolean(sub.cancel_at_period_end),
+    canceled_at: sub.canceled_at
+      ? new Date(sub.canceled_at * 1000).toISOString()
+      : null,
+  };
+
+  // Upsert keyed on stripe_subscription_id (unique constraint)
+  const { error } = await admin
+    .from("subscriptions")
+    .upsert(row, { onConflict: "stripe_subscription_id" });
+
+  if (error) {
+    console.error("[memberships] upsert failed", sub.id, error.message);
+    throw error; // surfaces in the webhook events table for retry
+  }
+}
+

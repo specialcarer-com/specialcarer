@@ -13,6 +13,7 @@ const NAV: { href: string; label: string; soon?: boolean }[] = [
   { href: "/admin/caregivers", label: "Caregivers" },
   { href: "/admin/bookings", label: "Bookings" },
   { href: "/admin/users", label: "Users" },
+  { href: "/admin/memberships", label: "Memberships" },
   { href: "/admin/webhooks", label: "Webhooks" },
   { href: "/admin/trust-safety", label: "Trust & safety" },
   { href: "/admin/finance", label: "Finance" },
