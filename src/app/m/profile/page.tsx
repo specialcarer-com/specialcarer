@@ -23,6 +23,7 @@ import {
   IconJournal,
 } from "../_components/ui";
 import { createClient } from "@/lib/supabase/client";
+import SwitchRole from "./_components/SwitchRole";
 
 type Row = {
   href: string;
@@ -208,6 +209,11 @@ export default function ProfilePage() {
           More
         </p>
         <ul className="overflow-hidden rounded-card bg-white shadow-card">
+          {role && role !== "admin" && (
+            <li className="border-b border-line">
+              <SwitchRole currentRole={role} />
+            </li>
+          )}
           <li>
             <button
               onClick={logout}
