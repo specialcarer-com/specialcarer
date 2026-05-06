@@ -281,7 +281,15 @@ workflows:
       - name: Build, archive, and export .ipa
         script: |
           set -euxo pipefail
-          xcode-project use-profiles
+          # Internal-testing only: tells Xcode to export the build with a flag
+          # that lets ASC skip Apple's Beta App Review (which only applies to
+          # external testers). Saves the 24-48h wait and removes the
+          # post-processing race condition where Codemagic's 15-min "find
+          # build" window expires before Apple finishes processing.
+          # When we onboard external testers, switch this to false (or remove)
+          # and re-enable submit_to_testflight: true below.
+          xcode-project use-profiles \
+            --custom-export-options='{"testFlightInternalTestingOnly": true}'
           # Capacitor 8 SPM project has no .xcworkspace — build the .xcodeproj.
           xcode-project build-ipa \
             --project "$XCODE_PROJECT" \
@@ -299,12 +307,20 @@ workflows:
         # `app_store_connect` integration credentials.
         auth: integration
 
-        # Submit to TestFlight automatically. Internal testers (Account Holder,
-        # Admins, App Manager, etc. invited in App Store Connect) get the build
-        # immediately. External testers require a separate Beta App Review.
-        submit_to_testflight: true
-        beta_groups:
-          - SpecialCarer Internal
+        # submit_to_testflight triggers Apple's Beta App Review, which is
+        # ONLY needed for EXTERNAL testers. We're internal-only right now
+        # (combined with the testFlightInternalTestingOnly export flag
+        # above), so leave this false. Internal testers get the build the
+        # moment ASC finishes processing — no review, no group assignment
+        # needed because Account Holders / Admins / App Managers added as
+        # ASC users automatically receive every build.
+        submit_to_testflight: false
+        # When you're ready to invite external testers, flip
+        # submit_to_testflight to true, remove the export flag above, and
+        # uncomment the line below (the group name must match exactly,
+        # case- and space-sensitive, what's shown in App Store Connect):
+        # beta_groups:
+        #   - SpecialCarer Internal
 
         # Do NOT auto-submit to App Review — keep that as a manual step until
         # the privacy questionnaire and screenshots are filled in.
