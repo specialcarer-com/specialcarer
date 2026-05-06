@@ -6,16 +6,18 @@ import { FormEvent, useState } from "react";
 import { AppLogo, Button, Input, PasswordInput } from "../_components/ui";
 import { createClient } from "@/lib/supabase/client";
 
+type SignupRole = "seeker" | "caregiver";
+
 /**
- * Sign Up screen — Figma 6:318.
- * Email / Password / Confirm Password / Sign Up.
- *
- * The role (seeker vs carer) defaults to "seeker" here. Carers convert
- * later in onboarding via /m/become-a-caregiver — keeps signup friction
- * low for the larger seeker audience.
+ * Sign Up screen.
+ * Asks the user up front whether they're seeking care or providing it,
+ * then collects email / password. The chosen role is written both to
+ * Supabase auth user_metadata AND to the public.profiles row so the
+ * mobile UI shows the right sections after sign-in.
  */
 export default function SignUpPage() {
   const router = useRouter();
+  const [role, setRole] = useState<SignupRole>("seeker");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -48,7 +50,7 @@ export default function SignUpPage() {
             typeof window !== "undefined"
               ? `${window.location.origin}/auth/callback?flow=mobile&next=/m/home`
               : undefined,
-          data: { role: "seeker" },
+          data: { role },
         },
       });
       if (error) {
@@ -81,6 +83,53 @@ export default function SignUpPage() {
         </p>
 
         <form onSubmit={onSubmit} className="mt-8 space-y-5">
+          <fieldset>
+            <legend className="mb-2 text-[13px] font-semibold text-heading">
+              I want to:
+            </legend>
+            <div className="grid grid-cols-2 gap-3">
+              {(
+                [
+                  {
+                    value: "seeker" as const,
+                    title: "Find care",
+                    sub: "For me or a loved one",
+                  },
+                  {
+                    value: "caregiver" as const,
+                    title: "Provide care",
+                    sub: "I work as a carer",
+                  },
+                ]
+              ).map((opt) => {
+                const active = role === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setRole(opt.value)}
+                    aria-pressed={active}
+                    className={`rounded-card border p-3 text-left transition ${
+                      active
+                        ? "border-primary bg-primary-50"
+                        : "border-line bg-white"
+                    }`}
+                  >
+                    <span
+                      className={`block text-[14px] font-bold ${
+                        active ? "text-primary" : "text-heading"
+                      }`}
+                    >
+                      {opt.title}
+                    </span>
+                    <span className="block text-[12px] text-subheading mt-0.5">
+                      {opt.sub}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
           <Input
             label="Email"
             type="email"
