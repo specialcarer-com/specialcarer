@@ -10,7 +10,9 @@ import {
   CarerBadges,
   IconCal,
   IconChatBubble,
+  IconChevronRight,
   IconFilter,
+  IconJournal,
   IconMail,
   IconPhone,
   IconPin,
@@ -36,6 +38,7 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function HomePage() {
   const [name, setName] = useState("there");
+  const [journalCount, setJournalCount] = useState<number | null>(null);
 
   // Pull the user's display name from Supabase (best-effort).
   useEffect(() => {
@@ -56,6 +59,28 @@ export default function HomePage() {
         setName(display);
       } catch {
         /* keep default */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Lightweight count of recent journal entries the user can see.
+  // Best-effort — if it fails or returns zero we just hide the card.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/journal?limit=5", {
+          credentials: "include",
+        });
+        if (!res.ok) return;
+        const json = (await res.json()) as { entries?: { id: string }[] };
+        if (cancelled) return;
+        setJournalCount(json.entries?.length ?? 0);
+      } catch {
+        /* keep null */
       }
     })();
     return () => {
@@ -130,6 +155,38 @@ export default function HomePage() {
           </div>
         </>
       )}
+
+      {/* Care journal quick-access. Always visible for signed-in users so
+          they can both add a note and review the recent timeline. */}
+      <SectionTitle title="Care journal" />
+      <div className="px-4">
+        <Link href="/m/journal" className="block">
+          <Card>
+            <div className="flex items-center gap-3">
+              <span
+                className="grid h-11 w-11 flex-none place-items-center rounded-full"
+                style={{ background: "rgba(3,158,160,0.10)", color: "#039EA0" }}
+                aria-hidden
+              >
+                <IconJournal />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[14px] font-bold text-heading">
+                  {journalCount && journalCount > 0
+                    ? `${journalCount} recent note${journalCount === 1 ? "" : "s"}`
+                    : "Daily care notes"}
+                </p>
+                <p className="text-[12px] text-subheading">
+                  Notes, photos and mood updates from each visit.
+                </p>
+              </div>
+              <span className="text-subheading" aria-hidden>
+                <IconChevronRight />
+              </span>
+            </div>
+          </Card>
+        </Link>
+      </div>
 
       {/* Professionals */}
       <SectionTitle title="Professionals" />

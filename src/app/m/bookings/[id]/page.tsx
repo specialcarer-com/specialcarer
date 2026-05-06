@@ -8,6 +8,7 @@ import {
   Card,
   IconCal,
   IconChatBubble,
+  IconJournal,
   IconMail,
   IconPhone,
   IconPin,
@@ -109,6 +110,36 @@ export default function BookingDetailPage() {
               label="Message"
               href={`/m/chat/${carer.id}`}
             />
+          </div>
+        </Card>
+
+        {/* Care journal — entries appear on /m/journal. Once bookings are
+            ported to real Supabase rows, the bookingId qs param will tie
+            the note to this specific visit; for now the form just creates
+            a free-form entry the booking parties can read. */}
+        <Card>
+          <div className="flex items-start gap-3">
+            <span
+              className="grid h-10 w-10 flex-none place-items-center rounded-full"
+              style={{ background: "rgba(3,158,160,0.10)", color: "#039EA0" }}
+              aria-hidden
+            >
+              <IconJournal />
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] font-bold text-heading">Care journal</p>
+              <p className="text-[12px] text-subheading mt-0.5">
+                Short notes, photos and mood updates from this visit.
+              </p>
+              <div className="mt-3 flex gap-2">
+                <Link href="/m/journal/new" className="flex-1">
+                  <Button size="sm" block>Add a note</Button>
+                </Link>
+                <Link href="/m/journal" className="flex-1">
+                  <Button size="sm" variant="outline" block>View journal</Button>
+                </Link>
+              </div>
+            </div>
           </div>
         </Card>
       </div>
