@@ -6,6 +6,7 @@ export const SERVICES = [
   { key: "childcare", label: "Childcare", href: "/services/childcare" },
   { key: "special_needs", label: "Special-needs", href: "/services/special-needs" },
   { key: "postnatal", label: "Postnatal & newborn", href: "/services/postnatal" },
+  { key: "complex_care", label: "Complex care", href: "/services/complex-care" },
 ] as const;
 
 export type ServiceKey = (typeof SERVICES)[number]["key"];

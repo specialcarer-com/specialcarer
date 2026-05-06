@@ -43,7 +43,7 @@ const requirements = [
   "At least one verifiable reference",
   "Smartphone (iOS or Android)",
   "Bank account in your name",
-  "For specialised work (postnatal, special-needs, eldercare with personal care): relevant training certificates",
+  "For specialised work (postnatal, special-needs, complex/clinical, eldercare with personal care): relevant training certificates",
 ];
 
 export default function Page() {

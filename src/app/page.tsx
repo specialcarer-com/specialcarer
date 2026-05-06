@@ -15,12 +15,12 @@ export const metadata: Metadata = {
   title:
     "SpecialCarer — Vetted, on-demand caregivers for families in the UK & US",
   description:
-    "Book trusted, background-checked caregivers for elderly care, childcare, special-needs and postnatal support. Live shift tracking, escrow payments, transparent pricing. Available across the UK and US.",
+    "Book trusted, background-checked caregivers for elderly care, childcare, special-needs, postnatal and complex clinical care. Live shift tracking, escrow payments, transparent pricing. Available across the UK and US.",
   alternates: { canonical: "https://specialcarer.com/" },
   openGraph: {
     title: "SpecialCarer — Vetted, on-demand caregivers for families",
     description:
-      "Background-checked, on-demand carers for elderly care, childcare, special-needs and postnatal support. UK + US.",
+      "Background-checked, on-demand carers for elderly care, childcare, special-needs, postnatal and complex care. UK + US.",
     url: "https://specialcarer.com/",
     siteName: "SpecialCarer",
     type: "website",
@@ -225,7 +225,7 @@ export default async function Home() {
               with caregivers vetted for your situation.
             </p>
           </div>
-          <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
             {[
               {
                 title: "Elderly care",
@@ -246,6 +246,11 @@ export default async function Home() {
                 title: "Postnatal",
                 copy: "Maternity nurses, night nannies, breastfeeding peer support, and newborn-trained caregivers.",
                 href: "/services/postnatal",
+              },
+              {
+                title: "Complex care",
+                copy: "Clinical-grade caregivers for PEG/tracheostomy, ventilator, seizure protocols, and palliative care.",
+                href: "/services/complex-care",
               },
             ].map((s) => (
               <Link

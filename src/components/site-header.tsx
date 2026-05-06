@@ -76,6 +76,12 @@ export default async function SiteHeader() {
               >
                 Postnatal &amp; newborn
               </Link>
+              <Link
+                href="/services/complex-care"
+                className="block px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50"
+              >
+                Complex care
+              </Link>
               <div className="my-2 border-t border-slate-100" />
               <p className="px-3 pt-1 pb-1 text-[10px] font-semibold tracking-wider uppercase text-slate-400">
                 How it&rsquo;s delivered

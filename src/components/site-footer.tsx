@@ -10,6 +10,7 @@ const CARE_LINKS: FooterLink[] = [
   { href: "/services/childcare", label: "Childcare" },
   { href: "/services/special-needs", label: "Special-needs" },
   { href: "/services/postnatal", label: "Postnatal" },
+  { href: "/services/complex-care", label: "Complex care" },
   { href: "/care-formats/live-in", label: "Live-in care" },
   { href: "/care-formats/visiting", label: "Visiting care" },
   { href: "/find-care", label: "Find care now" },

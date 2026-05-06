@@ -6,13 +6,21 @@ import type { Appearance } from "@stripe/stripe-js";
 import { getStripe } from "@/lib/stripe/client";
 
 type Currency = "gbp" | "usd";
-type ServiceType = "childcare" | "elderly" | "home_support" | "special_needs";
+// Aligned with src/lib/care/services.ts so caregiver listings, search,
+// and booking all use the same vertical taxonomy.
+type ServiceType =
+  | "elderly_care"
+  | "childcare"
+  | "special_needs"
+  | "postnatal"
+  | "complex_care";
 
 const SERVICE_TYPES: { value: ServiceType; label: string }[] = [
+  { value: "elderly_care", label: "Elderly care" },
   { value: "childcare", label: "Childcare" },
-  { value: "elderly", label: "Elderly care" },
-  { value: "home_support", label: "Home support" },
-  { value: "special_needs", label: "Special needs" },
+  { value: "special_needs", label: "Special-needs" },
+  { value: "postnatal", label: "Postnatal & newborn" },
+  { value: "complex_care", label: "Complex care" },
 ];
 
 const CURRENCY_SYMBOL: Record<Currency, string> = { gbp: "£", usd: "$" };

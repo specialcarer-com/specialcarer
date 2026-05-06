@@ -30,6 +30,7 @@ const SERVICES = [
   { key: "elderly", label: "Elderly care" },
   { key: "special", label: "Special-needs" },
   { key: "postnatal", label: "Postnatal support" },
+  { key: "complex", label: "Complex care" },
 ] as const;
 
 export default function SearchPage() {
