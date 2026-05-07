@@ -23,6 +23,7 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
+import { OVERNIGHT_RATE_MULTIPLIER } from "@/lib/pricing";
 
 type Tab = "now" | "schedule" | "recurring";
 type Surface = "web" | "mobile";
@@ -42,7 +43,17 @@ const SERVICES: { value: ServiceType; label: string }[] = [
   { value: "complex_care", label: "Complex care" },
 ];
 
-const DURATION_OPTIONS = [1, 2, 4, 6, 8] as const;
+const DURATION_MIN = 1;
+const DURATION_MAX = 12;
+const DURATION_STEP = 0.5;
+
+const OVERNIGHT_START = "20:00";
+const OVERNIGHT_END = "08:00";
+const OVERNIGHT_HOURS = 12;
+
+function formatHours(h: number): string {
+  return h % 1 === 0 ? `${h.toFixed(0)} hrs` : `${h.toFixed(1)} hrs`;
+}
 
 type Match = {
   user_id: string;
@@ -118,6 +129,8 @@ export default function WhenPicker({
   const [postcode, setPostcode] = useState("");
   const [service, setService] = useState<ServiceType>("elderly_care");
   const [durationHours, setDurationHours] = useState<number>(2);
+  // Sleep-in / overnight (8pm–8am) — applies a 0.7× rate multiplier.
+  const [overnightRate, setOvernightRate] = useState(false);
 
   // Schedule-only inputs
   const today = new Date();
@@ -125,6 +138,20 @@ export default function WhenPicker({
   const [scheduleDate, setScheduleDate] = useState(localDateStr(tomorrow));
   const [scheduleStart, setScheduleStart] = useState("09:00");
   const [scheduleEnd, setScheduleEnd] = useState("11:00");
+
+  function applyNowOvernight() {
+    setDurationHours(OVERNIGHT_HOURS);
+    setOvernightRate(true);
+  }
+  function applyScheduleOvernight() {
+    setScheduleStart(OVERNIGHT_START);
+    setScheduleEnd(OVERNIGHT_END);
+    setOvernightRate(true);
+  }
+  function setNowDurationManual(h: number) {
+    setDurationHours(h);
+    setOvernightRate(false);
+  }
 
   // Live quote pill state
   const [quote, setQuote] = useState<LiveQuote>(DEFAULT_QUOTE);
@@ -135,9 +162,14 @@ export default function WhenPicker({
     const [sh, sm] = scheduleStart.split(":").map(Number);
     const [eh, em] = scheduleEnd.split(":").map(Number);
     if ([sh, sm, eh, em].some((n) => Number.isNaN(n))) return 0;
+    if (overnightRate) {
+      // Overnight wraps past midnight: end-time is the next day.
+      const minutes = 24 * 60 - (sh * 60 + sm) + (eh * 60 + em);
+      return Math.max(0, minutes / 60);
+    }
     const minutes = eh * 60 + em - (sh * 60 + sm);
     return Math.max(0, minutes / 60);
-  }, [scheduleStart, scheduleEnd]);
+  }, [scheduleStart, scheduleEnd, overnightRate]);
 
   // Currently relevant duration for the fare ribbon
   const activeHours =
@@ -258,6 +290,7 @@ export default function WhenPicker({
       duration: String(durationHours),
       start: "60",
     });
+    if (overnightRate) params.set("overnight", "1");
     const target =
       surface === "mobile"
         ? `/m/book/instant?${params.toString()}`
@@ -276,6 +309,7 @@ export default function WhenPicker({
       start: scheduleStart,
       end: scheduleEnd,
     });
+    if (overnightRate) params.set("overnight", "1");
     router.push(`/find-care?${params.toString()}`);
   }
 
@@ -301,7 +335,9 @@ export default function WhenPicker({
             service={service}
             setService={setService}
             durationHours={durationHours}
-            setDurationHours={setDurationHours}
+            setDurationHours={setNowDurationManual}
+            overnightRate={overnightRate}
+            applyOvernight={applyNowOvernight}
           />
         )}
         {tab === "schedule" && (
@@ -314,9 +350,17 @@ export default function WhenPicker({
             date={scheduleDate}
             setDate={setScheduleDate}
             start={scheduleStart}
-            setStart={setScheduleStart}
+            setStart={(v: string) => {
+              setScheduleStart(v);
+              setOvernightRate(false);
+            }}
             end={scheduleEnd}
-            setEnd={setScheduleEnd}
+            setEnd={(v: string) => {
+              setScheduleEnd(v);
+              setOvernightRate(false);
+            }}
+            overnightRate={overnightRate}
+            applyOvernight={applyScheduleOvernight}
           />
         )}
         {tab === "recurring" && <RecurringPanel surface={surface} />}
@@ -328,6 +372,7 @@ export default function WhenPicker({
           tab={tab}
           quote={quote}
           hours={activeHours}
+          overnightRate={overnightRate}
           disabled={!postcode.trim() || (tab === "schedule" && activeHours <= 0)}
           onClick={tab === "now" ? handleNowSubmit : handleScheduleSubmit}
         />
@@ -388,6 +433,8 @@ function NowPanel({
   setService,
   durationHours,
   setDurationHours,
+  overnightRate,
+  applyOvernight,
 }: {
   surface: Surface;
   postcode: string;
@@ -396,6 +443,8 @@ function NowPanel({
   setService: (s: ServiceType) => void;
   durationHours: number;
   setDurationHours: (n: number) => void;
+  overnightRate: boolean;
+  applyOvernight: () => void;
 }) {
   return (
     <div className="space-y-5">
@@ -405,30 +454,92 @@ function NowPanel({
         onChange={setPostcode}
       />
 
-      <div>
-        <FieldLabel surface={surface}>For how long?</FieldLabel>
-        <div className="flex flex-wrap gap-2">
-          {DURATION_OPTIONS.map((h) => {
-            const on = durationHours === h;
-            return (
-              <button
-                key={h}
-                type="button"
-                onClick={() => setDurationHours(h)}
-                className={`px-4 py-2 rounded-pill border text-sm font-semibold transition ${
-                  on
-                    ? "bg-slate-900 border-slate-900 text-white"
-                    : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
-                }`}
-              >
-                {h} hr
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <DurationSlider
+        surface={surface}
+        durationHours={durationHours}
+        setDurationHours={setDurationHours}
+        overnightRate={overnightRate}
+        applyOvernight={applyOvernight}
+      />
 
       <ServicePicker surface={surface} value={service} onChange={setService} />
+    </div>
+  );
+}
+
+function DurationSlider({
+  surface,
+  durationHours,
+  setDurationHours,
+  overnightRate,
+  applyOvernight,
+}: {
+  surface: Surface;
+  durationHours: number;
+  setDurationHours: (n: number) => void;
+  overnightRate: boolean;
+  applyOvernight: () => void;
+}) {
+  const presets: {
+    label: string;
+    active: boolean;
+    onClick: () => void;
+  }[] = [
+    {
+      label: "4 hrs",
+      active: !overnightRate && durationHours === 4,
+      onClick: () => setDurationHours(4),
+    },
+    {
+      label: "8 hrs",
+      active: !overnightRate && durationHours === 8,
+      onClick: () => setDurationHours(8),
+    },
+    {
+      label: "Overnight (8pm–8am)",
+      active: overnightRate,
+      onClick: applyOvernight,
+    },
+  ];
+  const accent = surface === "mobile" ? "primary" : "brand";
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <FieldLabel surface={surface}>For how long?</FieldLabel>
+        <span className="text-[15px] font-bold text-slate-900">
+          {overnightRate ? "12 hrs · overnight" : formatHours(durationHours)}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={DURATION_MIN}
+        max={DURATION_MAX}
+        step={DURATION_STEP}
+        value={durationHours}
+        onChange={(e) => setDurationHours(Number(e.target.value))}
+        className={`w-full sc-duration-slider sc-duration-slider--${accent}`}
+        aria-label="Duration in hours"
+      />
+      <div className="flex justify-between text-[11px] text-slate-400 mt-1 px-0.5">
+        <span>{DURATION_MIN} hr</span>
+        <span>{DURATION_MAX} hrs</span>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {presets.map((p) => (
+          <button
+            key={p.label}
+            type="button"
+            onClick={p.onClick}
+            className={`px-3.5 py-1.5 rounded-pill border text-[13px] font-semibold transition ${
+              p.active
+                ? "bg-slate-900 border-slate-900 text-white"
+                : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -449,6 +560,8 @@ function SchedulePanel({
   setStart,
   end,
   setEnd,
+  overnightRate,
+  applyOvernight,
 }: {
   surface: Surface;
   postcode: string;
@@ -461,13 +574,21 @@ function SchedulePanel({
   setStart: (s: string) => void;
   end: string;
   setEnd: (s: string) => void;
+  overnightRate: boolean;
+  applyOvernight: () => void;
 }) {
   const [sh, sm] = start.split(":").map(Number);
   const [eh, em] = end.split(":").map(Number);
-  const minutes =
-    [sh, sm, eh, em].some((n) => Number.isNaN(n))
-      ? 0
-      : Math.max(0, eh * 60 + em - (sh * 60 + sm));
+  const haveTimes = ![sh, sm, eh, em].some((n) => Number.isNaN(n));
+  let minutes = 0;
+  if (haveTimes) {
+    if (overnightRate) {
+      // Overnight wraps midnight (e.g. 20:00 → 08:00 next day).
+      minutes = 24 * 60 - (sh * 60 + sm) + (eh * 60 + em);
+    } else {
+      minutes = Math.max(0, eh * 60 + em - (sh * 60 + sm));
+    }
+  }
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   const durationLabel =
@@ -496,6 +617,47 @@ function SchedulePanel({
         />
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        {[
+          {
+            label: "4 hrs",
+            active:
+              !overnightRate && start === "09:00" && end === "13:00",
+            onClick: () => {
+              setStart("09:00");
+              setEnd("13:00");
+            },
+          },
+          {
+            label: "8 hrs",
+            active:
+              !overnightRate && start === "09:00" && end === "17:00",
+            onClick: () => {
+              setStart("09:00");
+              setEnd("17:00");
+            },
+          },
+          {
+            label: "Overnight (8pm–8am)",
+            active: overnightRate,
+            onClick: applyOvernight,
+          },
+        ].map((p) => (
+          <button
+            key={p.label}
+            type="button"
+            onClick={p.onClick}
+            className={`px-3.5 py-1.5 rounded-pill border text-[13px] font-semibold transition ${
+              p.active
+                ? "bg-slate-900 border-slate-900 text-white"
+                : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <div>
           <FieldLabel surface={surface}>Start</FieldLabel>
@@ -507,7 +669,9 @@ function SchedulePanel({
           />
         </div>
         <div>
-          <FieldLabel surface={surface}>End</FieldLabel>
+          <FieldLabel surface={surface}>
+            End{overnightRate ? " (next day)" : ""}
+          </FieldLabel>
           <input
             type="time"
             value={end}
@@ -517,7 +681,10 @@ function SchedulePanel({
         </div>
       </div>
 
-      <p className="text-[13px] text-slate-500">Duration: {durationLabel}</p>
+      <p className="text-[13px] text-slate-500">
+        Duration: {durationLabel}
+        {overnightRate ? " · sleep-in rate applies" : ""}
+      </p>
 
       <ServicePicker surface={surface} value={service} onChange={setService} />
     </div>
@@ -626,6 +793,7 @@ function StickyActionBar({
   tab,
   quote,
   hours,
+  overnightRate,
   disabled,
   onClick,
 }: {
@@ -633,17 +801,24 @@ function StickyActionBar({
   tab: Tab;
   quote: LiveQuote;
   hours: number;
+  overnightRate: boolean;
   disabled: boolean;
   onClick: () => void;
 }) {
   const ctaLabel = tab === "now" ? "Find carer" : "Find carers";
-  const rateCents = quote.minRateCents;
+  const rawRateCents = quote.minRateCents;
+  // Sleep-in shifts pay 0.7× the standard hourly rate (industry norm).
+  const effectiveRateCents =
+    rawRateCents != null && overnightRate
+      ? Math.round(rawRateCents * OVERNIGHT_RATE_MULTIPLIER)
+      : rawRateCents;
+  const hoursStr = hours.toFixed(hours % 1 === 0 ? 0 : 1);
   const fareLine =
-    rateCents != null && hours > 0
-      ? `${hours.toFixed(hours % 1 === 0 ? 0 : 1)} hr × ${fmtRate(
-          rateCents,
+    effectiveRateCents != null && hours > 0
+      ? `${hoursStr} hrs${overnightRate ? " overnight" : ""} × ${fmtRate(
+          effectiveRateCents,
           quote.currency
-        )}/hr = ${fmtTotal(hours, rateCents, quote.currency)}`
+        )}/hr = ${fmtTotal(hours, effectiveRateCents, quote.currency)}`
       : "Enter your postcode to see live pricing";
 
   const positionClass =
@@ -668,6 +843,9 @@ function StickyActionBar({
         </div>
         <div className="mt-2 mb-3 text-[12px] text-slate-600 leading-tight">
           <div className="font-semibold text-slate-800">{fareLine}</div>
+          {overnightRate && effectiveRateCents != null && (
+            <div className="text-slate-500">Sleep-in rate applies (0.7×).</div>
+          )}
           <div>Held securely. Released to carer 24h after shift.</div>
         </div>
         <button

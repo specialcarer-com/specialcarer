@@ -1,20 +1,17 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import MarketingShell from "@/components/marketing-shell";
-import WhenPicker from "./when-picker";
+import CareFormatChooser from "./care-format-chooser";
+import type { Country } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "Book care · SpecialCarer",
   description:
-    "One picker for all care: instant, scheduled, or recurring. Live ETAs and transparent hourly pricing in the UK and US.",
+    "Choose visiting or live-in care. Vetted carers, transparent pricing, escrowed payments.",
 };
 
-type Tab = "now" | "schedule" | "recurring";
-
-function parseTab(when: string | string[] | undefined): Tab {
-  const v = Array.isArray(when) ? when[0] : when;
-  if (v === "schedule" || v === "recurring") return v;
-  return "now";
-}
+export const dynamic = "force-dynamic";
 
 export default async function BookEntryPage({
   searchParams,
@@ -22,22 +19,37 @@ export default async function BookEntryPage({
   searchParams: Promise<{ when?: string }>;
 }) {
   const sp = await searchParams;
-  const initialTab = parseTab(sp.when);
+
+  // Preserve existing deep-links from the homepage CTAs:
+  // /book?when=now and /book?when=schedule should land in the visiting flow
+  // so the When picker still works as a single-tap entry point.
+  const when = Array.isArray(sp.when) ? sp.when[0] : sp.when;
+  if (when === "now" || when === "schedule" || when === "recurring") {
+    redirect(`/book/visiting?when=${when}`);
+  }
+
+  const reqHeaders = await headers();
+  const ipCountry = (
+    reqHeaders.get("x-vercel-ip-country") ||
+    reqHeaders.get("cf-ipcountry") ||
+    ""
+  ).toUpperCase();
+  const country: Country = ipCountry === "US" ? "US" : "GB";
 
   return (
     <MarketingShell>
       <div className="pt-10 sm:pt-14 pb-6">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">
-            Book a carer
+            What kind of care do you need?
           </h1>
-          <p className="mt-2 text-slate-600">
-            Now, later, or every week. One simple flow — held in escrow until
-            the shift ends.
+          <p className="mt-2 text-slate-600 max-w-xl mx-auto">
+            Two simple paths. Pick the one that fits your situation &mdash;
+            we&rsquo;ll take it from there.
           </p>
         </div>
       </div>
-      <WhenPicker surface="web" initialTab={initialTab} />
+      <CareFormatChooser surface="web" country={country} />
     </MarketingShell>
   );
 }

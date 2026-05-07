@@ -79,3 +79,53 @@ html, body { height: 100%; }
   .sc-phone-tilt-right { transform: rotate(8deg); }
   .sc-cta-shimmer { background-image: none; background-color: #039EA0; }
 }
+
+/* ── Duration slider used in /book/visiting When picker ─────────── */
+.sc-duration-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 24px;
+  background: transparent;
+  cursor: pointer;
+}
+.sc-duration-slider:focus { outline: none; }
+.sc-duration-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: #E2E8F0; /* slate-200 */
+}
+.sc-duration-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: #E2E8F0;
+}
+.sc-duration-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 22px;
+  width: 22px;
+  margin-top: -8px;
+  border-radius: 9999px;
+  background: #FFFFFF;
+  border: 2px solid #0F172A; /* slate-900 */
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+  transition: transform 80ms ease;
+}
+.sc-duration-slider::-moz-range-thumb {
+  height: 22px;
+  width: 22px;
+  border-radius: 9999px;
+  background: #FFFFFF;
+  border: 2px solid #0F172A;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+}
+.sc-duration-slider:active::-webkit-slider-thumb { transform: scale(1.05); }
+
+/* Mobile surface uses the brand teal accent on the thumb. */
+.sc-duration-slider--primary::-webkit-slider-thumb { border-color: #039EA0; }
+.sc-duration-slider--primary::-moz-range-thumb { border-color: #039EA0; }
+
+/* Web surface uses the marketing brand teal. */
+.sc-duration-slider--brand::-webkit-slider-thumb { border-color: #0E7C7B; }
+.sc-duration-slider--brand::-moz-range-thumb { border-color: #0E7C7B; }
