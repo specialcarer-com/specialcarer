@@ -27,12 +27,12 @@ function renderBrandHeader(eyebrow?: string): string {
     : "";
   // Bulletproof centred logo header. Each row is its own <tr>/<td> so
   // Apple Mail and Gmail can't merge or clip them. Image dimensions
-  // are 1:1 with the source PNG (192×192 file rendered at 96×96 = @2x
+  // are 1:1 with the source PNG (256×256 file rendered at 128×128 = @2x
   // retina) to avoid any in-client resize math. align="center" on the
   // outer cell handles centring — no margin:auto trickery.
   return `<tr>
-            <td align="center" valign="top" class="sc-pad-x" style="padding:32px 28px 0 28px;background:#ffffff;line-height:0;">
-              <img src="${BRAND_LOGO_URL}" width="96" height="96" alt="SpecialCarer logo" border="0" style="display:block;border:0;outline:none;text-decoration:none;width:96px;height:96px;-ms-interpolation-mode:bicubic;">
+            <td align="center" valign="top" class="sc-pad-x" style="padding:36px 28px 0 28px;background:#ffffff;line-height:0;">
+              <img src="${BRAND_LOGO_URL}" width="128" height="128" alt="SpecialCarer logo" border="0" style="display:block;border:0;outline:none;text-decoration:none;width:128px;height:128px;-ms-interpolation-mode:bicubic;">
             </td>
           </tr>
           <tr>
