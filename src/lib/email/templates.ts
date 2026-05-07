@@ -9,7 +9,7 @@ const BRAND_PRIMARY = "#039EA0";
 const BRAND_HEADING = "#171E54";
 const BRAND_SUBHEAD = "#575757";
 const BG_PALE = "#F7FAFA";
-const BRAND_LOGO_URL = "https://specialcarer.com/brand/logo-mark-transparent.png";
+const BRAND_LOGO_URL = "https://specialcarer.com/brand/logo-mark-email.png";
 
 /**
  * Branded email header with the SpecialCarer logo mark + wordmark.
@@ -23,22 +23,27 @@ const BRAND_LOGO_URL = "https://specialcarer.com/brand/logo-mark-transparent.png
  */
 function renderBrandHeader(eyebrow?: string): string {
   const eyebrowMarkup = eyebrow
-    ? `<div style="font-size:12px;letter-spacing:2px;color:${BRAND_PRIMARY};font-weight:700;text-transform:uppercase;margin-top:8px;">${escape(eyebrow)}</div>`
+    ? `<div style="font-size:12px;letter-spacing:2px;color:${BRAND_PRIMARY};font-weight:700;text-transform:uppercase;margin-top:8px;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${escape(eyebrow)}</div>`
     : "";
-  // Big, centred, brand-forward header. Logo at 96×96 with the
-  // SpecialCarer wordmark below at 26px navy bold. Wordmark text always
-  // renders even when the recipient's mail client blocks remote images,
-  // and the alt text on the logo also reads "SpecialCarer".
+  // Bulletproof centred logo header. Each row is its own <tr>/<td> so
+  // Apple Mail and Gmail can't merge or clip them. Image dimensions
+  // are 1:1 with the source PNG (192×192 file rendered at 96×96 = @2x
+  // retina) to avoid any in-client resize math. align="center" on the
+  // outer cell handles centring — no margin:auto trickery.
   return `<tr>
-            <td align="center" style="padding:36px 32px 18px 32px;background:#ffffff;">
-              <img src="${BRAND_LOGO_URL}" width="96" height="96" alt="SpecialCarer" style="display:block;margin:0 auto 14px auto;border:0;width:96px;height:96px;">
-              <div style="font-size:26px;color:${BRAND_HEADING};font-weight:800;letter-spacing:-0.4px;line-height:1;">SpecialCarer</div>
+            <td align="center" valign="top" style="padding:36px 32px 0 32px;background:#ffffff;line-height:0;">
+              <img src="${BRAND_LOGO_URL}" width="96" height="96" alt="SpecialCarer logo" border="0" style="display:block;border:0;outline:none;text-decoration:none;width:96px;height:96px;-ms-interpolation-mode:bicubic;">
+            </td>
+          </tr>
+          <tr>
+            <td align="center" valign="top" style="padding:14px 32px 0 32px;background:#ffffff;">
+              <div style="font-size:26px;color:${BRAND_HEADING};font-weight:800;letter-spacing:-0.4px;line-height:1.1;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">SpecialCarer</div>
               ${eyebrowMarkup}
             </td>
           </tr>
           <tr>
-            <td style="padding:0 32px;">
-              <div style="height:1px;background:#E6F0EF;width:100%;"></div>
+            <td style="padding:18px 32px 0 32px;background:#ffffff;">
+              <div style="height:1px;background:#E6F0EF;width:100%;font-size:0;line-height:0;">&nbsp;</div>
             </td>
           </tr>`;
 }
