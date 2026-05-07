@@ -98,7 +98,7 @@ export default function SignUpPage() {
                   {
                     value: "caregiver" as const,
                     title: "Provide care",
-                    sub: "I work as a carer",
+                    sub: "for non-medical or clinical support needs",
                   },
                 ]
               ).map((opt) => {

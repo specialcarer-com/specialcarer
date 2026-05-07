@@ -104,7 +104,7 @@ export function OnboardingForm({
             />
             <span className="font-medium">Provide care</span>
             <span className="text-xs text-slate-500 mt-1">
-              I&rsquo;m a caregiver looking for work
+              for non-medical or clinical support needs
             </span>
           </label>
         </div>
