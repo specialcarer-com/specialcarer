@@ -23,21 +23,22 @@ const BRAND_LOGO_URL = "https://specialcarer.com/brand/icon-192.png";
  */
 function renderBrandHeader(eyebrow?: string): string {
   const eyebrowMarkup = eyebrow
-    ? `<div style="font-size:11px;letter-spacing:1.5px;color:${BRAND_PRIMARY};font-weight:700;text-transform:uppercase;margin-top:4px;">${escape(eyebrow)}</div>`
+    ? `<div style="font-size:12px;letter-spacing:2px;color:${BRAND_PRIMARY};font-weight:700;text-transform:uppercase;margin-top:8px;">${escape(eyebrow)}</div>`
     : "";
+  // Big, centred, brand-forward header. Logo at 96×96 with the
+  // SpecialCarer wordmark below at 26px navy bold. Wordmark text always
+  // renders even when the recipient's mail client blocks remote images,
+  // and the alt text on the logo also reads "SpecialCarer".
   return `<tr>
-            <td style="padding:28px 32px 12px 32px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td style="vertical-align:middle;padding-right:12px;">
-                    <img src="${BRAND_LOGO_URL}" width="40" height="40" alt="SpecialCarer" style="display:block;border:0;width:40px;height:40px;">
-                  </td>
-                  <td style="vertical-align:middle;">
-                    <div style="font-size:18px;color:${BRAND_HEADING};font-weight:700;letter-spacing:-0.2px;line-height:1;">SpecialCarer</div>
-                    ${eyebrowMarkup}
-                  </td>
-                </tr>
-              </table>
+            <td align="center" style="padding:36px 32px 18px 32px;background:#ffffff;">
+              <img src="${BRAND_LOGO_URL}" width="96" height="96" alt="SpecialCarer" style="display:block;margin:0 auto 14px auto;border:0;width:96px;height:96px;">
+              <div style="font-size:26px;color:${BRAND_HEADING};font-weight:800;letter-spacing:-0.4px;line-height:1;">SpecialCarer</div>
+              ${eyebrowMarkup}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 32px;">
+              <div style="height:1px;background:#E6F0EF;width:100%;"></div>
             </td>
           </tr>`;
 }
