@@ -12,10 +12,10 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/smtp";
+import { renderLiveInAdminEmail } from "@/lib/email/templates";
 import {
   LIVE_IN_DAILY_RATES,
   liveInTotalCents,
-  fmtCurrency,
   type Country,
 } from "@/lib/pricing";
 
@@ -45,14 +45,6 @@ type Body = {
 
 function isISODate(s: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s));
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
 
 export async function POST(req: Request) {
@@ -151,22 +143,21 @@ export async function POST(req: Request) {
 
   // Best-effort admin notification — failures should not block the
   // success response (insert already succeeded).
-  const subject = `New live-in request — ${service.replace("_", " ")} (${country})`;
-  const lines = [
-    `Request ID: ${inserted.id}`,
-    `Service: ${service}`,
-    `Country: ${country}`,
-    `Start date: ${start_date}`,
-    `Duration: ${weeks} weeks`,
-    `Indicative total: ${fmtCurrency(total_cents, rate.currency)} (${weeks} × 7 × ${fmtCurrency(rate.rate_cents, rate.currency)}/day)`,
-    `Address: ${address}`,
-    `Contact email: ${contact_email}`,
-    `Contact phone: ${contact_phone || "(not provided)"}`,
-    `Notes: ${notes || "(none)"}`,
-    `User ID: ${userId ?? "(anonymous)"}`,
-  ];
-  const text = lines.join("\n");
-  const html = `<h2>${escapeHtml(subject)}</h2><pre style="font-family:ui-monospace,monospace;font-size:13px;white-space:pre-wrap;">${escapeHtml(text)}</pre>`;
+  const { subject, html, text } = renderLiveInAdminEmail({
+    requestId: inserted.id,
+    service,
+    country,
+    startDate: start_date,
+    weeks: Math.round(weeks),
+    address,
+    notes: notes || null,
+    contactEmail: contact_email,
+    contactPhone: contact_phone || null,
+    dailyRateCents: rate.rate_cents,
+    totalCents: total_cents,
+    currency: rate.currency,
+    userId,
+  });
 
   await sendEmail({
     to: ADMIN_EMAIL,
