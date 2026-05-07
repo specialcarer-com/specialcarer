@@ -93,7 +93,7 @@ export default function SignUpPage() {
                   {
                     value: "seeker" as const,
                     title: "Find care",
-                    sub: "For me or a loved one",
+                    sub: "For me, a loved one or client",
                   },
                   {
                     value: "caregiver" as const,
