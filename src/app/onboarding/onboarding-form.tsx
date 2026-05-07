@@ -84,7 +84,7 @@ export function OnboardingForm({
             />
             <span className="font-medium">Find care</span>
             <span className="text-xs text-slate-500 mt-1">
-              For me, my child, a loved one, or a client
+              for me, my child, a loved one, or a client
             </span>
           </label>
           <label
