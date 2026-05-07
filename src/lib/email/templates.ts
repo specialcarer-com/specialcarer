@@ -197,6 +197,75 @@ function fmtDate(iso: string): string {
 }
 
 /**
+ * Privacy: mask the family's full address before the carer is matched/
+ * accepted. Only the postcode (UK) or ZIP (US) is shown until acceptance.
+ * Falls back to a generic “city, country” hint if no postcode is parseable.
+ */
+function maskAddress(address: string, country: "GB" | "US"): string {
+  if (!address) return "(not provided)";
+  const trimmed = address.trim();
+  if (country === "GB") {
+    // UK postcode pattern (covers e.g. SW1A 1AA, NW1 9XB, EC1V 9HX,
+    // M1 1AE, B33 8TH, CR2 6XH, DN55 1PT). Match anywhere in string.
+    const m = trimmed.match(/\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/i);
+    if (m) return `${m[1].toUpperCase()} ${m[2].toUpperCase()}`;
+  } else {
+    // US ZIP (5-digit or ZIP+4)
+    const m = trimmed.match(/\b(\d{5})(-\d{4})?\b/);
+    if (m) return m[0];
+  }
+  // Last-ditch fallback: show only the last comma-separated chunk
+  // (commonly the postcode/state) to avoid revealing street + city.
+  const parts = trimmed.split(",").map((s) => s.trim()).filter(Boolean);
+  return parts.length > 1 ? parts[parts.length - 1] : "(masked until accepted)";
+}
+
+/**
+ * Privacy: mask all but the last 4 digits of the contact phone number.
+ * Preserves the international dialling prefix (+44, +1) so ops still know
+ * which country to expect. e.g. "+44 7700 900123" → "+44 •••• •••0123".
+ */
+function maskPhone(raw: string): string {
+  if (!raw) return "";
+  const trimmed = raw.trim();
+  // Pull out leading + and country code (1–3 digits)
+  const cc = trimmed.match(/^\+\d{1,3}/);
+  // Strip everything that isn't a digit
+  const digits = trimmed.replace(/[^0-9]/g, "");
+  if (digits.length < 4) return "\u2022".repeat(digits.length);
+  const last4 = digits.slice(-4);
+  const prefix = cc ? `${cc[0]} ` : "";
+  return `${prefix}\u2022\u2022\u2022\u2022 \u2022\u2022\u2022${last4}`;
+}
+
+/**
+ * Privacy: mask the local part of an email address. Show first character
+ * + last character, mask the middle. Domain is preserved so ops can see
+ * if the family is on a personal vs corporate domain. e.g.
+ * "jane.doe@gmail.com" → "j••••••e@gmail.com".
+ */
+function maskEmail(raw: string): string {
+  if (!raw) return "";
+  const at = raw.indexOf("@");
+  if (at <= 0) return raw;
+  const local = raw.slice(0, at);
+  const domain = raw.slice(at);
+  if (local.length <= 2) return `${local[0] || ""}\u2022${domain}`;
+  return `${local[0]}\u2022\u2022\u2022\u2022\u2022\u2022${local[local.length - 1]}${domain}`;
+}
+
+/**
+ * Privacy: mask all but the first 8 characters of a UUID so ops can still
+ * eyeball-correlate rows in the admin dashboard, without exposing the
+ * full identifier in plain-text email.
+ */
+function maskId(raw: string): string {
+  if (!raw) return "";
+  if (raw.length <= 8) return raw;
+  return `${raw.slice(0, 8)}\u2026`;
+}
+
+/**
  * Render the live-in care request admin notification.
  * Sent to the ops inbox whenever a family submits /book/live-in.
  */
@@ -219,10 +288,18 @@ export function renderLiveInAdminEmail(args: {
   const serviceLabel = labelService(args.service);
   const subject = `New live-in request — ${serviceLabel} (${args.country})`;
   const safeService = escape(serviceLabel);
-  const safeAddress = escape(args.address);
+  // Privacy: mask family PII until a carer accepts the booking.
+  // The reply-to header (set on the outbound email) preserves the real
+  // family email so ops can still reply via their mail client —
+  // they just don’t see the address, full phone, or full email in
+  // the body of the notification card.
+  const maskedAddress = maskAddress(args.address, args.country);
+  const safeAddress = escape(maskedAddress);
   const safeNotes = args.notes ? escape(args.notes) : "";
-  const safeEmail = escape(args.contactEmail);
-  const safePhone = args.contactPhone ? escape(args.contactPhone) : "";
+  const safeEmail = escape(maskEmail(args.contactEmail));
+  const safePhone = args.contactPhone
+    ? escape(maskPhone(args.contactPhone))
+    : "";
   const safeUser = args.userId ? escape(args.userId) : "";
   const totalLabel = fmtMoney(args.totalCents, args.currency);
   const dailyLabel = fmtMoney(args.dailyRateCents, args.currency);
@@ -278,9 +355,9 @@ export function renderLiveInAdminEmail(args: {
                 <tr><td class="sc-row-label" style="padding:6px 12px 6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Country</td><td style="padding:6px 0;font-weight:600;">${args.country}</td></tr>
                 <tr><td class="sc-row-label" style="padding:6px 12px 6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Start date</td><td style="padding:6px 0;font-weight:600;word-break:break-word;">${escape(startLabel)}</td></tr>
                 <tr><td class="sc-row-label" style="padding:6px 12px 6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Duration</td><td style="padding:6px 0;font-weight:600;">${args.weeks} week${args.weeks === 1 ? "" : "s"}</td></tr>
-                <tr><td class="sc-row-label" style="padding:6px 12px 6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Address</td><td style="padding:6px 0;font-weight:600;word-break:break-word;">${safeAddress}</td></tr>
-                <tr><td class="sc-row-label" style="padding:6px 12px 6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Contact email</td><td style="padding:6px 0;font-weight:600;word-break:break-all;"><a href="mailto:${safeEmail}" style="color:${BRAND_PRIMARY};text-decoration:none;">${safeEmail}</a></td></tr>
-                ${safePhone ? `<tr><td class="sc-row-label" style="padding:6px 12px 6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Contact phone</td><td style="padding:6px 0;font-weight:600;"><a href="tel:${safePhone}" style="color:${BRAND_PRIMARY};text-decoration:none;">${safePhone}</a></td></tr>` : ""}
+                <tr><td class="sc-row-label" style="padding:6px 12px 6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">${args.country === "GB" ? "Postcode" : "ZIP"}</td><td style="padding:6px 0;font-weight:600;word-break:break-word;">${safeAddress}</td></tr>
+                <tr><td class="sc-row-label" style="padding:6px 12px 6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Contact email</td><td style="padding:6px 0;font-weight:600;word-break:break-all;">${safeEmail}</td></tr>
+                ${safePhone ? `<tr><td class="sc-row-label" style="padding:6px 12px 6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Contact phone</td><td style="padding:6px 0;font-weight:600;">${safePhone}</td></tr>` : ""}
                 ${safeNotes ? `<tr><td class="sc-row-label" style="padding:6px 12px 6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Notes</td><td style="padding:6px 0;font-weight:500;line-height:1.55;word-break:break-word;">${safeNotes}</td></tr>` : ""}
                 <tr><td class="sc-row-label" style="padding:6px 12px 6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Request ID</td><td style="padding:6px 0;font-family:ui-monospace,monospace;font-size:12px;color:#8a8a8a;word-break:break-all;">${escape(args.requestId)}</td></tr>
                 <tr><td class="sc-row-label" style="padding:6px 12px 6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">User</td><td style="padding:6px 0;font-family:ui-monospace,monospace;font-size:12px;color:#8a8a8a;word-break:break-all;">${safeUser || "(anonymous — not signed in)"}</td></tr>
@@ -293,8 +370,8 @@ export function renderLiveInAdminEmail(args: {
             </td>
           </tr>
           <tr>
-            <td class="sc-pad-x" style="padding:8px 28px 22px 28px;color:${BRAND_SUBHEAD};font-size:13px;line-height:1.5;">
-              <p style="margin:8px 0 0 0;">Reply directly to this email to reach the family — the reply-to is set to ${safeEmail}.</p>
+            <td class="sc-pad-x" style="padding:10px 28px 6px 28px;color:${BRAND_SUBHEAD};font-size:13px;line-height:1.55;">
+              <p style="margin:0;padding:10px 14px;background:#FFF7E6;border-left:3px solid #E0A92F;border-radius:6px;color:#5C4A1B;"><strong style="color:#5C4A1B;">Privacy:</strong> the family’s full address, phone, and email are masked until a carer accepts this request. Hit <strong>Reply</strong> to message them — their address is set as reply-to.</p>
             </td>
           </tr>
           <tr>
@@ -310,6 +387,7 @@ export function renderLiveInAdminEmail(args: {
 </body>
 </html>`;
 
+  const postcodeLabel = args.country === "GB" ? "Postcode" : "ZIP";
   const text = `New live-in request — ${serviceLabel} (${args.country})
 
 Indicative total: ${totalLabel} (${args.weeks} weeks × 7 days × ${dailyLabel}/day)
@@ -318,16 +396,16 @@ Service: ${serviceLabel}
 Country: ${args.country}
 Start date: ${startLabel}
 Duration: ${args.weeks} week${args.weeks === 1 ? "" : "s"}
-Address: ${args.address}
-Contact email: ${args.contactEmail}
-Contact phone: ${args.contactPhone || "(not provided)"}
+${postcodeLabel}: ${maskedAddress}
+Contact email: ${maskEmail(args.contactEmail)}
+Contact phone: ${args.contactPhone ? maskPhone(args.contactPhone) : "(not provided)"}
 Notes: ${args.notes || "(none)"}
 Request ID: ${args.requestId}
 User ID: ${args.userId ?? "(anonymous — not signed in)"}
 
 Open admin dashboard: ${adminUrl}
 
-Reply directly to this email to reach the family.
+Privacy: the family’s full address, phone, and email are masked until a carer accepts. Reply directly to this email to reach the family — the reply-to header is set to their address.
 
 — SpecialCarer
 A product of All Care 4 U Group Ltd
