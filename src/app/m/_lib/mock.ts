@@ -394,8 +394,16 @@ export function getChat(id: string) {
 
 export type JobStatus = "Open" | "Applied" | "Closed";
 
+// Weekly availability grid: 7 rows (Sun..Sat) x 4 cols (Morning, Afternoon, Evening, Night)
+export type DaySlots = [boolean, boolean, boolean, boolean];
+export type AvailabilityGrid = [DaySlots, DaySlots, DaySlots, DaySlots, DaySlots, DaySlots, DaySlots];
+
+export const TIME_SLOT_LABELS = ["Morning", "Afternoon", "Evening", "Night"] as const;
+export const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
 export type Job = {
   id: string;
+  displayId: string; // e.g. #00606272
   title: string;
   service: keyof typeof SERVICE_LABEL;
   city: string;
@@ -404,15 +412,28 @@ export type Job = {
   postedAgo: string;
   hourly: { gbp: number; usd: number };
   hoursPerWeek: string;
+  hoursPerWeekNum: number;
   startDate: string;
+  daysPerWeek: string; // e.g. "Flexible", "3 days a week"
   description: string;
   requirements: string[];
+  careNeeds: string[];
+  qualifications: string[];
+  availability: AvailabilityGrid;
   status: JobStatus;
 };
+
+// Helper to build a grid: pass an array of [dayIndex, slotIndex] tuples.
+function grid(cells: Array<[number, number]>): AvailabilityGrid {
+  const g: boolean[][] = Array.from({ length: 7 }, () => [false, false, false, false]);
+  for (const [d, s] of cells) g[d][s] = true;
+  return g.map((r) => r as DaySlots) as AvailabilityGrid;
+}
 
 export const JOBS: Job[] = [
   {
     id: "job_001",
+    displayId: "#00606272",
     title: "Looking for an experienced child carer",
     service: "child",
     city: "Camden, London",
@@ -421,7 +442,9 @@ export const JOBS: Job[] = [
     postedAgo: "2h ago",
     hourly: { gbp: 22, usd: 28 },
     hoursPerWeek: "12-15 hrs/week",
+    hoursPerWeekNum: 12,
     startDate: "Mon 11 May",
+    daysPerWeek: "Flexible days a week",
     description:
       "Hi, we're looking for a kind, reliable carer to look after our 4-year-old in the afternoons. School pick-up, light meals, homework help and a bit of play. We live near Regent's Park.",
     requirements: [
@@ -430,10 +453,26 @@ export const JOBS: Job[] = [
       "Min 3 years experience",
       "Non-smoker",
     ],
+    careNeeds: ["Meal Prep", "Light Housekeeping", "School Pick-up", "Homework Help"],
+    qualifications: [
+      "Live-out preferred",
+      "Speaks English",
+      "Female preferred",
+      "Passed background check",
+      "Access to vehicle",
+    ],
+    availability: grid([
+      [1, 1], [1, 2],
+      [2, 1], [2, 2],
+      [3, 1], [3, 2],
+      [4, 1], [4, 2],
+      [5, 1], [5, 2],
+    ]),
     status: "Open",
   },
   {
     id: "job_002",
+    displayId: "#00606273",
     title: "Weekend elderly care companion",
     service: "elderly",
     city: "Manchester",
@@ -442,14 +481,28 @@ export const JOBS: Job[] = [
     postedAgo: "Yesterday",
     hourly: { gbp: 20, usd: 26 },
     hoursPerWeek: "8 hrs/weekend",
+    hoursPerWeekNum: 8,
     startDate: "Sat 16 May",
+    daysPerWeek: "2 days a week",
     description:
       "My mother needs a companion on Saturdays — light housekeeping, meal prep, conversation and a short walk if the weather is good.",
     requirements: ["DBS Enhanced", "Manual Handling", "Driving licence preferred"],
+    careNeeds: ["Bathing", "Dressing & Grooming", "Meal Prep", "Housekeeping"],
+    qualifications: [
+      "Live-out preferred",
+      "Speaks English",
+      "Passed background check",
+      "Access to vehicle",
+    ],
+    availability: grid([
+      [0, 0], [0, 1], [0, 2],
+      [6, 0], [6, 1], [6, 2],
+    ]),
     status: "Open",
   },
   {
     id: "job_003",
+    displayId: "#00606274",
     title: "Special-needs support, after school",
     service: "special",
     city: "Bristol",
@@ -458,14 +511,31 @@ export const JOBS: Job[] = [
     postedAgo: "3 days ago",
     hourly: { gbp: 24, usd: 30 },
     hoursPerWeek: "10 hrs/week",
+    hoursPerWeekNum: 10,
     startDate: "Mon 18 May",
+    daysPerWeek: "5 days a week",
     description:
       "Our 9-year-old has autism and needs a patient, structured carer for after-school routine, homework support and play.",
     requirements: ["DBS Enhanced", "SEN experience", "Calm temperament"],
+    careNeeds: ["School Pick-up", "Homework Help", "Sensory-friendly Play", "Meal Prep"],
+    qualifications: [
+      "SEN experience required",
+      "Speaks English",
+      "Passed background check",
+      "Calm temperament",
+    ],
+    availability: grid([
+      [1, 1], [1, 2],
+      [2, 1], [2, 2],
+      [3, 1], [3, 2],
+      [4, 1], [4, 2],
+      [5, 1], [5, 2],
+    ]),
     status: "Applied",
   },
   {
     id: "job_004",
+    displayId: "#00606275",
     title: "Postnatal night-time support",
     service: "postnatal",
     city: "Edinburgh",
@@ -474,10 +544,26 @@ export const JOBS: Job[] = [
     postedAgo: "5 days ago",
     hourly: { gbp: 26, usd: 32 },
     hoursPerWeek: "Nights, 4×/week",
+    hoursPerWeekNum: 32,
     startDate: "ASAP",
+    daysPerWeek: "4 nights a week",
     description:
       "Looking for an experienced postnatal carer to support overnight feeds and routines. Twins, both healthy.",
     requirements: ["Maternity Nurse cert", "Twin experience", "References"],
+    careNeeds: ["Overnight Feeds", "Sleep Routine", "Bathing", "Light Housekeeping"],
+    qualifications: [
+      "Live-out preferred",
+      "Female preferred",
+      "Speaks English",
+      "Passed background check",
+      "Twin experience",
+    ],
+    availability: grid([
+      [0, 3],
+      [1, 3],
+      [2, 3],
+      [3, 3],
+    ]),
     status: "Open",
   },
 ];
