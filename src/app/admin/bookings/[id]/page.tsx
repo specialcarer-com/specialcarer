@@ -91,17 +91,54 @@ export default async function AdminBookingDetail({
           <h2 className="text-xs uppercase tracking-wider text-slate-500 mb-3">
             Money
           </h2>
+          {/*
+            Split fee model (10% client uplift + 20% carer deduction):
+              subtotal     = listed rate × hours       (carer's gross)
+              client uplift = subtotal × 10%            (added on top)
+              total        = subtotal + client uplift  (client pays)
+              carer ded.   = subtotal × 20%            (taken from carer)
+              carer payout = subtotal − carer ded.    (carer keeps 80%)
+              platform_fee = uplift + carer ded. ≡ 30% of subtotal
+          */}
           <dl className="space-y-2 text-sm">
-            <Row k="Total charged" v={fmtMoney(booking.total_cents, currency)} />
-            <Row k="Subtotal" v={fmtMoney(booking.subtotal_cents, currency)} />
-            <Row
-              k="Platform fee (30%)"
-              v={fmtMoney(booking.platform_fee_cents, currency)}
-            />
-            <Row k="Hours" v={String(booking.hours)} />
             <Row
               k="Hourly rate"
               v={fmtMoney(booking.hourly_rate_cents, currency)}
+            />
+            <Row k="Hours" v={String(booking.hours)} />
+            <Row
+              k="Carer subtotal"
+              v={fmtMoney(booking.subtotal_cents ?? 0, currency)}
+            />
+            <Row
+              k="Client fee (+10%)"
+              v={`+ ${fmtMoney(
+                Math.round(((booking.subtotal_cents ?? 0) * 10) / 100),
+                currency,
+              )}`}
+            />
+            <Row
+              k="Client paid"
+              v={fmtMoney(booking.total_cents, currency)}
+            />
+            <Row
+              k="Carer fee (−20%)"
+              v={`− ${fmtMoney(
+                Math.round(((booking.subtotal_cents ?? 0) * 20) / 100),
+                currency,
+              )}`}
+            />
+            <Row
+              k="Carer payout (80%)"
+              v={fmtMoney(
+                (booking.subtotal_cents ?? 0) -
+                  Math.round(((booking.subtotal_cents ?? 0) * 20) / 100),
+                currency,
+              )}
+            />
+            <Row
+              k="Platform total"
+              v={fmtMoney(booking.platform_fee_cents, currency)}
             />
             <Row k="Currency" v={currency.toUpperCase()} />
           </dl>

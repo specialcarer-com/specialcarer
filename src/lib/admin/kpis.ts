@@ -72,11 +72,11 @@ export async function getKpis(): Promise<Kpis> {
       .gte("created_at", since7d),
     admin
       .from("bookings")
-      .select("subtotal_cents, platform_fee_cents, currency, status")
+      .select("total_cents, subtotal_cents, platform_fee_cents, currency, status")
       .gte("created_at", since7d),
     admin
       .from("bookings")
-      .select("subtotal_cents, platform_fee_cents, currency, status")
+      .select("total_cents, subtotal_cents, platform_fee_cents, currency, status")
       .gte("created_at", monthStart),
     admin
       .from("bookings")
@@ -109,8 +109,8 @@ export async function getKpis(): Promise<Kpis> {
   ]);
 
   function sumByCurrency(
-    rows: { subtotal_cents: number; platform_fee_cents: number; currency: string; status?: string }[],
-    field: "subtotal_cents" | "platform_fee_cents",
+    rows: { total_cents?: number | null; subtotal_cents: number; platform_fee_cents: number; currency: string; status?: string }[],
+    field: "total_cents" | "subtotal_cents" | "platform_fee_cents",
     excludeStatuses: string[] = ["cancelled", "refunded"],
   ) {
     const out = { gbp: 0, usd: 0 };
@@ -127,9 +127,11 @@ export async function getKpis(): Promise<Kpis> {
   const rowsMtd = bookingRowsMtd.data ?? [];
   const rows30d = bookingRows30d.data ?? [];
 
-  const gmvLast7d = sumByCurrency(rows7d, "subtotal_cents");
+  // GMV = client-paid (total_cents) under split-fee model. This is the
+  // gross transaction value, including the 10% client uplift.
+  const gmvLast7d = sumByCurrency(rows7d, "total_cents");
   const feeLast7d = sumByCurrency(rows7d, "platform_fee_cents");
-  const gmvMtd = sumByCurrency(rowsMtd, "subtotal_cents");
+  const gmvMtd = sumByCurrency(rowsMtd, "total_cents");
 
   let completed = 0;
   let terminal = 0;

@@ -63,7 +63,7 @@ export default async function DashboardPage() {
   const { data: bookings } = await admin
     .from("bookings")
     .select(
-      "id, seeker_id, caregiver_id, status, starts_at, ends_at, hours, total_cents, subtotal_cents, currency, location_city, location_country, service_type",
+      "id, seeker_id, caregiver_id, status, starts_at, ends_at, hours, total_cents, subtotal_cents, platform_fee_cents, currency, location_city, location_country, service_type",
     )
     .eq(bookingFilter, user.id)
     .order("starts_at", { ascending: false })
@@ -95,12 +95,18 @@ export default async function DashboardPage() {
   // Caregiver-only: readiness + earnings
   const readiness = isCaregiver ? await computeReadiness(user.id) : null;
 
+  // Carer take-home = subtotal − carer-side deduction (20% under the
+  // split-fee model). The `platform_fee_cents` column stores the *combined*
+  // platform take (10% client uplift + 20% carer deduction), so we can't
+  // use it directly for carer earnings — derive from subtotal instead.
   let totalEarnedCents = 0;
   let pendingPayoutCents = 0;
   if (isCaregiver) {
     for (const b of bookings ?? []) {
-      if (b.status === "paid_out") totalEarnedCents += b.subtotal_cents ?? 0;
-      if (b.status === "completed") pendingPayoutCents += b.subtotal_cents ?? 0;
+      const sub = b.subtotal_cents ?? 0;
+      const payout = sub - Math.round((sub * 20) / 100);
+      if (b.status === "paid_out") totalEarnedCents += payout;
+      if (b.status === "completed") pendingPayoutCents += payout;
     }
   }
 
@@ -285,7 +291,18 @@ export default async function DashboardPage() {
                               {STATUS_LABEL[b.status] ?? b.status}
                             </span>
                             <span className="font-semibold text-slate-900">
-                              {fmtMoney(b.total_cents, b.currency)}
+                              {fmtMoney(
+                                isCaregiver
+                                  ? (b.subtotal_cents ?? 0) -
+                                      Math.round(((b.subtotal_cents ?? 0) * 20) / 100)
+                                  : b.total_cents,
+                                b.currency,
+                              )}
+                              {isCaregiver && (
+                                <span className="ml-1 text-[10px] font-normal text-slate-500">
+                                  take-home
+                                </span>
+                              )}
                             </span>
                           </div>
                         </div>
@@ -328,7 +345,18 @@ export default async function DashboardPage() {
                               {STATUS_LABEL[b.status] ?? b.status}
                             </span>
                             <span className="font-semibold text-slate-900">
-                              {fmtMoney(b.total_cents, b.currency)}
+                              {fmtMoney(
+                                isCaregiver
+                                  ? (b.subtotal_cents ?? 0) -
+                                      Math.round(((b.subtotal_cents ?? 0) * 20) / 100)
+                                  : b.total_cents,
+                                b.currency,
+                              )}
+                              {isCaregiver && (
+                                <span className="ml-1 text-[10px] font-normal text-slate-500">
+                                  take-home
+                                </span>
+                              )}
                             </span>
                           </div>
                         </div>

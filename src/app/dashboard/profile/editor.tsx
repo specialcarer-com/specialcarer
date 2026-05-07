@@ -452,7 +452,7 @@ export default function ProfileEditor({
           {offersVisiting && (
             <Field
               label={`Hourly rate (${currencySymbol})`}
-              help="For visiting work"
+              help={`Your take-home: ${currencySymbol}${(hourlyRate * 0.8).toFixed(2)}/hr after 20% platform fee`}
             >
               <input
                 type="number"
@@ -469,7 +469,7 @@ export default function ProfileEditor({
           {offersLiveIn && (
             <Field
               label={`Weekly rate (${currencySymbol})`}
-              help="For live-in placements"
+              help={`Your take-home: ${currencySymbol}${(weeklyRate * 0.8).toFixed(2)}/wk after 20% platform fee`}
             >
               <input
                 type="number"

@@ -119,6 +119,14 @@ export async function getFinanceSnapshot(): Promise<{
     let refunded30Count = 0;
     let paid30Count = 0;
 
+    // Carer payout in cents under the split-fee model: subtotal − 20%.
+    // (`total_cents` is what the *client* paid, which includes the 10%
+    // client uplift — not what the carer receives.)
+    const carerPayoutCents = (r: Row) => {
+      const sub = r.subtotal_cents ?? 0;
+      return sub - Math.round((sub * 20) / 100);
+    };
+
     for (const r of cur) {
       const isRefunded = r.status === "refunded" || r.refunded_at;
       const isPaidOut = !!r.paid_out_at;
@@ -128,11 +136,11 @@ export async function getFinanceSnapshot(): Promise<{
 
       // Eligible-now: not paid out, not refunded, eligible_at exists and <= now
       if (!isPaidOut && !isRefunded && eligibleAt !== null && eligibleAt <= now) {
-        eligibleNow += r.total_cents ?? 0;
+        eligibleNow += carerPayoutCents(r);
         eligibleNowCount += 1;
         // Overdue = eligible >24h ago and still not paid out
         if (now - eligibleAt > 24 * 3600 * 1000) {
-          overdue += r.total_cents ?? 0;
+          overdue += carerPayoutCents(r);
           overdueCount += 1;
         }
       }
@@ -143,16 +151,17 @@ export async function getFinanceSnapshot(): Promise<{
         eligibleAt !== null &&
         eligibleAt > now
       ) {
-        held += r.total_cents ?? 0;
+        held += carerPayoutCents(r);
         heldCount += 1;
       }
 
       if (isPaidOut && r.paid_out_at && r.paid_out_at >= t30) {
-        paidOut30 += r.total_cents ?? 0;
+        paidOut30 += carerPayoutCents(r);
         paidOut30Count += 1;
       }
 
       if (r.refunded_at && r.refunded_at >= t30) {
+        // Refunds are returned to the *client*, so use total_cents here.
         refunded30 += r.total_cents ?? 0;
         refunded30Count += 1;
       }

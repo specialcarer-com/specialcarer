@@ -42,7 +42,7 @@ export default async function BookingDetailPage({
   const { data: booking } = await admin
     .from("bookings")
     .select(
-      "id, seeker_id, caregiver_id, status, starts_at, ends_at, hours, total_cents, subtotal_cents, currency, location_city, location_country, paid_at, shift_completed_at, payout_eligible_at, paid_out_at, service_type, notes",
+      "id, seeker_id, caregiver_id, status, starts_at, ends_at, hours, total_cents, subtotal_cents, platform_fee_cents, currency, location_city, location_country, paid_at, shift_completed_at, payout_eligible_at, paid_out_at, service_type, notes",
     )
     .eq("id", id)
     .maybeSingle();
@@ -81,6 +81,13 @@ export default async function BookingDetailPage({
 
   const currencySymbol = booking.currency?.toLowerCase() === "usd" ? "$" : "£";
   const total = (booking.total_cents ?? 0) / 100;
+  // Carer take-home (split-fee model): subtotal − 20% carer deduction.
+  const carerPayoutCents =
+    (booking.subtotal_cents ?? 0) -
+    Math.round(((booking.subtotal_cents ?? 0) * 20) / 100);
+  const carerPayout = carerPayoutCents / 100;
+  const displayAmount = isCaregiver ? carerPayout : total;
+  const displayLabel = isCaregiver ? "take-home" : "";
 
   const role = isCaregiver ? "caregiver" : "seeker";
   const reviewable =
@@ -127,7 +134,10 @@ export default async function BookingDetailPage({
               minute: "2-digit",
             })}{" "}
             · {booking.hours} hours · {currencySymbol}
-            {total.toFixed(2)}
+            {displayAmount.toFixed(2)}
+            {displayLabel && (
+              <span className="ml-1 text-xs text-slate-500">{displayLabel}</span>
+            )}
           </p>
 
           <div className="mt-6 p-5 rounded-2xl bg-white border border-slate-100 grid sm:grid-cols-2 gap-4 text-sm">
