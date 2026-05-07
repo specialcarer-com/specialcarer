@@ -31,18 +31,18 @@ function renderBrandHeader(eyebrow?: string): string {
   // retina) to avoid any in-client resize math. align="center" on the
   // outer cell handles centring — no margin:auto trickery.
   return `<tr>
-            <td align="center" valign="top" style="padding:36px 32px 0 32px;background:#ffffff;line-height:0;">
+            <td align="center" valign="top" class="sc-pad-x" style="padding:32px 28px 0 28px;background:#ffffff;line-height:0;">
               <img src="${BRAND_LOGO_URL}" width="96" height="96" alt="SpecialCarer logo" border="0" style="display:block;border:0;outline:none;text-decoration:none;width:96px;height:96px;-ms-interpolation-mode:bicubic;">
             </td>
           </tr>
           <tr>
-            <td align="center" valign="top" style="padding:14px 32px 0 32px;background:#ffffff;">
+            <td align="center" valign="top" class="sc-pad-x" style="padding:14px 28px 0 28px;background:#ffffff;">
               <div style="font-size:26px;color:${BRAND_HEADING};font-weight:800;letter-spacing:-0.4px;line-height:1.1;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">SpecialCarer</div>
               ${eyebrowMarkup}
             </td>
           </tr>
           <tr>
-            <td style="padding:18px 32px 0 32px;background:#ffffff;">
+            <td class="sc-pad-x" style="padding:18px 28px 0 28px;background:#ffffff;">
               <div style="height:1px;background:#E6F0EF;width:100%;font-size:0;line-height:0;">&nbsp;</div>
             </td>
           </tr>`;
@@ -233,56 +233,71 @@ export function renderLiveInAdminEmail(args: {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="x-apple-disable-message-reformatting">
 <title>${escape(subject)}</title>
+<style>
+  /* Mobile responsive: shrink card padding + font sizes for narrow screens.
+     iOS Mail honours @media (max-width). */
+  @media only screen and (max-width: 480px) {
+    .sc-card { width:100% !important; max-width:100% !important; border-radius:0 !important; }
+    .sc-pad-x { padding-left:18px !important; padding-right:18px !important; }
+    .sc-pad-x-sm { padding-left:14px !important; padding-right:14px !important; }
+    .sc-h1 { font-size:20px !important; line-height:1.25 !important; }
+    .sc-total { font-size:22px !important; }
+    .sc-total-meta { display:block !important; margin-top:4px !important; }
+    .sc-row-label { width:auto !important; padding-right:10px !important; white-space:nowrap; }
+    .sc-outer-pad { padding:16px 0 !important; }
+  }
+</style>
 </head>
 <body style="margin:0;padding:0;background:${BG_PALE};font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${BRAND_HEADING};">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BG_PALE};padding:32px 16px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BG_PALE};">
     <tr>
-      <td align="center">
-        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+      <td align="center" class="sc-outer-pad" style="padding:24px 12px;">
+        <table role="presentation" class="sc-card" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
           ${renderBrandHeader("Ops")}
           <tr>
-            <td style="padding:0 32px 8px 32px;">
-              <h1 style="margin:0;font-size:24px;line-height:1.25;color:${BRAND_HEADING};font-weight:700;">New live-in request</h1>
-              <p style="margin:6px 0 0 0;color:${BRAND_SUBHEAD};font-size:14px;">${safeService} · ${args.country} · starts ${escape(startLabel)}</p>
+            <td class="sc-pad-x" style="padding:0 28px 8px 28px;">
+              <h1 class="sc-h1" style="margin:0;font-size:24px;line-height:1.25;color:${BRAND_HEADING};font-weight:700;">New live-in request</h1>
+              <p style="margin:6px 0 0 0;color:${BRAND_SUBHEAD};font-size:14px;line-height:1.45;">${safeService} · ${args.country} · starts ${escape(startLabel)}</p>
             </td>
           </tr>
           <tr>
-            <td style="padding:20px 32px 4px 32px;">
+            <td class="sc-pad-x" style="padding:18px 28px 4px 28px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BG_PALE};border-radius:12px;">
-                <tr><td style="padding:14px 18px 6px 18px;color:${BRAND_SUBHEAD};font-size:12px;letter-spacing:0.5px;text-transform:uppercase;font-weight:700;">Indicative total</td></tr>
-                <tr><td style="padding:0 18px 14px 18px;color:${BRAND_HEADING};font-size:28px;font-weight:700;">${totalLabel} <span style="color:${BRAND_SUBHEAD};font-size:13px;font-weight:500;">· ${args.weeks} weeks × 7 days × ${dailyLabel}/day</span></td></tr>
+                <tr><td class="sc-pad-x-sm" style="padding:14px 18px 4px 18px;color:${BRAND_SUBHEAD};font-size:12px;letter-spacing:0.5px;text-transform:uppercase;font-weight:700;">Indicative total</td></tr>
+                <tr><td class="sc-pad-x-sm" style="padding:0 18px 14px 18px;color:${BRAND_HEADING};font-size:26px;font-weight:700;line-height:1.2;"><span style="white-space:nowrap;">${totalLabel}</span> <span class="sc-total-meta" style="color:${BRAND_SUBHEAD};font-size:13px;font-weight:500;">· ${args.weeks} weeks × 7 days × ${dailyLabel}/day</span></td></tr>
               </table>
             </td>
           </tr>
           <tr>
-            <td style="padding:18px 32px 8px 32px;color:${BRAND_HEADING};font-size:14px;line-height:1.6;">
+            <td class="sc-pad-x" style="padding:16px 28px 8px 28px;color:${BRAND_HEADING};font-size:14px;line-height:1.55;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr><td style="padding:6px 0;color:${BRAND_SUBHEAD};width:130px;vertical-align:top;">Service</td><td style="padding:6px 0;font-weight:600;">${safeService}</td></tr>
-                <tr><td style="padding:6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Country</td><td style="padding:6px 0;font-weight:600;">${args.country}</td></tr>
-                <tr><td style="padding:6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Start date</td><td style="padding:6px 0;font-weight:600;">${escape(startLabel)}</td></tr>
-                <tr><td style="padding:6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Duration</td><td style="padding:6px 0;font-weight:600;">${args.weeks} week${args.weeks === 1 ? "" : "s"}</td></tr>
-                <tr><td style="padding:6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Address</td><td style="padding:6px 0;font-weight:600;">${safeAddress}</td></tr>
-                <tr><td style="padding:6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Contact email</td><td style="padding:6px 0;font-weight:600;"><a href="mailto:${safeEmail}" style="color:${BRAND_PRIMARY};text-decoration:none;">${safeEmail}</a></td></tr>
-                ${safePhone ? `<tr><td style="padding:6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Contact phone</td><td style="padding:6px 0;font-weight:600;"><a href="tel:${safePhone}" style="color:${BRAND_PRIMARY};text-decoration:none;">${safePhone}</a></td></tr>` : ""}
-                ${safeNotes ? `<tr><td style="padding:6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Notes</td><td style="padding:6px 0;font-weight:500;line-height:1.55;">${safeNotes}</td></tr>` : ""}
-                <tr><td style="padding:6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Request ID</td><td style="padding:6px 0;font-family:ui-monospace,monospace;font-size:12px;color:#8a8a8a;">${escape(args.requestId)}</td></tr>
-                <tr><td style="padding:6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">User</td><td style="padding:6px 0;font-family:ui-monospace,monospace;font-size:12px;color:#8a8a8a;">${safeUser || "(anonymous — not signed in)"}</td></tr>
+                <tr><td class="sc-row-label" style="padding:6px 12px 6px 0;color:${BRAND_SUBHEAD};width:120px;vertical-align:top;">Service</td><td style="padding:6px 0;font-weight:600;word-break:break-word;">${safeService}</td></tr>
+                <tr><td class="sc-row-label" style="padding:6px 12px 6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Country</td><td style="padding:6px 0;font-weight:600;">${args.country}</td></tr>
+                <tr><td class="sc-row-label" style="padding:6px 12px 6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Start date</td><td style="padding:6px 0;font-weight:600;word-break:break-word;">${escape(startLabel)}</td></tr>
+                <tr><td class="sc-row-label" style="padding:6px 12px 6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Duration</td><td style="padding:6px 0;font-weight:600;">${args.weeks} week${args.weeks === 1 ? "" : "s"}</td></tr>
+                <tr><td class="sc-row-label" style="padding:6px 12px 6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Address</td><td style="padding:6px 0;font-weight:600;word-break:break-word;">${safeAddress}</td></tr>
+                <tr><td class="sc-row-label" style="padding:6px 12px 6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Contact email</td><td style="padding:6px 0;font-weight:600;word-break:break-all;"><a href="mailto:${safeEmail}" style="color:${BRAND_PRIMARY};text-decoration:none;">${safeEmail}</a></td></tr>
+                ${safePhone ? `<tr><td class="sc-row-label" style="padding:6px 12px 6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Contact phone</td><td style="padding:6px 0;font-weight:600;"><a href="tel:${safePhone}" style="color:${BRAND_PRIMARY};text-decoration:none;">${safePhone}</a></td></tr>` : ""}
+                ${safeNotes ? `<tr><td class="sc-row-label" style="padding:6px 12px 6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Notes</td><td style="padding:6px 0;font-weight:500;line-height:1.55;word-break:break-word;">${safeNotes}</td></tr>` : ""}
+                <tr><td class="sc-row-label" style="padding:6px 12px 6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">Request ID</td><td style="padding:6px 0;font-family:ui-monospace,monospace;font-size:12px;color:#8a8a8a;word-break:break-all;">${escape(args.requestId)}</td></tr>
+                <tr><td class="sc-row-label" style="padding:6px 12px 6px 0;color:${BRAND_SUBHEAD};vertical-align:top;">User</td><td style="padding:6px 0;font-family:ui-monospace,monospace;font-size:12px;color:#8a8a8a;word-break:break-all;">${safeUser || "(anonymous — not signed in)"}</td></tr>
               </table>
             </td>
           </tr>
           <tr>
-            <td align="center" style="padding:24px 32px 8px 32px;">
-              <a href="${escape(adminUrl)}" style="display:inline-block;background:${BRAND_PRIMARY};color:#ffffff;text-decoration:none;font-weight:700;padding:14px 28px;border-radius:999px;font-size:15px;">Open admin dashboard</a>
+            <td align="center" class="sc-pad-x" style="padding:22px 28px 8px 28px;">
+              <a href="${escape(adminUrl)}" style="display:inline-block;background:${BRAND_PRIMARY};color:#ffffff;text-decoration:none;font-weight:700;padding:14px 24px;border-radius:999px;font-size:15px;">Open admin dashboard</a>
             </td>
           </tr>
           <tr>
-            <td style="padding:8px 32px 24px 32px;color:${BRAND_SUBHEAD};font-size:13px;line-height:1.5;">
+            <td class="sc-pad-x" style="padding:8px 28px 22px 28px;color:${BRAND_SUBHEAD};font-size:13px;line-height:1.5;">
               <p style="margin:8px 0 0 0;">Reply directly to this email to reach the family — the reply-to is set to ${safeEmail}.</p>
             </td>
           </tr>
           <tr>
-            <td style="padding:18px 32px;background:#C2E5E4;color:#2F2E31;font-size:12px;line-height:1.5;text-align:center;">
+            <td class="sc-pad-x" style="padding:16px 28px;background:#C2E5E4;color:#2F2E31;font-size:12px;line-height:1.5;text-align:center;">
               SpecialCarer · A product of All Care 4 U Group Ltd<br>
               <a href="https://specialcarer.com" style="color:#2F2E31;">specialcarer.com</a>
             </td>
