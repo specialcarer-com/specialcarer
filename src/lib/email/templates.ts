@@ -9,6 +9,38 @@ const BRAND_PRIMARY = "#039EA0";
 const BRAND_HEADING = "#171E54";
 const BRAND_SUBHEAD = "#575757";
 const BG_PALE = "#F7FAFA";
+const BRAND_LOGO_URL = "https://specialcarer.com/brand/icon-192.png";
+
+/**
+ * Branded email header with the SpecialCarer logo mark + wordmark.
+ * Uses absolute https URL for the logo (required by all major mail
+ * clients). The wordmark text is always rendered next to the image so
+ * the brand still reads even when the recipient's client blocks remote
+ * images by default.
+ *
+ * @param eyebrow Optional uppercase tag-line shown under the wordmark
+ *                (e.g. "OPS", "FAMILY", "PAYMENTS"). Omit for none.
+ */
+function renderBrandHeader(eyebrow?: string): string {
+  const eyebrowMarkup = eyebrow
+    ? `<div style="font-size:11px;letter-spacing:1.5px;color:${BRAND_PRIMARY};font-weight:700;text-transform:uppercase;margin-top:4px;">${escape(eyebrow)}</div>`
+    : "";
+  return `<tr>
+            <td style="padding:28px 32px 12px 32px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="vertical-align:middle;padding-right:12px;">
+                    <img src="${BRAND_LOGO_URL}" width="40" height="40" alt="SpecialCarer" style="display:block;border:0;width:40px;height:40px;">
+                  </td>
+                  <td style="vertical-align:middle;">
+                    <div style="font-size:18px;color:${BRAND_HEADING};font-weight:700;letter-spacing:-0.2px;line-height:1;">SpecialCarer</div>
+                    ${eyebrowMarkup}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>`;
+}
 
 function escape(str: string): string {
   return str
@@ -67,11 +99,7 @@ export function renderFamilyInviteEmail(args: {
     <tr>
       <td align="center">
         <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
-          <tr>
-            <td style="padding:28px 32px 8px 32px;">
-              <div style="font-size:13px;letter-spacing:1.5px;color:${BRAND_PRIMARY};font-weight:700;text-transform:uppercase;">SpecialCarer</div>
-            </td>
-          </tr>
+          ${renderBrandHeader()}
           <tr>
             <td style="padding:0 32px 8px 32px;">
               <h1 style="margin:0;font-size:24px;line-height:1.25;color:${BRAND_HEADING};font-weight:700;">You've been invited to a family on SpecialCarer</h1>
@@ -206,11 +234,7 @@ export function renderLiveInAdminEmail(args: {
     <tr>
       <td align="center">
         <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
-          <tr>
-            <td style="padding:28px 32px 8px 32px;">
-              <div style="font-size:13px;letter-spacing:1.5px;color:${BRAND_PRIMARY};font-weight:700;text-transform:uppercase;">SpecialCarer · Ops</div>
-            </td>
-          </tr>
+          ${renderBrandHeader("Ops")}
           <tr>
             <td style="padding:0 32px 8px 32px;">
               <h1 style="margin:0;font-size:24px;line-height:1.25;color:${BRAND_HEADING};font-weight:700;">New live-in request</h1>
