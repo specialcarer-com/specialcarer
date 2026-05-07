@@ -1,7 +1,20 @@
 # Codemagic CI/CD — SpecialCarer iOS (Capacitor)
 # ================================================
-# Builds the Capacitor iOS app and uploads to TestFlight.
-# Runs on every push to `main` (configurable via Codemagic UI).
+# Two workflows, same app:
+#
+#   1. ios-build        — runs on every push to `main`.
+#      Builds, signs, and archives the .ipa but does NOT upload to
+#      App Store Connect. Catches iOS build regressions early without
+#      consuming Apple's daily upload quota (ITMS-90382).
+#
+#   2. ios-testflight   — runs only when an `ios-v*` git tag is pushed.
+#      Full TestFlight upload. Trigger manually by tagging a release:
+#
+#        git tag ios-v1.0.87 && git push origin ios-v1.0.87
+#
+#      Or from Codemagic UI: "Start new build" ▸ select ios-testflight ▸ main.
+#      This way only deliberate releases count against Apple's daily
+#      upload limit per bundle-id.
 #
 # Apple identifiers (static for SpecialCarer):
 #   Team ID:     2HU3MZAKN7  (ALL CARE 4 U GROUP LTD)
@@ -24,47 +37,272 @@
 #   Group: apns  (already provided to Vercel — same values reused for runtime push)
 #     # NOT needed at build time. Listed here for reference only.
 
+# ─────────────────────────────────────────────────────────────────────
+# YAML anchors — shared environment + build scripts used by both workflows
+# so the build logic stays in one place and can't drift between them.
+# ─────────────────────────────────────────────────────────────────────
+definitions:
+  env_ios: &env_ios
+    groups:
+      - signing
+    vars:
+      # Capacitor 8 generates an SPM-based iOS project (no .xcworkspace,
+      # no Podfile). The build target is the .xcodeproj directly.
+      XCODE_PROJECT: "ios/App/App.xcodeproj"
+      XCODE_SCHEME: "App"
+      APP_STORE_APP_ID: 6766242271
+      BUNDLE_ID: "com.allcare4ugroup.specialcarer"
+    node: 22
+    xcode: latest
+
+  scripts_build: &scripts_build
+    - name: Install Node dependencies
+      script: |
+        npm ci
+
+    - name: Generate iOS native project (idempotent)
+      script: |
+        set -euxo pipefail
+        # Capacitor 8 + SPM plugins generates ios/App/App.xcodeproj and
+        # ios/App/CapApp-SPM/Package.swift instead of a Podfile.
+        # `cap add ios` is idempotent only if a *valid* iOS project exists —
+        # treat 'valid' as 'App.xcodeproj is present'.
+        if [ -d "ios/App/App.xcodeproj" ]; then
+          echo "✅ iOS project already exists — skipping cap add"
+        else
+          echo "⚠️  No ios/App/App.xcodeproj — generating fresh iOS project via Capacitor CLI"
+          rm -rf ios
+          # cap add ios reads webDir from capacitor.config — make sure it exists
+          mkdir -p mobile/web
+          [ -f mobile/web/index.html ] || echo '<html><body>SpecialCarer offline fallback</body></html>' > mobile/web/index.html
+          npx --yes cap add ios
+          echo "--- Verifying ios/App was created ---"
+          ls -la ios/App/
+          test -d ios/App/App.xcodeproj || { echo "❌ cap add ios completed but App.xcodeproj is missing"; exit 1; }
+        fi
+
+    - name: Generate app icons + splash from source assets
+      script: |
+        set -euxo pipefail
+        # `@capacitor/assets` v3 looks for `assets/` or `resources/` at
+        # project root by default. Our source PNGs live in
+        # `mobile/resources/`, so we MUST pass --assetPath explicitly.
+        # Without it the command silently exits 0 having generated
+        # nothing, which is how the default Capacitor placeholder icon
+        # ended up shipping in TestFlight build 30.
+        test -f mobile/resources/icon.png || { echo "❌ mobile/resources/icon.png missing"; exit 1; }
+        npx --yes capacitor-assets generate --ios --assetPath mobile/resources
+        echo "--- Verifying AppIcon.appiconset was populated ---"
+        ls -la ios/App/App/Assets.xcassets/AppIcon.appiconset/
+        # The 1024x1024 marketing icon is the one App Store / TestFlight
+        # email previews show. If it's missing, fail the build now
+        # rather than ship another placeholder.
+        test -f ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png \
+          || { echo "❌ AppIcon-512@2x.png not generated — icon would ship as placeholder"; exit 1; }
+
+    - name: Apply iOS overlay (PrivacyInfo + Info.plist usage strings)
+      script: |
+        set -e
+        # Drop the privacy manifest into the app target.
+        cp mobile/ios-overlay/App/App/PrivacyInfo.xcprivacy ios/App/App/PrivacyInfo.xcprivacy
+
+        # Merge required usage-description keys into the generated Info.plist.
+        # `plutil -insert` is idempotent: re-inserting an existing key is a no-op
+        # only if -replace is used, so we use `plutil -replace` with `|| -insert`.
+        INFO_PLIST="ios/App/App/Info.plist"
+
+        merge_string () {
+          local KEY="$1"
+          local VALUE="$2"
+          /usr/libexec/PlistBuddy -c "Set :${KEY} ${VALUE}" "${INFO_PLIST}" 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Add :${KEY} string ${VALUE}" "${INFO_PLIST}"
+        }
+
+        merge_string "NSLocationWhenInUseUsageDescription" \
+          "Special Carer uses your location to find nearby caregivers and to share live shift updates with the family during an active booking."
+        merge_string "NSLocationAlwaysAndWhenInUseUsageDescription" \
+          "Special Carer needs background location access so the family can see live shift progress even if the carer locks their phone during a booking. Tracking only runs while a booking is active."
+        merge_string "NSLocationAlwaysUsageDescription" \
+          "Special Carer needs background location access so the family can see live shift progress while a booking is active."
+        merge_string "NSCameraUsageDescription" \
+          "Special Carer uses the camera to capture your ID document for identity verification and to take a profile photo during onboarding."
+        merge_string "NSPhotoLibraryUsageDescription" \
+          "Special Carer accesses your photo library so you can choose a profile picture or upload an existing photo of your ID document."
+        merge_string "NSPhotoLibraryAddUsageDescription" \
+          "Special Carer saves booking receipts and shift summaries to your photo library when you tap Save."
+        merge_string "NSContactsUsageDescription" \
+          "Special Carer accesses your contacts only when you choose to invite friends or family. Contact data is never uploaded or shared without your action."
+        merge_string "NSFaceIDUsageDescription" \
+          "Special Carer uses Face ID to keep your account secure without typing a password each time."
+        merge_string "NSMicrophoneUsageDescription" \
+          "Special Carer uses the microphone if you record a voice note during an active booking or trigger an SOS audio alert."
+        merge_string "NSUserTrackingUsageDescription" \
+          "Special Carer does not track you across apps or websites. This permission would only be requested if a future feature needs it, and you can decline at any time."
+
+        # Export-compliance exemption — declares we use only standard
+        # encryption (HTTPS) which is exempt under US export rules.
+        # This stops App Store Connect from prompting for compliance
+        # info on every TestFlight upload. Equivalent to selecting
+        # "None of the algorithms / standard exempt encryption" in the UI.
+        /usr/libexec/PlistBuddy -c "Delete :ITSAppUsesNonExemptEncryption" "${INFO_PLIST}" 2>/dev/null || true
+        /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "${INFO_PLIST}"
+
+        # Background modes (remote-notification, fetch, location)
+        /usr/libexec/PlistBuddy -c "Delete :UIBackgroundModes" "${INFO_PLIST}" 2>/dev/null || true
+        /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "${INFO_PLIST}"
+        /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string remote-notification" "${INFO_PLIST}"
+        /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:1 string fetch" "${INFO_PLIST}"
+        /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:2 string location" "${INFO_PLIST}"
+
+    - name: Capacitor sync (copies plugins + web assets into iOS project)
+      script: |
+        npx cap sync ios
+
+    - name: Install iOS dependencies (CocoaPods or SPM)
+      script: |
+        set -euxo pipefail
+        ls -la ios/App/
+        if [ -f "ios/App/Podfile" ]; then
+          echo "📦 Podfile detected — running CocoaPods"
+          cd ios/App
+          pod install --repo-update
+        elif [ -f "ios/App/CapApp-SPM/Package.swift" ]; then
+          echo "📦 SPM Package.swift detected — Xcode will resolve packages during the build step"
+        else
+          echo "❌ Neither Podfile nor Package.swift found in ios/App — iOS project is malformed"
+          exit 1
+        fi
+
+    - name: Set build number to Codemagic build sequence
+      script: |
+        set -euxo pipefail
+        cd ios/App
+        # Marketing version stays as defined in the Xcode project (1.0).
+        # Build number = monotonically increasing CI build counter.
+        agvtool new-version -all "$BUILD_NUMBER"
+
+    - name: Fetch (or create) signing certificate + provisioning profile
+      script: |
+        set -euxo pipefail
+
+        # Codemagic CLI requires a private key on disk to either:
+        #   (a) install an existing cert that uses this key, or
+        #   (b) generate a brand-new iOS Distribution cert + key pair
+        #       via the App Store Connect API.
+        #
+        # KEY PERSISTENCE STRATEGY:
+        #   - If $CERTIFICATE_PRIVATE_KEY is set (Codemagic environment
+        #     variable group `signing`), reuse that key. Apple has the
+        #     matching cert from a previous build, so fetch-signing-files
+        #     finds it and just downloads — no new cert is created. This
+        #     is the steady state.
+        #   - If the variable is NOT set, generate a one-time key and
+        #     print it at the end so the operator can copy it into the
+        #     Codemagic environment for all future builds.
+        #
+        # Without this strategy every build provisioned a new cert and
+        # quickly hit Apple's 2-cert cap (Distribution certs are limited).
+        CERT_KEY_PATH="$CM_BUILD_DIR/ios_distribution_private_key.pem"
+
+        if [ -n "${CERTIFICATE_PRIVATE_KEY:-}" ]; then
+          echo "🔑 Using persisted CERTIFICATE_PRIVATE_KEY from Codemagic env"
+          printf '%s' "$CERTIFICATE_PRIVATE_KEY" > "$CERT_KEY_PATH"
+          # Defensive: if the env var was uploaded with literal \n escapes
+          # (common when pasting via Codemagic UI), unescape them.
+          if ! head -1 "$CERT_KEY_PATH" | grep -q -- "-----BEGIN"; then
+            printf '%b' "$CERTIFICATE_PRIVATE_KEY" > "$CERT_KEY_PATH"
+          fi
+          chmod 600 "$CERT_KEY_PATH"
+        else
+          echo "⚠️  No persisted cert key — generating a new one (one-time bootstrap)."
+          ssh-keygen -t rsa -b 2048 -m PEM -f "$CERT_KEY_PATH" -q -N ""
+          # Force PKCS#1/PEM so app-store-connect can read it.
+          openssl rsa -in "$CERT_KEY_PATH" -out "$CERT_KEY_PATH.pem" 2>/dev/null || cp "$CERT_KEY_PATH" "$CERT_KEY_PATH.pem"
+          mv "$CERT_KEY_PATH.pem" "$CERT_KEY_PATH"
+        fi
+
+        # Initialize a clean keychain BEFORE fetching certs.
+        keychain initialize
+
+        # Fetch (or create) the iOS Distribution cert + App Store
+        # provisioning profile. --create lets the CLI provision new
+        # signing assets if no usable ones are found in App Store
+        # Connect for this bundle id.
+        app-store-connect fetch-signing-files "$BUNDLE_ID" \
+          --type IOS_APP_STORE \
+          --certificate-key "@file:$CERT_KEY_PATH" \
+          --create
+
+        # Install the cert into the temp keychain so xcodebuild can
+        # use it for code signing.
+        keychain add-certificates
+
+        # If we just generated a fresh key, surface it so the operator
+        # can paste it into the Codemagic environment as
+        # CERTIFICATE_PRIVATE_KEY (group: signing). Future builds will
+        # then reuse it and skip cert creation entirely.
+        if [ -z "${CERTIFICATE_PRIVATE_KEY:-}" ]; then
+          echo ""
+          echo "================================================================="
+          echo "📋 ONE-TIME SETUP — copy the key below into Codemagic:"
+          echo "   Teams ▸ <team> ▸ Environment variables ▸ Add"
+          echo "     name:  CERTIFICATE_PRIVATE_KEY"
+          echo "     group: signing"
+          echo "     value: (paste the entire BEGIN/END block below, including the lines)"
+          echo "     Mark as secure: ✅"
+          echo "================================================================="
+          cat "$CERT_KEY_PATH"
+          echo "================================================================="
+          echo "After saving, future builds will reuse the existing iOS"
+          echo "Distribution cert and never hit Apple's 2-cert cap."
+          echo "================================================================="
+        fi
+
+    - name: Build, archive, and export .ipa
+      script: |
+        set -euxo pipefail
+        # Internal-testing only: tells Xcode to export the build with a flag
+        # that lets ASC skip Apple's Beta App Review (which only applies to
+        # external testers). Saves the 24-48h wait and removes the
+        # post-processing race condition where Codemagic's 15-min "find
+        # build" window expires before Apple finishes processing.
+        # When we onboard external testers, switch this to false (or remove)
+        # and re-enable submit_to_testflight: true below.
+        xcode-project use-profiles \
+          --custom-export-options='{"testFlightInternalTestingOnly": true}'
+        # Capacitor 8 SPM project has no .xcworkspace — build the .xcodeproj.
+        xcode-project build-ipa \
+          --project "$XCODE_PROJECT" \
+          --scheme "$XCODE_SCHEME"
+
+  artifacts_ipa: &artifacts_ipa
+    - build/ios/ipa/*.ipa
+    - /tmp/xcodebuild_logs/*.log
+    - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+    - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM.zip
+
+  email_notify: &email_notify
+    recipients:
+      - 5fnb47bs5d@privaterelay.appleid.com
+    notify:
+      success: true
+      failure: true
+
+
 workflows:
-  ios-testflight:
-    name: iOS · TestFlight
+  # ───────────────────────────────────────────────────────────────────
+  # Workflow 1: ios-build
+  # Runs on every push to main. Builds + signs + archives the .ipa.
+  # Does NOT upload to App Store Connect — so no ITMS-90382 rate limit.
+  # Gives us fast feedback that iOS compiles & signs without burning quota.
+  # ───────────────────────────────────────────────────────────────────
+  ios-build:
+    name: iOS · Build only (no upload)
     max_build_duration: 60
     instance_type: mac_mini_m2
     integrations:
       app_store_connect: SpecialCarer ASC API key
-
-    environment:
-      # Pull in the `signing` group so $CERTIFICATE_PRIVATE_KEY is
-      # injected into the build. Without this opt-in, Codemagic
-      # silently leaves group-scoped vars unset at runtime — which is
-      # exactly what bit us on build 41 (the env check fell through to
-      # the bootstrap branch and tried to register a brand-new cert,
-      # then hit Apple's 409 cert-limit error).
-      groups:
-        - signing
-      # NOTE: We deliberately do NOT use the `ios_signing` block here.
-      # That block runs a pre-build profile lookup that fails on first
-      # build (when no profile exists yet), regardless of `--create`
-      # in our user scripts. Instead we run `app-store-connect
-      # fetch-signing-files <bundle_id> --type IOS_APP_STORE --create`
-      # explicitly inside scripts, which both creates the profile if
-      # missing and reuses it on subsequent runs.
-      # NOTE: After the first build prints a CERTIFICATE_PRIVATE_KEY,
-      # paste it into Codemagic as a regular project-scoped environment
-      # variable (Codemagic ▸ App settings ▸ Environment variables ▸
-      # Add: name=CERTIFICATE_PRIVATE_KEY, secure=on). It will be
-      # automatically injected into the workflow on subsequent runs and
-      # the script's `if [ -n "$CERTIFICATE_PRIVATE_KEY" ]` branch will
-      # reuse the same iOS Distribution cert across all future builds,
-      # avoiding Apple's 2-cert cap.
-      vars:
-        # Capacitor 8 generates an SPM-based iOS project (no .xcworkspace,
-        # no Podfile). The build target is the .xcodeproj directly.
-        XCODE_PROJECT: "ios/App/App.xcodeproj"
-        XCODE_SCHEME: "App"
-        APP_STORE_APP_ID: 6766242271
-        BUNDLE_ID: "com.allcare4ugroup.specialcarer"
-      node: 22
-      xcode: latest
+    environment: *env_ios
 
     triggering:
       events:
@@ -75,231 +313,41 @@ workflows:
           source: true
       cancel_previous_builds: true
 
-    scripts:
-      - name: Install Node dependencies
-        script: |
-          npm ci
+    scripts: *scripts_build
+    artifacts: *artifacts_ipa
 
-      - name: Generate iOS native project (idempotent)
-        script: |
-          set -euxo pipefail
-          # Capacitor 8 + SPM plugins generates ios/App/App.xcodeproj and
-          # ios/App/CapApp-SPM/Package.swift instead of a Podfile.
-          # `cap add ios` is idempotent only if a *valid* iOS project exists —
-          # treat 'valid' as 'App.xcodeproj is present'.
-          if [ -d "ios/App/App.xcodeproj" ]; then
-            echo "✅ iOS project already exists — skipping cap add"
-          else
-            echo "⚠️  No ios/App/App.xcodeproj — generating fresh iOS project via Capacitor CLI"
-            rm -rf ios
-            # cap add ios reads webDir from capacitor.config — make sure it exists
-            mkdir -p mobile/web
-            [ -f mobile/web/index.html ] || echo '<html><body>SpecialCarer offline fallback</body></html>' > mobile/web/index.html
-            npx --yes cap add ios
-            echo "--- Verifying ios/App was created ---"
-            ls -la ios/App/
-            test -d ios/App/App.xcodeproj || { echo "❌ cap add ios completed but App.xcodeproj is missing"; exit 1; }
-          fi
+    # NO publishing.app_store_connect block — the .ipa stays as a build
+    # artifact you can download from Codemagic but is not pushed to Apple.
+    publishing:
+      email: *email_notify
 
-      - name: Generate app icons + splash from source assets
-        script: |
-          set -euxo pipefail
-          # `@capacitor/assets` v3 looks for `assets/` or `resources/` at
-          # project root by default. Our source PNGs live in
-          # `mobile/resources/`, so we MUST pass --assetPath explicitly.
-          # Without it the command silently exits 0 having generated
-          # nothing, which is how the default Capacitor placeholder icon
-          # ended up shipping in TestFlight build 30.
-          test -f mobile/resources/icon.png || { echo "❌ mobile/resources/icon.png missing"; exit 1; }
-          npx --yes capacitor-assets generate --ios --assetPath mobile/resources
-          echo "--- Verifying AppIcon.appiconset was populated ---"
-          ls -la ios/App/App/Assets.xcassets/AppIcon.appiconset/
-          # The 1024x1024 marketing icon is the one App Store / TestFlight
-          # email previews show. If it's missing, fail the build now
-          # rather than ship another placeholder.
-          test -f ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png \
-            || { echo "❌ AppIcon-512@2x.png not generated — icon would ship as placeholder"; exit 1; }
+  # ───────────────────────────────────────────────────────────────────
+  # Workflow 2: ios-testflight
+  # Runs when an `ios-v*` git tag is pushed (e.g. `ios-v1.0.88`),
+  # or when manually started from Codemagic UI.
+  # Full TestFlight upload — this is the workflow that counts against
+  # Apple's daily upload quota, so we only run it on deliberate releases.
+  #
+  #   # To cut a new TestFlight release:
+  #   git tag ios-v1.0.$(date +%s) && git push origin --tags
+  # ───────────────────────────────────────────────────────────────────
+  ios-testflight:
+    name: iOS · TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: SpecialCarer ASC API key
+    environment: *env_ios
 
-      - name: Apply iOS overlay (PrivacyInfo + Info.plist usage strings)
-        script: |
-          set -e
-          # Drop the privacy manifest into the app target.
-          cp mobile/ios-overlay/App/App/PrivacyInfo.xcprivacy ios/App/App/PrivacyInfo.xcprivacy
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: "ios-v*"
+          include: true
 
-          # Merge required usage-description keys into the generated Info.plist.
-          # `plutil -insert` is idempotent: re-inserting an existing key is a no-op
-          # only if -replace is used, so we use `plutil -replace` with `|| -insert`.
-          INFO_PLIST="ios/App/App/Info.plist"
-
-          merge_string () {
-            local KEY="$1"
-            local VALUE="$2"
-            /usr/libexec/PlistBuddy -c "Set :${KEY} ${VALUE}" "${INFO_PLIST}" 2>/dev/null \
-              || /usr/libexec/PlistBuddy -c "Add :${KEY} string ${VALUE}" "${INFO_PLIST}"
-          }
-
-          merge_string "NSLocationWhenInUseUsageDescription" \
-            "Special Carer uses your location to find nearby caregivers and to share live shift updates with the family during an active booking."
-          merge_string "NSLocationAlwaysAndWhenInUseUsageDescription" \
-            "Special Carer needs background location access so the family can see live shift progress even if the carer locks their phone during a booking. Tracking only runs while a booking is active."
-          merge_string "NSLocationAlwaysUsageDescription" \
-            "Special Carer needs background location access so the family can see live shift progress while a booking is active."
-          merge_string "NSCameraUsageDescription" \
-            "Special Carer uses the camera to capture your ID document for identity verification and to take a profile photo during onboarding."
-          merge_string "NSPhotoLibraryUsageDescription" \
-            "Special Carer accesses your photo library so you can choose a profile picture or upload an existing photo of your ID document."
-          merge_string "NSPhotoLibraryAddUsageDescription" \
-            "Special Carer saves booking receipts and shift summaries to your photo library when you tap Save."
-          merge_string "NSContactsUsageDescription" \
-            "Special Carer accesses your contacts only when you choose to invite friends or family. Contact data is never uploaded or shared without your action."
-          merge_string "NSFaceIDUsageDescription" \
-            "Special Carer uses Face ID to keep your account secure without typing a password each time."
-          merge_string "NSMicrophoneUsageDescription" \
-            "Special Carer uses the microphone if you record a voice note during an active booking or trigger an SOS audio alert."
-          merge_string "NSUserTrackingUsageDescription" \
-            "Special Carer does not track you across apps or websites. This permission would only be requested if a future feature needs it, and you can decline at any time."
-
-          # Export-compliance exemption — declares we use only standard
-          # encryption (HTTPS) which is exempt under US export rules.
-          # This stops App Store Connect from prompting for compliance
-          # info on every TestFlight upload. Equivalent to selecting
-          # "None of the algorithms / standard exempt encryption" in the UI.
-          /usr/libexec/PlistBuddy -c "Delete :ITSAppUsesNonExemptEncryption" "${INFO_PLIST}" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "${INFO_PLIST}"
-
-          # Background modes (remote-notification, fetch, location)
-          /usr/libexec/PlistBuddy -c "Delete :UIBackgroundModes" "${INFO_PLIST}" 2>/dev/null || true
-          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "${INFO_PLIST}"
-          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string remote-notification" "${INFO_PLIST}"
-          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:1 string fetch" "${INFO_PLIST}"
-          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:2 string location" "${INFO_PLIST}"
-
-      - name: Capacitor sync (copies plugins + web assets into iOS project)
-        script: |
-          npx cap sync ios
-
-      - name: Install iOS dependencies (CocoaPods or SPM)
-        script: |
-          set -euxo pipefail
-          ls -la ios/App/
-          if [ -f "ios/App/Podfile" ]; then
-            echo "📦 Podfile detected — running CocoaPods"
-            cd ios/App
-            pod install --repo-update
-          elif [ -f "ios/App/CapApp-SPM/Package.swift" ]; then
-            echo "📦 SPM Package.swift detected — Xcode will resolve packages during the build step"
-          else
-            echo "❌ Neither Podfile nor Package.swift found in ios/App — iOS project is malformed"
-            exit 1
-          fi
-
-      - name: Set build number to Codemagic build sequence
-        script: |
-          set -euxo pipefail
-          cd ios/App
-          # Marketing version stays as defined in the Xcode project (1.0).
-          # Build number = monotonically increasing CI build counter.
-          agvtool new-version -all "$BUILD_NUMBER"
-
-      - name: Fetch (or create) signing certificate + provisioning profile
-        script: |
-          set -euxo pipefail
-
-          # Codemagic CLI requires a private key on disk to either:
-          #   (a) install an existing cert that uses this key, or
-          #   (b) generate a brand-new iOS Distribution cert + key pair
-          #       via the App Store Connect API.
-          #
-          # KEY PERSISTENCE STRATEGY:
-          #   - If $CERTIFICATE_PRIVATE_KEY is set (Codemagic environment
-          #     variable group `signing`), reuse that key. Apple has the
-          #     matching cert from a previous build, so fetch-signing-files
-          #     finds it and just downloads — no new cert is created. This
-          #     is the steady state.
-          #   - If the variable is NOT set, generate a one-time key and
-          #     print it at the end so the operator can copy it into the
-          #     Codemagic environment for all future builds.
-          #
-          # Without this strategy every build provisioned a new cert and
-          # quickly hit Apple's 2-cert cap (Distribution certs are limited).
-          CERT_KEY_PATH="$CM_BUILD_DIR/ios_distribution_private_key.pem"
-
-          if [ -n "${CERTIFICATE_PRIVATE_KEY:-}" ]; then
-            echo "🔑 Using persisted CERTIFICATE_PRIVATE_KEY from Codemagic env"
-            printf '%s' "$CERTIFICATE_PRIVATE_KEY" > "$CERT_KEY_PATH"
-            # Defensive: if the env var was uploaded with literal \n escapes
-            # (common when pasting via Codemagic UI), unescape them.
-            if ! head -1 "$CERT_KEY_PATH" | grep -q -- "-----BEGIN"; then
-              printf '%b' "$CERTIFICATE_PRIVATE_KEY" > "$CERT_KEY_PATH"
-            fi
-            chmod 600 "$CERT_KEY_PATH"
-          else
-            echo "⚠️  No persisted cert key — generating a new one (one-time bootstrap)."
-            ssh-keygen -t rsa -b 2048 -m PEM -f "$CERT_KEY_PATH" -q -N ""
-            # Force PKCS#1/PEM so app-store-connect can read it.
-            openssl rsa -in "$CERT_KEY_PATH" -out "$CERT_KEY_PATH.pem" 2>/dev/null || cp "$CERT_KEY_PATH" "$CERT_KEY_PATH.pem"
-            mv "$CERT_KEY_PATH.pem" "$CERT_KEY_PATH"
-          fi
-
-          # Initialize a clean keychain BEFORE fetching certs.
-          keychain initialize
-
-          # Fetch (or create) the iOS Distribution cert + App Store
-          # provisioning profile. --create lets the CLI provision new
-          # signing assets if no usable ones are found in App Store
-          # Connect for this bundle id.
-          app-store-connect fetch-signing-files "$BUNDLE_ID" \
-            --type IOS_APP_STORE \
-            --certificate-key "@file:$CERT_KEY_PATH" \
-            --create
-
-          # Install the cert into the temp keychain so xcodebuild can
-          # use it for code signing.
-          keychain add-certificates
-
-          # If we just generated a fresh key, surface it so the operator
-          # can paste it into the Codemagic environment as
-          # CERTIFICATE_PRIVATE_KEY (group: signing). Future builds will
-          # then reuse it and skip cert creation entirely.
-          if [ -z "${CERTIFICATE_PRIVATE_KEY:-}" ]; then
-            echo ""
-            echo "================================================================="
-            echo "📋 ONE-TIME SETUP — copy the key below into Codemagic:"
-            echo "   Teams ▸ <team> ▸ Environment variables ▸ Add"
-            echo "     name:  CERTIFICATE_PRIVATE_KEY"
-            echo "     group: signing"
-            echo "     value: (paste the entire BEGIN/END block below, including the lines)"
-            echo "     Mark as secure: ✅"
-            echo "================================================================="
-            cat "$CERT_KEY_PATH"
-            echo "================================================================="
-            echo "After saving, future builds will reuse the existing iOS"
-            echo "Distribution cert and never hit Apple's 2-cert cap."
-            echo "================================================================="
-          fi
-
-      - name: Build, archive, and export .ipa
-        script: |
-          set -euxo pipefail
-          # Internal-testing only: tells Xcode to export the build with a flag
-          # that lets ASC skip Apple's Beta App Review (which only applies to
-          # external testers). Saves the 24-48h wait and removes the
-          # post-processing race condition where Codemagic's 15-min "find
-          # build" window expires before Apple finishes processing.
-          # When we onboard external testers, switch this to false (or remove)
-          # and re-enable submit_to_testflight: true below.
-          xcode-project use-profiles \
-            --custom-export-options='{"testFlightInternalTestingOnly": true}'
-          # Capacitor 8 SPM project has no .xcworkspace — build the .xcodeproj.
-          xcode-project build-ipa \
-            --project "$XCODE_PROJECT" \
-            --scheme "$XCODE_SCHEME"
-
-    artifacts:
-      - build/ios/ipa/*.ipa
-      - /tmp/xcodebuild_logs/*.log
-      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
-      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM.zip
+    scripts: *scripts_build
+    artifacts: *artifacts_ipa
 
     publishing:
       app_store_connect:
@@ -326,11 +374,4 @@ workflows:
         # the privacy questionnaire and screenshots are filled in.
         submit_to_app_store: false
 
-      email:
-        # Codemagic's free tier sends a build-status email to the address on
-        # the account. Listed explicitly here so multiple addresses can opt in.
-        recipients:
-          - 5fnb47bs5d@privaterelay.appleid.com
-        notify:
-          success: true
-          failure: true
+      email: *email_notify
