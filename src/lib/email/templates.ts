@@ -9,7 +9,10 @@ const BRAND_PRIMARY = "#039EA0";
 const BRAND_HEADING = "#171E54";
 const BRAND_SUBHEAD = "#575757";
 const BG_PALE = "#F7FAFA";
-const BRAND_LOGO_URL = "https://specialcarer.com/brand/logo-mark-email.png";
+const BRAND_LOGO_URL = "https://specialcarer.com/brand/logo-wordmark-email.png";
+// Full SpecialCarer wordmark logo (icon + "Special Carer" text, all teal,
+// transparent background). Source 960x721, rendered at 240x180 in email
+// (@4x retina). Aspect ratio 161:121.
 
 /**
  * Branded email header with the SpecialCarer logo mark + wordmark.
@@ -23,24 +26,22 @@ const BRAND_LOGO_URL = "https://specialcarer.com/brand/logo-mark-email.png";
  */
 function renderBrandHeader(eyebrow?: string): string {
   const eyebrowMarkup = eyebrow
-    ? `<div style="font-size:12px;letter-spacing:2px;color:${BRAND_PRIMARY};font-weight:700;text-transform:uppercase;margin-top:8px;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${escape(eyebrow)}</div>`
+    ? `<tr>
+            <td align="center" valign="top" class="sc-pad-x" style="padding:6px 28px 0 28px;background:#ffffff;">
+              <div style="font-size:12px;letter-spacing:2px;color:${BRAND_PRIMARY};font-weight:700;text-transform:uppercase;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">${escape(eyebrow)}</div>
+            </td>
+          </tr>`
     : "";
-  // Bulletproof centred logo header. Each row is its own <tr>/<td> so
-  // Apple Mail and Gmail can't merge or clip them. Image dimensions
-  // are 1:1 with the source PNG (256×256 file rendered at 128×128 = @2x
-  // retina) to avoid any in-client resize math. align="center" on the
-  // outer cell handles centring — no margin:auto trickery.
+  // Full SpecialCarer wordmark logo (icon + "Special Carer" text). Image is
+  // 960×721 served as @4x retina; rendered at 240×180 in client. The wordmark
+  // is part of the image so we no longer render a separate text wordmark below.
+  // Aspect ratio 161:121 → height = round(width * 121/161).
   return `<tr>
-            <td align="center" valign="top" class="sc-pad-x" style="padding:36px 28px 0 28px;background:#ffffff;line-height:0;">
-              <img src="${BRAND_LOGO_URL}" width="128" height="128" alt="SpecialCarer logo" border="0" style="display:block;border:0;outline:none;text-decoration:none;width:128px;height:128px;-ms-interpolation-mode:bicubic;">
+            <td align="center" valign="top" class="sc-pad-x sc-logo-cell" style="padding:36px 28px 0 28px;background:#ffffff;line-height:0;">
+              <img src="${BRAND_LOGO_URL}" width="240" height="180" alt="SpecialCarer" border="0" style="display:block;border:0;outline:none;text-decoration:none;width:240px;height:180px;max-width:240px;-ms-interpolation-mode:bicubic;">
             </td>
           </tr>
-          <tr>
-            <td align="center" valign="top" class="sc-pad-x" style="padding:14px 28px 0 28px;background:#ffffff;">
-              <div style="font-size:26px;color:${BRAND_HEADING};font-weight:800;letter-spacing:-0.4px;line-height:1.1;font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">SpecialCarer</div>
-              ${eyebrowMarkup}
-            </td>
-          </tr>
+          ${eyebrowMarkup}
           <tr>
             <td class="sc-pad-x" style="padding:18px 28px 0 28px;background:#ffffff;">
               <div style="height:1px;background:#E6F0EF;width:100%;font-size:0;line-height:0;">&nbsp;</div>
