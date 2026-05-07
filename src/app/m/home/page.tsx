@@ -133,9 +133,9 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Instant booking entry — Uber-style "book the nearest carer now". */}
+      {/* Unified booking entry — Now / Schedule / Recurring picker. */}
       <div className="px-4 pt-3">
-        <Link href="/m/book/instant" className="block sc-no-select">
+        <Link href="/m/book" className="block sc-no-select">
           <div
             className="rounded-card p-4 flex items-center gap-3"
             style={{
@@ -152,10 +152,10 @@ export default function HomePage() {
             </span>
             <div className="flex-1 min-w-0">
               <p className="text-[14px] font-bold text-heading">
-                Need a carer right now?
+                Book care
               </p>
               <p className="text-[12px] text-subheading">
-                Find the nearest available carer · book in 1 tap.
+                Now, scheduled, or recurring · live ETA &amp; pricing.
               </p>
             </div>
             <span className="text-primary font-bold text-[13px]">Start</span>

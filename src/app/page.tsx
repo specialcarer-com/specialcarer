@@ -129,7 +129,26 @@ export default async function Home() {
 
         <HeroSearch cities={heroCities} />
 
-        <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center text-sm">
+        <div className="mt-5 flex justify-center">
+          <Link
+            href="/book"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-pill bg-slate-900 text-white text-sm font-semibold shadow-sm hover:bg-slate-800 transition"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+              <path d="M13 2 4 14h7l-1 8 9-12h-7z" />
+            </svg>
+            Book care · now, schedule or recurring
+          </Link>
+        </div>
+
+        <div className="mt-5 flex flex-col sm:flex-row gap-3 justify-center text-sm">
+          <Link
+            href="/book?when=now"
+            className="text-slate-600 hover:text-slate-900 transition"
+          >
+            Find a carer right now
+          </Link>
+          <span className="hidden sm:inline text-slate-300">·</span>
           <Link
             href="/find-care"
             className="text-slate-600 hover:text-slate-900 transition"
