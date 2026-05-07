@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeReadiness } from "@/lib/care/profile";
+import { CARER_FEE_PERCENT } from "@/lib/fees/config";
 import Image from "next/image";
 
 export const dynamic = "force-dynamic";
@@ -95,16 +96,17 @@ export default async function DashboardPage() {
   // Caregiver-only: readiness + earnings
   const readiness = isCaregiver ? await computeReadiness(user.id) : null;
 
-  // Carer take-home = subtotal − carer-side deduction (20% under the
-  // split-fee model). The `platform_fee_cents` column stores the *combined*
-  // platform take (10% client uplift + 20% carer deduction), so we can't
-  // use it directly for carer earnings — derive from subtotal instead.
+  // Carer take-home = subtotal − carer-side deduction (CARER_FEE_PERCENT).
+  // The `platform_fee_cents` column stores the *combined* platform take
+  // (client uplift + carer deduction), so we can't use it directly for
+  // carer earnings — derive from subtotal instead.
+  const carerPayoutCents = (sub: number) =>
+    sub - Math.round((sub * CARER_FEE_PERCENT) / 100);
   let totalEarnedCents = 0;
   let pendingPayoutCents = 0;
   if (isCaregiver) {
     for (const b of bookings ?? []) {
-      const sub = b.subtotal_cents ?? 0;
-      const payout = sub - Math.round((sub * 20) / 100);
+      const payout = carerPayoutCents(b.subtotal_cents ?? 0);
       if (b.status === "paid_out") totalEarnedCents += payout;
       if (b.status === "completed") pendingPayoutCents += payout;
     }
@@ -293,8 +295,7 @@ export default async function DashboardPage() {
                             <span className="font-semibold text-slate-900">
                               {fmtMoney(
                                 isCaregiver
-                                  ? (b.subtotal_cents ?? 0) -
-                                      Math.round(((b.subtotal_cents ?? 0) * 20) / 100)
+                                  ? carerPayoutCents(b.subtotal_cents ?? 0)
                                   : b.total_cents,
                                 b.currency,
                               )}
@@ -347,8 +348,7 @@ export default async function DashboardPage() {
                             <span className="font-semibold text-slate-900">
                               {fmtMoney(
                                 isCaregiver
-                                  ? (b.subtotal_cents ?? 0) -
-                                      Math.round(((b.subtotal_cents ?? 0) * 20) / 100)
+                                  ? carerPayoutCents(b.subtotal_cents ?? 0)
                                   : b.total_cents,
                                 b.currency,
                               )}

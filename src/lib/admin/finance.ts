@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { CARER_FEE_PERCENT } from "@/lib/fees/config";
 
 export type Currency = "gbp" | "usd";
 
@@ -119,12 +120,13 @@ export async function getFinanceSnapshot(): Promise<{
     let refunded30Count = 0;
     let paid30Count = 0;
 
-    // Carer payout in cents under the split-fee model: subtotal − 20%.
-    // (`total_cents` is what the *client* paid, which includes the 10%
-    // client uplift — not what the carer receives.)
+    // Carer payout in cents: subtotal − carer-side deduction
+    // (CARER_FEE_PERCENT). `total_cents` is what the *client* paid —
+    // when CLIENT_FEE_PERCENT > 0 it includes the uplift, which is
+    // not what the carer receives.
     const carerPayoutCents = (r: Row) => {
       const sub = r.subtotal_cents ?? 0;
-      return sub - Math.round((sub * 20) / 100);
+      return sub - Math.round((sub * CARER_FEE_PERCENT) / 100);
     };
 
     for (const r of cur) {

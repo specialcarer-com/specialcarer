@@ -5,6 +5,7 @@ import Link from "next/link";
 import { SERVICES } from "@/lib/care/services";
 import { CARE_FORMATS } from "@/lib/care/formats";
 import { createClient as createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { CARER_FEE_PERCENT, CARER_PAYOUT_PERCENT } from "@/lib/fees/config";
 import InstantBookingSection from "./InstantBookingSection";
 import type { CaregiverProfileFull, ProfileReadiness } from "@/lib/care/profile";
 import {
@@ -452,7 +453,10 @@ export default function ProfileEditor({
           {offersVisiting && (
             <Field
               label={`Hourly rate (${currencySymbol})`}
-              help={`Your take-home: ${currencySymbol}${(hourlyRate * 0.8).toFixed(2)}/hr after 20% platform fee`}
+              help={`Your take-home: ${currencySymbol}${(
+                (hourlyRate * CARER_PAYOUT_PERCENT) /
+                100
+              ).toFixed(2)}/hr after ${CARER_FEE_PERCENT}% platform fee`}
             >
               <input
                 type="number"
@@ -469,7 +473,10 @@ export default function ProfileEditor({
           {offersLiveIn && (
             <Field
               label={`Weekly rate (${currencySymbol})`}
-              help={`Your take-home: ${currencySymbol}${(weeklyRate * 0.8).toFixed(2)}/wk after 20% platform fee`}
+              help={`Your take-home: ${currencySymbol}${(
+                (weeklyRate * CARER_PAYOUT_PERCENT) /
+                100
+              ).toFixed(2)}/wk after ${CARER_FEE_PERCENT}% platform fee`}
             >
               <input
                 type="number"

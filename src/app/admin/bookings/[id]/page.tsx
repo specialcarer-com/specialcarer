@@ -8,6 +8,7 @@ import {
   type BookingStatus,
 } from "@/lib/admin/bookings";
 import BookingActions from "./_components/BookingActions";
+import { CLIENT_FEE_PERCENT, CARER_FEE_PERCENT } from "@/lib/fees/config";
 
 export const dynamic = "force-dynamic";
 
@@ -92,56 +93,56 @@ export default async function AdminBookingDetail({
             Money
           </h2>
           {/*
-            Split fee model (10% client uplift + 20% carer deduction):
-              subtotal     = listed rate × hours       (carer's gross)
-              client uplift = subtotal × 10%            (added on top)
-              total        = subtotal + client uplift  (client pays)
-              carer ded.   = subtotal × 20%            (taken from carer)
-              carer payout = subtotal − carer ded.    (carer keeps 80%)
-              platform_fee = uplift + carer ded. ≡ 30% of subtotal
+            Split fee model:
+              subtotal     = listed rate × hours              (carer's gross)
+              client fee   = subtotal × CLIENT_FEE_PERCENT    (added on top)
+              total        = subtotal + client fee            (client pays)
+              carer fee    = subtotal × CARER_FEE_PERCENT     (taken from carer)
+              carer payout = subtotal − carer fee
+              platform_fee = client fee + carer fee           (combined platform take)
           */}
-          <dl className="space-y-2 text-sm">
-            <Row
-              k="Hourly rate"
-              v={fmtMoney(booking.hourly_rate_cents, currency)}
-            />
-            <Row k="Hours" v={String(booking.hours)} />
-            <Row
-              k="Carer subtotal"
-              v={fmtMoney(booking.subtotal_cents ?? 0, currency)}
-            />
-            <Row
-              k="Client fee (+10%)"
-              v={`+ ${fmtMoney(
-                Math.round(((booking.subtotal_cents ?? 0) * 10) / 100),
-                currency,
-              )}`}
-            />
-            <Row
-              k="Client paid"
-              v={fmtMoney(booking.total_cents, currency)}
-            />
-            <Row
-              k="Carer fee (−20%)"
-              v={`− ${fmtMoney(
-                Math.round(((booking.subtotal_cents ?? 0) * 20) / 100),
-                currency,
-              )}`}
-            />
-            <Row
-              k="Carer payout (80%)"
-              v={fmtMoney(
-                (booking.subtotal_cents ?? 0) -
-                  Math.round(((booking.subtotal_cents ?? 0) * 20) / 100),
-                currency,
-              )}
-            />
-            <Row
-              k="Platform total"
-              v={fmtMoney(booking.platform_fee_cents, currency)}
-            />
-            <Row k="Currency" v={currency.toUpperCase()} />
-          </dl>
+          {(() => {
+            const sub = booking.subtotal_cents ?? 0;
+            const clientFee = Math.round((sub * CLIENT_FEE_PERCENT) / 100);
+            const carerFee = Math.round((sub * CARER_FEE_PERCENT) / 100);
+            const carerPct = 100 - CARER_FEE_PERCENT;
+            return (
+              <dl className="space-y-2 text-sm">
+                <Row
+                  k="Hourly rate"
+                  v={fmtMoney(booking.hourly_rate_cents, currency)}
+                />
+                <Row k="Hours" v={String(booking.hours)} />
+                <Row
+                  k="Carer subtotal"
+                  v={fmtMoney(sub, currency)}
+                />
+                {CLIENT_FEE_PERCENT > 0 && (
+                  <Row
+                    k={`Client fee (+${CLIENT_FEE_PERCENT}%)`}
+                    v={`+ ${fmtMoney(clientFee, currency)}`}
+                  />
+                )}
+                <Row
+                  k="Client paid"
+                  v={fmtMoney(booking.total_cents, currency)}
+                />
+                <Row
+                  k={`Carer fee (−${CARER_FEE_PERCENT}%)`}
+                  v={`− ${fmtMoney(carerFee, currency)}`}
+                />
+                <Row
+                  k={`Carer payout (${carerPct}%)`}
+                  v={fmtMoney(sub - carerFee, currency)}
+                />
+                <Row
+                  k="Platform total"
+                  v={fmtMoney(booking.platform_fee_cents, currency)}
+                />
+                <Row k="Currency" v={currency.toUpperCase()} />
+              </dl>
+            );
+          })()}
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5">
           <h2 className="text-xs uppercase tracking-wider text-slate-500 mb-3">

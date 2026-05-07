@@ -6,6 +6,7 @@ import BookingTrackingClient from "./tracking-client";
 import MessagesPanel from "./messages-panel";
 import BookingActions from "./booking-actions";
 import ReviewPanel from "./review-panel";
+import { CARER_FEE_PERCENT } from "@/lib/fees/config";
 import Image from "next/image";
 
 export const dynamic = "force-dynamic";
@@ -81,10 +82,10 @@ export default async function BookingDetailPage({
 
   const currencySymbol = booking.currency?.toLowerCase() === "usd" ? "$" : "£";
   const total = (booking.total_cents ?? 0) / 100;
-  // Carer take-home (split-fee model): subtotal − 20% carer deduction.
+  // Carer take-home: subtotal − carer-side deduction (CARER_FEE_PERCENT).
   const carerPayoutCents =
     (booking.subtotal_cents ?? 0) -
-    Math.round(((booking.subtotal_cents ?? 0) * 20) / 100);
+    Math.round(((booking.subtotal_cents ?? 0) * CARER_FEE_PERCENT) / 100);
   const carerPayout = carerPayoutCents / 100;
   const displayAmount = isCaregiver ? carerPayout : total;
   const displayLabel = isCaregiver ? "take-home" : "";
