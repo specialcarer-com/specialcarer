@@ -9,7 +9,7 @@ const BRAND_PRIMARY = "#039EA0";
 const BRAND_HEADING = "#171E54";
 const BRAND_SUBHEAD = "#575757";
 const BG_PALE = "#F7FAFA";
-const BRAND_LOGO_URL = "https://specialcarer.com/brand/icon-192.png";
+const BRAND_LOGO_URL = "https://specialcarer.com/brand/logo-mark-transparent.png";
 
 /**
  * Branded email header with the SpecialCarer logo mark + wordmark.
