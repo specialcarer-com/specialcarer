@@ -75,7 +75,12 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    // Run on everything except Next internals + static assets
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // Run on everything except:
+    //   - Next internals (_next/static, _next/image)
+    //   - Static assets (svg/png/jpg/jpeg/gif/webp/favicon)
+    //   - API routes (each handler does its own auth via createClient — running
+    //     middleware here triggered Supabase auth.getUser() on every API call,
+    //     adding 10-30s of cold-start latency and 278 MB of memory per invocation)
+    "/((?!api/|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
