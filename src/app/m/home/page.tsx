@@ -38,9 +38,10 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function HomePage() {
   const [name, setName] = useState("there");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [journalCount, setJournalCount] = useState<number | null>(null);
 
-  // Pull the user's display name from Supabase (best-effort).
+  // Pull the user's display name + avatar from Supabase (best-effort).
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -48,15 +49,27 @@ export default function HomePage() {
         const supabase = createClient();
         const { data } = await supabase.auth.getUser();
         if (cancelled) return;
-        const meta = data.user?.user_metadata as
-          | { full_name?: string; first_name?: string }
+        const user = data.user;
+        const meta = user?.user_metadata as
+          | { full_name?: string; first_name?: string; avatar_url?: string }
           | undefined;
         const display =
           meta?.first_name ||
           meta?.full_name?.split(" ")[0] ||
-          data.user?.email?.split("@")[0] ||
+          user?.email?.split("@")[0] ||
           "there";
         setName(display);
+        // Fast path — metadata copy. Falls through to profiles below
+        // for the canonical value.
+        if (meta?.avatar_url) setAvatarUrl(meta.avatar_url);
+        if (user?.id) {
+          const { data: prof } = await supabase
+            .from("profiles")
+            .select("avatar_url")
+            .eq("id", user.id)
+            .maybeSingle();
+          if (!cancelled && prof?.avatar_url) setAvatarUrl(prof.avatar_url);
+        }
       } catch {
         /* keep default */
       }
@@ -102,7 +115,7 @@ export default function HomePage() {
             <Avatar
               size={42}
               name={name}
-              src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200"
+              src={avatarUrl || undefined}
             />
             <div className="leading-tight">
               <p className="text-[12px] text-subheading">Welcome!</p>

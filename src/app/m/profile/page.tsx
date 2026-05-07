@@ -105,6 +105,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [role, setRole] = useState<Role | null>(null);
   const [loaded, setLoaded] = useState(false);
 
@@ -122,14 +123,19 @@ export default function ProfilePage() {
       const fullName =
         (meta.full_name as string) || (meta.name as string) || "";
       if (fullName) setName(fullName);
+      // user_metadata.avatar_url is the fast path — we already have
+      // the User object in memory. profiles.avatar_url is fetched
+      // below and overrides if it differs (canonical source).
+      if (typeof meta.avatar_url === "string") setAvatarUrl(meta.avatar_url);
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role, full_name")
+        .select("role, full_name, avatar_url")
         .eq("id", user.id)
         .maybeSingle();
       if (profile?.full_name && !fullName) setName(profile.full_name);
       if (profile?.role) setRole(profile.role as Role);
+      if (profile?.avatar_url) setAvatarUrl(profile.avatar_url);
       setLoaded(true);
     })();
   }, []);
@@ -150,7 +156,11 @@ export default function ProfilePage() {
       <div className="px-5 pt-2">
         <div className="rounded-card bg-white p-4 shadow-card">
           <div className="flex items-center gap-4">
-            <Avatar size={64} name={name || "—"} />
+            <Avatar
+              size={64}
+              src={avatarUrl || undefined}
+              name={name || "—"}
+            />
             <div className="min-w-0 flex-1">
               <p className="text-[16px] font-bold text-heading">
                 {name || "Your profile"}
