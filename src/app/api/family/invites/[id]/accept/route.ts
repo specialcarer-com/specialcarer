@@ -3,11 +3,17 @@ import { acceptFamilyInvite } from "@/lib/family/server";
 
 export const dynamic = "force-dynamic";
 
-type RouteParams = { params: Promise<{ token: string }> };
+type RouteParams = { params: Promise<{ id: string }> };
 
-/** POST /api/family/invites/:token/accept → accept invite as current user. */
+/**
+ * POST /api/family/invites/:id/accept → accept invite as current user.
+ *
+ * Note: the {id} param is the invite token (UUID-like). It's named `id` to
+ * avoid Next.js routing conflicts with the sibling `[id]/route.ts` (Next.js
+ * forbids different slug names at the same path segment).
+ */
 export async function POST(_req: Request, ctx: RouteParams) {
-  const { token } = await ctx.params;
+  const { id: token } = await ctx.params;
   const result = await acceptFamilyInvite(token);
   if (!result.ok) {
     return NextResponse.json(
