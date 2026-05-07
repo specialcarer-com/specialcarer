@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "../globals.css";
 import "./mobile.css";
+import SplashIntro from "./_components/SplashIntro";
 
 /**
  * Mobile app shell — Capacitor loads /m/* directly.
@@ -41,6 +42,8 @@ export default function MobileLayout({
   return (
     <div className={`${jakarta.variable} sc-mobile-root`}>
       <div className="font-display antialiased text-heading bg-bg-screen min-h-[100dvh]">
+        {/* Animated wordmark intro — plays once per session, fades out. */}
+        <SplashIntro />
         {children}
       </div>
     </div>
