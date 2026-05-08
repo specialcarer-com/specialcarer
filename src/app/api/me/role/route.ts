@@ -4,8 +4,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
-const SELF_SWITCHABLE_ROLES = ["seeker", "caregiver"] as const;
-type SelfSwitchableRole = (typeof SELF_SWITCHABLE_ROLES)[number];
+// Roles a user can hold. Self-service role switching has been removed —
+// each account is permanently bound to the role chosen at sign-up. If the
+// wrong role was picked, an admin must correct it via
+//   POST /api/admin/users/[id]/role
+// which writes to admin_audit_log.
 
 /**
  * GET /api/me/role
@@ -57,13 +60,14 @@ export async function GET() {
     ]);
 
   const role = profileRes.data?.role ?? "seeker";
-  const canSwitch = role === "seeker" || role === "caregiver";
   const activeBookings =
     (bookingsSeekerRes.count ?? 0) + (bookingsCaregiverRes.count ?? 0);
 
+  // can_switch is permanently false: roles are locked at sign-up.
+  // Field is retained for back-compat with older clients.
   return NextResponse.json({
     role,
-    can_switch: canSwitch,
+    can_switch: false,
     active_bookings: activeBookings,
     has_caregiver_profile: !!cgProfileRes.data,
     has_published_caregiver: !!cgProfileRes.data?.is_published,
@@ -71,128 +75,23 @@ export async function GET() {
 }
 
 /**
- * POST /api/me/role
- * Body: { role: "seeker" | "caregiver" }
+ * POST /api/me/role — DISABLED.
  *
- * Self-serve role switch for the signed-in user. Admins cannot use this
- * endpoint to demote themselves — they must use the admin panel.
+ * Self-service role switching is no longer supported. Each account is
+ * permanently bound to the role chosen at sign-up. If a user picked the
+ * wrong role, an admin must correct it via the admin panel
+ * (POST /api/admin/users/[id]/role). The change is audit-logged.
  *
- * Side-effects:
- * - When switching seeker → caregiver, the user must still complete
- *   /m/onboarding (or the caregiver profile setup) before they appear
- *   in search. The unpublished caregiver_profile row is left intact so
- *   no carer data is destroyed by toggling back and forth.
- * - When switching caregiver → seeker, any caregiver_profiles row is
- *   set is_published=false so the carer disappears from search. The
- *   row itself is preserved so the user can switch back without losing
- *   their bio, certifications, etc.
- *
- * The action is audit-logged in admin_audit_log with admin_id = the
- * acting user (since they are acting on themselves).
+ * Returns 410 Gone with a stable error code so clients can handle the
+ * deprecation gracefully.
  */
-export async function POST(req: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const body = (await req.json().catch(() => ({}))) as {
-    role?: string;
-  };
-  const newRole = body.role as SelfSwitchableRole | undefined;
-
-  if (
-    !newRole ||
-    !SELF_SWITCHABLE_ROLES.includes(newRole as SelfSwitchableRole)
-  ) {
-    return NextResponse.json(
-      {
-        error: `role must be one of ${SELF_SWITCHABLE_ROLES.join(", ")}`,
-      },
-      { status: 400 },
-    );
-  }
-
-  const admin = createAdminClient();
-
-  const { data: existing } = await admin
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-  const priorRole = existing?.role ?? null;
-
-  if (priorRole === "admin") {
-    return NextResponse.json(
-      {
-        error:
-          "Admins cannot switch their own role here — please ask another admin via the admin panel.",
-      },
-      { status: 400 },
-    );
-  }
-
-  if (priorRole === newRole) {
-    return NextResponse.json({ ok: true, status: "noop", role: newRole });
-  }
-
-  // Update profile.
-  const { error: profErr } = await admin
-    .from("profiles")
-    .update({ role: newRole, updated_at: new Date().toISOString() })
-    .eq("id", user.id);
-  if (profErr) {
-    return NextResponse.json(
-      { error: `Update failed: ${profErr.message}` },
-      { status: 500 },
-    );
-  }
-
-  // Mirror to auth.user_metadata so the JWT/user-meta stays in sync.
-  // Best-effort: ignore failures (the profiles row is the source of truth).
-  try {
-    await admin.auth.admin.updateUserById(user.id, {
-      user_metadata: {
-        ...(user.user_metadata ?? {}),
-        role: newRole,
-      },
-    });
-  } catch {
-    // ignore
-  }
-
-  // Side-effect: if switching away from caregiver, hide their carer
-  // profile from search (preserve the row).
-  if (priorRole === "caregiver" && newRole !== "caregiver") {
-    await admin
-      .from("caregiver_profiles")
-      .update({ is_published: false })
-      .eq("user_id", user.id);
-  }
-
-  // Audit log (best-effort; never blocks the response).
-  try {
-    await admin.from("admin_audit_log").insert({
-      admin_id: user.id,
-      action: "user.self_switch_role",
-      target_type: "user",
-      target_id: user.id,
-      details: { prior_role: priorRole, new_role: newRole },
-    });
-  } catch {
-    // ignore
-  }
-
-  return NextResponse.json({
-    ok: true,
-    role: newRole,
-    prior_role: priorRole,
-    next_steps:
-      newRole === "caregiver"
-        ? "Complete your carer onboarding to appear in search."
-        : null,
-  });
+export async function POST() {
+  return NextResponse.json(
+    {
+      error: "role_switching_disabled",
+      message:
+        "Account roles are now locked at sign-up. If you need to change your role, please contact support.",
+    },
+    { status: 410 },
+  );
 }

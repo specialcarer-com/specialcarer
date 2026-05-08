@@ -8,6 +8,29 @@ const PROTECTED_PREFIXES = ["/dashboard", "/onboarding", "/admin"];
 // Routes that require an admin role on top of being signed in
 const ADMIN_PREFIXES = ["/admin"];
 
+// Mobile app role isolation. Each user's account is permanently bound to a
+// role at sign-up; carers and care receivers must not be able to access each
+// other's pages even by typing the URL.
+//
+//   SEEKER_ONLY  — only role==="seeker" may access (carers redirected to /m/jobs)
+//   CAREGIVER_ONLY — only role==="caregiver" may access (seekers redirected to /m/search)
+//
+// Anything not listed here is shared (auth flows, profile, bookings, chat,
+// notifications, track, home).
+const MOBILE_SEEKER_ONLY_PREFIXES = [
+  "/m/search",
+  "/m/book",
+  "/m/post-job",
+  "/m/household",
+  "/m/family",
+  "/m/journal",
+  "/m/memberships",
+  "/m/carer", // browsing carer profiles
+];
+const MOBILE_CAREGIVER_ONLY_PREFIXES = [
+  "/m/jobs",
+];
+
 export async function middleware(req: NextRequest) {
   let res = NextResponse.next({ request: req });
 
@@ -60,6 +83,40 @@ export async function middleware(req: NextRequest) {
       url.pathname = "/dashboard";
       url.searchParams.set("forbidden", "1");
       return NextResponse.redirect(url);
+    }
+  }
+
+  // Mobile role isolation — carers and care receivers cannot access each
+  // other's pages. Skips when user is unauthenticated (let the page handle
+  // redirecting to /m/login) or when the path is in the shared set.
+  const isSeekerOnly = MOBILE_SEEKER_ONLY_PREFIXES.some((p) =>
+    pathname.startsWith(p),
+  );
+  const isCaregiverOnly = MOBILE_CAREGIVER_ONLY_PREFIXES.some((p) =>
+    pathname.startsWith(p),
+  );
+  if (user && (isSeekerOnly || isCaregiverOnly)) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+    const role = profile?.role ?? "seeker";
+
+    // Admins can browse anywhere on /m/* for support purposes.
+    if (role !== "admin") {
+      if (isSeekerOnly && role === "caregiver") {
+        const url = req.nextUrl.clone();
+        url.pathname = "/m/jobs";
+        url.searchParams.set("forbidden", "role");
+        return NextResponse.redirect(url);
+      }
+      if (isCaregiverOnly && role === "seeker") {
+        const url = req.nextUrl.clone();
+        url.pathname = "/m/search";
+        url.searchParams.set("forbidden", "role");
+        return NextResponse.redirect(url);
+      }
     }
   }
 
