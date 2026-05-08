@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import {
   Avatar,
@@ -34,7 +34,16 @@ import {
 
 export default function CarerDetailPage() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const carer = getCarer(params.id);
+  // Forward any browse-context params (postcode, service, date, start, end)
+  // into the booking flow so the seeker doesn't re-enter them.
+  const bookHref = (() => {
+    const qs = searchParams?.toString() ?? "";
+    return qs
+      ? `/m/book/${params.id}?${qs}`
+      : `/m/book/${params.id}`;
+  })();
   const [tab, setTab] = useState<"about" | "availability" | "reviews">("about");
 
   if (!carer) {
@@ -291,8 +300,8 @@ export default function CarerDetailPage() {
 
       {/* Sticky Book CTA */}
       <div className="fixed inset-x-0 bottom-0 z-30 bg-white border-t border-line px-4 pt-3 sc-safe-bottom">
-        <Link href={`/m/book/${carer.id}`}>
-          <Button block>Book</Button>
+        <Link href={bookHref}>
+          <Button block>Request booking</Button>
         </Link>
       </div>
     </main>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Avatar, BottomNav, Button, Card, Input, TopBar } from "../../_components/ui";
 
@@ -139,6 +140,30 @@ export default function MobileInstantBookPage() {
                 Tell us where, when and what — we&rsquo;ll find the nearest
                 available carer.
               </p>
+            </div>
+
+            {/* Mode toggle: Quick match (this page) vs Browse & choose. */}
+            <div
+              role="tablist"
+              aria-label="Booking mode"
+              className="rounded-pill bg-muted p-1 grid grid-cols-2 gap-1"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected="true"
+                className="h-10 rounded-pill bg-white text-heading text-[13px] font-bold shadow-sm"
+              >
+                ⚡ Quick match
+              </button>
+              <Link
+                role="tab"
+                aria-selected="false"
+                href="/m/book/browse"
+                className="h-10 rounded-pill flex items-center justify-center text-subheading text-[13px] font-semibold"
+              >
+                Browse & choose
+              </Link>
             </div>
 
             <Input

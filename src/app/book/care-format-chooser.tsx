@@ -28,6 +28,8 @@ export default function CareFormatChooser({
   const visitingHref =
     surface === "mobile" ? "/m/book/visiting" : "/book/visiting";
   const liveInHref = surface === "mobile" ? "/m/book/live-in" : "/book/live-in";
+  const browseHref =
+    surface === "mobile" ? "/m/book/browse" : "/find-care";
 
   return (
     <div
@@ -54,6 +56,17 @@ export default function CareFormatChooser({
         />
       </div>
 
+      <div className="mt-4">
+        <ChoiceCard
+          href={browseHref}
+          icon={<SearchIcon />}
+          title="Browse & choose your carer"
+          subtitle="Pick from a ranked list"
+          body="See nearby carers, compare profiles, then send a booking request to the one you choose."
+          accent="subtle"
+        />
+      </div>
+
       <p
         className={`mt-6 text-center ${
           surface === "mobile"
@@ -74,17 +87,24 @@ function ChoiceCard({
   title,
   subtitle,
   body,
+  accent,
 }: {
   href: string;
   icon: React.ReactNode;
   title: string;
   subtitle: string;
   body: string;
+  accent?: "subtle";
 }) {
+  const subtle = accent === "subtle";
   return (
     <Link
       href={href}
-      className="group block rounded-card border border-slate-200 bg-white p-6 shadow-card transition hover:border-slate-900 hover:shadow-md"
+      className={
+        subtle
+          ? "group block rounded-card border border-dashed border-slate-300 bg-slate-50 p-6 transition hover:border-slate-900 hover:bg-white hover:shadow-md"
+          : "group block rounded-card border border-slate-200 bg-white p-6 shadow-card transition hover:border-slate-900 hover:shadow-md"
+      }
     >
       <div className="flex items-start gap-4">
         <span className="grid h-12 w-12 flex-none place-items-center rounded-full bg-brand-50 text-brand-700">
@@ -133,6 +153,25 @@ function ClockIcon() {
     >
       <circle cx="12" cy="12" r="10" />
       <polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="11" cy="11" r="7" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
     </svg>
   );
 }
