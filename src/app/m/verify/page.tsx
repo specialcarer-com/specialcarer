@@ -90,7 +90,10 @@ function VerifyInner() {
         setError(error.message);
         return;
       }
-      router.replace("/m/home");
+      // Role-aware landing post-verify (see /m/login for rationale).
+      const { data: userData } = await supabase.auth.getUser();
+      const role = (userData.user?.user_metadata as { role?: string } | undefined)?.role;
+      router.replace(role === "caregiver" ? "/m/jobs" : "/m/home");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed.");
     } finally {

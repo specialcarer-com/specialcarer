@@ -15,9 +15,11 @@ const ADMIN_PREFIXES = ["/admin"];
 //   SEEKER_ONLY  — only role==="seeker" may access (carers redirected to /m/jobs)
 //   CAREGIVER_ONLY — only role==="caregiver" may access (seekers redirected to /m/search)
 //
-// Anything not listed here is shared (auth flows, profile, bookings, chat,
-// notifications, track, home).
+// Anything not listed here is shared (auth flows, profile, chat,
+// notifications, track).
 const MOBILE_SEEKER_ONLY_PREFIXES = [
+  "/m/home",      // seeker-shaped widgets + bookings preview
+  "/m/bookings",  // mock data + UI is seeker-perspective only (carer side TBD)
   "/m/search",
   "/m/book",
   "/m/post-job",

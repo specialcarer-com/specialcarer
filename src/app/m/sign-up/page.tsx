@@ -129,6 +129,10 @@ export default function SignUpPage() {
                 );
               })}
             </div>
+            <p className="mt-2 text-[12px] leading-snug text-subheading">
+              Please choose carefully — your account type is locked once you
+              sign up. If you pick the wrong one, contact support to fix it.
+            </p>
           </fieldset>
           <Input
             label="Email"

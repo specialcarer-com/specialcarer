@@ -23,7 +23,7 @@ export default function LoginPage() {
     setBusy(true);
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error, data } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
@@ -31,7 +31,12 @@ export default function LoginPage() {
         setError(error.message);
         return;
       }
-      router.replace("/m/home");
+      // Role-aware landing: carers go to their jobs feed, everyone else
+      // (seekers, admins) goes to /m/home. Reads role from user_metadata
+      // (set at sign-up); falls back to /m/home if missing — middleware
+      // will then redirect carers to /m/jobs.
+      const role = (data.user?.user_metadata as { role?: string } | undefined)?.role;
+      router.replace(role === "caregiver" ? "/m/jobs" : "/m/home");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign-in failed.");
     } finally {
