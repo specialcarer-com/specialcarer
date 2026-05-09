@@ -568,11 +568,14 @@ export default async function FindCarePage({
           </ul>
         )}
 
-        {/* Help footer — each card on a distinct, brand-appropriate background
-            so the three topics read as separate at a glance: trust (teal),
-            cost (amber), support (neutral). */}
+        {/* Help footer — each card on a distinct, brand-appropriate
+            background so the three topics read as separate at a glance:
+              • trust   → white card + teal border (sits crisply on the
+                          page's bg-brand-50 wash)
+              • cost    → soft amber tint
+              • support → neutral slate. */}
         <div className="mt-12 grid sm:grid-cols-3 gap-4 text-sm">
-          <div className="bg-brand-50 p-5 rounded-2xl border border-brand-100">
+          <div className="bg-white p-5 rounded-2xl border border-brand-100 shadow-sm">
             <h3 className="font-semibold text-slate-900">How vetting works</h3>
             <p className="mt-1 text-slate-700">
               ID + selfie, full background check, payouts-enabled.{" "}
