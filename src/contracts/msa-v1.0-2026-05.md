@@ -3,7 +3,7 @@
 # Master Services Agreement
 
 **Version:** msa-v1.0-2026-05
-**Between:** All Care 4 U Group Ltd, a company incorporated in England & Wales (company number {{COMPANY_NUMBER}}), trading as **SpecialCarer** ("**SpecialCarer**", "we", "us")
+**Between:** All Care 4 U Group Ltd, a company incorporated in England & Wales (company number 09428739), trading as **SpecialCarer** ("**SpecialCarer**", "we", "us")
 **And:** the customer organisation identified at signature ("**Customer**", "you")
 
 This Master Services Agreement ("**MSA**" or "**Agreement**") sets out the terms on which SpecialCarer makes its platform available to the Customer for the purpose of finding, booking and managing independent care professionals.

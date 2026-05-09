@@ -3,10 +3,14 @@
  *
  * ── Payment architecture (org vs B2C) ────────────────────────────────────────
  * B2C:  Stripe Connect destination charge. Carer paid by Stripe on capture.
+ *       Carer payout cadence: WEEKLY (existing release-payouts cron).
  * Org:  All Care 4 U Group Ltd issues a Stripe Invoice to the org (no Connect).
  *       Org pays All Care 4 U Group Ltd directly via Stripe-hosted page.
- *       Carer is paid from All Care 4 U Group Ltd's own funds via the existing
- *       weekly payout cycle — independently of whether the org has paid yet.
+ *       Carer is paid from All Care 4 U Group Ltd's own funds via the
+ *       MONTHLY org payout cycle (release-org-payouts cron, 1st of each
+ *       month) — independently of whether the org has paid the invoice yet.
+ *       The monthly cadence aligns with the net-14 invoice window and
+ *       reduces working-capital float.
  *
  * ── Sleep-in economics (intentional, higher platform margin) ─────────────────
  *   sleep_in_org_charge  default £100  — what org is invoiced (overnight only)

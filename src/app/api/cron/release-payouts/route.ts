@@ -25,10 +25,15 @@ export async function GET(req: Request) {
 
   const admin = createAdminClient();
 
+  // Private/seeker bookings only — org bookings are paid monthly via
+  // /api/cron/release-org-payouts. Defensive filter: even though org
+  // bookings won't have a Stripe payment_intent in `payments`, exclude
+  // them explicitly so this cron's scan stats stay clean.
   const { data: due, error } = await admin
     .from("bookings")
     .select("id, status, payout_eligible_at")
     .eq("status", "completed")
+    .neq("booking_source", "org")
     .lte("payout_eligible_at", new Date().toISOString())
     .limit(100);
   if (error) {
