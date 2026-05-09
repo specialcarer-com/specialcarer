@@ -9,7 +9,7 @@ import {
   TextArea,
   IconCheck,
 } from "../_components/ui";
-import { SERVICE_LABEL, type Caregiver } from "../_lib/mock";
+import { SERVICE_DESCRIPTION, SERVICE_LABEL, type Caregiver } from "../_lib/mock";
 
 type ServiceKey = Caregiver["services"][number];
 
@@ -88,11 +88,14 @@ export default function PostJobPage() {
   }
 
   // Mock-vertical → canonical SpecialCarer service vertical.
+  // Keep aligned with the 5 canonical verticals (child=childcare,
+  // elderly=elderly_care, special=special_needs, postnatal, complex=complex_care).
   const SERVICE_TO_CANONICAL: Record<string, string> = {
     child: "childcare",
     elderly: "elderly_care",
     special: "special_needs",
     postnatal: "postnatal",
+    complex: "complex_care",
   };
 
   async function publish() {
@@ -209,13 +212,7 @@ export default function PostJobPage() {
                   {SERVICE_LABEL[s]}
                 </p>
                 <p className="mt-1 text-[12px] text-subheading">
-                  {s === "child"
-                    ? "Babysitting, school run, play"
-                    : s === "elderly"
-                    ? "Companionship, errands, mobility"
-                    : s === "special"
-                    ? "Tailored support, SEN-trained"
-                    : "Newborn & maternity support"}
+                  {SERVICE_DESCRIPTION[s]}
                 </p>
               </button>
             ))}

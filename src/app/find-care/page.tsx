@@ -161,6 +161,7 @@ export default async function FindCarePage({
 
   return (
     <MarketingShell>
+      <div className="bg-brand-50">
       <section className="px-6 py-10 sm:py-14 max-w-6xl mx-auto">
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
           <div>
@@ -604,6 +605,7 @@ export default async function FindCarePage({
           </div>
         </div>
       </section>
+      </div>
     </MarketingShell>
   );
 }

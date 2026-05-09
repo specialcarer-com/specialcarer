@@ -3,6 +3,7 @@ import {
   getFunnel,
   getRetention,
 } from "@/lib/admin/analytics";
+import KpiSnapshot from "./KpiSnapshot";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,9 @@ export default async function AdminAnalyticsPage() {
           <code>profiles</code>, and <code>bookings</code>.
         </p>
       </div>
+
+      {/* KPI snapshot — added in Admin Ops 3.12. */}
+      <KpiSnapshot />
 
       {/* Funnel */}
       <section className="space-y-3">

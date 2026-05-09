@@ -58,9 +58,11 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchShowDuration: 1200,
       launchAutoHide: true,
-      // White matches mobile/resources/splash.png. The dark variant
-      // (splash-dark.png) ships with its own teal background baked in.
-      backgroundColor: "#FFFFFF",
+      // Dark teal stage matches the in-app SpecialCarerMobileSplash
+      // overlay (src/app/m/_components/SplashIntro.tsx) so the handoff
+      // from native splash → web splash has no colour flash. The native
+      // PNG (mobile/resources/splash-dark.png) already has teal baked in.
+      backgroundColor: "#06151a",
       androidScaleType: "CENTER_CROP",
       showSpinner: false,
       splashFullScreen: true,

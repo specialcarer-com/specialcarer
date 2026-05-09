@@ -7,6 +7,7 @@ import CaregiverCard from "@/components/caregiver-card";
 import HeroSearch from "@/components/hero-search";
 import { ExplainerVideo } from "@/components/explainer-video";
 import { HeroBanner } from "@/components/hero-banner";
+import HomeBanner from "@/components/home-banner";
 import { searchCaregivers, listPublishedCities } from "@/lib/care/search";
 import { CITIES } from "@/lib/care/cities";
 import { getAllPosts } from "@/lib/blog/posts";
@@ -116,6 +117,8 @@ export default async function Home() {
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
       />
+
+      <HomeBanner placement="home_top" />
 
       {/* Hero banner video */}
       <HeroBanner isUS={isUS} />

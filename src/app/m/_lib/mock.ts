@@ -50,7 +50,7 @@ export type Caregiver = {
    * the UK; state RN license in the US). Always implies `isClinical`.
    */
   isNurse?: boolean;
-  services: ("child" | "elderly" | "special" | "postnatal")[];
+  services: ("child" | "elderly" | "special" | "postnatal" | "complex")[];
   languages: string[];
   about: string;
   certifications: { title: string; issuedAt: string }[];
@@ -336,6 +336,20 @@ export const SERVICE_LABEL: Record<Caregiver["services"][number], string> = {
   elderly: "Elderly care",
   special: "Special-needs",
   postnatal: "Postnatal support",
+  complex: "Complex care",
+};
+
+// Short marketing-friendly description shown beside each service tile in
+// the booking + post-job wizards. Keep in sync with /services/* pages.
+export const SERVICE_DESCRIPTION: Record<
+  Caregiver["services"][number],
+  string
+> = {
+  child: "Babysitting, school run, play",
+  elderly: "Companionship, errands, mobility",
+  special: "Tailored support, SEN-trained",
+  postnatal: "Newborn & maternity support",
+  complex: "Clinical, live-in, high-needs",
 };
 
 export const STATUS_TONE: Record<
