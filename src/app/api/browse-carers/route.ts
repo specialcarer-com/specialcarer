@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  fetchStatsByIds,
+  type CaregiverStatsDisplay,
+} from "@/lib/care/caregiver-stats";
+import {
   isValidPostcode,
   normalisePostcode,
   inferCountryFromPostcode,
@@ -49,6 +53,8 @@ export type BrowseCarerCard = {
   /** Composite ranking score 0..1 (higher = better). For UI debugging only;
    *  callers should rely on the array order. */
   score: number;
+  /** Track-record stats. has_stats=false until 5 completed bookings. */
+  stats: CaregiverStatsDisplay;
 };
 
 /**
@@ -245,7 +251,11 @@ export async function POST(req: Request) {
     ALLOWED_GENDERS.has(g),
   );
 
-  type Candidate = BrowseCarerCard & { _raw: ProfileRow | undefined };
+  // Candidates carry every BrowseCarerCard field except `stats`, which
+  // is bulk-fetched after ranking and stitched on by `enriched` below.
+  type Candidate = Omit<BrowseCarerCard, "stats"> & {
+    _raw: ProfileRow | undefined;
+  };
   const candidates: Candidate[] = [];
 
   for (const row of rpcRows) {
@@ -354,10 +364,31 @@ export async function POST(req: Request) {
     return rest;
   });
 
+  // Bulk-fetch trust-signal stats for the carers we're about to return.
+  // Uses the same admin client; the caregiver_stats view has anon-read
+  // grants but the admin client avoids RLS overhead.
+  const statsMap = await fetchStatsByIds(
+    admin,
+    trimmed.map((c) => c.user_id),
+  );
+  const enriched = trimmed.map((c) => ({
+    ...c,
+    stats: statsMap.get(c.user_id) ?? {
+      has_stats: false,
+      completed_bookings: 0,
+      repeat_client_rate_pct: null,
+      response_time_minutes: null,
+      on_time_rate_pct: null,
+    },
+  }));
+
   return NextResponse.json({
     ok: true,
     origin: { postcode: normalised, country, lat: geo.lat, lng: geo.lng },
-    matches: trimmed,
+    // Returned under both keys for backwards-compat: 'matches' for the
+    // instant-match-shaped consumers, 'carers' for the browse page.
+    matches: enriched,
+    carers: enriched,
   });
 }
 

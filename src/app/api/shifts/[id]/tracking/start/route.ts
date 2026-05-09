@@ -30,7 +30,7 @@ export async function POST(
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "id, seeker_id, caregiver_id, status, starts_at, ends_at, paid_at"
+      "id, seeker_id, caregiver_id, status, starts_at, ends_at, paid_at, actual_started_at"
     )
     .eq("id", bookingId)
     .maybeSingle();
@@ -96,6 +96,14 @@ export async function POST(
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
+      // Mirror to bookings.actual_started_at (only if not already set) so
+      // the on-time metric reflects true arrival time.
+      if (!booking.actual_started_at) {
+        await admin
+          .from("bookings")
+          .update({ actual_started_at: now.toISOString() })
+          .eq("id", bookingId);
+      }
       return NextResponse.json({ session: updated });
     }
     return NextResponse.json({ session: existing });
@@ -115,6 +123,14 @@ export async function POST(
     })
     .select()
     .single();
+
+  // Mirror arrival to bookings.actual_started_at for the on-time metric.
+  if (!error && !booking.actual_started_at) {
+    await admin
+      .from("bookings")
+      .update({ actual_started_at: now.toISOString() })
+      .eq("id", bookingId);
+  }
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

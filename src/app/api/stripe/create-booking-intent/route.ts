@@ -194,13 +194,18 @@ export async function POST(req: Request) {
   const platformFeeCents = calculatePlatformFeeCents(subtotalCents);
   const totalCents = calculateTotalCents(subtotalCents);
 
-  // Create booking in 'accepted' state — payment is the next gate
+  // Create booking in 'accepted' state — payment is the next gate.
+  // Stamp accepted_at so the response-time metric counts this booking;
+  // the request-to-accept latency is effectively 0 in the auto-accept
+  // model, which is honest given the carer pre-set their availability.
+  const acceptedAt = new Date().toISOString();
   const { data: booking, error: bookingError } = await admin
     .from("bookings")
     .insert({
       seeker_id: user.id,
       caregiver_id: body.caregiver_id!,
       status: "accepted",
+      accepted_at: acceptedAt,
       starts_at: body.starts_at!,
       ends_at: body.ends_at!,
       hours: body.hours!,

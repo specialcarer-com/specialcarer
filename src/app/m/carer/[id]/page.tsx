@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { CaregiverStatsDisplay } from "@/lib/care/caregiver-stats";
 import {
   Avatar,
   Button,
@@ -45,6 +46,33 @@ export default function CarerDetailPage() {
       : `/m/book/${params.id}`;
   })();
   const [tab, setTab] = useState<"about" | "availability" | "reviews">("about");
+
+  // Track-record stats — fetched lazily from /api/carer-stats/[id] when
+  // the route param is a real UUID. The page still renders mock data
+  // for everything else, so we just render nothing when stats are
+  // unavailable rather than blocking the UI.
+  const carerId = params?.id ?? "";
+  const isUuidId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    carerId,
+  );
+  const [stats, setStats] = useState<CaregiverStatsDisplay | null>(null);
+  useEffect(() => {
+    if (!isUuidId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/carer-stats/${carerId}`);
+        if (!res.ok) return;
+        const json = (await res.json()) as { stats?: CaregiverStatsDisplay };
+        if (!cancelled && json.stats) setStats(json.stats);
+      } catch {
+        /* ignore — stats are optional */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [carerId, isUuidId]);
 
   if (!carer) {
     return (
@@ -118,6 +146,46 @@ export default function CarerDetailPage() {
                 {carer.about}
               </p>
             </PanelCard>
+
+            {stats && (
+              <PanelCard icon={<IconAward />} title="Track record">
+                {stats.has_stats ? (
+                  <ul className="grid grid-cols-3 gap-2">
+                    <TrackTile
+                      value={
+                        stats.repeat_client_rate_pct != null
+                          ? `${stats.repeat_client_rate_pct}%`
+                          : "—"
+                      }
+                      label="Repeat clients"
+                      tooltip="Share of recent clients who've booked this carer more than once."
+                    />
+                    <TrackTile
+                      value={
+                        stats.response_time_minutes != null
+                          ? `~${stats.response_time_minutes}m`
+                          : "—"
+                      }
+                      label="Reply time"
+                      tooltip="Median time to respond to booking requests in the last 30 days."
+                    />
+                    <TrackTile
+                      value={
+                        stats.on_time_rate_pct != null
+                          ? `${stats.on_time_rate_pct}%`
+                          : "—"
+                      }
+                      label="On time"
+                      tooltip="Share of tracked shifts where the carer arrived within 10 minutes of the start time."
+                    />
+                  </ul>
+                ) : (
+                  <p className="text-[12px] text-subheading">
+                    New carer — full track record after 5 completed bookings.
+                  </p>
+                )}
+              </PanelCard>
+            )}
 
             <PanelCard icon={<IconClock />} title="Rates">
               <ul className="grid grid-cols-2 gap-2">
@@ -325,6 +393,28 @@ function PanelCard({
       </div>
       <div className="p-4">{children}</div>
     </div>
+  );
+}
+
+function TrackTile({
+  value,
+  label,
+  tooltip,
+}: {
+  value: string;
+  label: string;
+  tooltip: string;
+}) {
+  return (
+    <li
+      className="rounded-btn border border-line p-3 text-center"
+      title={tooltip}
+    >
+      <p className="text-[18px] font-bold text-heading leading-none">
+        {value}
+      </p>
+      <p className="mt-1 text-[11px] text-subheading">{label}</p>
+    </li>
   );
 }
 

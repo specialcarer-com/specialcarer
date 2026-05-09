@@ -61,6 +61,9 @@ export async function POST(
       );
     }
 
+    // Track when the carer declined for the response-time metric.
+    const isDeclineByCarer = action === "decline" && isCaregiver;
+
     // If paid (manual capture authorized), cancel the PaymentIntent to release the hold
     if (booking.status === "paid" || booking.paid_at) {
       const { data: payment } = await admin
@@ -81,12 +84,18 @@ export async function POST(
       }
     }
 
+    const now = new Date().toISOString();
     await admin
       .from("bookings")
       .update({
         status: "cancelled",
-        cancelled_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        cancelled_at: now,
+        // Only stamp declined_at on a carer-initiated decline
+        // (not on a seeker cancel) — drives the response-time metric.
+        ...(isDeclineByCarer && !booking.declined_at
+          ? { declined_at: now }
+          : {}),
+        updated_at: now,
       })
       .eq("id", bookingId);
 
@@ -106,11 +115,18 @@ export async function POST(
         { status: 400 },
       );
     }
+    const startNow = new Date().toISOString();
     await admin
       .from("bookings")
       .update({
         status: "in_progress",
-        updated_at: new Date().toISOString(),
+        // Capture true arrival time for the on-time metric. Only sets
+        // on the first start to keep the value honest if the shift
+        // is paused/resumed in future.
+        ...(booking.actual_started_at
+          ? {}
+          : { actual_started_at: startNow }),
+        updated_at: startNow,
       })
       .eq("id", bookingId);
     return NextResponse.json({ ok: true, status: "in_progress" });

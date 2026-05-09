@@ -34,6 +34,7 @@ import {
   TopBar,
 } from "../../_components/ui";
 import { CERTIFICATIONS, GENDERS } from "@/lib/care/attributes";
+import type { CaregiverStatsDisplay } from "@/lib/care/caregiver-stats";
 
 type ServiceType =
   | "elderly_care"
@@ -87,6 +88,7 @@ type BrowseCard = {
   has_drivers_license: boolean;
   has_own_vehicle: boolean;
   score: number;
+  stats: CaregiverStatsDisplay;
 };
 
 function pad(n: number) {
@@ -523,6 +525,24 @@ export default function MobileBrowseCarersPage() {
                       {c.bio}
                     </p>
                   )}
+
+                  {c.stats?.has_stats && (() => {
+                    const parts: string[] = [];
+                    if (c.stats.repeat_client_rate_pct != null) {
+                      parts.push(`${c.stats.repeat_client_rate_pct}% repeat`);
+                    }
+                    if (c.stats.response_time_minutes != null) {
+                      parts.push(`~${c.stats.response_time_minutes} min reply`);
+                    }
+                    if (c.stats.on_time_rate_pct != null) {
+                      parts.push(`${c.stats.on_time_rate_pct}% on time`);
+                    }
+                    return parts.length > 0 ? (
+                      <p className="mt-2 text-[11px] text-subheading">
+                        {parts.join(" · ")}
+                      </p>
+                    ) : null;
+                  })()}
 
                   <div className="border-t border-line mt-4 pt-3 flex items-center justify-between">
                     <div className="text-[12px] text-subheading">
