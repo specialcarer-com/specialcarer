@@ -110,6 +110,9 @@ export default async function SiteHeader() {
         <Link href="/employers" className="hover:text-slate-900">
           For employers
         </Link>
+        <Link href="/organisations" className="hover:text-slate-900">
+          For organisations
+        </Link>
         <Link href="/become-a-caregiver" className="hover:text-slate-900">
           For caregivers
         </Link>

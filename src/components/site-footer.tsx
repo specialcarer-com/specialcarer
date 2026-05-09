@@ -22,6 +22,7 @@ const COMPANY_LINKS: FooterLink[] = [
   { href: "/trust", label: "Trust & safety" },
   { href: "/pricing", label: "Pricing" },
   { href: "/employers", label: "For employers" },
+  { href: "/organisations", label: "For organisations" },
   { href: "/become-a-caregiver", label: "Become a caregiver" },
   { href: "/blog", label: "Blog" },
   { href: "/press", label: "Press & media" },

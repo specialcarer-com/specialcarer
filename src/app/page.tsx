@@ -760,6 +760,41 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Organisations (B2B procurement) teaser */}
+      <section className="px-6 pb-20">
+        <div className="max-w-5xl mx-auto bg-brand-50 border border-brand-100 rounded-3xl px-8 py-12 sm:px-12 sm:py-16">
+          <div className="grid lg:grid-cols-2 gap-8 items-center">
+            <div>
+              <span className="inline-block px-3 py-1 rounded-full bg-white text-brand-700 text-xs font-medium border border-brand-100">
+                For organisations
+              </span>
+              <h2 className="mt-4 text-3xl sm:text-4xl font-semibold text-slate-900">
+                Vetted carers for your service users — on demand and under contract.
+              </h2>
+              <p className="mt-4 text-slate-700">
+                Councils, NHS trusts, fostering agencies, residential homes,
+                schools, and charities. Master Services Agreement and Data
+                Processing Addendum in place. Strict verification of every buyer.
+              </p>
+            </div>
+            <div className="lg:justify-self-end">
+              <ul className="space-y-3 text-sm text-slate-700">
+                <li>• Safer-recruited carers with Enhanced DBS / equivalent</li>
+                <li>• Net-14 invoicing, PO support, framework pricing on request</li>
+                <li>• GDPR-compliant DPA, audit trail on every booking</li>
+                <li>• 12-hour shifts, sleep-ins, and recurring contracts</li>
+              </ul>
+              <Link
+                href="/organisations"
+                className="mt-6 inline-block px-6 py-3 rounded-xl bg-brand text-white font-medium hover:bg-brand-600 transition"
+              >
+                Explore for organisations
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Where we cover */}
       <section className="px-6 py-16">
         <div className="max-w-5xl mx-auto">
