@@ -12,6 +12,7 @@ import {
   Tag,
 } from "../../_components/ui";
 import { serviceLabel } from "@/lib/care/services";
+import JobDetailExtras from "../_components/JobDetailExtras";
 
 type Booking = {
   id: string;
@@ -207,6 +208,9 @@ export default function TargetedJobClient({
           style={mapStyle}
         />
       )}
+
+      {/* About this client + sanitised recipients + pay breakdown */}
+      <JobDetailExtras jobId={booking.id} kind="targeted" />
 
       <div className="space-y-2">
         {status === "pending" && expiresAt && (

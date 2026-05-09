@@ -11,6 +11,7 @@ import {
   Tag,
 } from "../../../_components/ui";
 import { serviceLabel } from "@/lib/care/services";
+import JobDetailExtras from "../../_components/JobDetailExtras";
 
 type Request = {
   id: string;
@@ -148,6 +149,9 @@ export default function OpenJobClient({
           </div>
         )}
       </Card>
+
+      {/* About this client + pay breakdown */}
+      <JobDetailExtras jobId={request.id} kind="open" />
 
       <div className="space-y-2">
         <div className="text-center text-[13px]">
