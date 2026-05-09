@@ -96,13 +96,14 @@ export default function SplashIntro() {
       // Private mode / blocked storage — just play it once.
     }
 
-    // prefers-reduced-motion → instant fade.
+    // prefers-reduced-motion → static composition, held for a beat so
+    // users still get a clear brand reveal (not a 600ms blink-and-miss).
     let visibleMs = VISIBLE_MS;
     try {
       const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
       if (mql.matches) {
         setReduced(true);
-        visibleMs = 600; // very brief brand chrome instead of the full splash
+        visibleMs = 2200; // hold the static composition for ~2.2s
       }
     } catch {
       /* noop */
@@ -137,18 +138,20 @@ export default function SplashIntro() {
       data-fading={fading ? "1" : "0"}
     >
       {reduced ? (
-        // Reduced-motion fallback — solid teal stage with static wordmark.
+        // Reduced-motion fallback — solid teal stage with the static
+        // composition (icon mark on top, italic teal wordmark below)
+        // mirroring the animated layout. No motion, just a held frame.
         <div className="sc-splash-reduced">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/brand/logo-wordmark-email.png"
+            src="/brand/specialcarer-icon.svg"
             alt=""
-            width={220}
-            height={166}
-            className="sc-splash-reduced-logo"
+            className="sc-splash-reduced-icon"
             decoding="async"
             draggable={false}
           />
+          <div className="sc-splash-reduced-wordmark">SpecialCarer</div>
+          <div className="sc-splash-reduced-tagline">CARE, 4 U</div>
         </div>
       ) : (
         <div className="sc-splash-canvas">
@@ -160,14 +163,14 @@ export default function SplashIntro() {
         .sc-splash-overlay {
           position: fixed;
           inset: 0;
+          /* Cover the iOS status bar / home indicator too. The overlay
+             must be edge-to-edge so there's no white strip above or
+             below the teal stage. Inner content is centred, so it does
+             not need explicit safe-area padding. */
           z-index: 9999;
-          /* Solid teal stage matches the SpecialCarerMobileSplash background,
-             so there's no white flash while the canvas mounts. */
           background: #06151a;
           opacity: 1;
           transition: opacity ${FADE_MS}ms ease-out;
-          padding-top: env(safe-area-inset-top);
-          padding-bottom: env(safe-area-inset-bottom);
           -webkit-user-select: none;
           user-select: none;
           -webkit-tap-highlight-color: transparent;
@@ -188,16 +191,37 @@ export default function SplashIntro() {
         .sc-splash-reduced {
           position: absolute;
           inset: 0;
-          display: grid;
-          place-items: center;
-        }
-        .sc-splash-reduced-logo {
-          width: 220px;
-          height: auto;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 18px;
+          padding: 0 32px;
+          font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
           opacity: 0;
-          animation: sc-fade-in 220ms ease-out forwards;
-          /* Tint white wordmark down for the dark stage. */
-          filter: brightness(1.15) saturate(1.05);
+          animation: sc-fade-in 240ms ease-out forwards;
+        }
+        .sc-splash-reduced-icon {
+          width: min(60vw, 280px);
+          height: auto;
+          filter: drop-shadow(0 14px 40px rgba(3, 158, 160, 0.45));
+        }
+        .sc-splash-reduced-wordmark {
+          font-weight: 700;
+          font-style: italic;
+          font-size: clamp(40px, 13vw, 64px);
+          letter-spacing: -0.025em;
+          color: #039ea0;
+          line-height: 1;
+          margin-top: 4px;
+        }
+        .sc-splash-reduced-tagline {
+          margin-top: 10px;
+          font-weight: 500;
+          font-size: 14px;
+          letter-spacing: 0.32em;
+          text-transform: uppercase;
+          color: rgba(255, 255, 255, 0.85);
         }
         @keyframes sc-fade-in {
           to {
