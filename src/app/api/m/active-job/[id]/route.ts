@@ -64,7 +64,7 @@ export async function GET(
   const { data: bookingRaw } = await admin
     .from("bookings")
     .select(
-      "id, seeker_id, caregiver_id, status, starts_at, ends_at, hours, hourly_rate_cents, subtotal_cents, currency, service_type, location_city, location_country, location_postcode, recipient_ids, notes, accepted_at, actual_started_at, shift_completed_at, checked_out_at, handoff_notes, arrival_selfie_path, photo_updates_consent, geofence_radius_m, task_checklist",
+      "id, seeker_id, caregiver_id, status, starts_at, ends_at, hours, hourly_rate_cents, subtotal_cents, currency, service_type, location_city, location_country, location_postcode, recipient_ids, notes, accepted_at, actual_started_at, shift_completed_at, checked_out_at, handoff_notes, arrival_selfie_path, photo_updates_consent, geofence_radius_m, task_checklist, booking_source, shift_mode, sleep_in_carer_pay, carer_pay_total_cents",
     )
     .eq("id", bookingId)
     .maybeSingle<{
@@ -93,6 +93,10 @@ export async function GET(
       photo_updates_consent: boolean | null;
       geofence_radius_m: number | null;
       task_checklist: unknown;
+      booking_source: string | null;
+      shift_mode: string | null;
+      sleep_in_carer_pay: number | null;
+      carer_pay_total_cents: number | null;
     }>();
   if (!bookingRaw) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
@@ -178,6 +182,19 @@ export async function GET(
     typeof bookingRaw.subtotal_cents === "number" && bookingRaw.subtotal_cents > 0
       ? bookingRaw.subtotal_cents
       : Math.round(totalHours * bookingRaw.hourly_rate_cents);
+  // For org shifts, carer_pay_total_cents is set on booking creation.
+  // Use it directly when available; fall back to standard 75% calc.
+  const isOrgBooking = bookingRaw.booking_source === "org";
+  const isSleepIn = isOrgBooking && bookingRaw.shift_mode === "sleep_in";
+  const sleepInPayCents = isSleepIn && bookingRaw.sleep_in_carer_pay != null
+    ? Math.round(bookingRaw.sleep_in_carer_pay * 100)
+    : 0;
+  const earningsTotalCents = bookingRaw.carer_pay_total_cents != null
+    ? bookingRaw.carer_pay_total_cents
+    : isSleepIn
+      ? carerPayoutCents(totalSubtotal) + sleepInPayCents
+      : carerPayoutCents(totalSubtotal);
+
   const pay_breakdown_live = {
     hours_total: totalHours,
     hours_so_far: Math.round(cappedHours * 100) / 100,
@@ -186,8 +203,13 @@ export async function GET(
     subtotal_total_cents: totalSubtotal,
     carer_fee_percent: CARER_FEE_PERCENT,
     carer_fee_cents: carerFeeCents(totalSubtotal),
-    earnings_total_cents: carerPayoutCents(totalSubtotal),
+    earnings_total_cents: earningsTotalCents,
     currency: bookingRaw.currency,
+    /** Phase B: org sleep-in breakdown (undefined for regular shifts) */
+    ...(isSleepIn && {
+      sleep_in_carer_pay_cents: sleepInPayCents,
+      active_earnings_cents: carerPayoutCents(totalSubtotal),
+    }),
   };
 
   // Recent journal entries (last 5) for this booking — author + body
@@ -276,6 +298,9 @@ export async function GET(
       seeker_first_name: fn,
       seeker_initial: fn.slice(0, 1).toUpperCase(),
       seeker_phone: prof?.phone ?? null,
+      /** Phase B: org booking fields */
+      is_org_booking: isOrgBooking,
+      shift_mode: bookingRaw.shift_mode ?? null,
     },
     recipients_full: recipients,
     pay_breakdown_live,

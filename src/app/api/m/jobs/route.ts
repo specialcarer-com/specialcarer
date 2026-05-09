@@ -30,6 +30,10 @@ type TargetedRpcRow = {
   distance_m: number | null;
   discovery_expires_at: string | null;
   created_at: string;
+  /** Phase B: org booking fields (null for regular bookings) */
+  shift_mode: string | null;
+  sleep_in_carer_pay: number | null;
+  booking_source: string | null;
 };
 
 type OpenRpcRow = {
@@ -73,6 +77,10 @@ export type TargetedJobItem = {
   surge: boolean;
   expires_at: string | null;
   is_preferred_client: boolean;
+  /** Phase B: org booking fields. is_org_booking=true when booking_source='org' */
+  is_org_booking: boolean;
+  shift_mode: string | null;
+  sleep_in_carer_pay: number | null;
 };
 
 export type OpenJobItem = {
@@ -292,6 +300,9 @@ export async function GET(req: Request) {
         surge: isSurge(r.starts_at),
         expires_at: r.discovery_expires_at,
         is_preferred_client: preferredSet.has(r.seeker_id),
+        is_org_booking: r.booking_source === "org",
+        shift_mode: r.shift_mode ?? null,
+        sleep_in_carer_pay: r.sleep_in_carer_pay ?? null,
       };
     });
 

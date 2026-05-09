@@ -57,6 +57,10 @@ type TargetedItem = ItemBase & {
   expires_at: string | null;
   is_preferred_client: boolean;
   location_postcode_partial: string | null;
+  /** Phase B org booking fields */
+  is_org_booking: boolean;
+  shift_mode: string | null;
+  sleep_in_carer_pay: number | null;
 };
 
 type OpenItem = ItemBase & {
@@ -444,9 +448,17 @@ function JobCard({ item }: { item: JobItem }) {
               <p className="text-[15px] font-bold text-heading truncate">
                 {item.client_first_name}
               </p>
-              <Tag tone={targeted ? "primary" : "neutral"}>
-                {targeted ? "Sent to you" : "Open request"}
-              </Tag>
+              {targeted && (item as TargetedItem).is_org_booking ? (
+                <Tag tone="primary">Org shift</Tag>
+              ) : (
+                <Tag tone={targeted ? "primary" : "neutral"}>
+                  {targeted ? "Sent to you" : "Open request"}
+                </Tag>
+              )}
+              {targeted && (item as TargetedItem).is_org_booking &&
+                (item as TargetedItem).shift_mode === "sleep_in" && (
+                  <Tag tone="amber">Sleep-in</Tag>
+                )}
               {item.surge && <Tag tone="amber">Surge</Tag>}
               {targeted && (item as TargetedItem).is_preferred_client && (
                 <Tag tone="green">Preferred</Tag>

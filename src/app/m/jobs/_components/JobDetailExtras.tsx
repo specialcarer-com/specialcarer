@@ -45,6 +45,9 @@ type PayBreakdown = {
   earnings_cents: number;
   currency: string;
   tax_country: "GB" | "US";
+  /** Phase B: only present for org sleep-in shifts */
+  sleep_in_carer_pay?: number;
+  sleep_in_carer_pay_cents?: number;
 };
 
 type DetailsResponse = {
@@ -236,6 +239,7 @@ export default function JobDetailExtras({
 function PayCard({ breakdown }: { breakdown: PayBreakdown }) {
   const tax = TAX_LINK[breakdown.tax_country];
   const sym = breakdown.currency.toUpperCase() === "USD" ? "$" : "£";
+  const hasSleepIn = breakdown.sleep_in_carer_pay_cents != null;
   return (
     <Card className="p-4">
       <p className="text-[12px] uppercase tracking-wide text-subheading mb-2">
@@ -244,7 +248,7 @@ function PayCard({ breakdown }: { breakdown: PayBreakdown }) {
       <table className="w-full text-[13px]">
         <tbody>
           <Row
-            label="Hours"
+            label="Active hours"
             value={`${breakdown.hours.toFixed(
               breakdown.hours % 1 === 0 ? 0 : 2,
             )} hr`}
@@ -254,7 +258,7 @@ function PayCard({ breakdown }: { breakdown: PayBreakdown }) {
             value={`${sym}${(breakdown.hourly_rate_cents / 100).toFixed(0)}/hr`}
           />
           <Row
-            label="Subtotal"
+            label="Active care subtotal"
             value={fmtMoney(breakdown.subtotal_cents, breakdown.currency)}
           />
           <Row
@@ -265,6 +269,12 @@ function PayCard({ breakdown }: { breakdown: PayBreakdown }) {
             )}`}
             tone="muted"
           />
+          {hasSleepIn && (
+            <Row
+              label="Sleep-in allowance"
+              value={`+ ${fmtMoney(breakdown.sleep_in_carer_pay_cents!, breakdown.currency)}`}
+            />
+          )}
           <tr>
             <td colSpan={2} className="pt-2">
               <hr className="border-line" />

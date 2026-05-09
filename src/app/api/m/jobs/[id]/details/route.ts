@@ -33,6 +33,9 @@ export type PayBreakdown = {
   currency: string;
   /** ISO country code for the tax pointer link. */
   tax_country: "GB" | "US";
+  /** Phase B: sleep-in extras (undefined for non-sleep-in shifts) */
+  sleep_in_carer_pay?: number;
+  sleep_in_carer_pay_cents?: number;
 };
 
 type SeekerSummary = {
@@ -66,6 +69,10 @@ type TargetedDetails = CommonResponse & {
     accepted_at: string | null;
     discovery_expires_at: string | null;
     full_address_revealed: boolean;
+    /** Phase B: org booking fields (null for regular bookings) */
+    is_org_booking: boolean;
+    shift_mode: string | null;
+    sleep_in_carer_pay: number | null;
   };
   recipients: SanitizedRecipient[];
   recipient_access_instructions: string | null;
@@ -96,20 +103,34 @@ function buildPayBreakdown(args: {
   subtotal_cents?: number | null;
   currency: string;
   country: string | null;
+  /** Phase B: org sleep-in allowance for this carer (£ decimal) */
+  sleep_in_carer_pay?: number | null;
+  shift_mode?: string | null;
 }): PayBreakdown {
   const subtotal =
     typeof args.subtotal_cents === "number" && args.subtotal_cents > 0
       ? args.subtotal_cents
       : Math.round(args.hours * args.hourly_rate_cents);
+  const isSleepIn = args.shift_mode === "sleep_in" && args.sleep_in_carer_pay != null;
+  const sleepInCents = isSleepIn ? Math.round((args.sleep_in_carer_pay ?? 0) * 100) : 0;
+  // For org sleep-in: active hours pay (75%) + sleep_in_carer_pay
+  // For regular shifts: carerPayoutCents (standard 75%)
+  const earnings = isSleepIn
+    ? carerPayoutCents(subtotal) + sleepInCents
+    : carerPayoutCents(subtotal);
   return {
     hours: args.hours,
     hourly_rate_cents: args.hourly_rate_cents,
     subtotal_cents: subtotal,
     carer_fee_cents: carerFeeCents(subtotal),
     carer_fee_percent: CARER_FEE_PERCENT,
-    earnings_cents: carerPayoutCents(subtotal),
+    earnings_cents: earnings,
     currency: args.currency,
     tax_country: args.country === "US" ? "US" : "GB",
+    ...(isSleepIn && {
+      sleep_in_carer_pay: args.sleep_in_carer_pay ?? undefined,
+      sleep_in_carer_pay_cents: sleepInCents,
+    }),
   };
 }
 
@@ -145,7 +166,7 @@ export async function GET(
     const { data: bookingRow } = await admin
       .from("bookings")
       .select(
-        "id, seeker_id, caregiver_id, status, starts_at, ends_at, hours, hourly_rate_cents, subtotal_cents, currency, service_type, location_city, location_country, location_postcode, recipient_ids, notes, accepted_at, discovery_expires_at",
+        "id, seeker_id, caregiver_id, status, starts_at, ends_at, hours, hourly_rate_cents, subtotal_cents, currency, service_type, location_city, location_country, location_postcode, recipient_ids, notes, accepted_at, discovery_expires_at, booking_source, shift_mode, sleep_in_carer_pay",
       )
       .eq("id", id)
       .maybeSingle<{
@@ -167,6 +188,9 @@ export async function GET(
         notes: string | null;
         accepted_at: string | null;
         discovery_expires_at: string | null;
+        booking_source: string | null;
+        shift_mode: string | null;
+        sleep_in_carer_pay: number | null;
       }>();
     if (!bookingRow) {
       return NextResponse.json({ error: "not_found" }, { status: 404 });
@@ -266,6 +290,9 @@ export async function GET(
         accepted_at: bookingRow.accepted_at,
         discovery_expires_at: bookingRow.discovery_expires_at,
         full_address_revealed: fullAddressRevealed,
+        is_org_booking: bookingRow.booking_source === "org",
+        shift_mode: bookingRow.shift_mode ?? null,
+        sleep_in_carer_pay: bookingRow.sleep_in_carer_pay ?? null,
       },
       recipients,
       recipient_access_instructions: access_instructions,
@@ -275,6 +302,8 @@ export async function GET(
         subtotal_cents: bookingRow.subtotal_cents,
         currency: bookingRow.currency,
         country: bookingRow.location_country,
+        shift_mode: bookingRow.shift_mode ?? null,
+        sleep_in_carer_pay: bookingRow.sleep_in_carer_pay ?? null,
       }),
       seeker,
     };

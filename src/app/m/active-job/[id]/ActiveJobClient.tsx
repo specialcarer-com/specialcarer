@@ -77,6 +77,9 @@ type State = {
     seeker_first_name: string;
     seeker_initial: string;
     seeker_phone: string | null;
+    /** Phase B: org booking fields */
+    is_org_booking: boolean;
+    shift_mode: string | null;
   };
   recipients_full: RecipientFull[];
   pay_breakdown_live: {
@@ -89,6 +92,9 @@ type State = {
     carer_fee_percent: number;
     carer_fee_cents: number;
     currency: string;
+    /** Phase B: present on org sleep-in shifts only */
+    sleep_in_carer_pay_cents?: number;
+    active_earnings_cents?: number;
   };
   checklist: ChecklistItem[];
   recent_journal: JournalRow[];
@@ -524,6 +530,12 @@ function ActivePhase({
               state.booking.currency,
             )}
           </strong>
+          {state.booking.shift_mode === "sleep_in" &&
+            state.pay_breakdown_live.sleep_in_carer_pay_cents != null && (
+              <span className="text-subheading">
+                {" "}(incl. sleep-in allowance)
+              </span>
+            )}
         </p>
       </Card>
 
@@ -741,16 +753,50 @@ function SummaryPhase({ state }: { state: State }) {
         <p className="mt-2 text-[26px] font-extrabold text-heading tabular-nums">
           {fmtElapsed(elapsed)}
         </p>
-        <p className="mt-1 text-[12px] text-subheading">
-          Earnings:{" "}
-          <strong className="text-heading">
-            {fmtMoney(
-              state.pay_breakdown_live.earnings_total_cents,
-              state.booking.currency,
-            )}
-          </strong>{" "}
-          · paid 24 h after shift ends
-        </p>
+        {state.booking.shift_mode === "sleep_in" &&
+          state.pay_breakdown_live.sleep_in_carer_pay_cents != null ? (
+          <div className="mt-2 space-y-1">
+            <p className="text-[12px] text-subheading">
+              Active care pay:{" "}
+              <strong className="text-heading">
+                {fmtMoney(
+                  state.pay_breakdown_live.active_earnings_cents ?? 0,
+                  state.booking.currency,
+                )}
+              </strong>
+            </p>
+            <p className="text-[12px] text-subheading">
+              Sleep-in allowance:{" "}
+              <strong className="text-heading">
+                {fmtMoney(
+                  state.pay_breakdown_live.sleep_in_carer_pay_cents,
+                  state.booking.currency,
+                )}
+              </strong>
+            </p>
+            <p className="text-[13px] font-bold text-heading">
+              Total earnings:{" "}
+              <span className="text-primary">
+                {fmtMoney(
+                  state.pay_breakdown_live.earnings_total_cents,
+                  state.booking.currency,
+                )}
+              </span>
+            </p>
+            <p className="text-[11px] text-subheading">Paid via weekly payout cycle</p>
+          </div>
+        ) : (
+          <p className="mt-1 text-[12px] text-subheading">
+            Earnings:{" "}
+            <strong className="text-heading">
+              {fmtMoney(
+                state.pay_breakdown_live.earnings_total_cents,
+                state.booking.currency,
+              )}
+            </strong>{" "}
+            · paid 24 h after shift ends
+          </p>
+        )}
       </Card>
       {state.booking.handoff_notes && (
         <Card className="p-4">
@@ -781,9 +827,17 @@ function ClientHeader({ state }: { state: State }) {
       <div className="flex items-start gap-3">
         <Avatar name={state.booking.seeker_initial} size={44} />
         <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-bold text-heading truncate">
-            {state.booking.seeker_first_name}
-          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-[15px] font-bold text-heading truncate">
+              {state.booking.seeker_first_name}
+            </p>
+            {state.booking.is_org_booking && (
+              <Tag tone="primary">Org shift</Tag>
+            )}
+            {state.booking.shift_mode === "sleep_in" && (
+              <Tag tone="amber">Sleep-in</Tag>
+            )}
+          </div>
           <p className="text-[12px] text-subheading">
             {state.booking.service_type.replace(/_/g, " ")} · {state.booking.hours} hr
           </p>

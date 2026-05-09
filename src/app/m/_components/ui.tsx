@@ -131,10 +131,13 @@ export function PasswordInput(props: InputProps) {
 type TextAreaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
   label?: string;
   error?: string;
+  /** Optional hint text shown below the field (grey, smaller). */
+  hint?: string;
 };
 export function TextArea({
   label,
   error,
+  hint,
   className = "",
   id,
   ...rest
@@ -158,6 +161,7 @@ export function TextArea({
         } ${className}`}
         {...rest}
       />
+      {hint && !error && <p className="mt-1.5 text-[12px] text-subheading">{hint}</p>}
       {error && <p className="mt-1.5 text-[12px] text-[#C22]">{error}</p>}
     </div>
   );
