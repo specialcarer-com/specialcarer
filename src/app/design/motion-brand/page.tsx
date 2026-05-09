@@ -15,6 +15,7 @@
 import { useState } from "react";
 import {
   SpecialCarerLogoAnimation,
+  SpecialCarerLogoStatic,
   SpecialCarerMobileSplash,
   type LogoTheme,
 } from "@/components/motion";
@@ -194,6 +195,55 @@ export default function MotionBrandPreviewPage() {
                       ))}
                     </ul>
                   </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        {/* ─── Static lockup contexts ─────────────────────────────── */}
+        <section style={{ marginBottom: 56 }}>
+          <header style={{ marginBottom: 16 }}>
+            <h2 style={{ fontSize: 22, margin: 0 }}>Static lockup · no-animation final frame</h2>
+            <p style={{ color: "#64748B", margin: "4px 0 0", fontSize: 14 }}>
+              Use for email banners, PDF covers, App Store screenshots, header logos, and reduced-motion fallback.
+            </p>
+          </header>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+              gap: 20,
+            }}
+          >
+            {(
+              [
+                { theme: "dark" as const, label: "Dark", bg: "#0F1416" },
+                { theme: "light" as const, label: "Light", bg: "#ffffff" },
+                {
+                  theme: "transparent" as const,
+                  label: "Transparent (over brand teal)",
+                  bg: "linear-gradient(135deg, #039EA0 0%, #02787A 100%)",
+                },
+              ]
+            ).map((s) => (
+              <article key={s.theme} style={card}>
+                <div
+                  style={{
+                    background: s.bg,
+                    borderRadius: 12,
+                    overflow: "hidden",
+                    aspectRatio: "16 / 9",
+                  }}
+                >
+                  <SpecialCarerLogoStatic theme={s.theme} bare />
+                </div>
+                <div style={{ padding: "16px 4px 4px" }}>
+                  <h3 style={{ margin: 0, fontSize: 16 }}>{s.label}</h3>
+                  <p style={{ color: "#475569", fontSize: 13, margin: "8px 0", lineHeight: 1.5 }}>
+                    Identical composition to the animated final frame. No JS, no motion infra —
+                    safe for emails, PDFs, screenshots, headers, and reduced-motion contexts.
+                  </p>
                 </div>
               </article>
             ))}
@@ -400,13 +450,28 @@ const DECISION_ROWS: DecisionRow[] = [
   },
   {
     surface: "Email banners",
-    variant: "Static final-frame export of dark or light",
-    why: "Email clients don't support the animation. Use a PNG of the final composition matching the email theme.",
+    variant: "Static lockup (theme matches email)",
+    why: "Email clients don't render the animation. <SpecialCarerLogoStatic /> is the production primitive — same composition as the animated final frame, no JS.",
   },
   {
     surface: "App Store / TestFlight screenshots",
-    variant: "Mobile splash · static final frame",
-    why: "Use a single rendered frame at t=6s. Preserve composition without animation.",
+    variant: "Static lockup · dark",
+    why: "Single-frame render. Use the static component, not a screenshot of the animation, to keep pixel fidelity.",
+  },
+  {
+    surface: "Site header / nav logo",
+    variant: "Static lockup (theme matches header)",
+    why: "Don't loop the reveal in chrome. Use the static lockup so the brand stays calm.",
+  },
+  {
+    surface: "PDF / certificate covers",
+    variant: "Static lockup · dark or light",
+    why: "Print / PDF contexts can't use the animation. Static composition matches every other touchpoint.",
+  },
+  {
+    surface: "prefers-reduced-motion users (any surface)",
+    variant: "Static lockup (matching theme)",
+    why: "Mandatory accessibility behaviour. The animated component falls back to its static final frame; for surfaces where the animated isn't needed at all, render <SpecialCarerLogoStatic /> directly.",
   },
 ];
 

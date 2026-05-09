@@ -11,6 +11,8 @@ The two HTML files in this folder are the source of truth — they are pinned de
 - `SpecialCarer-logo-animation-transparent.html` — **transparent surface variant** (no stage; for compositing over photography, video, or coloured panels)
 - `SpecialCarer-splash-mobile.html` — **mobile app splash** (1080×1920 portrait, 10s @ `SLOW=1.7`, dark teal stage with ripple rings, sparkle burst, drift particles, impact flash, progress dots)
 - `SpecialCarer-splash-mobile-slow.html` — **mobile app splash, slowed pacing** (same composition, 14s @ `SLOW=2.5` — the cinematic / first-launch variant)
+- `SpecialCarer-logo-static.html` — **static lockup, dark surface** (no animation; canonical "final-frame" composition for email banners, certificates, App Store screenshots, and reduced-motion fallbacks)
+- `SpecialCarer-logo-static-light.html` — **static lockup, light surface** (white/cream stage; tightened all-teal drop-shadows, ink-tone tagline + bars)
 - `animations.jsx` — easing helpers (`Easing.easeOutBack`, `easeOutCubic`, `easeInOutCubic`, `easeOutQuad`) and utilities (`clamp`, `interpolate`, `animate`, `Stage`, `Sprite`, `useTime`)
 - `assets/specialcarer-icon.svg` — pure icon (two carers + heart + foundation line, all teal)
 - `assets/specialcarer-logo.svg` — icon + wordmark lockup
@@ -91,6 +93,43 @@ For compositing over arbitrary backgrounds (photography, video, coloured panels)
 - Tagline bars colour: `rgba(3,158,160,0.55)` (teal)
 
 Use this variant when the underlying surface already provides contrast and atmosphere; do **not** stack it over a busy backdrop without ensuring sufficient contrast for the wordmark and tagline.
+
+## Static lockup (no animation)
+
+`SpecialCarer-logo-static.html` is the canonical **non-animated** logo composition. It mirrors the final-frame state of the 6s landscape timeline (icon + wordmark with capital-C `tealHi` pop + tagline with side bars) but ships as plain HTML/CSS — no React, no rAF, no JS at all in the source spec.
+
+### When to use static instead of animated
+
+| Surface | Use static |
+|---|---|
+| Email banners (Outlook, Gmail, Apple Mail) | Yes — email clients don't render the animation |
+| PDF / certificate cover sheets | Yes — print contexts |
+| App Store / TestFlight screenshots | Yes — single-frame rendering |
+| Marketing posters / billboards | Yes |
+| `prefers-reduced-motion: reduce` fallback | Yes — mandatory |
+| Web homepage hero (after first reveal settles) | Optional — the animated component already settles to this state |
+| Header logo / nav bar | Yes — don't loop the reveal in the chrome |
+
+### Surface variants
+
+The static component (`<SpecialCarerLogoStatic theme="dark" | "light" | "transparent">`) reuses the same surface-token system as the animated component, so the lockup reads correctly on every backdrop.
+
+The pinned HTML in this folder covers the **dark** and **light** variants (canonical surfaces); the **transparent** variant is derived in code from the same token system (no separate static HTML — backdrop / glow / halo are never present in the static lockup anyway, so transparent only changes tagline and shadow tokens).
+
+#### Dark vs light — surface token deltas
+
+| Token | Dark | Light |
+|---|---|---|
+| Body / stage | ink radial `#11181a → #06090a` | white radial `#ffffff → #eef5f5` |
+| Icon drop-shadow | `0 14px 40px rgba(3,158,160,0.45)` + `0 0 18px rgba(63,198,200,0.55)` (teal + tealHi accent) | `0 10px 30px rgba(3,158,160,0.18)` + `0 0 12px rgba(3,158,160,0.25)` (all-teal, tighter offsets) |
+| Tagline text | `rgba(244,239,230,0.78)` (cream) | `rgba(15,20,22,0.65)` (ink) |
+| Tagline bars | `rgba(244,239,230,0.45)` (cream) | `rgba(15,20,22,0.25)` (ink) |
+
+### Implementation
+
+- Renders as a Server Component by default (no `"use client"`). Drop it into emails-as-React, MDX, or any RSC tree.
+- Pass `bare={true}` when embedding inside a card that already has its own background, so the lockup itself is transparent.
+- The static component is a separate React component (`<SpecialCarerLogoStatic>`) from the animated one (`<SpecialCarerLogoAnimation>`). Do not flag-fork them — keep `static` as a peer.
 
 ## Mobile app splash (portrait, with ripple ring)
 

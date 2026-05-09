@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SpecialCarer — Static Logo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet">
+<style>
+  :root { --teal: #039EA0; --tealHi: #3FC6C8; }
+  html, body { margin: 0; padding: 0; height: 100%; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(120% 90% at 50% 35%, #11181a 0%, #0a0e10 70%, #06090a 100%);
+    overflow: hidden;
+  }
+  .lockup {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .icon {
+    width: 480px; height: auto; display: block;
+    filter: drop-shadow(0 14px 40px rgba(3,158,160,0.45)) drop-shadow(0 0 18px rgba(63,198,200,0.55));
+  }
+  .wordmark {
+    font-weight: 700; font-style: italic; font-size: 110px;
+    letter-spacing: -0.025em; color: var(--teal);
+    line-height: 1;
+  }
+  .tagline-row {
+    display: flex; align-items: center; gap: 22px; margin-top: 16px;
+  }
+  .tagline-row .rule {
+    width: 80px; height: 1px; background: rgba(244,239,230,0.45);
+  }
+  .tagline {
+    font-weight: 500; font-size: 22px; letter-spacing: 0.32em;
+    text-transform: uppercase; color: rgba(244,239,230,0.78);
+  }
+</style>
+</head>
+<body>
+  <div class="lockup">
+    <img class="icon" src="assets/specialcarer-icon.svg" alt="SpecialCarer">
+    <div class="wordmark">SpecialCarer</div>
+    <div class="tagline-row">
+      <div class="rule"></div>
+      <div class="tagline">Care, 4 U</div>
+      <div class="rule"></div>
+    </div>
+  </div>
+</body>
+</html>

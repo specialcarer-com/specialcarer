@@ -16,3 +16,9 @@ export {
   SpecialCarerMobileSplash,
   type SpecialCarerMobileSplashProps,
 } from "./SpecialCarerMobileSplash";
+
+export {
+  SpecialCarerLogoStatic,
+  type LogoStaticTheme,
+  type SpecialCarerLogoStaticProps,
+} from "./SpecialCarerLogoStatic";
