@@ -177,6 +177,8 @@ export default function ChatTriageWidget({ surface = "mobile" }: Props) {
 
       <div
         ref={viewportRef}
+        aria-live="polite"
+        aria-label="Chat messages"
         className="flex-1 overflow-y-auto px-3 py-2 space-y-2"
       >
         {messages.length === 0 && !err && (
@@ -188,7 +190,7 @@ export default function ChatTriageWidget({ surface = "mobile" }: Props) {
           <MessageRow key={m.id} m={m} />
         ))}
         {err && (
-          <p aria-live="polite" className="text-xs text-rose-700 mt-1">
+          <p aria-live="assertive" className="text-xs text-rose-700 mt-1">
             {err}
           </p>
         )}
@@ -213,6 +215,7 @@ export default function ChatTriageWidget({ surface = "mobile" }: Props) {
           type="button"
           onClick={send}
           disabled={busy || !body.trim() || !sessionId}
+          aria-label={busy ? "Sending message" : "Send message"}
           className="px-3 py-1.5 rounded-lg bg-brand-700 text-white text-xs font-semibold disabled:opacity-60"
         >
           {busy ? "…" : "Send"}

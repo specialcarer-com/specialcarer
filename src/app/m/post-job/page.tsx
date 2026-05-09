@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
 import {
   TopBar,
   Button,
@@ -9,6 +9,7 @@ import {
   TextArea,
   IconCheck,
 } from "../_components/ui";
+import VoiceBookingFab from "../_components/VoiceBookingFab";
 import { SERVICE_DESCRIPTION, SERVICE_LABEL, type Caregiver } from "../_lib/mock";
 
 type ServiceKey = Caregiver["services"][number];
@@ -45,8 +46,42 @@ const STEPS = [
   "Review",
 ];
 
-export default function PostJobPage() {
+/** Read the ?prefill= query param and convert it to partial form state. */
+function parsePrefill(raw: string | null): Partial<FormState> {
+  if (!raw) return {};
+  try {
+    const params = new URLSearchParams(decodeURIComponent(raw));
+    const result: Partial<FormState> = {};
+
+    const carer = params.get("carer");
+    if (carer) {
+      // Pre-populate title with the carer name so the user sees it
+      result.title = `Care booking for ${carer}`;
+    }
+
+    const day = params.get("day");
+    const time = params.get("time");
+    if (day || time) {
+      const parts: string[] = [];
+      if (day) {
+        if (day === "+1") parts.push("Tomorrow");
+        else if (day === "today") parts.push("Today");
+        else parts.push(day.charAt(0).toUpperCase() + day.slice(1));
+      }
+      if (time) parts.push(`at ${time}`);
+      result.startDate = parts.join(" ");
+    }
+
+    return result;
+  } catch {
+    return {};
+  }
+}
+
+// Inner component that uses useSearchParams — must be inside Suspense boundary
+function PostJobInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState(0);
   const [done, setDone] = useState(false);
 
@@ -61,6 +96,19 @@ export default function PostJobPage() {
     rateUsd: "",
     requirements: [],
   });
+
+  // Apply prefill on first render if the param is present
+  useEffect(() => {
+    const prefillRaw = searchParams.get("prefill");
+    if (!prefillRaw) return;
+    const prefilled = parsePrefill(prefillRaw);
+    if (Object.keys(prefilled).length > 0) {
+      setForm((prev) => ({ ...prev, ...prefilled }));
+      // If a carer name was extracted, skip to details step
+      if (prefilled.title) setStep(1);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount
 
   function update<K extends keyof FormState>(k: K, v: FormState[K]) {
     setForm((p) => ({ ...p, [k]: v }));
@@ -336,6 +384,9 @@ export default function PostJobPage() {
           {step === STEPS.length - 1 ? "Publish job" : "Continue"}
         </Button>
       </div>
+
+      {/* Voice booking FAB — shown when voice is enabled */}
+      <VoiceBookingFab />
     </div>
   );
 }
@@ -346,5 +397,17 @@ function Row({ label, value }: { label: string; value: string }) {
       <p className="text-[12px] uppercase tracking-wide text-subheading">{label}</p>
       <p className="max-w-[60%] text-right text-[14px] font-semibold text-heading">{value}</p>
     </div>
+  );
+}
+
+export default function PostJobPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-bg-screen flex items-center justify-center">
+        <p className="text-subheading text-[14px]">Loading…</p>
+      </div>
+    }>
+      <PostJobInner />
+    </Suspense>
   );
 }

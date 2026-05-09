@@ -1,0 +1,65 @@
+import type { Messages } from "../types";
+
+const ar: Messages = {
+  common: {
+    ok: "موافق",
+    cancel: "إلغاء",
+    back: "رجوع",
+    next: "التالي",
+    skip: "تخطي",
+    continue: "متابعة",
+    save: "حفظ",
+    loading: "جارٍ التحميل…",
+    error: "حدث خطأ ما",
+    retry: "إعادة المحاولة",
+    search: "بحث",
+  },
+  nav: {
+    home: "الرئيسية",
+    jobs: "الوظائف",
+    bookings: "الحجوزات",
+    schedule: "الجدول",
+    profile: "الملف الشخصي",
+    signIn: "تسجيل الدخول",
+    signUp: "إنشاء حساب",
+    signOut: "تسجيل الخروج",
+  },
+  login: {
+    welcomeBack: "مرحباً بعودتك",
+    subtitle: "سجّل دخولك للمتابعة مع SpecialCarer",
+    emailLabel: "البريد الإلكتروني",
+    passwordLabel: "كلمة المرور",
+    forgot: "هل نسيت كلمة المرور؟",
+    signInCta: "تسجيل الدخول",
+    noAccount: "ليس لديك حساب؟",
+    signUpCta: "إنشاء حساب",
+  },
+  postJob: {
+    title: "مسمى الوظيفة",
+    vertical: "نوع الرعاية",
+    when: "تاريخ البدء",
+    duration: "المدة",
+    address: "الموقع",
+    notes: "ملاحظات إضافية",
+    postCta: "نشر الوظيفة",
+  },
+  accessibility: {
+    settings: "إمكانية الوصول",
+    language: "اللغة",
+    largeText: "نص كبير",
+    largeTextHelp: "يزيد حجم الخط الأساسي إلى 18 بكسل في جميع أنحاء التطبيق",
+    reducedMotion: "تقليل الحركة",
+    voiceBooking: "الحجز الصوتي",
+    voiceBookingHelp: "استخدم الميكروفون للبحث أو نشر وظيفة رعاية بدون استخدام يديك",
+  },
+  voice: {
+    listening: "جارٍ الاستماع…",
+    idle: "اضغط للتحدث",
+    prompt: "ماذا تريد أن تفعل؟",
+    didntCatch: "لم أفهم. يرجى المحاولة مجدداً.",
+    exampleHint: 'جرّب: "احجز سارة لغد الساعة 3 مساءً" أو "ابحث عن مُقدِّم رعاية في الرياض"',
+    micPermission: "يلزم الوصول إلى الميكروفون لتفعيل الحجز الصوتي.",
+  },
+};
+
+export default ar;

@@ -28,6 +28,7 @@ import {
   IconAward,
 } from "../_components/ui";
 import { createClient } from "@/lib/supabase/client";
+import { useAccessibility } from "@/lib/i18n/LocaleContext";
 
 type Row = {
   href: string;
@@ -125,6 +126,26 @@ const CAREGIVER_SECTION: Section = {
   ],
 };
 
+/** Accessibility icon — universal figure with accessibility ring. */
+function IconA11y() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <circle cx="12" cy="5" r="2" />
+      <path d="M5 9h14M8 9l1 10h6l1-10" />
+    </svg>
+  );
+}
+
 /** Inline shield glyph used for the Support & Safety menu row. */
 function IconShield() {
   return (
@@ -171,6 +192,7 @@ function sectionsForRole(role: Role | null): Section[] {
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { t } = useAccessibility();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -295,13 +317,28 @@ export default function ProfilePage() {
         </div>
       ))}
 
-      {/* Danger zone */}
+      {/* Accessibility + More */}
       <div className="px-5 pt-6">
         <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-subheading">
           More
         </p>
         <ul className="overflow-hidden rounded-card bg-white shadow-card">
+          {/* Accessibility settings row */}
           <li>
+            <Link
+              href="/m/profile/accessibility"
+              className="flex items-center gap-3 px-4 py-3.5 active:bg-muted/60"
+            >
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-primary-50 text-primary">
+                <IconA11y />
+              </span>
+              <span className="flex-1 text-[14.5px] font-medium text-heading">
+                {t("accessibility.settings")}
+              </span>
+              <IconChevronRight />
+            </Link>
+          </li>
+          <li className="border-t border-line">
             <button
               onClick={logout}
               className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-muted/60"

@@ -74,7 +74,7 @@ export default function CareSummaryCard({ bookingId }: Props) {
 
   if (!loaded) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4" aria-live="polite" aria-busy="true">
         <p className="text-xs text-slate-400">Loading summary…</p>
       </div>
     );
@@ -82,14 +82,17 @@ export default function CareSummaryCard({ bookingId }: Props) {
 
   if (!summary) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 flex flex-wrap items-center justify-between gap-3">
+      <div
+        className="rounded-2xl border border-slate-200 bg-white p-4 flex flex-wrap items-center justify-between gap-3"
+        aria-live="polite"
+      >
         <div>
           <p className="text-sm font-semibold text-slate-900">Daily summary</p>
           <p className="text-xs text-slate-500 mt-0.5">
             No summary yet for this booking.
           </p>
           {err && (
-            <p aria-live="polite" className="text-xs text-rose-700 mt-1">
+            <p aria-live="assertive" className="text-xs text-rose-700 mt-1">
               {err}
             </p>
           )}
@@ -97,6 +100,7 @@ export default function CareSummaryCard({ bookingId }: Props) {
         <button
           onClick={generate}
           disabled={generating}
+          aria-label={generating ? "Generating summary, please wait" : "Generate care summary now"}
           className="px-3 py-1.5 rounded-lg bg-brand text-white text-sm font-semibold disabled:opacity-60"
         >
           {generating ? "Generating…" : "Generate now"}
@@ -106,7 +110,7 @@ export default function CareSummaryCard({ bookingId }: Props) {
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5" aria-live="polite">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -149,6 +153,7 @@ export default function CareSummaryCard({ bookingId }: Props) {
         <button
           onClick={generate}
           disabled={generating}
+          aria-label={generating ? "Refreshing summary, please wait" : "Refresh care summary"}
           className="text-brand-700 font-semibold hover:underline disabled:opacity-60"
         >
           {generating ? "Refreshing…" : "Refresh"}

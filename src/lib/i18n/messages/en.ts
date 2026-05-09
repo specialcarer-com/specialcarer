@@ -1,0 +1,65 @@
+import type { Messages } from "../types";
+
+const en: Messages = {
+  common: {
+    ok: "OK",
+    cancel: "Cancel",
+    back: "Back",
+    next: "Next",
+    skip: "Skip",
+    continue: "Continue",
+    save: "Save",
+    loading: "Loading…",
+    error: "Something went wrong",
+    retry: "Try again",
+    search: "Search",
+  },
+  nav: {
+    home: "Home",
+    jobs: "Jobs",
+    bookings: "Bookings",
+    schedule: "Schedule",
+    profile: "Profile",
+    signIn: "Sign in",
+    signUp: "Sign up",
+    signOut: "Sign out",
+  },
+  login: {
+    welcomeBack: "Welcome back",
+    subtitle: "Sign in to continue with SpecialCarer",
+    emailLabel: "Email address",
+    passwordLabel: "Password",
+    forgot: "Forgot password?",
+    signInCta: "Sign in",
+    noAccount: "Don't have an account?",
+    signUpCta: "Sign up",
+  },
+  postJob: {
+    title: "Job title",
+    vertical: "Care type",
+    when: "Start date",
+    duration: "Duration",
+    address: "Location",
+    notes: "Additional notes",
+    postCta: "Post job",
+  },
+  accessibility: {
+    settings: "Accessibility",
+    language: "Language",
+    largeText: "Large text",
+    largeTextHelp: "Increases base font size to 18px across the app",
+    reducedMotion: "Reduced motion",
+    voiceBooking: "Voice booking",
+    voiceBookingHelp: "Use your microphone to search or post a care job hands-free",
+  },
+  voice: {
+    listening: "Listening…",
+    idle: "Tap to speak",
+    prompt: "What would you like to do?",
+    didntCatch: "Didn't catch that. Please try again.",
+    exampleHint: 'Try: "Book Sarah for tomorrow 3pm" or "Find a carer in Manchester"',
+    micPermission: "Microphone access is needed for voice booking.",
+  },
+};
+
+export default en;

@@ -1,0 +1,65 @@
+import type { Messages } from "../types";
+
+const zh: Messages = {
+  common: {
+    ok: "确定",
+    cancel: "取消",
+    back: "返回",
+    next: "下一步",
+    skip: "跳过",
+    continue: "继续",
+    save: "保存",
+    loading: "加载中…",
+    error: "出现了错误",
+    retry: "重试",
+    search: "搜索",
+  },
+  nav: {
+    home: "首页",
+    jobs: "职位",
+    bookings: "预约",
+    schedule: "日程",
+    profile: "我的",
+    signIn: "登录",
+    signUp: "注册",
+    signOut: "退出登录",
+  },
+  login: {
+    welcomeBack: "欢迎回来",
+    subtitle: "登录以继续使用 SpecialCarer",
+    emailLabel: "电子邮件地址",
+    passwordLabel: "密码",
+    forgot: "忘记密码？",
+    signInCta: "登录",
+    noAccount: "还没有账户？",
+    signUpCta: "注册",
+  },
+  postJob: {
+    title: "职位名称",
+    vertical: "护理类型",
+    when: "开始日期",
+    duration: "时长",
+    address: "地点",
+    notes: "补充说明",
+    postCta: "发布职位",
+  },
+  accessibility: {
+    settings: "无障碍",
+    language: "语言",
+    largeText: "大字体",
+    largeTextHelp: "将应用全局基础字号调整为 18px",
+    reducedMotion: "减少动画",
+    voiceBooking: "语音预约",
+    voiceBookingHelp: "使用麦克风免手动搜索或发布护理职位",
+  },
+  voice: {
+    listening: "正在聆听…",
+    idle: "点击说话",
+    prompt: "您想做什么？",
+    didntCatch: "没有听清，请再试一次。",
+    exampleHint: '试试说："帮我预约小红明天下午3点" 或 "在上海找一位护理人员"',
+    micPermission: "语音预约需要麦克风权限。",
+  },
+};
+
+export default zh;

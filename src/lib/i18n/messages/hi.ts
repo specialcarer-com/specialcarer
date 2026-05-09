@@ -1,0 +1,65 @@
+import type { Messages } from "../types";
+
+const hi: Messages = {
+  common: {
+    ok: "ठीक है",
+    cancel: "रद्द करें",
+    back: "वापस",
+    next: "अगला",
+    skip: "छोड़ें",
+    continue: "जारी रखें",
+    save: "सहेजें",
+    loading: "लोड हो रहा है…",
+    error: "कुछ गलत हो गया",
+    retry: "पुनः प्रयास करें",
+    search: "खोजें",
+  },
+  nav: {
+    home: "होम",
+    jobs: "नौकरियाँ",
+    bookings: "बुकिंग",
+    schedule: "शेड्यूल",
+    profile: "प्रोफ़ाइल",
+    signIn: "साइन इन करें",
+    signUp: "साइन अप करें",
+    signOut: "साइन आउट करें",
+  },
+  login: {
+    welcomeBack: "वापस स्वागत है",
+    subtitle: "SpecialCarer जारी रखने के लिए साइन इन करें",
+    emailLabel: "ईमेल पता",
+    passwordLabel: "पासवर्ड",
+    forgot: "पासवर्ड भूल गए?",
+    signInCta: "साइन इन करें",
+    noAccount: "खाता नहीं है?",
+    signUpCta: "साइन अप करें",
+  },
+  postJob: {
+    title: "नौकरी का शीर्षक",
+    vertical: "देखभाल का प्रकार",
+    when: "आरंभ तिथि",
+    duration: "अवधि",
+    address: "स्थान",
+    notes: "अतिरिक्त नोट्स",
+    postCta: "नौकरी पोस्ट करें",
+  },
+  accessibility: {
+    settings: "एक्सेसिबिलिटी",
+    language: "भाषा",
+    largeText: "बड़ा टेक्स्ट",
+    largeTextHelp: "ऐप में बेस फ़ॉन्ट साइज़ 18px कर देता है",
+    reducedMotion: "कम मूवमेंट",
+    voiceBooking: "वॉइस बुकिंग",
+    voiceBookingHelp: "हाथ-मुक्त तरीके से देखभाल कार्य खोजने या पोस्ट करने के लिए माइक्रोफ़ोन का उपयोग करें",
+  },
+  voice: {
+    listening: "सुन रहा है…",
+    idle: "बोलने के लिए टैप करें",
+    prompt: "आप क्या करना चाहते हैं?",
+    didntCatch: "समझ नहीं आया। कृपया फिर से प्रयास करें।",
+    exampleHint: 'कोशिश करें: "कल दोपहर 3 बजे सारा को बुक करें" या "मुंबई में देखभालकर्ता खोजें"',
+    micPermission: "वॉइस बुकिंग के लिए माइक्रोफ़ोन एक्सेस आवश्यक है।",
+  },
+};
+
+export default hi;

@@ -73,6 +73,7 @@ export default function RecurringSuggestionBanner() {
     <div
       role="region"
       aria-label="Recurring booking suggestion"
+      aria-live="polite"
       className="rounded-2xl border border-brand-100 bg-brand-50 p-4 sm:p-5 flex flex-wrap items-center gap-3"
     >
       <div className="min-w-0 flex-1">
@@ -94,6 +95,7 @@ export default function RecurringSuggestionBanner() {
         <button
           onClick={() => act("dismissed")}
           disabled={busy}
+          aria-label="Dismiss recurring booking suggestion"
           className="px-3 py-1.5 rounded-lg border border-slate-300 text-sm text-slate-700 disabled:opacity-60"
         >
           Dismiss
@@ -101,6 +103,7 @@ export default function RecurringSuggestionBanner() {
         <button
           onClick={() => act("accepted")}
           disabled={busy}
+          aria-label={busy ? "Saving recurring booking, please wait" : "Set up recurring booking"}
           className="px-3 py-1.5 rounded-lg bg-brand-700 text-white text-sm font-semibold disabled:opacity-60"
         >
           {busy ? "Saving…" : "Set up recurring"}

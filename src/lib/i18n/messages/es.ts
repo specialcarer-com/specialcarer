@@ -1,0 +1,65 @@
+import type { Messages } from "../types";
+
+const es: Messages = {
+  common: {
+    ok: "Aceptar",
+    cancel: "Cancelar",
+    back: "Atrás",
+    next: "Siguiente",
+    skip: "Omitir",
+    continue: "Continuar",
+    save: "Guardar",
+    loading: "Cargando…",
+    error: "Algo salió mal",
+    retry: "Intentar de nuevo",
+    search: "Buscar",
+  },
+  nav: {
+    home: "Inicio",
+    jobs: "Empleos",
+    bookings: "Reservas",
+    schedule: "Horario",
+    profile: "Perfil",
+    signIn: "Iniciar sesión",
+    signUp: "Registrarse",
+    signOut: "Cerrar sesión",
+  },
+  login: {
+    welcomeBack: "Bienvenido de nuevo",
+    subtitle: "Inicia sesión para continuar con SpecialCarer",
+    emailLabel: "Correo electrónico",
+    passwordLabel: "Contraseña",
+    forgot: "¿Olvidaste tu contraseña?",
+    signInCta: "Iniciar sesión",
+    noAccount: "¿No tienes una cuenta?",
+    signUpCta: "Registrarse",
+  },
+  postJob: {
+    title: "Título del trabajo",
+    vertical: "Tipo de cuidado",
+    when: "Fecha de inicio",
+    duration: "Duración",
+    address: "Ubicación",
+    notes: "Notas adicionales",
+    postCta: "Publicar trabajo",
+  },
+  accessibility: {
+    settings: "Accesibilidad",
+    language: "Idioma",
+    largeText: "Texto grande",
+    largeTextHelp: "Aumenta el tamaño base de la fuente a 18 px en toda la aplicación",
+    reducedMotion: "Movimiento reducido",
+    voiceBooking: "Reserva por voz",
+    voiceBookingHelp: "Usa el micrófono para buscar o publicar un trabajo de cuidado sin usar las manos",
+  },
+  voice: {
+    listening: "Escuchando…",
+    idle: "Toca para hablar",
+    prompt: "¿Qué deseas hacer?",
+    didntCatch: "No te entendí. Por favor, inténtalo de nuevo.",
+    exampleHint: 'Prueba: "Reservar a Sara para mañana a las 3 pm" o "Buscar un cuidador en Madrid"',
+    micPermission: "Se necesita acceso al micrófono para la reserva por voz.",
+  },
+};
+
+export default es;

@@ -64,3 +64,13 @@
 @media (prefers-reduced-motion: reduce) {
   .sc-pulse, .sc-skel { animation: none !important; }
 }
+
+/* ─── Large-text mode ───────────────────────────────────────────────────────
+   Activated by setting data-sc-text-scale="lg" on <html> via useEffect.
+   Bumps the root font-size so all em/rem units scale automatically.
+   No !important — rule specificity is sufficient.
+   ─────────────────────────────────────────────────────────────────────────── */
+[data-sc-text-scale="lg"] {
+  font-size: 18px;
+  line-height: 1.65;
+}

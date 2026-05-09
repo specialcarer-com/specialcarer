@@ -1,0 +1,65 @@
+import type { Messages } from "../types";
+
+const fr: Messages = {
+  common: {
+    ok: "OK",
+    cancel: "Annuler",
+    back: "Retour",
+    next: "Suivant",
+    skip: "Passer",
+    continue: "Continuer",
+    save: "Enregistrer",
+    loading: "Chargement…",
+    error: "Une erreur s'est produite",
+    retry: "Réessayer",
+    search: "Rechercher",
+  },
+  nav: {
+    home: "Accueil",
+    jobs: "Offres",
+    bookings: "Réservations",
+    schedule: "Planning",
+    profile: "Profil",
+    signIn: "Se connecter",
+    signUp: "S'inscrire",
+    signOut: "Se déconnecter",
+  },
+  login: {
+    welcomeBack: "Bon retour",
+    subtitle: "Connectez-vous pour continuer avec SpecialCarer",
+    emailLabel: "Adresse e-mail",
+    passwordLabel: "Mot de passe",
+    forgot: "Mot de passe oublié ?",
+    signInCta: "Se connecter",
+    noAccount: "Vous n'avez pas de compte ?",
+    signUpCta: "S'inscrire",
+  },
+  postJob: {
+    title: "Intitulé du poste",
+    vertical: "Type de soin",
+    when: "Date de début",
+    duration: "Durée",
+    address: "Lieu",
+    notes: "Notes supplémentaires",
+    postCta: "Publier l'offre",
+  },
+  accessibility: {
+    settings: "Accessibilité",
+    language: "Langue",
+    largeText: "Texte agrandi",
+    largeTextHelp: "Augmente la taille de police de base à 18 px dans toute l'application",
+    reducedMotion: "Animations réduites",
+    voiceBooking: "Réservation vocale",
+    voiceBookingHelp: "Utilisez votre microphone pour rechercher ou publier une offre de soin en mode mains libres",
+  },
+  voice: {
+    listening: "À l'écoute…",
+    idle: "Appuyer pour parler",
+    prompt: "Que souhaitez-vous faire ?",
+    didntCatch: "Je n'ai pas compris. Veuillez réessayer.",
+    exampleHint: 'Essayez : « Réserver Sarah pour demain à 15h » ou « Trouver un soignant à Paris »',
+    micPermission: "L'accès au microphone est nécessaire pour la réservation vocale.",
+  },
+};
+
+export default fr;
