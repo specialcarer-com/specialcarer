@@ -135,7 +135,10 @@ export default function SplashIntro() {
       data-fading={fading ? "1" : "0"}
     >
       <div className="sc-splash-canvas">
-        <SpecialCarerMobileSplash />
+        {/* forceAnimate: play the canonical reveal even when the user has
+            iOS-level Reduce Motion enabled. The animation is bounded
+            (~7s), gentle, and tap-to-skip after a short grace. */}
+        <SpecialCarerMobileSplash forceAnimate />
       </div>
 
       <style jsx>{`

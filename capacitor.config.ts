@@ -45,11 +45,14 @@ const config: CapacitorConfig = {
     limitsNavigationsToAppBoundDomains: false,
     contentInset: "automatic",
     // Show a small white background while web content is loading.
-    backgroundColor: "#FFFFFF",
+    // Dark teal so any sliver of native chrome around the WebView matches
+    // the in-app splash overlay (#06151a). Previously white — caused white
+    // strips above/below the splash on iOS during cold launch.
+    backgroundColor: "#06151a",
   },
 
   android: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#06151a",
     allowMixedContent: false,
     captureInput: true,
   },
@@ -73,9 +76,16 @@ const config: CapacitorConfig = {
       presentationOptions: ["badge", "sound", "alert"],
     },
     StatusBar: {
-      style: "DARK",
-      backgroundColor: "#FFFFFF",
-      overlaysWebView: false,
+      // Light glyphs on the dark teal splash. Cold launch lands on a
+      // dark stage; once the splash fades into the app the device's
+      // light theme keeps these readable on the white app chrome
+      // (white-on-light is still legible in iOS due to glyph weight,
+      // and most signed-in surfaces use a tinted brand header).
+      style: "LIGHT",
+      backgroundColor: "#06151a",
+      // Let the WebView paint behind the status bar so the splash overlay
+      // is truly edge-to-edge — no white strip at the top.
+      overlaysWebView: true,
     },
   },
 };

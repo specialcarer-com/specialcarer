@@ -35,6 +35,12 @@ export interface SpecialCarerMobileSplashProps {
   paused?: boolean;
   /** Loop continuously (debug / preview). Defaults to false. */
   loop?: boolean;
+  /**
+   * Force the animation to play even when the user prefers reduced motion.
+   * Used for the boot splash, where the brand intro is the canonical
+   * launch experience and must play for every user. Defaults to false.
+   */
+  forceAnimate?: boolean;
   /** Optional className applied to the outer wrapper. */
   className?: string;
   /** Optional inline style merged onto the outer wrapper. */
@@ -46,6 +52,7 @@ export function SpecialCarerMobileSplash({
   onComplete,
   paused = false,
   loop = false,
+  forceAnimate = false,
   className,
   style,
 }: SpecialCarerMobileSplashProps) {
@@ -56,10 +63,15 @@ export function SpecialCarerMobileSplash({
     durationSec: totalSec,
     loop,
     paused,
+    forceAnimate,
   });
 
   // Apply pacing factor — same constant divides every sub-effect.
-  const t = (reducedMotion ? totalSec : rawT) / SLOW;
+  // When reduced-motion is on AND we are NOT force-animating, snap to
+  // the final frame so the static composition is visible. Otherwise
+  // run the rAF-driven scene normally.
+  const useStaticEnd = reducedMotion && !forceAnimate;
+  const t = (useStaticEnd ? totalSec : rawT) / SLOW;
 
   if (done && onComplete) onComplete();
 

@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "../globals.css";
 import "./mobile.css";
 import SplashIntro from "./_components/SplashIntro";
+import StatusBarController from "@/components/native/StatusBarController";
 import { LocaleProvider } from "@/lib/i18n/LocaleContext";
 
 /**
@@ -11,8 +12,9 @@ import { LocaleProvider } from "@/lib/i18n/LocaleContext";
  * Notes
  *  - No marketing site header / footer / cookie banner.
  *  - Plus Jakarta Sans is the closest free match to the Figma "Nuckle" font.
- *  - Status bar is opaque white (Capacitor StatusBar.overlaysWebView=false)
- *    so we don't need extra top safe-area padding here for iOS.
+ *  - Status bar overlays the WebView (Capacitor StatusBar.overlaysWebView=true)
+ *    so the splash overlay reaches edge-to-edge. StatusBarController flips
+ *    glyph colour from LIGHT (splash) → DARK (app chrome) at runtime.
  *  - Bottom safe-area padding is applied per-screen via .sc-safe-bottom.
  *  - LocaleProvider wraps children to provide i18n + accessibility context.
  */
@@ -53,6 +55,8 @@ export default function MobileLayout({
         </a>
         {/* Animated wordmark intro — plays once per session, fades out. */}
         <SplashIntro />
+        {/* Runtime status-bar glyph controller (no-op on web). */}
+        <StatusBarController />
         <LocaleProvider>
           <main id="sc-main" tabIndex={-1}>
             {children}

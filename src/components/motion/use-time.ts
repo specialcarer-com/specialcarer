@@ -6,7 +6,9 @@ import { useEffect, useRef, useState } from "react";
  * Drives an rAF loop and returns elapsed seconds since mount.
  *
  * - Returns 0 forever if the user prefers reduced motion (caller is
- *   expected to render the static composition in that case).
+ *   expected to render the static composition in that case), UNLESS
+ *   the caller passes `forceAnimate: true` to override that gate.
+ *   Used by the splash, where the brand intro must always play.
  * - Stops the loop after `durationSec` if `loop=false` and freezes
  *   on the final frame value.
  */
@@ -14,8 +16,9 @@ export function useTime(opts: {
   durationSec: number;
   loop?: boolean;
   paused?: boolean;
+  forceAnimate?: boolean;
 } = { durationSec: 6 }): { t: number; reducedMotion: boolean; done: boolean } {
-  const { durationSec, loop = false, paused = false } = opts;
+  const { durationSec, loop = false, paused = false, forceAnimate = false } = opts;
   const [t, setT] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [done, setDone] = useState(false);
@@ -32,7 +35,7 @@ export function useTime(opts: {
   }, []);
 
   useEffect(() => {
-    if (reducedMotion || paused) return;
+    if ((reducedMotion && !forceAnimate) || paused) return;
 
     const tick = (now: number) => {
       if (startRef.current == null) startRef.current = now;
@@ -53,7 +56,7 @@ export function useTime(opts: {
       rafRef.current = null;
       startRef.current = null;
     };
-  }, [durationSec, loop, paused, reducedMotion]);
+  }, [durationSec, loop, paused, reducedMotion, forceAnimate]);
 
   return { t, reducedMotion, done };
 }
