@@ -39,7 +39,9 @@
  *     We hold to ~7000ms so users see the full "SpecialCarer" wordmark
  *     reveal (the whole point of the splash) before fading. Tap-anywhere
  *     skips after a short grace window.
- *   - prefers-reduced-motion → instant fade-in / fade-out, no animation.
+ *   - prefers-reduced-motion → still plays the canonical animated splash
+ *     (per product owner direction). The animation is gentle (no flashing,
+ *     no rapid scaling) and tap-to-skip is available after a short grace.
  *   - First paint shows a solid teal background so there's no white flash
  *     while the SplashIntro client component hydrates.
  */
@@ -75,7 +77,6 @@ export default function SplashIntro() {
   const [mounted, setMounted] = useState(false); // gate hydration paint
   const [visible, setVisible] = useState(true);
   const [fading, setFading] = useState(false);
-  const [reduced, setReduced] = useState(false);
   const dismissed = useRef(false);
   const startedAt = useRef<number>(0);
 
@@ -96,19 +97,14 @@ export default function SplashIntro() {
       // Private mode / blocked storage — just play it once.
     }
 
-    // prefers-reduced-motion → gentle staged fade-in (no ripples,
-    // sparkles, or scaling — those can trigger vestibular discomfort)
-    // held long enough to comfortably read the wordmark + tagline.
-    let visibleMs = VISIBLE_MS;
-    try {
-      const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
-      if (mql.matches) {
-        setReduced(true);
-        visibleMs = 4500; // hold long enough to read everything
-      }
-    } catch {
-      /* noop */
-    }
+    // Always play the canonical animated splash (ripple/sparkle/wordmark
+    // reveal). The brand intro is the product owner's designed launch
+    // experience and they have explicitly requested it for all users
+    // regardless of OS-level Reduce Motion. The animation itself is
+    // gentle (slow drifts, soft pulses, no flashing) and bounded to ~7s
+    // with a tap-to-skip — so it stays well within WCAG 2.3.3 (Animation
+    // from Interactions, AAA) for users who want to dismiss it.
+    const visibleMs = VISIBLE_MS;
 
     const fadeT = window.setTimeout(() => setFading(true), visibleMs);
     const hideT = window.setTimeout(() => setVisible(false), visibleMs + FADE_MS);
@@ -138,35 +134,9 @@ export default function SplashIntro() {
       className="sc-splash-overlay"
       data-fading={fading ? "1" : "0"}
     >
-      {reduced ? (
-        // Reduced-motion fallback — staged fade-in with a gentle teal
-        // halo pulse around the icon. No translation, no scale changes,
-        // no flying particles — just opacity + a soft breathing glow.
-        // Total reveal sequence:
-        //   0.0s  icon halo + icon fade in
-        //   0.6s  wordmark fades in
-        //   1.4s  tagline fades in
-        //   held until visibleMs, then overlay fades.
-        <div className="sc-splash-reduced">
-          <div className="sc-splash-reduced-icon-wrap">
-            <div className="sc-splash-reduced-halo" aria-hidden="true" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/brand/specialcarer-icon.svg"
-              alt=""
-              className="sc-splash-reduced-icon"
-              decoding="async"
-              draggable={false}
-            />
-          </div>
-          <div className="sc-splash-reduced-wordmark">SpecialCarer</div>
-          <div className="sc-splash-reduced-tagline">CARE, 4 U</div>
-        </div>
-      ) : (
-        <div className="sc-splash-canvas">
-          <SpecialCarerMobileSplash />
-        </div>
-      )}
+      <div className="sc-splash-canvas">
+        <SpecialCarerMobileSplash />
+      </div>
 
       <style jsx>{`
         .sc-splash-overlay {
@@ -195,91 +165,6 @@ export default function SplashIntro() {
           inset: 0;
           width: 100%;
           height: 100%;
-        }
-
-        .sc-splash-reduced {
-          position: absolute;
-          inset: 0;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 18px;
-          padding: 0 32px;
-          font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-        }
-
-        /* Icon + halo wrap — keeps the halo perfectly behind the mark. */
-        .sc-splash-reduced-icon-wrap {
-          position: relative;
-          width: min(60vw, 280px);
-          aspect-ratio: 3 / 2;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .sc-splash-reduced-halo {
-          position: absolute;
-          left: 50%;
-          top: 50%;
-          width: 110%;
-          height: 165%;
-          transform: translate(-50%, -50%);
-          background: radial-gradient(
-            circle,
-            rgba(63, 198, 200, 0.55) 0%,
-            rgba(63, 198, 200, 0) 65%
-          );
-          filter: blur(20px);
-          opacity: 0;
-          animation:
-            sc-fade-in 600ms ease-out 100ms forwards,
-            sc-halo-breathe 3.2s ease-in-out 700ms infinite;
-        }
-        .sc-splash-reduced-icon {
-          position: relative;
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
-          filter: drop-shadow(0 14px 40px rgba(3, 158, 160, 0.45));
-          opacity: 0;
-          animation: sc-fade-in 700ms ease-out forwards;
-        }
-        .sc-splash-reduced-wordmark {
-          font-weight: 700;
-          font-style: italic;
-          font-size: clamp(40px, 13vw, 64px);
-          letter-spacing: -0.025em;
-          color: #039ea0;
-          line-height: 1;
-          margin-top: 4px;
-          opacity: 0;
-          animation: sc-fade-in 600ms ease-out 600ms forwards;
-        }
-        .sc-splash-reduced-tagline {
-          margin-top: 10px;
-          font-weight: 500;
-          font-size: 14px;
-          letter-spacing: 0.32em;
-          text-transform: uppercase;
-          color: rgba(255, 255, 255, 0.85);
-          opacity: 0;
-          animation: sc-fade-in 500ms ease-out 1400ms forwards;
-        }
-        @keyframes sc-fade-in {
-          to {
-            opacity: 1;
-          }
-        }
-        /* Gentle halo breathing — opacity only, no scale/translate, so
-           it stays well within reduced-motion safety. */
-        @keyframes sc-halo-breathe {
-          0%, 100% {
-            opacity: 0.55;
-          }
-          50% {
-            opacity: 0.85;
-          }
         }
       `}</style>
     </div>
