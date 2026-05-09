@@ -133,6 +133,23 @@ export default function SignUpPage() {
               Please choose carefully — your account type is locked once you
               sign up. If you pick the wrong one, contact support to fix it.
             </p>
+            <div className="mt-3 rounded-card border border-line bg-white p-3 flex items-start gap-3">
+              <div className="flex-1">
+                <p className="text-[13px] font-semibold text-heading">
+                  Booking on behalf of an organisation?
+                </p>
+                <p className="text-[12px] text-subheading mt-0.5 leading-snug">
+                  Councils, NHS trusts, fostering agencies, residential homes,
+                  charities and more.
+                </p>
+              </div>
+              <Link
+                href="/m/org/register/step-1"
+                className="shrink-0 text-[13px] font-bold text-secondary self-center"
+              >
+                Get started →
+              </Link>
+            </div>
           </fieldset>
           <Input
             label="Email"

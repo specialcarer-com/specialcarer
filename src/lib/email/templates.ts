@@ -427,3 +427,183 @@ export function renderReferenceInviteEmail(args: ReferenceInviteEmail): {
 
   return { subject, html, text };
 }
+
+// ─── Organisation lifecycle emails ─────────────────────────────
+//
+// Sent during Phase A of the organisation user type:
+//   • renderOrgSubmittedEmail — booker confirmation after step 8
+//   • renderOrgApprovedEmail — sent on /admin/orgs approve
+//   • renderOrgRejectedEmail — sent on /admin/orgs reject
+//   • renderOrgRequestInfoEmail — sent on "Request more info"
+//   • renderOrgAdminNotifyEmail — heads-up to ops for new submissions
+
+function escOrgHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function orgShell(title: string, bodyHtml: string): string {
+  return `<!DOCTYPE html>
+<html><body style="font-family:'Plus Jakarta Sans',Arial,sans-serif;background:#F7FAFA;margin:0;padding:24px;color:#2F2E31">
+<div style="max-width:560px;margin:0 auto;background:#FFFFFF;border-radius:16px;padding:32px">
+  <h2 style="color:#0E7C7B;margin:0 0 8px">${escOrgHtml(title)}</h2>
+  ${bodyHtml}
+  <p style="font-size:11px;color:#575757;margin-top:24px">
+    SpecialCarer · A product of All Care 4 U Group Ltd<br>
+    <a href="https://specialcarer.com" style="color:#0E7C7B">specialcarer.com</a>
+  </p>
+</div></body></html>`;
+}
+
+export function renderOrgSubmittedEmail(args: {
+  bookerName: string;
+  legalName: string;
+}): { subject: string; html: string; text: string } {
+  const subject = `We've received your SpecialCarer organisation application`;
+  const html = orgShell(
+    "Application received",
+    `<p>Hi ${escOrgHtml(args.bookerName)},</p>
+    <p>Thanks — we've received the verification details for <strong>${escOrgHtml(args.legalName)}</strong>.</p>
+    <p>We aim to verify within <strong>2 business days</strong>. In the meantime you can browse carers and save shortlists from your dashboard; bookings unlock the moment we confirm your documents.</p>
+    <p style="margin:24px 0">
+      <a href="https://specialcarer.com/m/org" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
+        Open your dashboard
+      </a>
+    </p>`,
+  );
+  const text = [
+    `Hi ${args.bookerName},`,
+    "",
+    `Thanks — we've received the verification details for ${args.legalName}.`,
+    "",
+    "We aim to verify within 2 business days.",
+    "",
+    "Dashboard: https://specialcarer.com/m/org",
+    "",
+    "— SpecialCarer",
+  ].join("\n");
+  return { subject, html, text };
+}
+
+export function renderOrgApprovedEmail(args: {
+  bookerName: string;
+  legalName: string;
+}): { subject: string; html: string; text: string } {
+  const subject = `Your SpecialCarer organisation account is verified`;
+  const html = orgShell(
+    "You're verified — start booking",
+    `<p>Hi ${escOrgHtml(args.bookerName)},</p>
+    <p>Welcome aboard. <strong>${escOrgHtml(args.legalName)}</strong> is now verified on SpecialCarer.</p>
+    <p>You can book any of our DBS / Checkr-cleared carers directly from your dashboard. Pricing stays at the same UK / US standard rates — no setup fees, no contracts.</p>
+    <p style="margin:24px 0">
+      <a href="https://specialcarer.com/m/org/carers" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
+        Browse carers
+      </a>
+    </p>`,
+  );
+  const text = [
+    `Hi ${args.bookerName},`,
+    "",
+    `${args.legalName} is now verified on SpecialCarer. You can book carers directly from your dashboard.`,
+    "",
+    "Browse carers: https://specialcarer.com/m/org/carers",
+    "",
+    "— SpecialCarer",
+  ].join("\n");
+  return { subject, html, text };
+}
+
+export function renderOrgRejectedEmail(args: {
+  bookerName: string;
+  legalName: string;
+  reason: string;
+}): { subject: string; html: string; text: string } {
+  const subject = `We need a few changes to your SpecialCarer organisation account`;
+  const html = orgShell(
+    "We can't approve yet",
+    `<p>Hi ${escOrgHtml(args.bookerName)},</p>
+    <p>Thanks for submitting <strong>${escOrgHtml(args.legalName)}</strong>. We can't approve it just yet — here's what we need:</p>
+    <blockquote style="margin:16px 0;padding:12px 16px;background:#F7FAFA;border-left:4px solid #0E7C7B;color:#2F2E31;white-space:pre-wrap">${escOrgHtml(args.reason)}</blockquote>
+    <p>Once you've updated your details and re-uploaded any missing documents, we'll review again within 2 business days.</p>
+    <p style="margin:24px 0">
+      <a href="https://specialcarer.com/m/org/documents" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
+        Re-upload documents
+      </a>
+    </p>`,
+  );
+  const text = [
+    `Hi ${args.bookerName},`,
+    "",
+    `We can't approve ${args.legalName} just yet — here's what we need:`,
+    "",
+    args.reason,
+    "",
+    "Re-upload: https://specialcarer.com/m/org/documents",
+    "",
+    "— SpecialCarer",
+  ].join("\n");
+  return { subject, html, text };
+}
+
+export function renderOrgRequestInfoEmail(args: {
+  bookerName: string;
+  legalName: string;
+  message: string;
+}): { subject: string; html: string; text: string } {
+  const subject = `We need additional information for your SpecialCarer organisation account`;
+  const html = orgShell(
+    "Quick follow-up",
+    `<p>Hi ${escOrgHtml(args.bookerName)},</p>
+    <p>To finish verifying <strong>${escOrgHtml(args.legalName)}</strong> we'd appreciate a bit more info:</p>
+    <blockquote style="margin:16px 0;padding:12px 16px;background:#F7FAFA;border-left:4px solid #0E7C7B;color:#2F2E31;white-space:pre-wrap">${escOrgHtml(args.message)}</blockquote>
+    <p>Reply directly to this email or upload anything we need from your dashboard.</p>`,
+  );
+  const text = [
+    `Hi ${args.bookerName},`,
+    "",
+    `To finish verifying ${args.legalName} we need:`,
+    "",
+    args.message,
+    "",
+    "Dashboard: https://specialcarer.com/m/org/documents",
+    "",
+    "— SpecialCarer",
+  ].join("\n");
+  return { subject, html, text };
+}
+
+export function renderOrgAdminNotifyEmail(args: {
+  legalName: string;
+  country: string;
+  orgType: string;
+  bookerEmail: string;
+  orgId: string;
+}): { subject: string; html: string; text: string } {
+  const subject = `🆕 Org submission: ${args.legalName} (${args.country})`;
+  const adminUrl = `https://specialcarer.com/admin/orgs/${args.orgId}`;
+  const html = orgShell(
+    "New organisation submission",
+    `<ul style="line-height:1.6;color:#2F2E31">
+      <li><strong>${escOrgHtml(args.legalName)}</strong></li>
+      <li>${escOrgHtml(args.country)} · ${escOrgHtml(args.orgType)}</li>
+      <li>Booker: ${escOrgHtml(args.bookerEmail)}</li>
+    </ul>
+    <p style="margin:16px 0">
+      <a href="${adminUrl}" style="display:inline-block;background:#171E54;color:#FFFFFF;text-decoration:none;padding:10px 16px;border-radius:8px;font-weight:700">
+        Review in admin
+      </a>
+    </p>`,
+  );
+  const text = [
+    `${args.legalName} (${args.country})`,
+    `Type: ${args.orgType}`,
+    `Booker: ${args.bookerEmail}`,
+    "",
+    `Review: ${adminUrl}`,
+  ].join("\n");
+  return { subject, html, text };
+}
