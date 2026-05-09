@@ -96,6 +96,18 @@ export async function POST(req: Request) {
             raw: pi as unknown as Record<string, unknown>,
           })
           .eq("stripe_payment_intent_id", pi.id);
+        // Tips share the PaymentIntent flow but live in their own
+        // table and have application_fee_amount=0. Look up by intent
+        // id and mark succeeded if this PI corresponds to a tip.
+        if (pi.metadata?.kind === "tip") {
+          await admin
+            .from("tips")
+            .update({
+              status: "succeeded",
+              succeeded_at: new Date().toISOString(),
+            })
+            .eq("stripe_payment_intent_id", pi.id);
+        }
         break;
       }
       case "payment_intent.payment_failed": {
@@ -107,6 +119,12 @@ export async function POST(req: Request) {
             raw: pi as unknown as Record<string, unknown>,
           })
           .eq("stripe_payment_intent_id", pi.id);
+        if (pi.metadata?.kind === "tip") {
+          await admin
+            .from("tips")
+            .update({ status: "failed" })
+            .eq("stripe_payment_intent_id", pi.id);
+        }
         break;
       }
       case "charge.refunded": {

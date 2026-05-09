@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import {
   fetchStatsByIds,
   type CaregiverStatsDisplay,
 } from "@/lib/care/caregiver-stats";
+import { getBlockedIdsForSeeker } from "@/lib/reviews/blocks";
 import {
   isValidPostcode,
   normalisePostcode,
@@ -169,7 +171,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: rpcErr.message }, { status: 500 });
   }
 
-  const rpcRows =
+  const rpcRowsRaw =
     (rpcData as Array<{
       user_id: string;
       display_name: string | null;
@@ -181,6 +183,24 @@ export async function POST(req: Request) {
       distance_m: number;
       min_notice_minutes: number;
     }> | null) ?? [];
+
+  // Hide caregivers the seeker has blocked. Anonymous browse callers
+  // skip this lookup entirely.
+  let blocked = new Set<string>();
+  try {
+    const sb = await createClient();
+    const {
+      data: { user },
+    } = await sb.auth.getUser();
+    if (user) {
+      blocked = await getBlockedIdsForSeeker(admin, user.id);
+    }
+  } catch {
+    /* unauthenticated — skip */
+  }
+  const rpcRows = blocked.size > 0
+    ? rpcRowsRaw.filter((r) => !blocked.has(r.user_id))
+    : rpcRowsRaw;
 
   if (rpcRows.length === 0) {
     return NextResponse.json({

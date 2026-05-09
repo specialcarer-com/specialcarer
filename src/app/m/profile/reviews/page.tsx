@@ -1,12 +1,18 @@
 "use client";
 
+import Link from "next/link";
 import { TopBar, Avatar, Stars } from "../../_components/ui";
 import { CAREGIVERS } from "../../_lib/mock";
 
+type MockReview = (typeof CAREGIVERS)[number]["reviews"][number] & {
+  caregiverId?: string;
+};
+
 export default function MyReviewsPage() {
   const carer = CAREGIVERS[0];
-  const reviews = carer.reviews;
-  const avg = reviews.reduce((s, r) => s + r.rating, 0) / Math.max(1, reviews.length);
+  const reviews = carer.reviews as MockReview[];
+  const avg =
+    reviews.reduce((s, r) => s + r.rating, 0) / Math.max(1, reviews.length);
 
   return (
     <div className="min-h-screen bg-bg-screen pb-8">
@@ -26,7 +32,16 @@ export default function MyReviewsPage() {
         </div>
       </div>
 
-      <ul className="mt-5 flex flex-col gap-3 px-5">
+      <div className="mt-3 px-5">
+        <Link
+          href="/m/profile/blocks"
+          className="inline-flex items-center gap-1 text-[13px] font-semibold text-primary"
+        >
+          Manage blocked carers →
+        </Link>
+      </div>
+
+      <ul className="mt-4 flex flex-col gap-3 px-5">
         {reviews.map((r) => (
           <li key={r.id} className="rounded-card bg-white p-4 shadow-card">
             <div className="flex items-start gap-3">
@@ -36,7 +51,9 @@ export default function MyReviewsPage() {
                   <p className="truncate text-[14px] font-semibold text-heading">
                     {r.author}
                   </p>
-                  <span className="shrink-0 text-[11px] text-subheading">{r.when}</span>
+                  <span className="shrink-0 text-[11px] text-subheading">
+                    {r.when}
+                  </span>
                 </div>
                 <div className="mt-0.5 flex items-center gap-2">
                   <Stars value={r.rating} size={12} />
@@ -45,6 +62,21 @@ export default function MyReviewsPage() {
                 <p className="mt-2 text-[13.5px] leading-snug text-heading">
                   {r.text}
                 </p>
+                {r.caregiverId && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await fetch("/api/blocked-caregivers", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ caregiverId: r.caregiverId }),
+                      });
+                    }}
+                    className="mt-2 text-[12px] font-semibold text-[#C22] hover:underline"
+                  >
+                    Block this carer
+                  </button>
+                )}
               </div>
             </div>
           </li>

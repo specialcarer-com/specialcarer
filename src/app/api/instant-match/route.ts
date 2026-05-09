@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import {
   isValidPostcode,
   normalisePostcode,
@@ -7,6 +8,7 @@ import {
   type Country,
 } from "@/lib/care/postcode";
 import { geocodePostcode } from "@/lib/mapbox/server";
+import { getBlockedIdsForSeeker } from "@/lib/reviews/blocks";
 
 export const dynamic = "force-dynamic";
 
@@ -145,10 +147,29 @@ export async function POST(req: Request) {
     min_notice_minutes: number;
   }> | null) ?? [];
 
+  // Filter out caregivers the seeker has blocked. Anonymous callers
+  // (e.g. logged-out preview) get the full list — there's nothing to
+  // hide because they have no block list yet.
+  let blocked = new Set<string>();
+  try {
+    const sb = await createClient();
+    const {
+      data: { user },
+    } = await sb.auth.getUser();
+    if (user) {
+      blocked = await getBlockedIdsForSeeker(admin, user.id);
+    }
+  } catch {
+    /* unauthenticated — skip */
+  }
+  const filteredRows = blocked.size > 0
+    ? rows.filter((r) => !blocked.has(r.user_id))
+    : rows;
+
   // Rough ETA: assume 30 km/h average urban driving + a 5-minute buffer.
   // We're not pretending this is a real-time route — it's a friendly hint
   // for the booking card. Carers always confirm exact ETA in chat.
-  const matches: InstantMatchCard[] = rows.map((r) => {
+  const matches: InstantMatchCard[] = filteredRows.map((r) => {
     const distance_km = r.distance_m / 1000;
     return {
       ...r,

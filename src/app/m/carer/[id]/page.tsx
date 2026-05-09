@@ -21,6 +21,7 @@ import {
   Tabs,
   TopBar,
 } from "../../_components/ui";
+import SaveBlockMenu from "../../_components/SaveBlockMenu";
 import {
   CARE_FORMAT_LABEL,
   SERVICE_LABEL,
@@ -93,7 +94,12 @@ export default function CarerDetailPage() {
       <TopBar
         back="/m/search"
         title="Professionals"
-        right={<NotificationBell />}
+        right={
+          <div className="flex items-center gap-2">
+            {isUuidId && <SaveBlockMenu caregiverId={carerId} />}
+            <NotificationBell />
+          </div>
+        }
       />
 
       {/* Header card */}

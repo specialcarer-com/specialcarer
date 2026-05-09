@@ -60,16 +60,38 @@ export default async function BookingDetailPage({
     .eq("id", otherId)
     .maybeSingle();
 
-  // Existing review (if seeker)
-  let existingReview: { rating: number; body: string | null } | null = null;
+  // Existing review (if seeker) — pull v2 fields for the new panel.
+  let existingReview:
+    | {
+        rating: number;
+        body: string | null;
+        rating_punctuality: number | null;
+        rating_communication: number | null;
+        rating_care_quality: number | null;
+        rating_cleanliness: number | null;
+        tags: string[];
+      }
+    | null = null;
   if (isSeeker) {
     const { data } = await admin
       .from("reviews")
-      .select("rating, body")
+      .select(
+        "rating, body, rating_punctuality, rating_communication, rating_care_quality, rating_cleanliness, tags",
+      )
       .eq("booking_id", id)
       .eq("reviewer_id", user.id)
       .maybeSingle();
-    if (data) existingReview = { rating: data.rating, body: data.body };
+    if (data) {
+      existingReview = {
+        rating: data.rating,
+        body: data.body,
+        rating_punctuality: data.rating_punctuality ?? null,
+        rating_communication: data.rating_communication ?? null,
+        rating_care_quality: data.rating_care_quality ?? null,
+        rating_cleanliness: data.rating_cleanliness ?? null,
+        tags: Array.isArray(data.tags) ? (data.tags as string[]) : [],
+      };
+    }
   }
 
   const startsAt = new Date(booking.starts_at);
@@ -193,6 +215,9 @@ export default async function BookingDetailPage({
               bookingId={booking.id}
               caregiverName={otherProfile?.full_name ?? "your caregiver"}
               existing={existingReview}
+              currency={
+                booking.currency?.toLowerCase() === "usd" ? "USD" : "GBP"
+              }
             />
           )}
 
