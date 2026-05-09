@@ -8,6 +8,7 @@ import BookingActions from "./booking-actions";
 import ReviewPanel from "./review-panel";
 import { CARER_FEE_PERCENT } from "@/lib/fees/config";
 import Image from "next/image";
+import CareSummaryCard from "@/components/CareSummaryCard";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -216,6 +217,10 @@ export default async function BookingDetailPage({
             initiallyOpen={trackingWindowOpen}
             paid={!!booking.paid_at}
           />
+
+          {/* AI v1 — daily care summary (additive). Renders nothing if
+              the user isn't authorised to view it (the API enforces). */}
+          <CareSummaryCard bookingId={booking.id} />
 
           {/* Review (seeker only, post-shift) */}
           {reviewable && (

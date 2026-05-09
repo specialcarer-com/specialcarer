@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { computeReadiness } from "@/lib/care/profile";
 import { CARER_FEE_PERCENT } from "@/lib/fees/config";
 import Image from "next/image";
+import RecurringSuggestionBanner from "@/components/RecurringSuggestionBanner";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -174,6 +175,13 @@ export default async function DashboardPage() {
               )}
             </div>
           </div>
+
+          {/* AI v1 — recurring schedule suggestion (seekers only). */}
+          {!isCaregiver && (
+            <div className="mt-6">
+              <RecurringSuggestionBanner />
+            </div>
+          )}
 
           {/* Caregiver: profile readiness card */}
           {isCaregiver && readiness && (

@@ -160,6 +160,12 @@ export default function PostJobPage() {
   }
 
   if (done) {
+    // AI v1 — when this wizard is wired into the real seeker flow,
+    // recommended carers appear on the next screen with a
+    // <SmartMatchPill /> populated from /api/ai/match. This wizard
+    // currently uses mock data so the pill renders in mock mode via
+    // <CaregiverCard match_score={undefined} rating_avg=… /> on the
+    // listing screens (see src/components/caregiver-card.tsx).
     return (
       <div className="min-h-screen bg-bg-screen sc-safe-top sc-safe-bottom flex flex-col items-center justify-center px-6 text-center">
         <div className="grid h-20 w-20 place-items-center rounded-full bg-primary-50 text-primary">

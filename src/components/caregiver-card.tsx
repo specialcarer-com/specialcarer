@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { formatMoney, serviceLabel } from "@/lib/care/services";
 import { certLabel } from "@/lib/care/attributes";
+import SmartMatchPill from "@/components/SmartMatchPill";
 
 export type CaregiverCardData = {
   user_id: string;
@@ -20,6 +21,9 @@ export type CaregiverCardData = {
   rating_avg: number | null;
   rating_count: number;
   match_score?: number;
+  /** Top-reason text from /api/ai/match (added in AI v1). When present
+   *  alongside `match_score`, a SmartMatchPill is rendered. */
+  match_reason?: string;
   // Booking preference filter attributes (optional, additive)
   gender?: string | null;
   has_drivers_license?: boolean;
@@ -115,6 +119,26 @@ export default function CaregiverCard({
           )}
         </div>
       </div>
+
+      {/* AI v1 SmartMatchPill — additive. Renders when we have a top
+          reason from /api/ai/match. Falls back to mock-mode if there's
+          no score but a rating is available, so mock screens still get
+          a believable visual. */}
+      {typeof c.match_score === "number" && c.match_reason ? (
+        <div className="mt-3">
+          <SmartMatchPill
+            score={c.match_score > 1 ? c.match_score / 100 : c.match_score}
+            reason={c.match_reason}
+          />
+        </div>
+      ) : typeof c.rating_avg === "number" && c.rating_avg > 0 && c.match_score == null ? (
+        <div className="mt-3">
+          <SmartMatchPill
+            mode="mock"
+            caregiver={{ rating_avg: c.rating_avg, rating_count: c.rating_count }}
+          />
+        </div>
+      ) : null}
 
       {c.bio && (
         <p className="mt-4 text-sm text-slate-600 line-clamp-3">{c.bio}</p>
