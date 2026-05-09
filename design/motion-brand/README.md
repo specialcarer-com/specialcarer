@@ -8,6 +8,7 @@ The two HTML files in this folder are the source of truth — they are pinned de
 
 - `SpecialCarer-logo-animation.html` — **dark surface variant** (ink `#0F1416` backgrounds)
 - `SpecialCarer-logo-animation-light.html` — **light surface variant** (white backgrounds)
+- `SpecialCarer-logo-animation-transparent.html` — **transparent surface variant** (no stage; for compositing over photography, video, or coloured panels)
 - `animations.jsx` — easing helpers (`Easing.easeOutBack`, `easeOutCubic`, `easeInOutCubic`, `easeOutQuad`) and utilities (`clamp`, `interpolate`, `animate`, `Stage`, `Sprite`, `useTime`)
 - `assets/specialcarer-icon.svg` — pure icon (two carers + heart + foundation line, all teal)
 - `assets/specialcarer-logo.svg` — icon + wordmark lockup
@@ -74,12 +75,27 @@ Both variants share **identical timing, easing, structure, and brand colours for
 - Tagline text colour: `rgba(15,20,22,0.65)` (ink)
 - Tagline bars colour: `rgba(15,20,22,0.25)` (ink)
 
+### Transparent (no surface)
+
+For compositing over arbitrary backgrounds (photography, video, coloured panels). The backdrop, soft glow, and heart halo are **omitted from the tree entirely** — not just zeroed — so the composition reads cleanly against any underlying surface.
+
+- Body / Stage: `transparent`
+- Backdrop tint: **omitted** (node not rendered)
+- Soft glow: **omitted** (node not rendered)
+- Heart halo: **omitted** (node not rendered)
+- Icon drop-shadow: single layer `rgba(3,158,160, 0.25 base / 0.60 peak)`
+- Heart overlay blend: **plain alpha** (no `screen` / `multiply`) at `0.18 * (heartGlow - 0.4)`
+- Tagline text colour: `BRAND.teal` (`#039EA0`)
+- Tagline bars colour: `rgba(3,158,160,0.55)` (teal)
+
+Use this variant when the underlying surface already provides contrast and atmosphere; do **not** stack it over a busy backdrop without ensuring sufficient contrast for the wordmark and tagline.
+
 ## Implementation guidance
 
 When implementing in the app:
 
-1. Build a single React component `<SpecialCarerLogoAnimation theme="dark" | "light" durationMs={6000} loop={false} reducedMotionFallback />` under `src/components/motion/`.
-2. Switch only the surface tokens listed above on theme change. Timing / easing / structure must not vary by theme.
+1. Build a single React component `<SpecialCarerLogoAnimation theme="dark" | "light" | "transparent" durationMs={6000} loop={false} reducedMotionFallback />` under `src/components/motion/`.
+2. Switch only the surface tokens listed above on theme change. Timing / easing / structure must not vary by theme. For `theme="transparent"`, **omit** the backdrop, soft glow, and heart halo nodes (do not render with `opacity: 0`).
 3. Honour `prefers-reduced-motion` — render the static icon + wordmark + tagline composition with no transitions.
 4. For sub-3s use cases (splash, loading), ship a "compact" timing profile that compresses phases A–E into 1.8s and skips the breathing phases.
 5. The wordmark must always read **"SpecialCarer"** as one word — never split with spaces or styled to imply two words.

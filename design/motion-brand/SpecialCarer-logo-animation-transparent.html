@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SpecialCarer — Logo Animation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0f1416; overflow: hidden; }
+  /* checkered backdrop just so user can VERIFY transparency — not part of the logo */
+  body {
+    background-color: #ffffff;
+    background-image:
+      linear-gradient(45deg, #e6e6e6 25%, transparent 25%),
+      linear-gradient(-45deg, #e6e6e6 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #e6e6e6 75%),
+      linear-gradient(-45deg, transparent 75%, #e6e6e6 75%);
+    background-size: 40px 40px;
+    background-position: 0 0, 0 20px, 20px -20px, -20px 0;
+  }
+  #root { width: 100vw; height: 100vh; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="animations.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useEffect, useRef, useState } = React;
+
+// ── Brand tokens ─────────────────────────────────────────────
+const BRAND = {
+  teal:   '#039EA0',
+  tealLo: '#02787A',
+  tealHi: '#3FC6C8',
+  cream:  '#F4EFE6',
+  ink:    '#0F1416',
+};
+
+const WORDMARK = 'SpecialCarer';
+
+// ── Top-level scene ──────────────────────────────────────────
+function LogoScene() {
+  const t = useTime();
+  // Update screen label every second so comments can pin to a moment
+  const stageRef = useRef(null);
+  useEffect(() => {
+    const sec = Math.floor(t);
+    const root = document.querySelector('[data-anim-root]');
+    if (root) root.setAttribute('data-screen-label', `t=${sec}s`);
+  }, [Math.floor(t)]);
+
+  // Camera breathing: very subtle scale on the whole composition after build
+  const settle = clamp((t - 4.0) / 1.5, 0, 1);
+  const breath = 1 + Math.sin(t * 1.4) * 0.006 * settle;
+
+  return (
+    <div data-anim-root style={{
+      width: '100%', height: '100%',
+      background: 'transparent',
+      position: 'relative', overflow: 'hidden',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        gap: 8, transform: `scale(${breath})`, transformOrigin: 'center',
+      }}>
+        <LogoIcon />
+        <Wordmark />
+        <Tagline />
+      </div>
+    </div>
+  );
+}
+
+// ── Subtle backdrop ──────────────────────────────────────────
+function BackdropGrid() {
+  const t = useTime();
+  const opacity = clamp((t - 0.1) / 0.8, 0, 1) * 0.35;
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, opacity,
+      backgroundImage: `radial-gradient(circle at center, rgba(63,198,200,0.18) 0%, rgba(63,198,200,0) 55%)`,
+      pointerEvents: 'none',
+    }} />
+  );
+}
+
+function SoftGlow() {
+  const t = useTime();
+  // Pulses with the heart beat
+  const beat = 1 + Math.sin(Math.max(0, t - 1.6) * 3.2) * 0.5 * clamp((t - 1.6) / 0.6, 0, 1);
+  const opacity = clamp((t - 1.0) / 1.0, 0, 1) * 0.55;
+  return (
+    <div style={{
+      position: 'absolute', left: '50%', top: '38%',
+      width: 900, height: 900, marginLeft: -450, marginTop: -450,
+      background: `radial-gradient(circle, rgba(3,158,160,${0.22 * beat}) 0%, rgba(3,158,160,0) 60%)`,
+      filter: 'blur(20px)', opacity, pointerEvents: 'none',
+    }} />
+  );
+}
+
+// ── Logo Icon ────────────────────────────────────────────────
+// Strategy: render the whole icon SVG as <img> for fidelity,
+// and overlay a brush-sweep mask so paths reveal left-to-right.
+// Then add a heart-pulse highlight that beats over the figures.
+function LogoIcon() {
+  const t = useTime();
+
+  // Phase A: icon scales/fades in (0.2 → 1.4s) with soft anticipation
+  const tInA = clamp((t - 0.2) / 1.2, 0, 1);
+  const easedA = Easing.easeOutBack(tInA);
+  const scale = 0.6 + 0.4 * easedA;
+  const opacity = Easing.easeOutCubic(tInA);
+
+  // Phase B: reveal sweep mask from left → right (0.4 → 1.8s)
+  const sweep = clamp((t - 0.4) / 1.4, 0, 1);
+  const sweepEased = Easing.easeInOutCubic(sweep);
+
+  // Phase C: heart beat highlight after entrance
+  const beatStart = 1.7;
+  const beatT = Math.max(0, t - beatStart);
+  // beat envelope: two quick beats at 1.7 and 2.05, then steady soft pulse
+  const burst = (delay) => {
+    const x = beatT - delay;
+    if (x < 0 || x > 0.45) return 0;
+    return Math.sin((x / 0.45) * Math.PI);
+  };
+  const beat = Math.max(burst(0), burst(0.35)) + (beatT > 0.8 ? 0.18 + 0.18 * Math.sin((beatT - 0.8) * 2.4) : 0);
+  const heartScale = 1 + beat * 0.12;
+  const heartGlow = 0.4 + beat * 0.6;
+
+  // Phase D: gentle breathing on the icon after build
+  const settle = clamp((t - 2.0) / 1.0, 0, 1);
+  const breathing = 1 + Math.sin(t * 1.6) * 0.012 * settle;
+
+  // Foundation line draws in
+  const lineProgress = clamp((t - 0.0) / 1.0, 0, 1);
+  const lineEased = Easing.easeInOutCubic(lineProgress);
+
+  return (
+    <div style={{
+      position: 'relative',
+      width: 480, height: 320,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      {/* Heart glow halo, sits above figures' heart */}
+      <div style={{
+        position: 'absolute',
+        left: '50%', top: '6%',
+        width: 240, height: 240,
+        marginLeft: -120,
+        background: `radial-gradient(circle, rgba(63,198,200,${0.55 * heartGlow}) 0%, rgba(63,198,200,0) 60%)`,
+        filter: 'blur(14px)',
+        opacity: clamp((t - 1.5) / 0.5, 0, 1),
+        pointerEvents: 'none',
+      }} />
+
+      {/* The logo itself */}
+      <div style={{
+        position: 'relative',
+        width: 480, height: 320,
+        opacity,
+        transform: `scale(${scale * breathing})`,
+        transformOrigin: 'center 60%',
+        // sweep reveal mask: a tilted brush wipe
+        WebkitMask: `linear-gradient(100deg, #000 0%, #000 ${sweepEased * 100 - 6}%, rgba(0,0,0,0.6) ${sweepEased * 100 - 2}%, transparent ${sweepEased * 100 + 4}%)`,
+                mask: `linear-gradient(100deg, #000 0%, #000 ${sweepEased * 100 - 6}%, rgba(0,0,0,0.6) ${sweepEased * 100 - 2}%, transparent ${sweepEased * 100 + 4}%)`,
+      }}>
+        {/* Symbol image (icon only, no wordmark) */}
+        <img
+          src="assets/specialcarer-icon.svg"
+          alt=""
+          style={{
+            position: 'absolute', inset: 0,
+            width: '100%', height: '100%',
+            objectFit: 'contain',
+            filter: `drop-shadow(0 0 ${6 + beat * 14}px rgba(3,158,160,${0.25 + beat * 0.35}))`,
+          }}
+        />
+
+        {/* Heart-pulse overlay: a soft scaled copy that pulses, blending teal */}
+        <img
+          src="assets/specialcarer-icon.svg"
+          alt=""
+          aria-hidden
+          style={{
+            position: 'absolute', inset: 0,
+            width: '100%', height: '100%',
+            objectFit: 'contain',
+            transform: `scale(${heartScale})`,
+            transformOrigin: 'center 30%',
+            opacity: 0.18 * Math.max(0, heartGlow - 0.4),
+            pointerEvents: 'none',
+          }}
+        />
+      </div>
+
+      {/* Animated underline that the icon "stands on" */}
+      <svg viewBox="0 0 480 12" preserveAspectRatio="none" style={{
+        position: 'absolute', left: '50%', bottom: 8, width: 360, height: 12, marginLeft: -180,
+        opacity: clamp((t - 0.05) / 0.6, 0, 1),
+        pointerEvents: 'none',
+      }}>
+        <defs>
+          <linearGradient id="ulg" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" stopColor="rgba(3,158,160,0)" />
+            <stop offset="0.5" stopColor={BRAND.teal} />
+            <stop offset="1" stopColor="rgba(3,158,160,0)" />
+          </linearGradient>
+        </defs>
+        <line
+          x1={240 - 180 * lineEased} y1="6"
+          x2={240 + 180 * lineEased} y2="6"
+          stroke="url(#ulg)" strokeWidth="2" strokeLinecap="round"
+        />
+      </svg>
+    </div>
+  );
+}
+
+// ── Wordmark "SpecialCarer" with per-letter reveal ───────────
+function Wordmark() {
+  const t = useTime();
+  const startBase = 2.1;          // first letter starts here
+  const perLetter = 0.045;        // stagger
+  const letterDur = 0.55;
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'baseline', gap: 0,
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      fontWeight: 700,
+      fontStyle: 'italic',
+      fontSize: 110,
+      letterSpacing: '-0.025em',
+      color: BRAND.teal,
+    }}>
+      {WORDMARK.split('').map((ch, i) => {
+        const start = startBase + i * perLetter;
+        const lt = clamp((t - start) / letterDur, 0, 1);
+        const eased = Easing.easeOutCubic(lt);
+        const blurEased = Easing.easeOutQuad(lt);
+
+        // Special: capital "C" inside "SpecialCarer" gets a slight tealHi pop
+        const isCapC = (i === 7);
+        const color = isCapC
+          ? `oklch(${0.62 + 0.05 * eased} 0.10 195)`
+          : BRAND.teal;
+
+        return (
+          <span key={i} style={{
+            display: 'inline-block',
+            opacity: eased,
+            transform: `translateY(${(1 - eased) * 32}px)`,
+            filter: `blur(${(1 - blurEased) * 10}px)`,
+            color,
+            // tiny weight pulse on the capital C as it lands
+            textShadow: isCapC && eased > 0.6 && eased < 1
+              ? `0 0 ${20 * (1 - eased)}px rgba(3,158,160,0.6)`
+              : 'none',
+            willChange: 'transform, opacity, filter',
+          }}>{ch}</span>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Tagline ──────────────────────────────────────────────────
+function Tagline() {
+  const t = useTime();
+  const startTag = 3.4;
+  const tt = clamp((t - startTag) / 1.0, 0, 1);
+  const eased = Easing.easeOutCubic(tt);
+
+  // Two side bars that draw in around the text
+  const barW = 80;
+  const barProgress = clamp((t - 3.6) / 0.8, 0, 1);
+  const barEased = Easing.easeInOutCubic(barProgress);
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 22,
+      opacity: eased,
+      transform: `translateY(${(1 - eased) * 14}px)`,
+    }}>
+      <div style={{
+        width: barW * barEased, height: 1,
+        background: 'rgba(3,158,160,0.55)',
+        transition: 'none',
+      }} />
+      <div style={{
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        fontWeight: 500,
+        fontSize: 22,
+        letterSpacing: '0.32em',
+        textTransform: 'uppercase',
+        color: BRAND.teal,
+      }}>
+        Care, 4 U
+      </div>
+      <div style={{
+        width: barW * barEased, height: 1,
+        background: 'rgba(3,158,160,0.55)',
+      }} />
+    </div>
+  );
+}
+
+// ── Mount ─────────────────────────────────────────────────────
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <Stage width={1920} height={1080} duration={6} background="transparent">
+    <LogoScene />
+  </Stage>
+);
+</script>
+</body>
+</html>
