@@ -21,8 +21,12 @@
  * Behaviour:
  *   - Plays once per session (sessionStorage gate). After it's done, the
  *     overlay is unmounted entirely so the rest of /m never sees it.
- *   - Total visible ~3000 ms, then 320 ms fade-out. Tap-anywhere skips
- *     after 500 ms grace window.
+ *   - Total visible ~7000 ms, then 320 ms fade-out. The canonical splash
+ *     runs 10s in scene-time — at SLOW=1.7 the icon lands by ~2.4s, the
+ *     wordmark finishes typing by ~6.6s, and the tagline lands at ~8.5s.
+ *     We hold to ~7000ms so users see the full "SpecialCarer" wordmark
+ *     reveal (the whole point of the splash) before fading. Tap-anywhere
+ *     skips after a short grace window.
  *   - prefers-reduced-motion → instant fade-in / fade-out, no animation.
  *   - First paint shows a solid teal background so there's no white flash
  *     while the SplashIntro client component hydrates.
@@ -32,7 +36,7 @@ import { useEffect, useRef, useState } from "react";
 import { SpecialCarerMobileSplash } from "@/components/motion/SpecialCarerMobileSplash";
 
 const SESSION_KEY = "sc:splash:played";
-const VISIBLE_MS = 3000;
+const VISIBLE_MS = 7000;
 const FADE_MS = 320;
 const TAP_GRACE_MS = 500;
 

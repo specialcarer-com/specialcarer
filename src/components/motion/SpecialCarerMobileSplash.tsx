@@ -106,10 +106,10 @@ export function SpecialCarerMobileSplash({
   const sustained = beatT > 0.8 ? 0.18 + 0.18 * Math.sin((beatT - 0.8) * 2.4) : 0;
   const beat = Math.max(burst(0), burst(0.35)) + sustained;
 
-  // Wordmark stagger.
-  const startBase = 2.6;
-  const perLetter = 0.045;
-  const letterDur = 0.55;
+  // Wordmark — letter-by-letter typed reveal (matches supplied design).
+  const wmStartBase = 2.6;
+  const wmPerLetter = 0.045;
+  const wmLetterDur = 0.55;
 
   // Tagline + bars.
   const taglineT = clamp((t - 4.0) / 1.0, 0, 1);
@@ -296,7 +296,7 @@ export function SpecialCarerMobileSplash({
           zIndex: 5,
         }}
       >
-        {/* Icon */}
+        {/* Brand icon — supplied icon-only mark (wordmark animates separately below) */}
         <div
           style={{
             position: "relative",
@@ -340,7 +340,7 @@ export function SpecialCarerMobileSplash({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/brand/specialcarer-icon.svg"
-              alt=""
+              alt="SpecialCarer"
               style={{
                 position: "absolute",
                 inset: 0,
@@ -353,22 +353,23 @@ export function SpecialCarerMobileSplash({
           </div>
         </div>
 
-        {/* Wordmark */}
+        {/* Wordmark — italic, letter-staggered (matches supplied design) */}
         <div
           style={{
             display: "flex",
             alignItems: "baseline",
+            fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
             fontWeight: 700,
             fontStyle: "italic",
-            fontSize: "clamp(36px, 9vw, 64px)",
+            fontSize: "clamp(40px, 13vw, 64px)",
             letterSpacing: "-0.025em",
             color: BRAND.teal,
-            lineHeight: 1,
+            whiteSpace: "nowrap",
           }}
         >
           {WORDMARK.split("").map((ch, i) => {
-            const start = startBase + i * perLetter;
-            const lt = clamp((t - start) / letterDur, 0, 1);
+            const start = wmStartBase + i * wmPerLetter;
+            const lt = clamp((t - start) / wmLetterDur, 0, 1);
             const eased = Easing.easeOutCubic(lt);
             const blurEased = Easing.easeOutQuad(lt);
             return (
