@@ -101,6 +101,11 @@ const CAREGIVER_SECTION: Section = {
       label: "Achievements",
     },
     {
+      href: "/m/training",
+      icon: <IconCert />,
+      label: "Training & CEUs",
+    },
+    {
       href: "/m/schedule",
       icon: <IconCal />,
       label: "Schedule & availability",

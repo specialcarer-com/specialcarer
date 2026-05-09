@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   TopBar,
@@ -43,6 +44,7 @@ function iconFor(key: string) {
 export default function AchievementsPage() {
   const supabase = createClient();
   const [items, setItems] = useState<Achievement[] | null>(null);
+  const [ceuThisYear, setCeuThisYear] = useState<number>(0);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
@@ -55,18 +57,27 @@ export default function AchievementsPage() {
         setErr("Sign in to view your achievements.");
         return;
       }
-      const { data, error } = await supabase
-        .from("caregiver_achievements_v")
-        .select(
-          "achievement_key, earned, progress_current, progress_target, label, description",
-        )
-        .eq("caregiver_id", user.id);
+      const [{ data, error }, { data: ceuRow }] = await Promise.all([
+        supabase
+          .from("caregiver_achievements_v")
+          .select(
+            "achievement_key, earned, progress_current, progress_target, label, description",
+          )
+          .eq("caregiver_id", user.id),
+        supabase
+          .from("carer_ceu_totals_v")
+          .select("total_credits")
+          .eq("carer_id", user.id)
+          .eq("year", new Date().getUTCFullYear())
+          .maybeSingle(),
+      ]);
       if (error) {
         setErr(error.message);
         setItems([]);
         return;
       }
       setItems((data ?? []) as Achievement[]);
+      if (ceuRow) setCeuThisYear(Number(ceuRow.total_credits ?? 0));
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -90,6 +101,21 @@ export default function AchievementsPage() {
       <TopBar title="Achievements" back="/m/profile" />
       <div className="px-5 pt-3 space-y-6">
         {err && <p className="text-[12px] text-rose-700">{err}</p>}
+
+        <Link
+          href="/m/training"
+          className="block rounded-card bg-white p-4 shadow-card active:bg-muted/40"
+        >
+          <p className="text-[12px] uppercase tracking-wide text-subheading">
+            CEU credits this year
+          </p>
+          <p className="mt-1 text-[20px] font-bold text-heading">
+            {ceuThisYear.toFixed(2)}
+            <span className="ml-2 text-[12px] font-semibold text-primary">
+              View training →
+            </span>
+          </p>
+        </Link>
 
         <section>
           <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-subheading">
