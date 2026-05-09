@@ -14,6 +14,7 @@ import {
   IconCert,
   IconStar,
   IconClock,
+  IconCal,
   IconCard,
   IconBag,
   IconLogout,
@@ -83,9 +84,14 @@ const CAREGIVER_SECTION: Section = {
       label: "Certifications",
     },
     {
+      href: "/m/schedule",
+      icon: <IconCal />,
+      label: "Schedule & availability",
+    },
+    {
       href: "/m/profile/availability",
       icon: <IconClock />,
-      label: "Availability",
+      label: "Weekly availability",
     },
     { href: "/m/profile/reviews", icon: <IconStar />, label: "My reviews" },
     { href: "/m/profile/my-clients", icon: <IconUser />, label: "My clients" },

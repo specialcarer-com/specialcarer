@@ -17,6 +17,7 @@ const NAV: { href: string; label: string; soon?: boolean }[] = [
   { href: "/admin/memberships", label: "Memberships" },
   { href: "/admin/webhooks", label: "Webhooks" },
   { href: "/admin/trust-safety", label: "Trust & safety" },
+  { href: "/admin/timeoff", label: "Time-off" },
   { href: "/admin/finance", label: "Finance" },
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/audit-log", label: "Audit log" },

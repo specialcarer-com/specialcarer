@@ -237,6 +237,8 @@ export async function POST(req: Request) {
     broadcast,
     requiredCategories: required_categories,
     requiredSkills: required_skills,
+    bookingStartsAt: starts_at,
+    bookingEndsAt: ends_at,
   });
 
   if (offerResult.carerIds.length > 0) {
@@ -264,6 +266,8 @@ async function distributeOffers({
   broadcast,
   requiredCategories,
   requiredSkills: _requiredSkills,
+  bookingStartsAt,
+  bookingEndsAt,
 }: {
   admin: AdminClient;
   bookingId: string;
@@ -272,6 +276,8 @@ async function distributeOffers({
   broadcast: boolean;
   requiredCategories: CareCategory[];
   requiredSkills: string[];
+  bookingStartsAt?: string;
+  bookingEndsAt?: string;
 }) {
   let carerIds: string[] = [];
 
@@ -300,6 +306,47 @@ async function distributeOffers({
       carerIds = broadcast
         ? scored.map((c) => c.user_id)
         : scored.slice(0, 5).map((c) => c.user_id);
+    }
+  }
+
+  // Matcher integration (3.7): exclude carers with approved time-off or
+  // blockouts that overlap the booking window. Soft penalty only for
+  // missing availability slots (still surfaced — existing behaviour).
+  if (carerIds.length > 0 && bookingStartsAt && bookingEndsAt) {
+    const bookStart = new Date(bookingStartsAt);
+    const bookEnd   = new Date(bookingEndsAt);
+    const bookStartDate = bookingStartsAt.slice(0, 10);
+    const bookEndDate   = bookingEndsAt.slice(0, 10);
+
+    // Fetch approved time-off for these carers that overlaps booking window
+    const { data: timeoffs } = await admin
+      .from("caregiver_timeoff_requests")
+      .select("user_id, starts_on, ends_on")
+      .in("user_id", carerIds)
+      .eq("status", "approved")
+      .lte("starts_on", bookEndDate)
+      .gte("ends_on",   bookStartDate);
+
+    // Fetch blockouts that overlap booking window
+    const { data: blockouts } = await admin
+      .from("caregiver_blockouts")
+      .select("user_id, starts_on, ends_on")
+      .in("user_id", carerIds)
+      .lte("starts_on", bookEndDate)
+      .gte("ends_on",   bookStartDate);
+
+    const blockedSet = new Set<string>();
+    for (const row of [...(timeoffs ?? []), ...(blockouts ?? [])]) {
+      // Exact overlap: row range [starts_on, ends_on+1day) vs [bookStart, bookEnd)
+      const rowStart = new Date(row.starts_on + "T00:00:00");
+      const rowEnd   = new Date(row.ends_on   + "T23:59:59");
+      if (rowStart <= bookEnd && rowEnd >= bookStart) {
+        blockedSet.add(row.user_id);
+      }
+    }
+
+    if (blockedSet.size > 0) {
+      carerIds = carerIds.filter((id) => !blockedSet.has(id));
     }
   }
 
@@ -390,6 +437,8 @@ async function createRecurringBooking({
     broadcast,
     requiredCategories: required_categories,
     requiredSkills: [],
+    bookingStartsAt: parent.starts_at as string | undefined,
+    bookingEndsAt: parent.ends_at as string | undefined,
   });
 
   if (offerResult.carerIds.length > 0) {
