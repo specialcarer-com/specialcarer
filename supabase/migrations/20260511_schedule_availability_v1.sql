@@ -158,9 +158,14 @@ do $$ begin
 end $$;
 
 -- ── 4. bookings_near_carer — drop + recreate with blockout/timeoff filter ─────
--- The carer's own approved time-off AND caregiver_blockouts are filtered out:
--- if the booking's [starts_at, ends_at] overlaps any approved blockout range
--- for that carer, exclude it from their job feed.
+-- IMPORTANT: this RPC ALSO surfaces the Phase B columns (shift_mode,
+-- sleep_in_carer_pay, booking_source) and includes status='offered' so org
+-- shift offers reach carers. Do NOT remove those — the carer mobile feed
+-- (src/app/api/m/jobs/route.ts) consumes them via TargetedRpcRow.
+--
+-- Filter additions in 3.7:
+--   • Excludes bookings overlapping the carer's own approved time-off
+--   • Excludes bookings overlapping the carer's caregiver_blockouts
 drop function if exists public.bookings_near_carer(uuid, double precision);
 
 create function public.bookings_near_carer(
@@ -184,7 +189,10 @@ returns table (
   service_point_lat     double precision,
   distance_m            double precision,
   discovery_expires_at  timestamptz,
-  created_at            timestamptz
+  created_at            timestamptz,
+  shift_mode            text,
+  sleep_in_carer_pay    numeric,
+  booking_source        text
 )
 language sql
 stable
@@ -197,7 +205,6 @@ as $$
     where user_id = carer_uuid
     limit 1
   ),
-  -- Blocked date ranges: approved time-off + explicit blockouts
   blocked as (
     select starts_on::timestamptz as bs,
            (ends_on + interval '1 day')::timestamptz as be
@@ -211,41 +218,21 @@ as $$
     where user_id = carer_uuid
   )
   select
-    b.id,
-    b.seeker_id,
-    b.status::text,
-    b.starts_at,
-    b.ends_at,
-    b.hours,
-    b.hourly_rate_cents,
-    b.currency,
-    b.service_type::text,
-    b.location_city,
-    b.location_country,
-    b.location_postcode,
-    case when b.service_point is not null
-      then extensions.st_x(b.service_point::extensions.geometry)
-      else null
-    end as service_point_lng,
-    case when b.service_point is not null
-      then extensions.st_y(b.service_point::extensions.geometry)
-      else null
-    end as service_point_lat,
+    b.id, b.seeker_id, b.status::text, b.starts_at, b.ends_at, b.hours,
+    b.hourly_rate_cents, b.currency, b.service_type::text, b.location_city,
+    b.location_country, b.location_postcode,
+    case when b.service_point is not null then extensions.st_x(b.service_point::extensions.geometry) else null end,
+    case when b.service_point is not null then extensions.st_y(b.service_point::extensions.geometry) else null end,
     case
-      when b.service_point is null or (select g from carer_home) is null
-        then null
-      else extensions.st_distance(
-        b.service_point::extensions.geography,
-        (select g from carer_home)
-      )
-    end as distance_m,
-    b.discovery_expires_at,
-    b.created_at
+      when b.service_point is null or (select g from carer_home) is null then null
+      else extensions.st_distance(b.service_point::extensions.geography, (select g from carer_home))
+    end,
+    b.discovery_expires_at, b.created_at,
+    b.shift_mode::text, b.sleep_in_carer_pay, b.booking_source::text
   from public.bookings b
   where b.caregiver_id = carer_uuid
-    and b.status in ('pending','accepted','paid')
+    and b.status in ('pending','accepted','paid','offered')
     and b.starts_at >= now()
-    -- exclude bookings that fall within any blockout/approved-timeoff range
     and not exists (
       select 1 from blocked
       where b.starts_at < blocked.be
@@ -254,11 +241,7 @@ as $$
     and (
       b.service_point is null
       or (select g from carer_home) is null
-      or extensions.st_dwithin(
-        b.service_point::extensions.geography,
-        (select g from carer_home),
-        radius_m
-      )
+      or extensions.st_dwithin(b.service_point::extensions.geography, (select g from carer_home), radius_m)
     )
   order by b.starts_at asc;
 $$;
