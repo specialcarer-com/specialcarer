@@ -33,11 +33,11 @@
  *   - Plays once per session (sessionStorage gate). After it's done, the
  *     overlay is unmounted entirely so subsequent visits to /m/login in
  *     the same session don't replay it.
- *   - Total visible ~7000 ms, then 320 ms fade-out. The canonical splash
- *     runs 10s in scene-time — at SLOW=1.7 the icon lands by ~2.4s, the
- *     wordmark finishes typing by ~6.6s, and the tagline lands at ~8.5s.
- *     We hold to ~7000ms so users see the full "SpecialCarer" wordmark
- *     reveal (the whole point of the splash) before fading. Tap-anywhere
+ *   - Total visible ~9700 ms, then 320 ms fade-out. The canonical splash
+ *     runs 10s in scene-time — at SLOW=1.7 the icon impacts at ~4.1s real,
+ *     wordmark finishes typing by ~5.8s real, and the tagline lands at
+ *     ~8.5s real. We hold to ~9700ms so users see the full reveal AND get
+ *     ~1s to read the "CARE, 4 U" tagline before fading. Tap-anywhere
  *     skips after a short grace window.
  *   - prefers-reduced-motion → still plays the canonical animated splash
  *     (per product owner direction). The animation is gentle (no flashing,
@@ -51,7 +51,22 @@ import { usePathname } from "next/navigation";
 import { SpecialCarerMobileSplash } from "@/components/motion/SpecialCarerMobileSplash";
 
 const SESSION_KEY = "sc:splash:played";
-const VISIBLE_MS = 7000;
+/**
+ * How long the splash overlay is visible before the fade-out begins.
+ *
+ * Scene timing for the canonical splash (SLOW=1.7, totalSec=10):
+ *   t = rawT / 1.7  (scene-time)
+ *   - icon impact:           t ≈ 2.4  → ~4080ms real
+ *   - wordmark begins typing: t ≈ 2.6  → ~4420ms real
+ *   - wordmark complete:      t ≈ 3.4  → ~5780ms real
+ *   - tagline begins:         t = 4.0  → 6800ms real
+ *   - tagline complete:       t = 5.0  → 8500ms real
+ *   - settle/breath finishes: t = 5.5  → 9350ms real
+ *
+ * Hold to 9700ms so the tagline lands fully and the user gets ~1s to
+ * read "CARE, 4 U" before the overlay fades out.
+ */
+const VISIBLE_MS = 9700;
 const FADE_MS = 320;
 const TAP_GRACE_MS = 500;
 

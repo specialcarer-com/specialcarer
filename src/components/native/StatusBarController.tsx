@@ -21,7 +21,7 @@
 
 import { useEffect } from "react";
 
-const SPLASH_HANDOFF_MS = 8000; // splash visible 7000 + fade 320 + buffer
+const SPLASH_HANDOFF_MS = 10500; // splash visible 9700 + fade 320 + buffer
 
 export default function StatusBarController() {
   useEffect(() => {
