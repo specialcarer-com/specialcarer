@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SpecialCarer — App Splash Screen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #06151a; overflow: hidden; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+  #root { width: 100vw; height: 100vh; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="animations.jsx"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useMemo } = React;
+
+const BRAND = { teal: '#039EA0', tealHi: '#3FC6C8', tealLo: '#02787A' };
+const WORDMARK = 'SpecialCarer';
+const IMPACT = 2.4;          // moment the icon "lands"
+const SLOW   = 2.5;          // overall pacing factor
+
+// Pre-rolled deterministic randoms so particles are stable across re-renders
+function seeded(n, count) {
+  const out = [];
+  let s = n;
+  for (let i = 0; i < count; i++) {
+    s = (s * 9301 + 49297) % 233280;
+    out.push(s / 233280);
+  }
+  return out;
+}
+
+// ── Splash Scene ─────────────────────────────────────────────
+function SplashScene() {
+  const t = useTime() / SLOW;
+
+  // Background flash at impact
+  const flash = (() => {
+    const x = t - IMPACT;
+    if (x < 0 || x > 0.6) return 0;
+    return Math.pow(1 - (x / 0.6), 2);
+  })();
+
+  // Slow ambient breathing for the radial gradient
+  const ambient = 0.55 + 0.08 * Math.sin(t * 0.8);
+
+  return (
+    <div data-anim-root style={{
+      width: '100%', height: '100%',
+      position: 'relative', overflow: 'hidden',
+      background: `
+        radial-gradient(120% 80% at 50% 35%, rgba(3,158,160,${0.18 * ambient}) 0%, rgba(3,158,160,0) 55%),
+        radial-gradient(140% 100% at 50% 100%, #0c2a2d 0%, #06151a 60%, #03090b 100%)
+      `,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <SparkleField />
+      <RippleRings />
+      <DriftParticles />
+
+      {/* Burst flash overlay */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: `radial-gradient(circle at 50% 42%, rgba(255,255,255,${0.55 * flash}) 0%, rgba(63,198,200,${0.22 * flash}) 18%, rgba(63,198,200,0) 45%)`,
+      }} />
+
+      <Composition />
+
+      <ProgressDots />
+    </div>
+  );
+}
+
+// ── Logo + wordmark + tagline composition ────────────────────
+function Composition() {
+  const t = useTime() / SLOW;
+
+  // Settle breathing
+  const settle = clamp((t - 4.0) / 1.5, 0, 1);
+  const breath = 1 + Math.sin(t * 1.4) * 0.006 * settle;
+
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      gap: 12, transform: `scale(${breath})`, transformOrigin: 'center', zIndex: 5,
+    }}>
+      <LogoIcon />
+      <Wordmark />
+      <Tagline />
+    </div>
+  );
+}
+
+// ── Logo icon with entrance + heart pulse ────────────────────
+function LogoIcon() {
+  const t = useTime() / SLOW;
+
+  const tInA = clamp((t - 0.2) / 1.2, 0, 1);
+  const easedA = Easing.easeOutBack(tInA);
+  const scale = 0.55 + 0.45 * easedA;
+  const opacity = Easing.easeOutCubic(tInA);
+
+  const sweep = clamp((t - 0.4) / 1.4, 0, 1);
+  const sweepEased = Easing.easeInOutCubic(sweep);
+
+  // Impact bump at t=IMPACT (icon lands with a squash/stretch)
+  const ix = t - IMPACT;
+  const impactBump = (ix > -0.1 && ix < 0.5)
+    ? Math.exp(-Math.pow((ix - 0.05) * 6, 2)) * 0.10
+    : 0;
+
+  const beatStart = IMPACT;
+  const beatT = Math.max(0, t - beatStart);
+  const burst = (delay) => {
+    const x = beatT - delay;
+    if (x < 0 || x > 0.45) return 0;
+    return Math.sin((x / 0.45) * Math.PI);
+  };
+  const beat = Math.max(burst(0), burst(0.35)) + (beatT > 0.8 ? 0.18 + 0.18 * Math.sin((beatT - 0.8) * 2.4) : 0);
+
+  return (
+    <div style={{
+      position: 'relative',
+      width: 360, height: 240,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div style={{
+        position: 'absolute',
+        left: '50%', top: '6%',
+        width: 280, height: 280,
+        marginLeft: -140,
+        background: `radial-gradient(circle, rgba(63,198,200,${0.55 * (0.4 + beat * 0.6)}) 0%, rgba(63,198,200,0) 60%)`,
+        filter: 'blur(20px)',
+        opacity: clamp((t - 1.5) / 0.5, 0, 1),
+        pointerEvents: 'none',
+      }} />
+
+      <div style={{
+        position: 'relative',
+        width: 360, height: 240,
+        opacity,
+        transform: `scale(${scale * (1 + impactBump)})`,
+        transformOrigin: 'center 60%',
+        WebkitMask: `linear-gradient(100deg, #000 0%, #000 ${sweepEased * 100 - 6}%, rgba(0,0,0,0.6) ${sweepEased * 100 - 2}%, transparent ${sweepEased * 100 + 4}%)`,
+                mask: `linear-gradient(100deg, #000 0%, #000 ${sweepEased * 100 - 6}%, rgba(0,0,0,0.6) ${sweepEased * 100 - 2}%, transparent ${sweepEased * 100 + 4}%)`,
+      }}>
+        <img src="assets/specialcarer-icon.svg" alt=""
+          style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
+            objectFit: 'contain',
+            filter: `drop-shadow(0 14px 40px rgba(3,158,160,0.45)) drop-shadow(0 0 ${10 + beat * 20}px rgba(63,198,200,${0.4 + beat * 0.5}))`,
+          }} />
+      </div>
+    </div>
+  );
+}
+
+// ── Wordmark italic, letter-staggered ────────────────────────
+function Wordmark() {
+  const t = useTime() / SLOW;
+  const startBase = 2.6;
+  const perLetter = 0.045;
+  const letterDur = 0.55;
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'baseline',
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      fontWeight: 700, fontStyle: 'italic',
+      fontSize: 64,
+      letterSpacing: '-0.025em',
+      color: BRAND.teal,
+    }}>
+      {WORDMARK.split('').map((ch, i) => {
+        const start = startBase + i * perLetter;
+        const lt = clamp((t - start) / letterDur, 0, 1);
+        const eased = Easing.easeOutCubic(lt);
+        const blurEased = Easing.easeOutQuad(lt);
+        return (
+          <span key={i} style={{
+            display: 'inline-block',
+            opacity: eased,
+            transform: `translateY(${(1 - eased) * 22}px)`,
+            filter: `blur(${(1 - blurEased) * 8}px)`,
+          }}>{ch}</span>
+        );
+      })}
+    </div>
+  );
+}
+
+function Tagline() {
+  const t = useTime() / SLOW;
+  const tt = clamp((t - 4.0) / 1.0, 0, 1);
+  const eased = Easing.easeOutCubic(tt);
+  const barProgress = clamp((t - 4.2) / 0.8, 0, 1);
+  const barEased = Easing.easeInOutCubic(barProgress);
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 18,
+      opacity: eased,
+      transform: `translateY(${(1 - eased) * 12}px)`,
+      marginTop: 8,
+    }}>
+      <div style={{ width: 56 * barEased, height: 1, background: 'rgba(63,198,200,0.55)' }} />
+      <div style={{
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        fontWeight: 500, fontSize: 14, letterSpacing: '0.32em',
+        textTransform: 'uppercase', color: 'rgba(255,255,255,0.85)',
+      }}>Care, 4 U</div>
+      <div style={{ width: 56 * barEased, height: 1, background: 'rgba(63,198,200,0.55)' }} />
+    </div>
+  );
+}
+
+// ── Concentric ripple rings emanating from impact ────────────
+function RippleRings() {
+  const t = useTime() / SLOW;
+  const rings = [0.0, 0.18, 0.38];   // delays
+  return (
+    <div style={{
+      position: 'absolute', left: '50%', top: '42%',
+      width: 0, height: 0, pointerEvents: 'none', zIndex: 2,
+    }}>
+      {rings.map((d, i) => {
+        const x = t - (IMPACT + d);
+        if (x < 0 || x > 1.6) return null;
+        const p = x / 1.6;
+        const r = 60 + p * 720;
+        const op = (1 - p) * 0.5;
+        const w = 2 + (1 - p) * 2;
+        return (
+          <div key={i} style={{
+            position: 'absolute',
+            left: -r, top: -r,
+            width: r * 2, height: r * 2,
+            border: `${w}px solid rgba(63,198,200,${op})`,
+            borderRadius: '50%',
+            boxShadow: `0 0 ${20 * (1 - p)}px rgba(63,198,200,${op * 0.6}) inset, 0 0 ${30 * (1 - p)}px rgba(63,198,200,${op * 0.4})`,
+          }} />
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Particle burst — 28 dots radiate at impact ───────────────
+function SparkleField() {
+  const t = useTime() / SLOW;
+  const N = 28;
+  const rnd = useMemo(() => seeded(7, N * 3), []);
+  return (
+    <div style={{
+      position: 'absolute', left: '50%', top: '42%',
+      width: 0, height: 0, pointerEvents: 'none', zIndex: 3,
+    }}>
+      {Array.from({ length: N }).map((_, i) => {
+        const angle = (i / N) * Math.PI * 2 + rnd[i] * 0.4;
+        const x = t - (IMPACT + rnd[i + N] * 0.15);
+        if (x < 0 || x > 1.4) return null;
+        const p = x / 1.4;
+        const eased = Easing.easeOutCubic(p);
+        const dist = 80 + rnd[i + 2 * N] * 360 * eased + 220 * eased;
+        const opacity = (1 - p) * (0.7 + rnd[i] * 0.3);
+        const size = 4 + rnd[i + N] * 8 * (1 - p);
+        const dx = Math.cos(angle) * dist;
+        const dy = Math.sin(angle) * dist;
+        return (
+          <div key={i} style={{
+            position: 'absolute',
+            left: dx - size / 2, top: dy - size / 2,
+            width: size, height: size, borderRadius: '50%',
+            background: i % 4 === 0 ? '#fff' : BRAND.tealHi,
+            opacity,
+            boxShadow: `0 0 ${size * 2}px rgba(63,198,200,${opacity})`,
+          }} />
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Slow-drifting bokeh particles for ambience ───────────────
+function DriftParticles() {
+  const t = useTime() / SLOW;
+  const N = 14;
+  const rnd = useMemo(() => seeded(42, N * 3), []);
+  const fadeIn = clamp((t - 0.5) / 1.5, 0, 1);
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1,
+      opacity: fadeIn,
+    }}>
+      {Array.from({ length: N }).map((_, i) => {
+        const baseX = rnd[i] * 100;
+        const baseY = rnd[i + N] * 100;
+        const speed = 4 + rnd[i + 2 * N] * 6;
+        const drift = (t * 8) / speed;
+        const yp = (baseY - drift * 6 + 100) % 100;
+        const sway = Math.sin(t * 0.8 + i) * 1.5;
+        const size = 3 + rnd[i] * 5;
+        const op = 0.18 + rnd[i + N] * 0.32;
+        return (
+          <div key={i} style={{
+            position: 'absolute',
+            left: `calc(${baseX + sway}% - ${size / 2}px)`,
+            top: `${yp}%`,
+            width: size, height: size, borderRadius: '50%',
+            background: BRAND.tealHi, opacity: op,
+            filter: `blur(${size > 5 ? 2 : 0.5}px)`,
+            boxShadow: `0 0 ${size * 2}px rgba(63,198,200,${op})`,
+          }} />
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Loading dots at the bottom (mobile splash trope) ─────────
+function ProgressDots() {
+  const t = useTime() / SLOW;
+  const start = 4.5;
+  const visible = clamp((t - start) / 0.6, 0, 1);
+  const phase = (t - start) * 1.4;
+  return (
+    <div style={{
+      position: 'absolute', bottom: '8%', left: '50%', transform: 'translateX(-50%)',
+      display: 'flex', gap: 10, opacity: visible,
+    }}>
+      {[0, 1, 2].map(i => {
+        const v = (Math.sin(phase * 2 - i * 0.7) + 1) / 2;
+        return (
+          <div key={i} style={{
+            width: 8, height: 8, borderRadius: 4,
+            background: BRAND.tealHi,
+            opacity: 0.3 + v * 0.7,
+            transform: `scale(${0.8 + v * 0.4})`,
+            boxShadow: `0 0 ${4 + v * 12}px rgba(63,198,200,${0.4 + v * 0.5})`,
+          }} />
+        );
+      })}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <Stage width={1080} height={1920} duration={14} background="#06151a">
+    <SplashScene />
+  </Stage>
+);
+</script>
+</body>
+</html>

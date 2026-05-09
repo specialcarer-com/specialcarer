@@ -9,7 +9,8 @@ The two HTML files in this folder are the source of truth — they are pinned de
 - `SpecialCarer-logo-animation.html` — **dark surface variant** (ink `#0F1416` backgrounds)
 - `SpecialCarer-logo-animation-light.html` — **light surface variant** (white backgrounds)
 - `SpecialCarer-logo-animation-transparent.html` — **transparent surface variant** (no stage; for compositing over photography, video, or coloured panels)
-- `SpecialCarer-splash-mobile.html` — **mobile app splash** (1080×1920 portrait, 10s, dark teal stage with ripple rings, sparkle burst, drift particles, impact flash, progress dots)
+- `SpecialCarer-splash-mobile.html` — **mobile app splash** (1080×1920 portrait, 10s @ `SLOW=1.7`, dark teal stage with ripple rings, sparkle burst, drift particles, impact flash, progress dots)
+- `SpecialCarer-splash-mobile-slow.html` — **mobile app splash, slowed pacing** (same composition, 14s @ `SLOW=2.5` — the cinematic / first-launch variant)
 - `animations.jsx` — easing helpers (`Easing.easeOutBack`, `easeOutCubic`, `easeInOutCubic`, `easeOutQuad`) and utilities (`clamp`, `interpolate`, `animate`, `Stage`, `Sprite`, `useTime`)
 - `assets/specialcarer-icon.svg` — pure icon (two carers + heart + foundation line, all teal)
 - `assets/specialcarer-logo.svg` — icon + wordmark lockup
@@ -101,7 +102,7 @@ Use this variant when the underlying surface already provides contrast and atmos
 |---|---|
 | Aspect | 1080 × 1920 (9:16 portrait) |
 | Duration | 10s |
-| Pacing factor | `SLOW = 1.7` (overall time divisor for all components) |
+| Pacing factor | `SLOW = 1.7` (default) or `SLOW = 2.5` (slowed cinematic) — single overall time divisor for all components |
 | Body background | `#06151a` (deep teal-ink) |
 | Stage background | Layered `radial-gradient` — ambient teal halo (top) over `#0c2a2d → #06151a → #03090b` vignette (bottom) |
 
@@ -136,8 +137,9 @@ Particle positions use a **seeded LCG** (`seeded(seed, count)`) so layout is sta
 1. Build `<SpecialCarerMobileSplash durationMs={10000} loop={false} reducedMotionFallback />` under `src/components/motion/`. This is a **separate component** from the surface-variant `<SpecialCarerLogoAnimation>` — do not try to flag-fork them.
 2. The portrait aspect, dark teal stage, and impact-driven effect stack are intentional and identity-defining for app boot. Do not remix into landscape.
 3. Honour `prefers-reduced-motion` — render only the static composition + dim ambient gradient, no ripples / sparkles / drift / breathing / progress dots.
-4. The splash duration (10s) is the cinematic version. For real boot (where Supabase session typically resolves in <2s), render the splash on its own track and let the app cross-fade in whenever ready — do **not** block boot on the full 10s.
-5. Bundle a static fallback PNG (final frame at t=6.0s) for App Store screenshots and reduced-motion contexts.
+4. The splash duration (10s standard / 14s slowed) is the cinematic version. For real boot (where Supabase session typically resolves in <2s), render the splash on its own track and let the app cross-fade in whenever ready — do **not** block boot on the full duration.
+5. Bundle a static fallback PNG (final frame) for App Store screenshots and reduced-motion contexts.
+6. **Pacing recommendation:** use `SLOW = 2.5` (14s) for **first-launch / onboarding step 1** where the brand reveal carries weight; use `SLOW = 1.7` (10s) for **returning-user boot** where speed matters. The single `SLOW` constant drives all sub-effects — do not retime individual phases.
 
 ## Implementation guidance
 
