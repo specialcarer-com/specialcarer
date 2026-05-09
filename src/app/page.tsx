@@ -10,6 +10,8 @@ import { HeroBanner } from "@/components/hero-banner";
 import { searchCaregivers, listPublishedCities } from "@/lib/care/search";
 import { CITIES } from "@/lib/care/cities";
 import { getAllPosts } from "@/lib/blog/posts";
+import { listCoverageCities } from "@/lib/coverage-server";
+import CoverageMap from "@/components/coverage-map";
 
 export const metadata: Metadata = {
   title:
@@ -40,11 +42,15 @@ export default async function Home() {
   ).toUpperCase();
   const isUS = ipCountry === "US";
 
-  const [featured, publishedCities] = await Promise.all([
+  const [featured, publishedCities, coverageCities] = await Promise.all([
     searchCaregivers({ limit: 6 }).then((r) => r.slice(0, 6)),
     listPublishedCities(),
+    listCoverageCities(),
   ]);
   const recentPosts = getAllPosts().slice(0, 3);
+  const coverageLiveCount = coverageCities.filter(
+    (c) => c.status === "live",
+  ).length;
 
   // Only surface cities in the hero search that have at least one published caregiver
   const liveCityNames = new Set(
@@ -831,6 +837,39 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      {/* Coverage map teaser */}
+      {coverageCities.length > 0 && (
+        <section className="px-6 py-16 bg-white">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center max-w-2xl mx-auto">
+              <h2 className="text-3xl font-semibold text-slate-900">
+                We are in {coverageLiveCount} cities and counting
+              </h2>
+              <p className="mt-3 text-slate-600">
+                {coverageLiveCount} live across the UK and US, with{" "}
+                {coverageCities.filter((c) => c.status === "waitlist").length}{" "}
+                more on the waitlist. Hover any pin for details.
+              </p>
+            </div>
+            <div className="mt-8">
+              <CoverageMap
+                cities={coverageCities}
+                height="480px"
+                initialBounds="all"
+              />
+            </div>
+            <div className="mt-6 flex justify-center">
+              <Link
+                href="/coverage"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand text-white text-sm font-semibold hover:bg-brand-600 transition"
+              >
+                See full coverage map →
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Download the App */}
 

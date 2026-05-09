@@ -15,6 +15,7 @@ const CARE_LINKS: FooterLink[] = [
   { href: "/care-formats/visiting", label: "Visiting care" },
   { href: "/find-care", label: "Find care now" },
   { href: "/care-in", label: "Cities" },
+  { href: "/coverage", label: "Coverage map" },
 ];
 
 const COMPANY_LINKS: FooterLink[] = [
