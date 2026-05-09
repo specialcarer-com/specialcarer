@@ -376,7 +376,7 @@ export default function ProfilePage() {
         </p>
       </div>
 
-      <BottomNav active="profile" />
+      <BottomNav active="profile" role={role === "caregiver" ? "carer" : "seeker"} />
     </div>
   );
 }

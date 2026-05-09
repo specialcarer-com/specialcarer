@@ -17,7 +17,7 @@ export default async function EarningsPage() {
     <div className="min-h-screen bg-bg-screen sc-with-bottom-nav">
       <TopBar title="Earnings" back="/m/profile" />
       <EarningsClient />
-      <BottomNav active="profile" role="carer" />
+      <BottomNav active="jobs" role="carer" />
     </div>
   );
 }

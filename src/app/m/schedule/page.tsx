@@ -581,7 +581,7 @@ export default function SchedulePage() {
         </ul>
       )}
 
-      <BottomNav active="profile" role="carer" />
+      <BottomNav active="bookings" role="carer" />
     </div>
   );
 }

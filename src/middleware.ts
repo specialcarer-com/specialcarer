@@ -31,6 +31,8 @@ const MOBILE_SEEKER_ONLY_PREFIXES = [
 ];
 const MOBILE_CAREGIVER_ONLY_PREFIXES = [
   "/m/jobs",
+  "/m/schedule",  // carer-side availability + time-off + recurring clients
+  "/m/earnings",  // carer payout dashboard
 ];
 
 export async function middleware(req: NextRequest) {

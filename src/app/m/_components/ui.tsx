@@ -8,8 +8,10 @@ import {
   ReactNode,
   TextareaHTMLAttributes,
   forwardRef,
+  useEffect,
   useState,
 } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 /* ──────────────────────────────────────────────────────────────────
    Button
@@ -237,19 +239,48 @@ export function NotificationBell({ href = "/m/notifications", hasUnread = true }
    ────────────────────────────────────────────────────────────────── */
 export function BottomNav({
   active,
-  role = "seeker",
+  role: roleProp,
 }: {
   active: "home" | "bookings" | "jobs" | "chat" | "profile";
   role?: "seeker" | "carer";
 }) {
-  // For seekers, "Jobs" tab is replaced with "Saved" (saved carers).
-  // For carers, we keep "Jobs" as the feed.
+  // If role is not passed in, auto-detect once from the signed-in profile so
+  // every /m page renders the correct tab set without the caller having to
+  // thread the role through. Falls back to "seeker" while loading.
+  const [autoRole, setAutoRole] = useState<"seeker" | "carer" | null>(null);
+  useEffect(() => {
+    if (roleProp) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const supabase = createClient();
+        const { data: u } = await supabase.auth.getUser();
+        if (!u?.user) return;
+        const { data: p } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", u.user.id)
+          .maybeSingle();
+        if (cancelled) return;
+        setAutoRole(p?.role === "caregiver" ? "carer" : "seeker");
+      } catch {
+        /* best-effort */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [roleProp]);
+  const role = roleProp ?? autoRole ?? "seeker";
+  // Carer tabs land on real carer pages — Home routes to the Jobs feed (their
+  // home), Schedule to /m/schedule, Earnings replaces the duplicate "Jobs"
+  // slot. Each href below is allowed for caregivers in middleware.ts.
   const items =
     role === "carer"
       ? [
-          { key: "home", label: "Home", href: "/m/home", icon: <IconHome /> },
-          { key: "bookings", label: "Schedule", href: "/m/bookings", icon: <IconCal /> },
-          { key: "jobs", label: "Jobs", href: "/m/jobs", icon: <IconBag /> },
+          { key: "home", label: "Home", href: "/m/jobs", icon: <IconHome /> },
+          { key: "bookings", label: "Schedule", href: "/m/schedule", icon: <IconCal /> },
+          { key: "jobs", label: "Earnings", href: "/m/earnings", icon: <IconBag /> },
           { key: "chat", label: "Chat", href: "/m/chat", icon: <IconChat /> },
           { key: "profile", label: "Profile", href: "/m/profile", icon: <IconUser /> },
         ]
