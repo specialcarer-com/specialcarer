@@ -9,6 +9,7 @@ The two HTML files in this folder are the source of truth — they are pinned de
 - `SpecialCarer-logo-animation.html` — **dark surface variant** (ink `#0F1416` backgrounds)
 - `SpecialCarer-logo-animation-light.html` — **light surface variant** (white backgrounds)
 - `SpecialCarer-logo-animation-transparent.html` — **transparent surface variant** (no stage; for compositing over photography, video, or coloured panels)
+- `SpecialCarer-splash-mobile.html` — **mobile app splash** (1080×1920 portrait, 10s, dark teal stage with ripple rings, sparkle burst, drift particles, impact flash, progress dots)
 - `animations.jsx` — easing helpers (`Easing.easeOutBack`, `easeOutCubic`, `easeInOutCubic`, `easeOutQuad`) and utilities (`clamp`, `interpolate`, `animate`, `Stage`, `Sprite`, `useTime`)
 - `assets/specialcarer-icon.svg` — pure icon (two carers + heart + foundation line, all teal)
 - `assets/specialcarer-logo.svg` — icon + wordmark lockup
@@ -89,6 +90,54 @@ For compositing over arbitrary backgrounds (photography, video, coloured panels)
 - Tagline bars colour: `rgba(3,158,160,0.55)` (teal)
 
 Use this variant when the underlying surface already provides contrast and atmosphere; do **not** stack it over a busy backdrop without ensuring sufficient contrast for the wordmark and tagline.
+
+## Mobile app splash (portrait, with ripple ring)
+
+`SpecialCarer-splash-mobile.html` is the canonical splash composition for **iOS and mobile-web app boot**. It is structurally distinct from the three landscape surface variants: portrait aspect, longer duration, and four additional effect layers tied to a single "impact" beat.
+
+### Stage
+
+| Property | Value |
+|---|---|
+| Aspect | 1080 × 1920 (9:16 portrait) |
+| Duration | 10s |
+| Pacing factor | `SLOW = 1.7` (overall time divisor for all components) |
+| Body background | `#06151a` (deep teal-ink) |
+| Stage background | Layered `radial-gradient` — ambient teal halo (top) over `#0c2a2d → #06151a → #03090b` vignette (bottom) |
+
+### Impact beat
+
+All new effects key off `IMPACT = 2.4` (seconds, before SLOW divisor) — the moment the icon "lands" after its scale-in. This is the rhythmic anchor for the splash.
+
+| Effect | Behaviour |
+|---|---|
+| Burst flash overlay | White-core → tealHi radial flash at impact, decays over 0.6s |
+| Icon impact bump | Squash/stretch ±10% scale at impact (Gaussian envelope) |
+| Heart pulse | Two sine bursts at IMPACT and IMPACT+0.35s, then sustained 2.4Hz |
+| Ripple rings | 3 concentric rings (delays 0, 0.18s, 0.38s) expanding 60→780px over 1.6s, fading + thinning |
+| Sparkle field | 28 particles radiate from impact centre, 80→660px over 1.4s, easeOutCubic, white + tealHi mix |
+| Drift particles | 14 slow-drifting bokeh dots, fade in 0.5–2.0s, ambient throughout |
+
+### Composition tokens
+
+- Wordmark: `64px` Plus Jakarta Sans 700 italic, `BRAND.teal` (smaller than landscape's 110px to fit portrait)
+- Tagline: `14px` Plus Jakarta Sans 500, `0.32em` tracking, `rgba(255,255,255,0.85)` (white on dark stage), with `rgba(63,198,200,0.55)` side bars
+- Letter stagger: `startBase = 2.6s`, `0.045s` per letter, `0.55s` letter duration
+- Tagline reveal: 4.0s + 1.0s; bars draw outward 4.2s + 0.8s
+- Settle breathing: 4.0s + 1.5s ramp, 1.4Hz ±0.6%
+- Progress dots: 3 dots, fade in 4.5s + 0.6s, sine-wave 1.4Hz pulse (mobile splash trope while bootstrap fetches)
+
+### Determinism
+
+Particle positions use a **seeded LCG** (`seeded(seed, count)`) so layout is stable across re-renders — sparkles use seed `7`, drift particles use seed `42`. Do not replace with `Math.random()`.
+
+### Implementation
+
+1. Build `<SpecialCarerMobileSplash durationMs={10000} loop={false} reducedMotionFallback />` under `src/components/motion/`. This is a **separate component** from the surface-variant `<SpecialCarerLogoAnimation>` — do not try to flag-fork them.
+2. The portrait aspect, dark teal stage, and impact-driven effect stack are intentional and identity-defining for app boot. Do not remix into landscape.
+3. Honour `prefers-reduced-motion` — render only the static composition + dim ambient gradient, no ripples / sparkles / drift / breathing / progress dots.
+4. The splash duration (10s) is the cinematic version. For real boot (where Supabase session typically resolves in <2s), render the splash on its own track and let the app cross-fade in whenever ready — do **not** block boot on the full 10s.
+5. Bundle a static fallback PNG (final frame at t=6.0s) for App Store screenshots and reduced-motion contexts.
 
 ## Implementation guidance
 
