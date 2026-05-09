@@ -1,26 +1,33 @@
 "use client";
 
 /**
- * Animated splash overlay shown briefly on first paint of the mobile WebView.
+ * Animated splash overlay shown immediately before the sign-in screen.
+ *
+ * Scope (per product direction): the splash plays only on the /m/login
+ * route, just before users see Welcome Back!. We deliberately do NOT play
+ * it on /m (the entry redirect) or /m/onboarding so first-time users move
+ * through the onboarding carousel without an interrupting brand reveal.
  *
  * v3.12 update — swap the simple ring/pulse intro for the canonical
  * SpecialCarerMobileSplash component (full ripple/sparkle/drift/flash/dot
- * stack, dark teal stage). The full canonical splash runs 10s but we
- * auto-fade at ~3s for app-boot pacing, and tap-anywhere still skips
- * after a short grace period.
+ * stack, dark teal stage).
  *
  * Why we still need this on top of the native iOS launch image:
- *   - Capacitor's native splash (mobile/resources/splash.png) only shows
+ *   - Capacitor's native splash (mobile/resources/splash.png) shows only
  *     until the WebView is ready, which on cold launches can finish before
  *     the JS bundle has fully loaded — leaving a beat of bare white.
  *   - On warm launches (already running, returning from background) iOS
  *     does NOT show the native splash at all.
- *   - This overlay paints immediately on first React render so there's a
- *     branded transition into the app instead of a flash of empty UI.
+ *   - This overlay paints immediately on first React render at /m/login so
+ *     there's a branded transition into the sign-in screen instead of a
+ *     flash of empty UI.
  *
  * Behaviour:
+ *   - Renders only when pathname === "/m/login". On any other /m/* route
+ *     the component returns null on first render (no DOM, no timers).
  *   - Plays once per session (sessionStorage gate). After it's done, the
- *     overlay is unmounted entirely so the rest of /m never sees it.
+ *     overlay is unmounted entirely so subsequent visits to /m/login in
+ *     the same session don't replay it.
  *   - Total visible ~7000 ms, then 320 ms fade-out. The canonical splash
  *     runs 10s in scene-time — at SLOW=1.7 the icon lands by ~2.4s, the
  *     wordmark finishes typing by ~6.6s, and the tagline lands at ~8.5s.
@@ -33,6 +40,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { SpecialCarerMobileSplash } from "@/components/motion/SpecialCarerMobileSplash";
 
 const SESSION_KEY = "sc:splash:played";
@@ -40,7 +48,17 @@ const VISIBLE_MS = 7000;
 const FADE_MS = 320;
 const TAP_GRACE_MS = 500;
 
+/**
+ * Pathnames the splash is allowed to play on. Today this is just the
+ * sign-in screen; sign-up intentionally does NOT trigger the splash so
+ * the same-session SESSION_KEY gate doesn't cause a no-op there either.
+ */
+const ALLOWED_PATHS = new Set(["/m/login"]);
+
 export default function SplashIntro() {
+  const pathname = usePathname();
+  const allowed = pathname ? ALLOWED_PATHS.has(pathname) : false;
+
   const [mounted, setMounted] = useState(false); // gate hydration paint
   const [visible, setVisible] = useState(true);
   const [fading, setFading] = useState(false);
@@ -49,6 +67,8 @@ export default function SplashIntro() {
   const startedAt = useRef<number>(0);
 
   useEffect(() => {
+    if (!allowed) return; // Off-route: never start any timers.
+
     setMounted(true);
     startedAt.current = Date.now();
 
@@ -81,7 +101,7 @@ export default function SplashIntro() {
       window.clearTimeout(fadeT);
       window.clearTimeout(hideT);
     };
-  }, []);
+  }, [allowed]);
 
   // Tap-to-skip after the grace window.
   function handleSkip() {
@@ -92,6 +112,7 @@ export default function SplashIntro() {
     window.setTimeout(() => setVisible(false), FADE_MS);
   }
 
+  if (!allowed) return null;
   if (!mounted || !visible) return null;
 
   return (
