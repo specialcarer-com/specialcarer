@@ -33,12 +33,12 @@
  *   - Plays once per session (sessionStorage gate). After it's done, the
  *     overlay is unmounted entirely so subsequent visits to /m/login in
  *     the same session don't replay it.
- *   - Total visible ~13800 ms, then 1100 ms slow cross-fade. We use the
+ *   - Total visible ~15800 ms, then 1700 ms slow cross-fade. We use the
  *     slowed cinematic pacing (SLOW=2.5, totalSec=14) so the icon impacts
  *     at ~6.0s real, wordmark finishes typing by ~8.5s real, and the
- *     tagline lands at ~12.5s real. The fade-out is intentionally long
- *     so the next screen eases in instead of cutting in abruptly.
- *     Tap-anywhere skips after a short grace window.
+ *     tagline lands at ~12.5s real. We then hold for ~3.3s on the full
+ *     composition before a long 1.7s cross-fade so the next screen drifts
+ *     in instead of cutting in. Tap-anywhere skips after a short grace.
  *   - prefers-reduced-motion → still plays the canonical animated splash
  *     (per product owner direction). The animation is gentle (no flashing,
  *     no rapid scaling) and tap-to-skip is available after a short grace.
@@ -63,13 +63,13 @@ const SESSION_KEY = "sc:splash:played";
  *   - tagline complete:       t = 5.0  → 12500ms real
  *   - settle/breath finishes: t = 5.5  → 13750ms real
  *
- * Hold to 13800ms so the tagline lands fully and the user gets ~1.3s
- * to read "CARE, 4 U" before the slow cross-fade to the next screen
- * begins.
+ * Hold to 15800ms so the tagline lands fully and the user gets ~3.3s
+ * to dwell on the full composition before the slow cross-fade to the
+ * next screen begins.
  */
-const VISIBLE_MS = 13800;
-/** Slow, gentle cross-fade so the next screen eases in. */
-const FADE_MS = 1100;
+const VISIBLE_MS = 15800;
+/** Long, gentle cross-fade so the next screen drifts in. */
+const FADE_MS = 1700;
 const TAP_GRACE_MS = 500;
 
 /**
@@ -114,6 +114,15 @@ export default function SplashIntro() {
       // Private mode / blocked storage — just play it once.
     }
 
+    // Mark the document so the first /m screen runs its slow entrance
+    // animation (see mobile.css → sc-mobile-enter). Cleared after the
+    // overlay finishes fading so subsequent navigations are instant.
+    try {
+      document.body.setAttribute("data-sc-splash", "1");
+    } catch {
+      /* noop */
+    }
+
     // Always play the canonical animated splash (ripple/sparkle/wordmark
     // reveal). The brand intro is the product owner's designed launch
     // experience and they have explicitly requested it for all users
@@ -124,7 +133,14 @@ export default function SplashIntro() {
     const visibleMs = VISIBLE_MS;
 
     const fadeT = window.setTimeout(() => setFading(true), visibleMs);
-    const hideT = window.setTimeout(() => setVisible(false), visibleMs + FADE_MS);
+    const hideT = window.setTimeout(() => {
+      setVisible(false);
+      try {
+        document.body.removeAttribute("data-sc-splash");
+      } catch {
+        /* noop */
+      }
+    }, visibleMs + FADE_MS);
     return () => {
       window.clearTimeout(fadeT);
       window.clearTimeout(hideT);
@@ -137,7 +153,14 @@ export default function SplashIntro() {
     if (Date.now() - startedAt.current < TAP_GRACE_MS) return;
     dismissed.current = true;
     setFading(true);
-    window.setTimeout(() => setVisible(false), FADE_MS);
+    window.setTimeout(() => {
+      setVisible(false);
+      try {
+        document.body.removeAttribute("data-sc-splash");
+      } catch {
+        /* noop */
+      }
+    }, FADE_MS);
   }
 
   if (!allowed) return null;
