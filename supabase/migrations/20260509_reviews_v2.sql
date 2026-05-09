@@ -34,7 +34,7 @@ alter table public.review_private_feedback enable row level security;
 do $$ begin
   if not exists (
     select 1 from pg_policies
-    where polname = 'review_private_feedback_owner_rw'
+    where policyname = 'review_private_feedback_owner_rw'
       and tablename = 'review_private_feedback'
   ) then
     create policy review_private_feedback_owner_rw
@@ -66,7 +66,7 @@ alter table public.tips enable row level security;
 do $$ begin
   if not exists (
     select 1 from pg_policies
-    where polname = 'tips_self_read' and tablename = 'tips'
+    where policyname = 'tips_self_read' and tablename = 'tips'
   ) then
     create policy tips_self_read on public.tips
       for select to authenticated
@@ -90,7 +90,7 @@ alter table public.blocked_caregivers enable row level security;
 do $$ begin
   if not exists (
     select 1 from pg_policies
-    where polname = 'blocked_caregivers_owner_rw'
+    where policyname = 'blocked_caregivers_owner_rw'
       and tablename = 'blocked_caregivers'
   ) then
     create policy blocked_caregivers_owner_rw
