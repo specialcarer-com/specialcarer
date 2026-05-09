@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAdminAction, type AdminUser } from "@/lib/admin/auth";
+import { getVettingSummary } from "@/lib/vetting/server";
 
 export const dynamic = "force-dynamic";
 
@@ -94,6 +95,33 @@ export async function POST(
   const blockers: string[] = [];
   if (!payoutsEnabled) blockers.push("Stripe payouts not enabled");
   if (missing.length > 0) blockers.push(`Missing checks: ${missing.join(", ")}`);
+
+  // Vetting v1 readiness — soft warn (admin can still override with a
+  // reason, but the gaps land in the audit log so we can see exactly
+  // what was overridden later).
+  const vetting = await getVettingSummary(admin, userId);
+  if (!vetting.references.complete) {
+    blockers.push(
+      `References incomplete (${vetting.references.verified}/3 verified)`,
+    );
+  }
+  if (vetting.certifications.verified === 0) {
+    blockers.push("No certifications verified");
+  }
+  if (!vetting.skills.has_any_pass) {
+    blockers.push("No skills quiz passed");
+  }
+  if (!vetting.interview.complete) {
+    blockers.push(
+      `Interview incomplete (${vetting.interview.approved}/${vetting.interview.required})`,
+    );
+  }
+  if (!vetting.course.complete) {
+    blockers.push(
+      `Onboarding course incomplete (${vetting.course.completed_modules}/${vetting.course.total})`,
+    );
+  }
+
   const ready = blockers.length === 0;
 
   // --- Apply update ---
@@ -148,6 +176,7 @@ export async function POST(
       bg_required: required,
       bg_cleared: Array.from(cleared),
       bg_missing: missing,
+      vetting,
       reason,
     },
   });

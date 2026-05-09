@@ -351,3 +351,79 @@ https://specialcarer.com
   return { subject, html, text };
 }
 
+
+// ─── Reference invitation email ──────────────────────────────────
+//
+// Sent by /api/carer/references when a carer adds a referee. The
+// referee follows the link to /r/[token] and submits the form. The
+// link expires in 14 days (enforced server-side).
+
+export type ReferenceInviteEmail = {
+  refereeName: string;
+  carerName: string;
+  link: string;
+  expiresAtIso: string;
+};
+
+function escapeRefHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+export function renderReferenceInviteEmail(args: ReferenceInviteEmail): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const subject = `${args.carerName} has listed you as a reference on SpecialCarer`;
+  const expires = new Date(args.expiresAtIso).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+  const html = `<!DOCTYPE html>
+<html><body style="font-family:'Plus Jakarta Sans',Arial,sans-serif;background:#F7FAFA;margin:0;padding:24px;color:#2F2E31">
+<div style="max-width:560px;margin:0 auto;background:#FFFFFF;border-radius:16px;padding:32px">
+  <h2 style="color:#0E7C7B;margin:0 0 8px">Reference request</h2>
+  <p>Hi ${escapeRefHtml(args.refereeName)},</p>
+  <p>${escapeRefHtml(args.carerName)} has applied to provide care on SpecialCarer and has listed you as one of their references.</p>
+  <p>Could you take 2 minutes to vouch for them? It really helps families know who they're inviting into their homes.</p>
+  <p style="margin:24px 0">
+    <a href="${args.link}" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
+      Open the reference form
+    </a>
+  </p>
+  <p style="font-size:12px;color:#575757;margin-top:24px">
+    This link expires on <strong>${expires}</strong>. If you don't recognise the carer named, please ignore this email — no action is needed.
+  </p>
+  <hr style="border:none;border-top:1px solid #E9ECEC;margin:24px 0">
+  <p style="font-size:12px;color:#575757">
+    Why you're seeing this: ${escapeRefHtml(args.carerName)} entered your email address as a reference on SpecialCarer's vetting form. We never share your email and only use it for this single message.
+  </p>
+  <p style="font-size:11px;color:#575757;margin-top:24px">
+    SpecialCarer · A product of All Care 4 U Group Ltd<br>
+    <a href="https://specialcarer.com" style="color:#0E7C7B">specialcarer.com</a>
+  </p>
+</div></body></html>`;
+
+  const text = [
+    `Hi ${args.refereeName},`,
+    "",
+    `${args.carerName} has applied to provide care on SpecialCarer and has listed you as a reference.`,
+    "",
+    "Open the reference form:",
+    args.link,
+    "",
+    `This link expires on ${expires}.`,
+    "",
+    "If you don't recognise this carer, please ignore this email.",
+    "",
+    "— SpecialCarer",
+  ].join("\n");
+
+  return { subject, html, text };
+}

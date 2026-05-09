@@ -227,6 +227,11 @@ export default async function DashboardPage() {
                   href="/dashboard/verification"
                 />
                 <Step
+                  done={false}
+                  label="Get fully vetted (references, certs, quiz, interview, course)"
+                  href="/dashboard/vetting"
+                />
+                <Step
                   done={readiness.isPublished}
                   label={readiness.isPublished ? "Published" : "Publish profile"}
                   href="/dashboard/profile"
