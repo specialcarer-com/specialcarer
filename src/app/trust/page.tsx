@@ -220,6 +220,51 @@ export default function Page() {
           </Link>
         </div>
       </section>
+
+      <section className="px-6 pb-16">
+        <div className="max-w-4xl mx-auto">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Related pages
+          </h3>
+          <ul className="mt-3 grid sm:grid-cols-3 gap-3 text-sm">
+            <li>
+              <Link
+                href="/insurance"
+                className="block rounded-2xl border border-slate-200 bg-white p-4 hover:shadow-sm transition"
+              >
+                <p className="font-semibold text-slate-900">Insurance summary</p>
+                <p className="mt-1 text-xs text-slate-600">
+                  UK and US cover, plus what carers are recommended to carry.
+                </p>
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/worker-protection"
+                className="block rounded-2xl border border-slate-200 bg-white p-4 hover:shadow-sm transition"
+              >
+                <p className="font-semibold text-slate-900">
+                  Worker protections
+                </p>
+                <p className="mt-1 text-xs text-slate-600">
+                  Your rights when a shift becomes unsafe, and how to escalate.
+                </p>
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/dashboard/community"
+                className="block rounded-2xl border border-slate-200 bg-white p-4 hover:shadow-sm transition"
+              >
+                <p className="font-semibold text-slate-900">Carer community</p>
+                <p className="mt-1 text-xs text-slate-600">
+                  Tips, stories, and peer support from verified carers.
+                </p>
+              </Link>
+            </li>
+          </ul>
+        </div>
+      </section>
     </MarketingShell>
   );
 }

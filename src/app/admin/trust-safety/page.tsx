@@ -39,6 +39,30 @@ export default async function TrustSafetyHub() {
       counter: `${c.kycEscalations} flagged`,
       tone: c.kycEscalations > 0 ? "warn" : "default",
     },
+    {
+      href: "/admin/trust-safety/safety-reports",
+      title: "Safety reports",
+      blurb:
+        "Carer-raised reports about clients or environments. Triage, escalate, and document the response.",
+      counter: `${c.safetyReportsOpen} open`,
+      tone: c.safetyReportsOpen > 0 ? "danger" : "default",
+    },
+    {
+      href: "/admin/trust-safety/leave-requests",
+      title: "Leave requests",
+      blurb:
+        "Carers asking to leave a live booking. Approve or deny; arrange a replacement when needed.",
+      counter: `${c.leaveRequestsOpen} open`,
+      tone: c.leaveRequestsOpen > 0 ? "warn" : "default",
+    },
+    {
+      href: "/admin/trust-safety/forum-reports",
+      title: "Community reports",
+      blurb:
+        "Reports on community threads and replies. Soft-delete, lock, or dismiss.",
+      counter: `${c.forumReportsOpen} open`,
+      tone: c.forumReportsOpen > 0 ? "warn" : "default",
+    },
   ] as const;
 
   return (

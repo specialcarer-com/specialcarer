@@ -7,6 +7,7 @@
  * not eligible (booking finished, cancelled, etc.).
  */
 
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -45,7 +46,11 @@ export default async function TrackPage({
   if (!eligibility.eligible) {
     return (
       <main className="min-h-[100dvh] bg-bg-screen">
-        <TopBar title="Live tracking" back={`/m/bookings/${id}`} />
+        <TopBar
+          title="Live tracking"
+          back={`/m/bookings/${id}`}
+          right={<TalkToSafetyPill />}
+        />
         <ComingSoon
           hero={<IconMapPin />}
           title="Tracking not available right now"
@@ -115,5 +120,17 @@ export default async function TrackPage({
         hasArrivalSelfie={!!arrivalSelfiePath}
       />
     </main>
+  );
+}
+
+/** Small pill shown in the tracker TopBar that links to Support & Safety. */
+function TalkToSafetyPill() {
+  return (
+    <Link
+      href="/m/support"
+      className="inline-flex items-center gap-1 rounded-pill bg-rose-50 border border-rose-200 px-2.5 py-1 text-[11px] font-semibold text-rose-800"
+    >
+      Talk to safety
+    </Link>
   );
 }

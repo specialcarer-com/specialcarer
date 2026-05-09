@@ -2,8 +2,10 @@ import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPublicToken, getStyle } from "@/lib/mapbox/server";
+import Link from "next/link";
 import { TopBar } from "../../_components/ui";
 import TargetedJobClient from "./TargetedJobClient";
+import { ACTIVE_BOOKING_STATUSES } from "@/lib/safety/types";
 
 export const dynamic = "force-dynamic";
 
@@ -106,9 +108,35 @@ export default async function TargetedJobDetailPage({
       .maybeSingle<{ carer_id: string }>(),
   ]);
 
+  const isActive = (ACTIVE_BOOKING_STATUSES as readonly string[]).includes(
+    bookingRaw.status,
+  );
+
   return (
     <div className="min-h-screen bg-bg-screen pb-24">
       <TopBar title="Job details" back="/m/jobs" />
+      {isActive && (
+        <div className="px-5 pt-3 flex flex-wrap gap-2">
+          <Link
+            href={`/m/booking/${bookingRaw.id}/report-issue`}
+            className="inline-flex items-center gap-1 rounded-pill bg-rose-50 border border-rose-200 px-3 py-1.5 text-[12px] font-semibold text-rose-800"
+          >
+            Report issue
+          </Link>
+          <Link
+            href={`/m/booking/${bookingRaw.id}/leave`}
+            className="inline-flex items-center gap-1 rounded-pill bg-amber-50 border border-amber-200 px-3 py-1.5 text-[12px] font-semibold text-amber-900"
+          >
+            Request to leave
+          </Link>
+          <Link
+            href="/m/support"
+            className="inline-flex items-center gap-1 rounded-pill bg-white border border-line px-3 py-1.5 text-[12px] font-semibold text-heading"
+          >
+            Talk to safety
+          </Link>
+        </div>
+      )}
       <TargetedJobClient
         booking={{
           id: bookingRaw.id,

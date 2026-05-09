@@ -131,12 +131,20 @@ export default async function BookingDetailPage({
 
       <section className="flex-1 px-6 py-10">
         <div className="max-w-3xl mx-auto">
-          <Link
-            href="/dashboard"
-            className="text-sm text-slate-500 hover:text-slate-700"
-          >
-            ← Back to dashboard
-          </Link>
+          <div className="flex items-center justify-between gap-3">
+            <Link
+              href="/dashboard"
+              className="text-sm text-slate-500 hover:text-slate-700"
+            >
+              ← Back to dashboard
+            </Link>
+            <Link
+              href="/dashboard/support"
+              className="inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-200 px-2.5 py-1 text-xs font-semibold text-rose-800 hover:bg-rose-100"
+            >
+              Talk to safety
+            </Link>
+          </div>
 
           <div className="mt-3 flex flex-wrap items-baseline justify-between gap-3">
             <h1 className="text-3xl font-semibold tracking-tight">

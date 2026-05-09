@@ -249,7 +249,15 @@ export async function listKycEscalations(
 
 export async function getTrustSafetyCounts() {
   const admin = createAdminClient();
-  const [reviewsLow, disputes, kycOpen, sosOpen] = await Promise.all([
+  const [
+    reviewsLow,
+    disputes,
+    kycOpen,
+    sosOpen,
+    safetyOpen,
+    leaveOpen,
+    forumOpen,
+  ] = await Promise.all([
     admin
       .from("reviews")
       .select("id", { count: "exact", head: true })
@@ -267,6 +275,18 @@ export async function getTrustSafetyCounts() {
       .from("sos_alerts")
       .select("id", { count: "exact", head: true })
       .eq("status", "open"),
+    admin
+      .from("safety_reports")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["open", "triaging", "escalated"]),
+    admin
+      .from("leave_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "open"),
+    admin
+      .from("forum_reports")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "open"),
   ]);
 
   // KYC open = bg_checks in consider/failed that have NO decision yet.
@@ -276,6 +296,9 @@ export async function getTrustSafetyCounts() {
     disputes: disputes.count ?? 0,
     kycEscalations: kycOpen.count ?? 0,
     sosOpen: sosOpen.count ?? 0,
+    safetyReportsOpen: safetyOpen.count ?? 0,
+    leaveRequestsOpen: leaveOpen.count ?? 0,
+    forumReportsOpen: forumOpen.count ?? 0,
   };
 }
 
