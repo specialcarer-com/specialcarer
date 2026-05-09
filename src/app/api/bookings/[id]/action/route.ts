@@ -27,7 +27,7 @@ export async function POST(
   }
 
   const { action } = (await req.json()) as { action?: string };
-  if (!["cancel", "decline", "start"].includes(action ?? "")) {
+  if (!["cancel", "decline", "start", "accept"].includes(action ?? "")) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }
 
@@ -100,6 +100,43 @@ export async function POST(
       .eq("id", bookingId);
 
     return NextResponse.json({ ok: true, status: "cancelled" });
+  }
+
+  if (action === "accept") {
+    if (!isCaregiver) {
+      return NextResponse.json(
+        { error: "Only the assigned caregiver can accept" },
+        { status: 403 },
+      );
+    }
+    if (booking.status !== "pending") {
+      return NextResponse.json(
+        { error: `Cannot accept a booking in status ${booking.status}` },
+        { status: 400 },
+      );
+    }
+    if (
+      booking.discovery_expires_at &&
+      new Date(booking.discovery_expires_at).getTime() < Date.now()
+    ) {
+      return NextResponse.json(
+        { error: "This job has expired" },
+        { status: 400 },
+      );
+    }
+    const acceptedAt = new Date().toISOString();
+    const { error: updateErr } = await admin
+      .from("bookings")
+      .update({
+        status: "accepted",
+        accepted_at: acceptedAt,
+        updated_at: acceptedAt,
+      })
+      .eq("id", bookingId);
+    if (updateErr) {
+      return NextResponse.json({ error: updateErr.message }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true, status: "accepted" });
   }
 
   if (action === "start") {

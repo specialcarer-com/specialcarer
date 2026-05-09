@@ -84,13 +84,76 @@ export default function PostJobPage() {
 
   function next() {
     if (step < STEPS.length - 1) setStep((s) => s + 1);
-    else publish();
+    else void publish();
   }
 
-  function publish() {
-    // v1: stub publish, will POST to /api/jobs once backend lands
+  // Mock-vertical → canonical SpecialCarer service vertical.
+  const SERVICE_TO_CANONICAL: Record<string, string> = {
+    child: "childcare",
+    elderly: "elderly_care",
+    special: "special_needs",
+    postnatal: "postnatal",
+  };
+
+  async function publish() {
+    if (!form.service) return;
+    const canonical = SERVICE_TO_CANONICAL[form.service] ?? form.service;
+    // The form captures one date + an hours/week duration. For a v1
+    // single-shift request we treat that duration as a one-shot length
+    // starting at 09:00 local on the given date.
+    const startsAt = new Date(`${form.startDate}T09:00:00`);
+    const durationHours = Math.max(1, Math.min(24, Number(form.hoursPerWeek) || 1));
+    const endsAt = new Date(startsAt.getTime() + durationHours * 3600_000);
+
+    // The seeker fills both a GBP and USD rate in the existing form.
+    // We submit one request in the rate that matches their account
+    // country — fall back to GBP if neither feels right.
+    const rateGbp = Number(form.rateGbp);
+    const rateUsd = Number(form.rateUsd);
+    const useUsd = !rateGbp && rateUsd > 0;
+    const ratePounds = useUsd ? rateUsd : rateGbp;
+    const hourly_rate_cents = Math.round(ratePounds * 100);
+    const currency: "gbp" | "usd" = useUsd ? "usd" : "gbp";
+    const country: "GB" | "US" = useUsd ? "US" : "GB";
+
+    const notes = [
+      form.title.trim() ? `**${form.title.trim()}**` : null,
+      form.description.trim(),
+      form.requirements.length > 0
+        ? `Requirements: ${form.requirements.join(", ")}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    try {
+      const res = await fetch("/api/service-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          service_type: canonical,
+          starts_at: startsAt.toISOString(),
+          ends_at: endsAt.toISOString(),
+          hourly_rate_cents,
+          currency,
+          location_city: form.city.trim() || null,
+          location_country: country,
+          notes: notes || null,
+        }),
+      });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        // Surface the error inline rather than blowing up — the user
+        // can correct and retry without losing their inputs.
+        alert(j.error ?? "Couldn't publish your job. Please try again.");
+        return;
+      }
+    } catch {
+      alert("Network error. Please try again.");
+      return;
+    }
     setDone(true);
-    setTimeout(() => router.push("/m/jobs"), 1400);
+    setTimeout(() => router.push("/m/bookings"), 1400);
   }
 
   if (done) {
