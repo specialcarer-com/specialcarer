@@ -3,10 +3,15 @@
 /**
  * Animated splash overlay shown immediately before the sign-in screen.
  *
- * Scope (per product direction): the splash plays only on the /m/login
- * route, just before users see Welcome Back!. We deliberately do NOT play
- * it on /m (the entry redirect) or /m/onboarding so first-time users move
- * through the onboarding carousel without an interrupting brand reveal.
+ * Scope (per product direction): the splash plays on cold app launch
+ * (the /m entry route, before the auth-decision redirect lands) and on
+ * /m/login (returning users signing back in). Both are one-per-session,
+ * so users don't see the same reveal twice in the same launch.
+ *
+ * Critically: once the splash mounts on /m, it stays mounted across the
+ * client-side router.replace() to /m/onboarding or /m/home so the full
+ * 7s reveal never gets clipped by the redirect. We lock onto the first
+ * allowed route we see and ignore subsequent path changes for unmount.
  *
  * v3.12 update — swap the simple ring/pulse intro for the canonical
  * SpecialCarerMobileSplash component (full ripple/sparkle/drift/flash/dot
@@ -49,15 +54,23 @@ const FADE_MS = 320;
 const TAP_GRACE_MS = 500;
 
 /**
- * Pathnames the splash is allowed to play on. Today this is just the
- * sign-in screen; sign-up intentionally does NOT trigger the splash so
- * the same-session SESSION_KEY gate doesn't cause a no-op there either.
+ * Pathnames the splash is allowed to start on:
+ *   - /m       → cold-launch entry (app open from icon)
+ *   - /m/login → returning user signing in
+ * Sign-up and onboarding intentionally do NOT trigger the splash; if a
+ * user lands there directly via deep-link they don't get the reveal.
  */
-const ALLOWED_PATHS = new Set(["/m/login"]);
+const ALLOWED_PATHS = new Set(["/m", "/m/login"]);
 
 export default function SplashIntro() {
   const pathname = usePathname();
-  const allowed = pathname ? ALLOWED_PATHS.has(pathname) : false;
+  // Lock onto the first allowed path we see. Once locked, we ignore
+  // subsequent route changes so the splash plays through its full
+  // duration even when /m client-redirects to /m/onboarding mid-reveal.
+  const lockedRef = useRef<boolean>(false);
+  const isAllowedNow = pathname ? ALLOWED_PATHS.has(pathname) : false;
+  if (isAllowedNow) lockedRef.current = true;
+  const allowed = lockedRef.current;
 
   const [mounted, setMounted] = useState(false); // gate hydration paint
   const [visible, setVisible] = useState(true);
