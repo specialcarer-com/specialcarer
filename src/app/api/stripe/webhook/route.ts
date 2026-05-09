@@ -146,6 +146,32 @@ export async function POST(req: Request) {
         break;
       }
       // ---------------------------------------------------------------
+      // Connect payouts — flip payout_intents rows once Stripe confirms
+      // ---------------------------------------------------------------
+      case "payout.paid": {
+        const po = event.data.object as Stripe.Payout;
+        await admin
+          .from("payout_intents")
+          .update({
+            status: "paid",
+            paid_at: new Date().toISOString(),
+          })
+          .eq("stripe_payout_id", po.id);
+        break;
+      }
+      case "payout.failed": {
+        const po = event.data.object as Stripe.Payout;
+        await admin
+          .from("payout_intents")
+          .update({
+            status: "failed",
+            failure_reason: po.failure_message ?? "stripe_payout_failed",
+          })
+          .eq("stripe_payout_id", po.id);
+        break;
+      }
+
+      // ---------------------------------------------------------------
       // Memberships (consumer subscriptions, NOT Connect)
       // ---------------------------------------------------------------
       case "customer.subscription.created":

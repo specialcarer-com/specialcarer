@@ -68,6 +68,11 @@ const CAREGIVER_SECTION: Section = {
   title: "Care profile",
   rows: [
     {
+      href: "/m/earnings",
+      icon: <IconBag />,
+      label: "Earnings",
+    },
+    {
       href: "/m/profile/vetting",
       icon: <IconCert />,
       label: "Get vetted",

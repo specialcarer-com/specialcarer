@@ -233,6 +233,33 @@ export async function POST(
       console.error("[action.complete] journal event failed", e);
     }
 
+    // Referral progress: if this carer was referred, bump their
+    // referee row by 1 and flip to 'qualified' once they hit the
+    // qualifying-bookings threshold. Idempotent enough — we only
+    // increment for completed status transitions, which only fire
+    // here.
+    try {
+      const { data: ref } = await admin
+        .from("referrals")
+        .select("id, qualifying_bookings, payout_status")
+        .eq("referee_id", user.id)
+        .maybeSingle<{
+          id: string;
+          qualifying_bookings: number;
+          payout_status: string;
+        }>();
+      if (ref && ref.payout_status === "pending") {
+        const next = ref.qualifying_bookings + 1;
+        const status = next >= 5 ? "qualified" : "pending";
+        await admin
+          .from("referrals")
+          .update({ qualifying_bookings: next, payout_status: status })
+          .eq("id", ref.id);
+      }
+    } catch (e) {
+      console.error("[action.complete] referral bump failed", e);
+    }
+
     return NextResponse.json({ ok: true, status: "completed" });
   }
 
