@@ -568,11 +568,13 @@ export default async function FindCarePage({
           </ul>
         )}
 
-        {/* Help footer */}
+        {/* Help footer — each card on a distinct, brand-appropriate background
+            so the three topics read as separate at a glance: trust (teal),
+            cost (amber), support (neutral). */}
         <div className="mt-12 grid sm:grid-cols-3 gap-4 text-sm">
-          <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+          <div className="bg-brand-50 p-5 rounded-2xl border border-brand-100">
             <h3 className="font-semibold text-slate-900">How vetting works</h3>
-            <p className="mt-1 text-slate-600">
+            <p className="mt-1 text-slate-700">
               ID + selfie, full background check, payouts-enabled.{" "}
               <Link href="/trust" className="text-brand-700 hover:underline">
                 See standards
@@ -580,9 +582,9 @@ export default async function FindCarePage({
               .
             </p>
           </div>
-          <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+          <div className="bg-amber-50 p-5 rounded-2xl border border-amber-100">
             <h3 className="font-semibold text-slate-900">What you&rsquo;ll pay</h3>
-            <p className="mt-1 text-slate-600">
+            <p className="mt-1 text-slate-700">
               Caregiver rate + 30% service fee, all-in.{" "}
               <Link href="/pricing" className="text-brand-700 hover:underline">
                 Pricing detail
@@ -590,9 +592,9 @@ export default async function FindCarePage({
               .
             </p>
           </div>
-          <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
+          <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
             <h3 className="font-semibold text-slate-900">Need help choosing?</h3>
-            <p className="mt-1 text-slate-600">
+            <p className="mt-1 text-slate-700">
               Email{" "}
               <a
                 href="mailto:support@specialcarer.com"
