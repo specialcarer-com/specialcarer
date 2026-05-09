@@ -24,6 +24,8 @@ import {
   IconJournal,
   IconHome,
   IconPhone,
+  IconCamera,
+  IconAward,
 } from "../_components/ui";
 import { createClient } from "@/lib/supabase/client";
 
@@ -84,6 +86,21 @@ const CAREGIVER_SECTION: Section = {
       label: "Certifications",
     },
     {
+      href: "/m/profile/rates",
+      icon: <IconCard />,
+      label: "Rates",
+    },
+    {
+      href: "/m/profile/photos",
+      icon: <IconCamera />,
+      label: "Gallery",
+    },
+    {
+      href: "/m/profile/achievements",
+      icon: <IconAward />,
+      label: "Achievements",
+    },
+    {
       href: "/m/schedule",
       icon: <IconCal />,
       label: "Schedule & availability",
@@ -128,6 +145,7 @@ export default function ProfilePage() {
   const [email, setEmail] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [role, setRole] = useState<Role | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -139,6 +157,7 @@ export default function ProfilePage() {
         setLoaded(true);
         return;
       }
+      setUserId(user.id);
       setEmail(user.email ?? "");
       const meta = (user.user_metadata || {}) as Record<string, unknown>;
       const fullName =
@@ -200,12 +219,22 @@ export default function ProfilePage() {
               )}
             </div>
           </div>
-          <Link
-            href="/m/profile/edit"
-            className="mt-3 inline-flex h-9 items-center rounded-pill bg-primary-50 px-4 text-[13px] font-semibold text-primary"
-          >
-            View / edit profile
-          </Link>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link
+              href="/m/profile/edit"
+              className="inline-flex h-9 items-center rounded-pill bg-primary-50 px-4 text-[13px] font-semibold text-primary"
+            >
+              View / edit profile
+            </Link>
+            {role === "caregiver" && userId && (
+              <Link
+                href={`/m/carer/${userId}?preview=1`}
+                className="inline-flex h-9 items-center rounded-pill bg-muted px-4 text-[13px] font-semibold text-heading"
+              >
+                Preview public profile
+              </Link>
+            )}
+          </div>
         </div>
       </div>
 

@@ -63,6 +63,23 @@ export default async function CaregiverPage({
     : { data: [] };
   const nameById = new Map((reviewers ?? []).map((p) => [p.id, p.full_name]));
 
+  // Earned achievements — only render when there's at least one.
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  type EarnedAchievement = {
+    achievement_key: string;
+    label: string;
+    description: string;
+  };
+  let achievements: EarnedAchievement[] = [];
+  if (UUID_RE.test(id)) {
+    const { data: ach } = await admin
+      .from("caregiver_achievements_v")
+      .select("achievement_key, label, description")
+      .eq("caregiver_id", id)
+      .eq("earned", true);
+    achievements = (ach ?? []) as EarnedAchievement[];
+  }
+
   // Determine viewer + saved state
   const supabase = await createClient();
   const {
@@ -162,6 +179,20 @@ export default async function CaregiverPage({
                 )}
               </div>
             </div>
+
+            {achievements.length > 0 && (
+              <ul className="mt-4 flex flex-wrap gap-1.5">
+                {achievements.map((a) => (
+                  <li
+                    key={a.achievement_key}
+                    title={a.description}
+                    className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 text-xs font-medium border border-amber-100"
+                  >
+                    {a.label}
+                  </li>
+                ))}
+              </ul>
+            )}
 
             <div className="mt-5 flex flex-wrap gap-2">
               <Link

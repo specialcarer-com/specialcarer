@@ -11,6 +11,7 @@ import {
   CarerBadges,
   IconAward,
   IconCert,
+  IconCheck,
   IconClock,
   IconInfo,
   IconLanguage,
@@ -75,6 +76,34 @@ export default function CarerDetailPage() {
     };
   }, [carerId, isUuidId]);
 
+  type EarnedAchievement = {
+    achievement_key: string;
+    label: string;
+    description: string;
+  };
+  const [achievements, setAchievements] = useState<EarnedAchievement[]>([]);
+  useEffect(() => {
+    if (!isUuidId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/carer-achievements/${carerId}`);
+        if (!res.ok) return;
+        const json = (await res.json()) as {
+          achievements?: EarnedAchievement[];
+        };
+        if (!cancelled && Array.isArray(json.achievements)) {
+          setAchievements(json.achievements);
+        }
+      } catch {
+        /* ignore — achievements are optional */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [carerId, isUuidId]);
+
   if (!carer) {
     return (
       <main className="min-h-[100dvh] bg-white">
@@ -128,6 +157,20 @@ export default function CarerDetailPage() {
             <IconStar /> {carer.rating.toFixed(1)}
           </span>
         </p>
+        {isUuidId && achievements.length > 0 && (
+          <ul className="mt-3 flex flex-wrap justify-center gap-1.5">
+            {achievements.map((a) => (
+              <li
+                key={a.achievement_key}
+                title={a.description}
+                className="inline-flex items-center gap-1 rounded-pill bg-primary-50 px-2.5 py-1 text-[11px] font-semibold text-primary"
+              >
+                {achievementIcon(a.achievement_key)}
+                <span>{a.label}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Tabs */}
@@ -485,4 +528,24 @@ function CertIcon({ title }: { title: string }) {
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     </svg>
   );
+}
+
+function achievementIcon(key: string) {
+  switch (key) {
+    case "hundred_jobs":
+    case "rookie_pro":
+      return <IconAward />;
+    case "top_rated":
+    case "repeat_favourite":
+      return <IconStar />;
+    case "reliable":
+    case "verified_carer":
+      return <IconCheck />;
+    case "quick_responder":
+      return <IconClock />;
+    case "dementia_specialist":
+      return <IconCert />;
+    default:
+      return <IconAward />;
+  }
 }
