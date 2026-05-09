@@ -33,7 +33,7 @@ export default async function AdminOrgDetailPage({
     .maybeSingle();
   if (!org) notFound();
 
-  const [membersRes, docsRes, billingRes] = await Promise.all([
+  const [membersRes, docsRes, billingRes, contractsRes] = await Promise.all([
     admin
       .from("organization_members")
       .select(
@@ -54,7 +54,44 @@ export default async function AdminOrgDetailPage({
       )
       .eq("organization_id", id)
       .maybeSingle(),
+    admin
+      .from("organization_contracts")
+      .select(
+        "id, contract_type, version, status, signed_by_name, signed_by_role, signed_at, signature_ip, signature_user_agent, countersigned_at, signed_pdf_storage_path, legal_review_comment",
+      )
+      .eq("organization_id", id)
+      .order("contract_type", { ascending: true }),
   ]);
+
+  type ContractRow = {
+    id: string;
+    contract_type: "msa" | "dpa";
+    version: string;
+    status: string;
+    signed_by_name: string | null;
+    signed_by_role: string | null;
+    signed_at: string | null;
+    signature_ip: string | null;
+    signature_user_agent: string | null;
+    countersigned_at: string | null;
+    signed_pdf_storage_path: string | null;
+    legal_review_comment: string | null;
+    signed_url?: string | null;
+  };
+  const baseContracts = (contractsRes.data ?? []) as ContractRow[];
+  const contracts: ContractRow[] = await Promise.all(
+    baseContracts.map(async (c) => {
+      if (!c.signed_pdf_storage_path) return c;
+      try {
+        const { data: s } = await admin.storage
+          .from("organization-documents")
+          .createSignedUrl(c.signed_pdf_storage_path, 3600);
+        return { ...c, signed_url: s?.signedUrl ?? null };
+      } catch {
+        return { ...c, signed_url: null };
+      }
+    }),
+  );
 
   type DocBase = {
     id: string;
@@ -221,6 +258,77 @@ export default async function AdminOrgDetailPage({
             );
           })}
         </ul>
+      </div>
+
+      <div className="rounded-2xl bg-white border border-slate-200 p-5">
+        <p className="text-xs uppercase tracking-wide text-slate-500 mb-2">
+          Contracts
+        </p>
+        {contracts.length === 0 ? (
+          <p className="text-sm text-slate-500">
+            Org hasn&rsquo;t reached step 7.5 yet.
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {contracts.map((c) => (
+              <li
+                key={c.id}
+                className="border border-slate-200 rounded-xl p-3"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-slate-900">
+                      {c.contract_type.toUpperCase()} —{" "}
+                      <span className="font-mono text-xs text-slate-500">
+                        {c.version}
+                      </span>
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Status: <strong>{c.status}</strong>
+                      {c.signed_at &&
+                        ` · signed ${new Date(c.signed_at).toLocaleString("en-GB")}`}
+                      {c.signed_by_name &&
+                        ` by ${c.signed_by_name} (${c.signed_by_role ?? "—"})`}
+                    </p>
+                    {c.signature_ip && (
+                      <p className="text-[11px] text-slate-500">
+                        IP: {c.signature_ip} · UA:{" "}
+                        {c.signature_user_agent
+                          ? c.signature_user_agent.slice(0, 80)
+                          : "—"}
+                      </p>
+                    )}
+                    {c.legal_review_comment && (
+                      <p className="text-[11px] text-amber-700 mt-1 whitespace-pre-wrap">
+                        Legal-review note: {c.legal_review_comment}
+                      </p>
+                    )}
+                    {c.countersigned_at && (
+                      <p className="text-[11px] text-emerald-700">
+                        Countersigned{" "}
+                        {new Date(c.countersigned_at).toLocaleString("en-GB")}
+                      </p>
+                    )}
+                  </div>
+                  {c.signed_url ? (
+                    <a
+                      href={c.signed_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-semibold text-slate-900 underline whitespace-nowrap"
+                    >
+                      Download signed PDF →
+                    </a>
+                  ) : (
+                    <span className="text-xs text-slate-500">
+                      PDF generated on approval
+                    </span>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <OrgRowActions

@@ -162,7 +162,7 @@ export default function Step7() {
         <Button
           block
           disabled={!requiredOK}
-          onClick={() => router.push("/m/org/register/step-8")}
+          onClick={() => router.push("/m/org/register/step-7-5")}
         >
           Continue
         </Button>

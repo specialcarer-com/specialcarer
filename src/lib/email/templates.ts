@@ -462,12 +462,24 @@ function orgShell(title: string, bodyHtml: string): string {
 export function renderOrgSubmittedEmail(args: {
   bookerName: string;
   legalName: string;
+  contractsSignedAtIso?: string | null;
 }): { subject: string; html: string; text: string } {
   const subject = `We've received your SpecialCarer organisation application`;
+  const signedAt = args.contractsSignedAtIso
+    ? new Date(args.contractsSignedAtIso).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    : null;
+  const contractsLine = signedAt
+    ? `<p>You signed our Master Services Agreement and Data Processing Addendum on <strong>${escOrgHtml(signedAt)}</strong>. Your countersigned copy will be emailed once we approve your account.</p>`
+    : "";
   const html = orgShell(
     "Application received",
     `<p>Hi ${escOrgHtml(args.bookerName)},</p>
     <p>Thanks — we've received the verification details for <strong>${escOrgHtml(args.legalName)}</strong>.</p>
+    ${contractsLine}
     <p>We aim to verify within <strong>2 business days</strong>. In the meantime you can browse carers and save shortlists from your dashboard; bookings unlock the moment we confirm your documents.</p>
     <p style="margin:24px 0">
       <a href="https://specialcarer.com/m/org" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
@@ -475,33 +487,49 @@ export function renderOrgSubmittedEmail(args: {
       </a>
     </p>`,
   );
-  const text = [
+  const textLines = [
     `Hi ${args.bookerName},`,
     "",
     `Thanks — we've received the verification details for ${args.legalName}.`,
+  ];
+  if (signedAt) {
+    textLines.push(
+      "",
+      `You signed our MSA and DPA on ${signedAt}. Your countersigned copy will be emailed once we approve your account.`,
+    );
+  }
+  textLines.push(
     "",
     "We aim to verify within 2 business days.",
     "",
     "Dashboard: https://specialcarer.com/m/org",
     "",
     "— SpecialCarer",
-  ].join("\n");
-  return { subject, html, text };
+  );
+  return { subject, html, text: textLines.join("\n") };
 }
 
 export function renderOrgApprovedEmail(args: {
   bookerName: string;
   legalName: string;
+  contractDownloadsUrl?: string;
 }): { subject: string; html: string; text: string } {
   const subject = `Your SpecialCarer organisation account is verified`;
+  const downloads =
+    args.contractDownloadsUrl ?? "https://specialcarer.com/m/org/documents";
   const html = orgShell(
     "You're verified — start booking",
     `<p>Hi ${escOrgHtml(args.bookerName)},</p>
     <p>Welcome aboard. <strong>${escOrgHtml(args.legalName)}</strong> is now verified on SpecialCarer.</p>
-    <p>You can book any of our DBS / Checkr-cleared carers directly from your dashboard. Pricing stays at the same UK / US standard rates — no setup fees, no contracts.</p>
+    <p>Your countersigned MSA and DPA are now available on your dashboard — open the Documents tab to download.</p>
+    <p>You can book any of our DBS / Checkr-cleared carers directly from your dashboard. Pricing stays at the same UK / US standard rates — no setup fees.</p>
     <p style="margin:24px 0">
       <a href="https://specialcarer.com/m/org/carers" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
         Browse carers
+      </a>
+      &nbsp;
+      <a href="${downloads}" style="display:inline-block;background:#FFFFFF;color:#0E7C7B;border:1px solid #0E7C7B;text-decoration:none;padding:11px 20px;border-radius:9999px;font-weight:700">
+        Download contracts
       </a>
     </p>`,
   );
@@ -510,7 +538,39 @@ export function renderOrgApprovedEmail(args: {
     "",
     `${args.legalName} is now verified on SpecialCarer. You can book carers directly from your dashboard.`,
     "",
+    `Your countersigned MSA and DPA: ${downloads}`,
+    "",
     "Browse carers: https://specialcarer.com/m/org/carers",
+    "",
+    "— SpecialCarer",
+  ].join("\n");
+  return { subject, html, text };
+}
+
+/**
+ * Stub: contract amendment proposed. Used in a future phase when we
+ * publish a new MSA / DPA version and need to nudge existing
+ * counterparties to re-sign.
+ */
+export function renderOrgContractAmendmentEmail(args: {
+  bookerName: string;
+  legalName: string;
+  contractType: "msa" | "dpa";
+  newVersion: string;
+}): { subject: string; html: string; text: string } {
+  const subject = `Action needed — updated SpecialCarer ${args.contractType.toUpperCase()}`;
+  const html = orgShell(
+    "We've updated our agreement",
+    `<p>Hi ${escOrgHtml(args.bookerName)},</p>
+    <p>We've published a new version of our ${escOrgHtml(args.contractType.toUpperCase())} (<strong>${escOrgHtml(args.newVersion)}</strong>) and would like you to review and re-sign for <strong>${escOrgHtml(args.legalName)}</strong>.</p>
+    <p>This won't change your rates or service — the amendment is administrative only. Full diff is on your dashboard.</p>`,
+  );
+  const text = [
+    `Hi ${args.bookerName},`,
+    "",
+    `We've updated the SpecialCarer ${args.contractType.toUpperCase()} (${args.newVersion}) and would like you to re-sign for ${args.legalName}.`,
+    "",
+    "Dashboard: https://specialcarer.com/m/org/documents",
     "",
     "— SpecialCarer",
   ].join("\n");

@@ -77,9 +77,22 @@ export async function POST() {
   // Best-effort emails — don't block the success response.
   const bookerName = member.full_name || "there";
   const bookerEmail = member.work_email || user.email || null;
+
+  // Look up the most recent contract signature so the email can
+  // confirm "you signed on …" (Phase A.5).
+  const { data: ctRow } = await admin
+    .from("organization_contracts")
+    .select("signed_at")
+    .eq("organization_id", org.id)
+    .not("signed_at", "is", null)
+    .order("signed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ signed_at: string | null }>();
+
   const submitted = renderOrgSubmittedEmail({
     bookerName,
     legalName: org.legal_name,
+    contractsSignedAtIso: ctRow?.signed_at ?? null,
   });
   if (bookerEmail) {
     await sendEmail({

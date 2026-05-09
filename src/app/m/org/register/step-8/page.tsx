@@ -49,9 +49,18 @@ type MeResp = {
   } | null;
 };
 
+type Contract = {
+  id: string;
+  contract_type: "msa" | "dpa";
+  version: string;
+  status: string;
+  signed_at: string | null;
+};
+
 export default function Step8() {
   const router = useRouter();
   const [data, setData] = useState<MeResp | null>(null);
+  const [contracts, setContracts] = useState<Contract[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -59,10 +68,18 @@ export default function Step8() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/m/org/me", { cache: "no-store" });
-        if (!res.ok) return;
-        const json = (await res.json()) as MeResp;
-        if (!cancelled) setData(json);
+        const [meRes, ctRes] = await Promise.all([
+          fetch("/api/m/org/me", { cache: "no-store" }),
+          fetch("/api/m/org/contracts", { cache: "no-store" }),
+        ]);
+        if (meRes.ok) {
+          const json = (await meRes.json()) as MeResp;
+          if (!cancelled) setData(json);
+        }
+        if (ctRes.ok) {
+          const json = (await ctRes.json()) as { contracts?: Contract[] };
+          if (!cancelled) setContracts(json.contracts ?? []);
+        }
       } catch {
         /* ignore */
       }
@@ -92,7 +109,7 @@ export default function Step8() {
 
   if (!data) {
     return (
-      <RegShell step={8} title="Review & submit">
+      <RegShell step={9} title="Review & submit">
         <p className="text-[13px] text-subheading">Loading…</p>
       </RegShell>
     );
@@ -100,7 +117,7 @@ export default function Step8() {
   const o = data.org;
   if (!o) {
     return (
-      <RegShell step={8} title="Review & submit">
+      <RegShell step={9} title="Review & submit">
         <p className="text-[13px] text-subheading">
           Nothing to review yet — start at step 1.
         </p>
@@ -113,10 +130,10 @@ export default function Step8() {
 
   return (
     <RegShell
-      step={8}
+      step={9}
       title="Review & submit"
       subtitle="Pending review takes around 2 business days. You can browse carers right after submitting."
-      back="/m/org/register/step-7"
+      back="/m/org/register/step-7-5"
     >
       <Card className="p-4 space-y-2">
         <Section title="Organisation" href="/m/org/register/step-3">
@@ -188,6 +205,29 @@ export default function Step8() {
               </li>
             ))}
           </ul>
+        </Section>
+        <Section title="Signed contracts" href="/m/org/register/step-7-5">
+          {contracts.length === 0 ? (
+            <p className="text-[12px] text-subheading">
+              Not signed yet — head back to step 8 to sign the MSA + DPA.
+            </p>
+          ) : (
+            <ul className="text-[12px] text-subheading space-y-0.5">
+              {contracts.map((c) => (
+                <li key={c.id}>
+                  ✓ {c.contract_type.toUpperCase()} ·{" "}
+                  <span className="text-[11px]">{c.version}</span>
+                  {c.signed_at && (
+                    <span className="text-[11px]">
+                      {" "}
+                      · signed{" "}
+                      {new Date(c.signed_at).toLocaleDateString("en-GB")}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </Section>
       </Card>
 

@@ -18,6 +18,7 @@ const STEP_LABELS = [
   "Your role",
   "Billing",
   "Documents",
+  "Sign",
   "Review",
   "Done",
 ];

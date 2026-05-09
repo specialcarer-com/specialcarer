@@ -3,6 +3,8 @@ import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/smtp";
 import { renderOrgApprovedEmail } from "@/lib/email/templates";
+import { renderContractPdf } from "@/lib/contracts/pdf";
+import { getContractMarkdown } from "@/contracts";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +41,75 @@ export async function POST(
     .eq("id", id);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Countersign every contract this org has signed: render the PDF
+  // (org signature + admin countersignature), upload to storage, and
+  // flip status → countersigned → active.
+  const { data: contractRows } = await admin
+    .from("organization_contracts")
+    .select(
+      "id, contract_type, version, status, signed_by_name, signed_by_role, signed_at, signature_ip, legal_review_comment",
+    )
+    .eq("organization_id", id);
+  type CRow = {
+    id: string;
+    contract_type: "msa" | "dpa";
+    version: string;
+    status: string;
+    signed_by_name: string | null;
+    signed_by_role: string | null;
+    signed_at: string | null;
+    signature_ip: string | null;
+    legal_review_comment: string | null;
+  };
+  const counterTime = new Date();
+  for (const row of (contractRows ?? []) as CRow[]) {
+    if (row.status !== "signed" && row.status !== "countersigned") continue;
+    try {
+      const md = getContractMarkdown(row.version);
+      const pdf = await renderContractPdf({
+        contractType: row.contract_type,
+        version: row.version,
+        markdown: md,
+        organizationName: org.legal_name ?? "Customer",
+        signedByName: row.signed_by_name,
+        signedByRole: row.signed_by_role,
+        signedAt: row.signed_at ? new Date(row.signed_at) : null,
+        signatureIp: row.signature_ip,
+        countersignName: me.email ?? "SpecialCarer Admin",
+        countersignedAt: counterTime,
+        legalReviewComment: row.legal_review_comment,
+      });
+      const path = `${id}/contracts/${row.contract_type}-${row.version}.pdf`;
+      const { error: upErr } = await admin.storage
+        .from("organization-documents")
+        .upload(path, Buffer.from(pdf), {
+          upsert: true,
+          contentType: "application/pdf",
+        });
+      if (upErr) {
+        console.error("[org.approve] pdf upload failed", upErr);
+        continue;
+      }
+      await admin
+        .from("organization_contracts")
+        .update({
+          status: "active",
+          signed_pdf_storage_path: path,
+          countersigned_by_admin_id: me.id,
+          countersigned_at: counterTime.toISOString(),
+          effective_from: counterTime.toISOString(),
+        })
+        .eq("id", row.id);
+    } catch (e) {
+      console.error(
+        "[org.approve] countersign failed",
+        row.contract_type,
+        row.version,
+        e,
+      );
+    }
   }
 
   // Notify the org's owner (booker) + billing contact.

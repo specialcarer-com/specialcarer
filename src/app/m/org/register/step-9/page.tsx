@@ -3,7 +3,7 @@ import RegShell from "../_components/RegShell";
 
 export default function Step9() {
   return (
-    <RegShell step={9} title="Pending verification">
+    <RegShell step={10} title="Pending verification">
       <div className="rounded-card bg-white border border-line p-5 text-center">
         <div className="text-[44px]" aria-hidden>
           📨
