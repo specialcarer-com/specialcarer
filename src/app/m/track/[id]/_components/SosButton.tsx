@@ -70,6 +70,7 @@ export default function SosButton({ bookingId }: Props) {
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [alertId, setAlertId] = useState<string | null>(null);
+  const [contactsCount, setContactsCount] = useState<number | null>(null);
 
   const send = useCallback(async () => {
     setPhase("sending");
@@ -91,8 +92,16 @@ export default function SosButton({ bookingId }: Props) {
         const j = (await r.json().catch(() => ({}))) as { error?: string };
         throw new Error(j.error ?? "Couldn't send SOS.");
       }
-      const j = (await r.json()) as { alert: { id: string } };
+      const j = (await r.json()) as {
+        alert: { id: string };
+        emergency_contacts_count?: number;
+      };
       setAlertId(j.alert.id);
+      setContactsCount(
+        typeof j.emergency_contacts_count === "number"
+          ? j.emergency_contacts_count
+          : null,
+      );
       setPhase("sent");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't send SOS.");
@@ -105,6 +114,7 @@ export default function SosButton({ bookingId }: Props) {
     setNote("");
     setError(null);
     setAlertId(null);
+    setContactsCount(null);
   }, []);
 
   return (
@@ -140,12 +150,29 @@ export default function SosButton({ bookingId }: Props) {
                   Raise an SOS?
                 </h3>
                 <p className="text-[13px] text-subhead mt-1 leading-relaxed">
-                  Our team will be alerted immediately. The other party on this
-                  booking will also be notified. If this is a life-threatening
-                  emergency, please call <strong>999</strong> (UK) or{" "}
-                  <strong>911</strong> (US) first.
+                  If this is a life-threatening emergency, call emergency
+                  services right now — don&apos;t wait for our team.
                 </p>
-                <div className="mt-4">
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <a
+                    href="tel:999"
+                    className="inline-flex items-center justify-center h-14 rounded-btn bg-rose-600 text-white font-extrabold text-[18px] active:scale-95 transition"
+                  >
+                    Call 999
+                  </a>
+                  <a
+                    href="tel:911"
+                    className="inline-flex items-center justify-center h-14 rounded-btn bg-rose-600 text-white font-extrabold text-[18px] active:scale-95 transition"
+                  >
+                    Call 911
+                  </a>
+                </div>
+                <p className="text-[12px] text-subhead mt-3 leading-relaxed">
+                  Or send an SOS to our trust &amp; safety team and the other
+                  party on this booking — we&apos;ll also email any emergency
+                  contacts you&apos;ve added.
+                </p>
+                <div className="mt-3">
                   <TextArea
                     label="Optional message"
                     placeholder="What's happening? (optional)"
@@ -190,6 +217,24 @@ export default function SosButton({ bookingId }: Props) {
                   this is a life-threatening emergency, please also call{" "}
                   <strong>999</strong> (UK) or <strong>911</strong> (US).
                 </p>
+                {contactsCount != null && contactsCount > 0 && (
+                  <p className="text-[12px] text-emerald-700 mt-2 leading-relaxed">
+                    Notified {contactsCount} emergency contact
+                    {contactsCount === 1 ? "" : "s"} on file.
+                  </p>
+                )}
+                {contactsCount === 0 && (
+                  <p className="text-[12px] text-subhead mt-2 leading-relaxed">
+                    Tip: add emergency contacts in your{" "}
+                    <a
+                      href="/m/profile/emergency-contacts"
+                      className="text-primary font-semibold underline"
+                    >
+                      profile
+                    </a>{" "}
+                    so we can reach them automatically next time.
+                  </p>
+                )}
                 {alertId && (
                   <p className="text-[11px] text-subhead mt-3">
                     Reference: {alertId.slice(0, 8)}

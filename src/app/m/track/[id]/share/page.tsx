@@ -58,10 +58,22 @@ export default async function ShareTrackPage({
     );
   }
 
+  // Has the carer already taken an arrival selfie for this booking?
+  // Used by ShareClient to suppress the prompt once it's been done.
+  const { data: bookingMeta } = await supabase
+    .from("bookings")
+    .select("arrival_selfie_path")
+    .eq("id", id)
+    .maybeSingle<{ arrival_selfie_path: string | null }>();
+
   return (
     <main className="min-h-[100dvh] bg-bg-screen">
       <TopBar title="Share location" back={`/m/track/${id}`} />
-      <ShareClient bookingId={id} bookingStatus={eligibility.bookingStatus} />
+      <ShareClient
+        bookingId={id}
+        bookingStatus={eligibility.bookingStatus}
+        hasArrivalSelfie={!!bookingMeta?.arrival_selfie_path}
+      />
     </main>
   );
 }

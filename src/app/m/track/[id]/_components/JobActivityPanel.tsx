@@ -47,6 +47,14 @@ import { createClient } from "@/lib/supabase/client";
 type Props = {
   bookingId: string;
   role: "seeker" | "caregiver";
+  /**
+   * Per-booking photo-update consent (set by the seeker on the
+   * tracker page). When false the carer's "Photo" quick-log button
+   * is suppressed and a small inline hint is shown instead.
+   * `null` means consent hasn't been recorded yet — treated as the
+   * default-on case for the carer to keep the feature available.
+   */
+  photoConsent?: boolean | null;
 };
 
 type QuickLog = {
@@ -76,8 +84,15 @@ function formatTime(iso: string): string {
   }
 }
 
-export default function JobActivityPanel({ bookingId, role }: Props) {
+export default function JobActivityPanel({
+  bookingId,
+  role,
+  photoConsent,
+}: Props) {
   const isCarer = role === "caregiver";
+  // Carers can upload photos unless the seeker has explicitly toggled
+  // consent off for this booking. Treat null as "not yet set" → allow.
+  const photosAllowed = photoConsent !== false;
 
   // ───── Checklist state ─────
   const [items, setItems] = useState<ChecklistItem[]>([]);
@@ -399,17 +414,19 @@ export default function JobActivityPanel({ bookingId, role }: Props) {
                 {posting === q.kind ? "Logging…" : q.label}
               </Button>
             ))}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => fileRef.current?.click()}
-              disabled={posting !== null || uploadingPhoto}
-            >
-              <span className="inline-flex items-center gap-1">
-                <IconCamera />
-                {uploadingPhoto ? "Uploading…" : "Photo"}
-              </span>
-            </Button>
+            {photosAllowed && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileRef.current?.click()}
+                disabled={posting !== null || uploadingPhoto}
+              >
+                <span className="inline-flex items-center gap-1">
+                  <IconCamera />
+                  {uploadingPhoto ? "Uploading…" : "Photo"}
+                </span>
+              </Button>
+            )}
             <a
               href={`/m/journal/new?bookingId=${encodeURIComponent(bookingId)}`}
               className="inline-flex items-center justify-center gap-1 rounded-xl border border-line bg-white px-3 h-11 text-[14px] font-semibold text-heading"
@@ -428,6 +445,11 @@ export default function JobActivityPanel({ bookingId, role }: Props) {
               if (f) onPickPhoto(f);
             }}
           />
+          {!photosAllowed && (
+            <p className="text-[11px] text-subhead">
+              Photo updates are off for this booking.
+            </p>
+          )}
           {feedError && (
             <p className="text-[12px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2 py-1">
               {feedError}
@@ -461,7 +483,13 @@ export default function JobActivityPanel({ bookingId, role }: Props) {
                   </Tag>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[13px] text-heading leading-snug whitespace-pre-wrap">
+                  <p
+                    className={`text-[13px] leading-snug whitespace-pre-wrap ${
+                      e.kind === "system"
+                        ? "italic text-subheading"
+                        : "text-heading"
+                    }`}
+                  >
                     {e.body}
                   </p>
                   {e.photos.length > 0 && (

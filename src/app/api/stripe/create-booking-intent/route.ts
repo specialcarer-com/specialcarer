@@ -215,6 +215,14 @@ export async function POST(req: Request) {
       total_cents: totalCents,
       currency: body.currency,
       service_type: body.service_type!,
+      // Smart-default photo consent. Care for older / clinical /
+      // postnatal recipients defaults ON (families want updates),
+      // childcare / special-needs default OFF (privacy by default —
+      // family can opt in from the tracker page).
+      photo_updates_consent:
+        body.service_type === "elderly_care" ||
+        body.service_type === "postnatal" ||
+        body.service_type === "complex_care",
       notes: body.notes,
       location_city: body.location_city,
       location_country: body.location_country,

@@ -40,5 +40,8 @@ export async function POST(req: Request) {
       { status: result.status ?? 400 },
     );
   }
-  return NextResponse.json({ alert: result.alert });
+  return NextResponse.json({
+    alert: result.alert,
+    emergency_contacts_count: result.emergency_contacts_count,
+  });
 }

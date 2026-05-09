@@ -8,20 +8,27 @@ import {
   IconMapPin,
   IconClock,
   IconCheck,
+  IconCamera,
 } from "../../../_components/ui";
 import {
   PING_INTERVAL_MS,
   MIN_ACCEPTABLE_ACCURACY_M,
 } from "@/lib/tracking/types";
+import { createClient } from "@/lib/supabase/client";
 
 type SendResult = "idle" | "ok" | "error";
+type SelfieState = "idle" | "uploading" | "saved" | "error";
+
+const PHOTOS_BUCKET = "journal-photos";
 
 export default function ShareClient({
   bookingId,
   bookingStatus,
+  hasArrivalSelfie,
 }: {
   bookingId: string;
   bookingStatus: string;
+  hasArrivalSelfie: boolean;
 }) {
   const [sharing, setSharing] = useState(false);
   const [permission, setPermission] = useState<PermissionState | "unsupported">(
@@ -35,6 +42,59 @@ export default function ShareClient({
   const watchIdRef = useRef<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastPosRef = useRef<GeolocationPosition | null>(null);
+
+  // Arrival selfie state.
+  const selfieRef = useRef<HTMLInputElement | null>(null);
+  const [selfieState, setSelfieState] = useState<SelfieState>(
+    hasArrivalSelfie ? "saved" : "idle",
+  );
+  const [selfieErr, setSelfieErr] = useState<string | null>(null);
+
+  async function uploadArrivalSelfie(file: File) {
+    setSelfieState("uploading");
+    setSelfieErr(null);
+    try {
+      const sb = createClient();
+      const { data: userResp } = await sb.auth.getUser();
+      const userId = userResp.user?.id;
+      if (!userId) {
+        setSelfieState("error");
+        setSelfieErr("Not signed in.");
+        return;
+      }
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `${userId}/arrival-${bookingId}.${ext}`;
+      const { error: upErr } = await sb.storage
+        .from(PHOTOS_BUCKET)
+        .upload(path, file, {
+          upsert: true,
+          contentType: file.type || "image/jpeg",
+        });
+      if (upErr) {
+        setSelfieState("error");
+        setSelfieErr(upErr.message);
+        return;
+      }
+      const res = await fetch(
+        `/api/bookings/${bookingId}/arrival-selfie`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ path }),
+        },
+      );
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        setSelfieState("error");
+        setSelfieErr(j.error ?? "Couldn't save arrival selfie.");
+        return;
+      }
+      setSelfieState("saved");
+    } catch (e) {
+      setSelfieState("error");
+      setSelfieErr(e instanceof Error ? e.message : "Upload failed.");
+    }
+  }
 
   // Ask the platform what permission state we already have.
   useEffect(() => {
@@ -191,6 +251,59 @@ export default function ShareClient({
           </div>
         </div>
       </Card>
+
+      {/* Arrival selfie — shown until the carer has uploaded one. */}
+      {selfieState !== "saved" ? (
+        <Card className="p-4 space-y-3">
+          <div className="flex items-start gap-3">
+            <span
+              className="grid h-10 w-10 flex-none place-items-center rounded-full text-primary"
+              style={{ background: "rgba(3,158,160,0.15)" }}
+              aria-hidden
+            >
+              <IconCamera />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[14px] font-bold text-heading">
+                Arrival selfie
+              </p>
+              <p className="mt-0.5 text-[12px] text-subheading">
+                Take a quick selfie at the door so the family can see you
+                arrived. Used by trust &amp; safety only.
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            block
+            onClick={() => selfieRef.current?.click()}
+            disabled={selfieState === "uploading"}
+          >
+            {selfieState === "uploading" ? "Uploading…" : "Take arrival selfie"}
+          </Button>
+          <input
+            ref={selfieRef}
+            type="file"
+            accept="image/*"
+            capture="user"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) uploadArrivalSelfie(f);
+            }}
+          />
+          {selfieErr && (
+            <p className="text-[12px] text-rose-700">{selfieErr}</p>
+          )}
+        </Card>
+      ) : (
+        <Card className="p-4">
+          <div className="flex items-center gap-2 text-[13px] text-emerald-700">
+            <IconCheck /> Arrival selfie saved.
+          </div>
+        </Card>
+      )}
 
       <Card className="p-4 space-y-2">
         <p className="text-[13px] text-subhead leading-relaxed">

@@ -22,6 +22,7 @@ import {
   IconCrown,
   IconJournal,
   IconHome,
+  IconPhone,
 } from "../_components/ui";
 import { createClient } from "@/lib/supabase/client";
 
@@ -88,6 +89,11 @@ const SEEKER_SECTION: Section = {
     { href: "/m/household", icon: <IconHome />, label: "My household" },
     { href: "/m/journal", icon: <IconJournal />, label: "Care journal" },
     { href: "/m/family", icon: <IconFamily />, label: "Family sharing" },
+    {
+      href: "/m/profile/emergency-contacts",
+      icon: <IconPhone />,
+      label: "Emergency contacts",
+    },
     { href: "/m/memberships", icon: <IconCrown />, label: "Memberships" },
   ],
 };

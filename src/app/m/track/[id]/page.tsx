@@ -75,13 +75,26 @@ export default async function TrackPage({
   // and the family-supplied match preferences (jsonb, may be {}).
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, location_city, location_country, status, preferences")
+    .select(
+      "id, location_city, location_country, status, preferences, actual_started_at, completed_at, photo_updates_consent, arrival_selfie_path",
+    )
     .eq("id", id)
     .maybeSingle();
 
   const preferences =
     (booking as { preferences?: Record<string, unknown> } | null)?.preferences ??
     null;
+  const photoConsent =
+    (booking as { photo_updates_consent?: boolean | null } | null)
+      ?.photo_updates_consent ?? null;
+  const actualStartedAt =
+    (booking as { actual_started_at?: string | null } | null)
+      ?.actual_started_at ?? null;
+  const completedAt =
+    (booking as { completed_at?: string | null } | null)?.completed_at ?? null;
+  const arrivalSelfiePath =
+    (booking as { arrival_selfie_path?: string | null } | null)
+      ?.arrival_selfie_path ?? null;
 
   return (
     <main className="min-h-[100dvh] bg-bg-screen">
@@ -96,6 +109,10 @@ export default async function TrackPage({
         locationCity={booking?.location_city ?? null}
         locationCountry={booking?.location_country ?? null}
         preferences={preferences}
+        actualStartedAt={actualStartedAt}
+        completedAt={completedAt}
+        photoConsent={photoConsent}
+        hasArrivalSelfie={!!arrivalSelfiePath}
       />
     </main>
   );

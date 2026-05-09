@@ -19,7 +19,7 @@ export type RaiseSosInput = {
 };
 
 export type RaiseSosResult =
-  | { ok: true; alert: SosAlert }
+  | { ok: true; alert: SosAlert; emergency_contacts_count: number }
   | { ok: false; error: string; status?: number };
 
 const ADMIN_EMAIL =
@@ -111,7 +111,23 @@ export async function raiseSos(
     console.error("[sos] notify failed", e);
   });
 
-  return { ok: true, alert: inserted };
+  // Lightweight count so the UI can say "Notified X emergency contacts".
+  let emergencyContactsCount = 0;
+  try {
+    const { count } = await client
+      .from("emergency_contacts")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_id", user.id);
+    emergencyContactsCount = count ?? 0;
+  } catch {
+    /* ignore */
+  }
+
+  return {
+    ok: true,
+    alert: inserted,
+    emergency_contacts_count: emergencyContactsCount,
+  };
 }
 
 async function notifyAdminsAndCounterpart(
@@ -253,5 +269,43 @@ async function notifyAdminsAndCounterpart(
     // Counterpart name is captured for future notification surfaces; ESLint
     // would otherwise complain if we left it unused.
     void counterpartName;
+  }
+
+  // Emergency contacts — fan out one email per row owned by the
+  // raiser. The 3-per-owner cap is enforced at insert time so this
+  // fan-out is bounded. SMS is not yet wired (see TODOs).
+  try {
+    const { data: contacts } = await admin
+      .from("emergency_contacts")
+      .select("id, name, phone, relationship")
+      .eq("owner_id", alert.user_id);
+    const rows = (contacts ?? []) as Array<{
+      id: string;
+      name: string;
+      phone: string;
+      relationship: string | null;
+    }>;
+    if (rows.length > 0) {
+      // We don't store contact emails — only phone numbers. Until SMS
+      // is wired we surface the alert in the admin email by listing
+      // the contacts so trust & safety can phone them. Keeps a single
+      // place to act on for now.
+      const contactLines = rows
+        .map(
+          (c) =>
+            `${c.name}${c.relationship ? ` (${c.relationship})` : ""}: ${c.phone}`,
+        )
+        .join("\n");
+      void sendEmail({
+        to: ADMIN_EMAIL,
+        subject: `🚨 SOS — ${rows.length} emergency contact${rows.length === 1 ? "" : "s"} on file`,
+        text: `Emergency contacts for SOS ${alert.id}:\n${contactLines}`,
+        html: `<h3>Emergency contacts for SOS ${alert.id}</h3><pre style="font-family:ui-monospace,monospace;font-size:13px;">${contactLines.replace(/</g, "&lt;")}</pre>`,
+      }).catch((e) =>
+        console.error("[sos] emergency contacts admin email failed", e),
+      );
+    }
+  } catch (e) {
+    console.error("[sos] emergency contacts fan-out failed", e);
   }
 }

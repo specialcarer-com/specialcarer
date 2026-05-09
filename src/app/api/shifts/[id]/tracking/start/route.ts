@@ -1,8 +1,26 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { recordSystemEventOnce } from "@/lib/journal/system-events";
 
 export const runtime = "nodejs";
+
+async function fetchCarerName(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  admin: ReturnType<typeof createAdminClient>,
+  carerId: string,
+): Promise<string | null> {
+  try {
+    const { data } = await admin
+      .from("caregiver_profiles")
+      .select("display_name")
+      .eq("user_id", carerId)
+      .maybeSingle<{ display_name: string | null }>();
+    return data?.display_name ?? null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * POST /api/shifts/[id]/tracking/start
@@ -104,6 +122,13 @@ export async function POST(
           .update({ actual_started_at: now.toISOString() })
           .eq("id", bookingId);
       }
+      const actorName = await fetchCarerName(admin, booking.caregiver_id);
+      await recordSystemEventOnce(admin, {
+        bookingId,
+        kind: "arrival",
+        actorName,
+        authorId: booking.caregiver_id,
+      });
       return NextResponse.json({ session: updated });
     }
     return NextResponse.json({ session: existing });
@@ -135,5 +160,17 @@ export async function POST(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Best-effort: record an "arrival" system event the first time
+  // tracking starts. recordSystemEventOnce dedupes so a re-entry into
+  // this route after a momentary failure doesn't spam the feed.
+  const actorName = await fetchCarerName(admin, booking.caregiver_id);
+  await recordSystemEventOnce(admin, {
+    bookingId,
+    kind: "arrival",
+    actorName,
+    authorId: booking.caregiver_id,
+  });
+
   return NextResponse.json({ session: created });
 }

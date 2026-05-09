@@ -16,6 +16,9 @@ import { POSITION_STALE_AFTER_MS } from "@/lib/tracking/types";
 import JobActivityPanel from "./_components/JobActivityPanel";
 import SosButton from "./_components/SosButton";
 import BookingPreferencesPanel from "./_components/BookingPreferencesPanel";
+import EtaCard from "./_components/EtaCard";
+import ContactBar from "./_components/ContactBar";
+import PhotoConsentToggle from "./_components/PhotoConsentToggle";
 
 type Props = {
   bookingId: string;
@@ -27,7 +30,38 @@ type Props = {
   locationCity: string | null;
   locationCountry: string | null;
   preferences: Record<string, unknown> | null;
+  actualStartedAt: string | null;
+  completedAt: string | null;
+  photoConsent: boolean | null;
+  hasArrivalSelfie: boolean;
 };
+
+function formatHHMM(iso: string): string {
+  const d = new Date(iso);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+function checkInLabel(
+  bookingStatus: string,
+  actualStartedAt: string | null,
+  completedAt: string | null,
+): { tone: "neutral" | "amber" | "green"; label: string } {
+  if (bookingStatus === "completed" || bookingStatus === "paid_out") {
+    if (completedAt) {
+      return { tone: "green", label: `Checked out ${formatHHMM(completedAt)}` };
+    }
+    return { tone: "green", label: "Checked out" };
+  }
+  if (actualStartedAt) {
+    return {
+      tone: "green",
+      label: `Checked in ${formatHHMM(actualStartedAt)}`,
+    };
+  }
+  return { tone: "amber", label: "Not arrived" };
+}
 
 const REFRESH_MS = 6_000;
 
@@ -48,7 +82,14 @@ export default function TrackClient(props: Props) {
     mapboxToken,
     mapStyle,
     preferences,
+    actualStartedAt,
+    completedAt,
+    photoConsent,
   } = props;
+  const checkIn = checkInLabel(bookingStatus, actualStartedAt, completedAt);
+  // Show ETA only to seekers/family before the carer has checked in.
+  // Once `in_progress` we replace it with an "Arrived at" line.
+  const showEta = role !== "caregiver" && !actualStartedAt;
 
   const [position, setPosition] = useState<CarerPosition | null>(
     initialPosition,
@@ -186,20 +227,26 @@ export default function TrackClient(props: Props) {
         )}
       </div>
 
+      {/* ETA card — seeker/family only, hidden once carer has checked in */}
+      {showEta && <EtaCard bookingId={bookingId} />}
+
       {/* Status card */}
       <Card className="p-4">
-        <div className="flex items-center gap-3">
+        <div className="flex items-start gap-3">
           <span
-            className="grid h-10 w-10 place-items-center rounded-full text-primary"
+            className="grid h-10 w-10 flex-none place-items-center rounded-full text-primary"
             style={{ background: "rgba(3,158,160,0.15)" }}
             aria-hidden
           >
             <IconMapPin />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[12px] font-semibold uppercase tracking-wide text-subheading">
-              {role === "caregiver" ? "Your location" : "Carer location"}
-            </p>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-[12px] font-semibold uppercase tracking-wide text-subheading">
+                {role === "caregiver" ? "Your location" : "Carer location"}
+              </p>
+              <Tag tone={checkIn.tone}>{checkIn.label}</Tag>
+            </div>
             {position ? (
               <p className="text-[15px] font-bold text-heading">
                 Updated {formatRelative(position.recordedAt)}
@@ -234,6 +281,16 @@ export default function TrackClient(props: Props) {
         )}
       </Card>
 
+      {/* Contact bar — seeker / family only */}
+      {role !== "caregiver" && (
+        <ContactBar bookingId={bookingId} role={role} />
+      )}
+
+      {/* Photo updates consent — seeker only */}
+      {role === "seeker" && photoConsent != null && (
+        <PhotoConsentToggle bookingId={bookingId} initial={photoConsent} />
+      )}
+
       {/* Actions */}
       {role === "caregiver" ? (
         <Link href={`/m/track/${bookingId}/share`} className="block">
@@ -264,7 +321,11 @@ export default function TrackClient(props: Props) {
       <BookingPreferencesPanel preferences={preferences} role={role} />
 
       {/* Active-job checklist + quick-log + feed (both roles) */}
-      <JobActivityPanel bookingId={bookingId} role={role} />
+      <JobActivityPanel
+        bookingId={bookingId}
+        role={role}
+        photoConsent={photoConsent}
+      />
 
       <p className="text-center text-[11px] text-subhead">
         Booking #{bookingId.slice(0, 8)}

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { recordSystemEventOnce } from "@/lib/journal/system-events";
 
 export const runtime = "nodejs";
 
@@ -51,5 +52,25 @@ export async function POST(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Best-effort departure event in the activity feed.
+  let actorName: string | null = null;
+  try {
+    const { data: prof } = await admin
+      .from("caregiver_profiles")
+      .select("display_name")
+      .eq("user_id", session.caregiver_id)
+      .maybeSingle<{ display_name: string | null }>();
+    actorName = prof?.display_name ?? null;
+  } catch {
+    /* ignore */
+  }
+  await recordSystemEventOnce(admin, {
+    bookingId,
+    kind: "departure",
+    actorName,
+    authorId: session.caregiver_id,
+  });
+
   return NextResponse.json({ session: updated });
 }

@@ -12,6 +12,9 @@ export const JOURNAL_KINDS = [
   "activity",
   "mood",
   "incident",
+  // Auto-injected events (arrival, departure, photo-consent toggle, etc).
+  // Authored by the platform itself, not the carer.
+  "system",
 ] as const;
 
 export type JournalKind = (typeof JOURNAL_KINDS)[number];
@@ -23,6 +26,7 @@ export const JOURNAL_KIND_LABEL: Record<JournalKind, string> = {
   activity: "Activity",
   mood: "Mood",
   incident: "Incident",
+  system: "Update",
 };
 
 /** Tone keys accepted by the shared `<Tag>` component. */
@@ -36,6 +40,7 @@ export const JOURNAL_KIND_TONE: Record<
   activity: "green",
   mood: "neutral",
   incident: "red",
+  system: "neutral",
 };
 
 export const JOURNAL_MOODS = [
