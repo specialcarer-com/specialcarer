@@ -161,7 +161,7 @@ export default async function FindCarePage({
 
   return (
     <MarketingShell>
-      <div className="bg-brand-50">
+      <div className="bg-brand-50 overflow-x-hidden">
       <section className="px-6 py-10 sm:py-14 max-w-6xl mx-auto">
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
           <div>
@@ -559,9 +559,9 @@ export default async function FindCarePage({
             </Link>
           </div>
         ) : (
-          <ul className="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <ul className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {sorted.map((c) => (
-              <li key={c.user_id}>
+              <li key={c.user_id} className="min-w-0">
                 <CaregiverCard c={c} bookable={bookable} />
               </li>
             ))}
@@ -574,7 +574,7 @@ export default async function FindCarePage({
                           page's bg-brand-50 wash)
               • cost    → soft amber tint
               • support → neutral slate. */}
-        <div className="mt-12 grid sm:grid-cols-3 gap-4 text-sm">
+        <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
           <div className="bg-white p-5 rounded-2xl border border-brand-100 shadow-sm">
             <h3 className="font-semibold text-slate-900">How vetting works</h3>
             <p className="mt-1 text-slate-700">
