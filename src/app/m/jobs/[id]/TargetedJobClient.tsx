@@ -1,6 +1,7 @@
 "use client";
 
 import "mapbox-gl/dist/mapbox-gl.css";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -211,6 +212,20 @@ export default function TargetedJobClient({
 
       {/* About this client + sanitised recipients + pay breakdown */}
       <JobDetailExtras jobId={booking.id} kind="targeted" />
+
+      {/* Active-job entry — visible mid-shift OR within 4h of start. */}
+      {(() => {
+        if (status === "in_progress") return true;
+        if (status !== "paid" && status !== "accepted") return false;
+        const startsAt = new Date(booking.starts_at).getTime();
+        return startsAt - Date.now() <= 4 * 3600_000;
+      })() && (
+        <Link href={`/m/active-job/${booking.id}`} className="block">
+          <Button block>
+            {status === "in_progress" ? "Open active job" : "Start shift"}
+          </Button>
+        </Link>
+      )}
 
       <div className="space-y-2">
         {status === "pending" && expiresAt && (

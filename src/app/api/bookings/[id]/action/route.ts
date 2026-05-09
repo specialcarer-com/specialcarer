@@ -26,8 +26,16 @@ export async function POST(
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const { action } = (await req.json()) as { action?: string };
-  if (!["cancel", "decline", "start", "accept"].includes(action ?? "")) {
+  const payload = (await req.json().catch(() => ({}))) as {
+    action?: string;
+    handoff_notes?: string;
+  };
+  const action = payload.action;
+  if (
+    !["cancel", "decline", "start", "accept", "complete"].includes(
+      action ?? "",
+    )
+  ) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   }
 
@@ -167,6 +175,65 @@ export async function POST(
       })
       .eq("id", bookingId);
     return NextResponse.json({ ok: true, status: "in_progress" });
+  }
+
+  if (action === "complete") {
+    if (!isCaregiver) {
+      return NextResponse.json(
+        { error: "Only the caregiver can check out a shift" },
+        { status: 403 },
+      );
+    }
+    if (booking.status !== "in_progress") {
+      return NextResponse.json(
+        { error: `Cannot complete a booking in status ${booking.status}` },
+        { status: 400 },
+      );
+    }
+    const handoff =
+      typeof payload.handoff_notes === "string"
+        ? payload.handoff_notes.trim().slice(0, 4000)
+        : null;
+    const completedAt = new Date().toISOString();
+    const payoutEligibleAt = new Date(
+      Date.now() + 24 * 3600 * 1000,
+    ).toISOString();
+    const { error: updErr } = await admin
+      .from("bookings")
+      .update({
+        status: "completed",
+        shift_completed_at: completedAt,
+        checked_out_at: completedAt,
+        handoff_notes: handoff || null,
+        payout_eligible_at: payoutEligibleAt,
+        updated_at: completedAt,
+      })
+      .eq("id", bookingId);
+    if (updErr) {
+      return NextResponse.json({ error: updErr.message }, { status: 500 });
+    }
+
+    // Drop a system journal event "{Carer} checked out at HH:MM".
+    try {
+      const { recordSystemEventOnce } = await import(
+        "@/lib/journal/system-events"
+      );
+      const { data: prof } = await admin
+        .from("caregiver_profiles")
+        .select("display_name")
+        .eq("user_id", user.id)
+        .maybeSingle<{ display_name: string | null }>();
+      await recordSystemEventOnce(admin, {
+        bookingId,
+        kind: "departure",
+        actorName: prof?.display_name ?? null,
+        authorId: user.id,
+      });
+    } catch (e) {
+      console.error("[action.complete] journal event failed", e);
+    }
+
+    return NextResponse.json({ ok: true, status: "completed" });
   }
 
   return NextResponse.json({ error: "Unhandled action" }, { status: 400 });
