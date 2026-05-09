@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SpecialCarer — Static Logo (Transparent)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet">
+<style>
+  :root { --teal: #039EA0; --tealHi: #3FC6C8; }
+  html, body { margin: 0; padding: 0; height: 100%; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+  /* Checker just so transparency is visible — not part of the logo */
+  body {
+    display: flex; align-items: center; justify-content: center;
+    background-color: #ffffff;
+    background-image:
+      linear-gradient(45deg, #e6e6e6 25%, transparent 25%),
+      linear-gradient(-45deg, #e6e6e6 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #e6e6e6 75%),
+      linear-gradient(-45deg, transparent 75%, #e6e6e6 75%);
+    background-size: 40px 40px;
+    background-position: 0 0, 0 20px, 20px -20px, -20px 0;
+    overflow: hidden;
+  }
+  .lockup {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    background: transparent;
+  }
+  .icon {
+    width: 480px; height: auto; display: block;
+    filter: drop-shadow(0 0 14px rgba(3,158,160,0.45));
+  }
+  .wordmark {
+    font-weight: 700; font-style: italic; font-size: 110px;
+    letter-spacing: -0.025em; color: var(--teal); line-height: 1;
+  }
+  .tagline-row {
+    display: flex; align-items: center; gap: 22px; margin-top: 16px;
+  }
+  .tagline-row .rule {
+    width: 80px; height: 1px; background: rgba(3,158,160,0.55);
+  }
+  .tagline {
+    font-weight: 500; font-size: 22px; letter-spacing: 0.32em;
+    text-transform: uppercase; color: var(--teal);
+  }
+</style>
+</head>
+<body>
+  <div class="lockup">
+    <img class="icon" src="assets/specialcarer-icon.svg" alt="SpecialCarer">
+    <div class="wordmark">SpecialCarer</div>
+    <div class="tagline-row">
+      <div class="rule"></div>
+      <div class="tagline">Care, 4 U</div>
+      <div class="rule"></div>
+    </div>
+  </div>
+</body>
+</html>

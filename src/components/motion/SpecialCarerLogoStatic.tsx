@@ -72,7 +72,10 @@ const SURFACES: Record<LogoStaticTheme, SurfaceTokens> = {
   transparent: {
     body: "transparent",
     stage: "transparent",
-    iconShadow: "drop-shadow(0 14px 40px rgba(3,158,160,0.25))",
+    // Transparent spec uses a pure glow halo (no vertical offset, no second layer)
+    // so directional shadows never fall onto an unknown underlying surface.
+    // — matches design/motion-brand/SpecialCarer-logo-static-transparent.html exactly.
+    iconShadow: "drop-shadow(0 0 14px rgba(3,158,160,0.45))",
     taglineText: BRAND.teal,
     taglineBars: "rgba(3,158,160,0.55)",
   },

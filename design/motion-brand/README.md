@@ -13,6 +13,7 @@ The two HTML files in this folder are the source of truth — they are pinned de
 - `SpecialCarer-splash-mobile-slow.html` — **mobile app splash, slowed pacing** (same composition, 14s @ `SLOW=2.5` — the cinematic / first-launch variant)
 - `SpecialCarer-logo-static.html` — **static lockup, dark surface** (no animation; canonical "final-frame" composition for email banners, certificates, App Store screenshots, and reduced-motion fallbacks)
 - `SpecialCarer-logo-static-light.html` — **static lockup, light surface** (white/cream stage; tightened all-teal drop-shadows, ink-tone tagline + bars)
+- `SpecialCarer-logo-static-transparent.html` — **static lockup, transparent surface** (no stage; pure glow halo — no offset — so directional shadows never fall onto an unknown background)
 - `animations.jsx` — easing helpers (`Easing.easeOutBack`, `easeOutCubic`, `easeInOutCubic`, `easeOutQuad`) and utilities (`clamp`, `interpolate`, `animate`, `Stage`, `Sprite`, `useTime`)
 - `assets/specialcarer-icon.svg` — pure icon (two carers + heart + foundation line, all teal)
 - `assets/specialcarer-logo.svg` — icon + wordmark lockup
@@ -114,16 +115,18 @@ Use this variant when the underlying surface already provides contrast and atmos
 
 The static component (`<SpecialCarerLogoStatic theme="dark" | "light" | "transparent">`) reuses the same surface-token system as the animated component, so the lockup reads correctly on every backdrop.
 
-The pinned HTML in this folder covers the **dark** and **light** variants (canonical surfaces); the **transparent** variant is derived in code from the same token system (no separate static HTML — backdrop / glow / halo are never present in the static lockup anyway, so transparent only changes tagline and shadow tokens).
+All three surface variants — **dark**, **light**, and **transparent** — are pinned as separate HTML files in this folder.
 
-#### Dark vs light — surface token deltas
+#### Static surface token deltas
 
-| Token | Dark | Light |
-|---|---|---|
-| Body / stage | ink radial `#11181a → #06090a` | white radial `#ffffff → #eef5f5` |
-| Icon drop-shadow | `0 14px 40px rgba(3,158,160,0.45)` + `0 0 18px rgba(63,198,200,0.55)` (teal + tealHi accent) | `0 10px 30px rgba(3,158,160,0.18)` + `0 0 12px rgba(3,158,160,0.25)` (all-teal, tighter offsets) |
-| Tagline text | `rgba(244,239,230,0.78)` (cream) | `rgba(15,20,22,0.65)` (ink) |
-| Tagline bars | `rgba(244,239,230,0.45)` (cream) | `rgba(15,20,22,0.25)` (ink) |
+| Token | Dark | Light | Transparent |
+|---|---|---|---|
+| Body / stage | ink radial `#11181a → #06090a` | white radial `#ffffff → #eef5f5` | `transparent` (no stage) |
+| Icon drop-shadow | `0 14px 40px rgba(3,158,160,0.45)` + `0 0 18px rgba(63,198,200,0.55)` (teal + tealHi accent) | `0 10px 30px rgba(3,158,160,0.18)` + `0 0 12px rgba(3,158,160,0.25)` (all-teal, tighter offsets) | `0 0 14px rgba(3,158,160,0.45)` (pure glow halo — no offset, no second layer) |
+| Tagline text | `rgba(244,239,230,0.78)` (cream) | `rgba(15,20,22,0.65)` (ink) | `BRAND.teal` (`#039EA0`) |
+| Tagline bars | `rgba(244,239,230,0.45)` (cream) | `rgba(15,20,22,0.25)` (ink) | `rgba(3,158,160,0.55)` (teal) |
+
+The **transparent variant deliberately uses a single glow-only drop-shadow** (no vertical offset) so directional shadows never fall onto whatever underlying surface the lockup is composited over.
 
 ### Implementation
 
