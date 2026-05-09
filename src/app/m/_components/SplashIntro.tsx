@@ -33,12 +33,12 @@
  *   - Plays once per session (sessionStorage gate). After it's done, the
  *     overlay is unmounted entirely so subsequent visits to /m/login in
  *     the same session don't replay it.
- *   - Total visible ~9700 ms, then 320 ms fade-out. The canonical splash
- *     runs 10s in scene-time — at SLOW=1.7 the icon impacts at ~4.1s real,
- *     wordmark finishes typing by ~5.8s real, and the tagline lands at
- *     ~8.5s real. We hold to ~9700ms so users see the full reveal AND get
- *     ~1s to read the "CARE, 4 U" tagline before fading. Tap-anywhere
- *     skips after a short grace window.
+ *   - Total visible ~13800 ms, then 1100 ms slow cross-fade. We use the
+ *     slowed cinematic pacing (SLOW=2.5, totalSec=14) so the icon impacts
+ *     at ~6.0s real, wordmark finishes typing by ~8.5s real, and the
+ *     tagline lands at ~12.5s real. The fade-out is intentionally long
+ *     so the next screen eases in instead of cutting in abruptly.
+ *     Tap-anywhere skips after a short grace window.
  *   - prefers-reduced-motion → still plays the canonical animated splash
  *     (per product owner direction). The animation is gentle (no flashing,
  *     no rapid scaling) and tap-to-skip is available after a short grace.
@@ -54,20 +54,22 @@ const SESSION_KEY = "sc:splash:played";
 /**
  * How long the splash overlay is visible before the fade-out begins.
  *
- * Scene timing for the canonical splash (SLOW=1.7, totalSec=10):
- *   t = rawT / 1.7  (scene-time)
- *   - icon impact:           t ≈ 2.4  → ~4080ms real
- *   - wordmark begins typing: t ≈ 2.6  → ~4420ms real
- *   - wordmark complete:      t ≈ 3.4  → ~5780ms real
- *   - tagline begins:         t = 4.0  → 6800ms real
- *   - tagline complete:       t = 5.0  → 8500ms real
- *   - settle/breath finishes: t = 5.5  → 9350ms real
+ * Using the slowed cinematic pacing (SLOW=2.5, totalSec=14):
+ *   t = rawT / 2.5  (scene-time)
+ *   - icon impact:           t ≈ 2.4  → ~6000ms real
+ *   - wordmark begins typing: t ≈ 2.6  → ~6500ms real
+ *   - wordmark complete:      t ≈ 3.4  → ~8500ms real
+ *   - tagline begins:         t = 4.0  → 10000ms real
+ *   - tagline complete:       t = 5.0  → 12500ms real
+ *   - settle/breath finishes: t = 5.5  → 13750ms real
  *
- * Hold to 9700ms so the tagline lands fully and the user gets ~1s to
- * read "CARE, 4 U" before the overlay fades out.
+ * Hold to 13800ms so the tagline lands fully and the user gets ~1.3s
+ * to read "CARE, 4 U" before the slow cross-fade to the next screen
+ * begins.
  */
-const VISIBLE_MS = 9700;
-const FADE_MS = 320;
+const VISIBLE_MS = 13800;
+/** Slow, gentle cross-fade so the next screen eases in. */
+const FADE_MS = 1100;
 const TAP_GRACE_MS = 500;
 
 /**
@@ -152,10 +154,13 @@ export default function SplashIntro() {
       <div className="sc-splash-canvas">
         {/* forceAnimate: play the canonical reveal even when the user has
             iOS-level Reduce Motion enabled. The animation is bounded
-            (~10s), gentle, and tap-to-skip after a short grace.
+            (~14s scene-time at slow pacing) and tap-to-skip after a
+            short grace.
+            slow: SLOW=2.5, scene runs 14s instead of 10s for a calmer
+            cinematic feel.
             theme="light": clean white stage, teal particles + ripples,
             dark tagline. Per product owner direction. */}
-        <SpecialCarerMobileSplash forceAnimate theme="light" />
+        <SpecialCarerMobileSplash forceAnimate slow theme="light" />
       </div>
 
       <style jsx>{`
@@ -171,7 +176,8 @@ export default function SplashIntro() {
              fade-in / fade-out reads white, not dark teal. */
           background: #ffffff;
           opacity: 1;
-          transition: opacity ${FADE_MS}ms ease-out;
+          /* Smooth, gentle ease for the cross-fade to the next screen. */
+          transition: opacity ${FADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1);
           -webkit-user-select: none;
           user-select: none;
           -webkit-tap-highlight-color: transparent;
