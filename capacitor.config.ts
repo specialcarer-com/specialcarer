@@ -45,14 +45,14 @@ const config: CapacitorConfig = {
     limitsNavigationsToAppBoundDomains: false,
     contentInset: "automatic",
     // Show a small white background while web content is loading.
-    // Dark teal so any sliver of native chrome around the WebView matches
-    // the in-app splash overlay (#06151a). Previously white — caused white
-    // strips above/below the splash on iOS during cold launch.
-    backgroundColor: "#06151a",
+    // White to match the in-app splash overlay (light-themed). Any sliver
+    // of native chrome around the WebView at cold launch reads as white,
+    // matching the splash stage with no colour seam.
+    backgroundColor: "#FFFFFF",
   },
 
   android: {
-    backgroundColor: "#06151a",
+    backgroundColor: "#FFFFFF",
     allowMixedContent: false,
     captureInput: true,
   },
@@ -61,11 +61,10 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchShowDuration: 1200,
       launchAutoHide: true,
-      // Dark teal stage matches the in-app SpecialCarerMobileSplash
-      // overlay (src/app/m/_components/SplashIntro.tsx) so the handoff
-      // from native splash → web splash has no colour flash. The native
-      // PNG (mobile/resources/splash-dark.png) already has teal baked in.
-      backgroundColor: "#06151a",
+      // White stage matches the in-app SpecialCarerMobileSplash overlay
+      // (light theme) so the handoff from native splash → web splash has
+      // no colour flash.
+      backgroundColor: "#FFFFFF",
       androidScaleType: "CENTER_CROP",
       showSpinner: false,
       splashFullScreen: true,
@@ -76,15 +75,12 @@ const config: CapacitorConfig = {
       presentationOptions: ["badge", "sound", "alert"],
     },
     StatusBar: {
-      // Light glyphs on the dark teal splash. Cold launch lands on a
-      // dark stage; once the splash fades into the app the device's
-      // light theme keeps these readable on the white app chrome
-      // (white-on-light is still legible in iOS due to glyph weight,
-      // and most signed-in surfaces use a tinted brand header).
-      style: "LIGHT",
-      backgroundColor: "#06151a",
+      // DARK glyphs read on the white splash stage and on the app's
+      // white surfaces afterwards — no runtime flip needed.
+      style: "DARK",
+      backgroundColor: "#FFFFFF",
       // Let the WebView paint behind the status bar so the splash overlay
-      // is truly edge-to-edge — no white strip at the top.
+      // is truly edge-to-edge — no coloured strip at the top.
       overlaysWebView: true,
     },
   },

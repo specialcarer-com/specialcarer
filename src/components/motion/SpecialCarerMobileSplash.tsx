@@ -41,6 +41,12 @@ export interface SpecialCarerMobileSplashProps {
    * launch experience and must play for every user. Defaults to false.
    */
   forceAnimate?: boolean;
+  /**
+   * Stage theme. "dark" (default) is the cinematic dark-teal stage.
+   * "light" is a clean white stage with teal accents — every particle,
+   * gradient, glow, and tagline colour is re-tuned so it reads on white.
+   */
+  theme?: "dark" | "light";
   /** Optional className applied to the outer wrapper. */
   className?: string;
   /** Optional inline style merged onto the outer wrapper. */
@@ -53,9 +59,11 @@ export function SpecialCarerMobileSplash({
   paused = false,
   loop = false,
   forceAnimate = false,
+  theme = "dark",
   className,
   style,
 }: SpecialCarerMobileSplashProps) {
+  const isLight = theme === "light";
   const SLOW = slow ? 2.5 : 1.7;
   const totalSec = slow ? 14 : 10;
 
@@ -145,7 +153,7 @@ export function SpecialCarerMobileSplash({
         width: "100%",
         height: "100%",
         overflow: "hidden",
-        background: "#06151a",
+        background: isLight ? "#FFFFFF" : "#06151a",
         fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
         ...style,
       }}
@@ -157,10 +165,15 @@ export function SpecialCarerMobileSplash({
         style={{
           position: "absolute",
           inset: 0,
-          background: `
-            radial-gradient(120% 80% at 50% 35%, rgba(3,158,160,${0.18 * ambient}) 0%, rgba(3,158,160,0) 55%),
-            radial-gradient(140% 100% at 50% 100%, #0c2a2d 0%, #06151a 60%, #03090b 100%)
-          `,
+          background: isLight
+            ? `
+              radial-gradient(120% 80% at 50% 35%, rgba(3,158,160,${0.10 * ambient}) 0%, rgba(3,158,160,0) 55%),
+              radial-gradient(140% 100% at 50% 100%, #F4FAFA 0%, #FFFFFF 55%, #FFFFFF 100%)
+            `
+            : `
+              radial-gradient(120% 80% at 50% 35%, rgba(3,158,160,${0.18 * ambient}) 0%, rgba(3,158,160,0) 55%),
+              radial-gradient(140% 100% at 50% 100%, #0c2a2d 0%, #06151a 60%, #03090b 100%)
+            `,
         }}
       />
 
@@ -193,10 +206,12 @@ export function SpecialCarerMobileSplash({
                 width: size,
                 height: size,
                 borderRadius: "50%",
-                background: BRAND.tealHi,
-                opacity: op,
-                filter: `blur(${size > 5 ? 2 : 0.5}px)`,
-                boxShadow: `0 0 ${size * 2}px rgba(63,198,200,${op})`,
+                background: isLight ? BRAND.teal : BRAND.tealHi,
+                opacity: isLight ? op * 0.55 : op,
+                filter: isLight ? "none" : `blur(${size > 5 ? 2 : 0.5}px)`,
+                boxShadow: isLight
+                  ? "none"
+                  : `0 0 ${size * 2}px rgba(63,198,200,${op})`,
               }}
             />
           );
@@ -231,9 +246,13 @@ export function SpecialCarerMobileSplash({
                 top: -r,
                 width: r * 2,
                 height: r * 2,
-                border: `${w}px solid rgba(63,198,200,${op})`,
+                border: isLight
+                  ? `${w}px solid rgba(3,158,160,${Math.min(1, op * 1.6)})`
+                  : `${w}px solid rgba(63,198,200,${op})`,
                 borderRadius: "50%",
-                boxShadow: `0 0 ${20 * (1 - p)}px rgba(63,198,200,${op * 0.6}) inset, 0 0 ${30 * (1 - p)}px rgba(63,198,200,${op * 0.4})`,
+                boxShadow: isLight
+                  ? "none"
+                  : `0 0 ${20 * (1 - p)}px rgba(63,198,200,${op * 0.6}) inset, 0 0 ${30 * (1 - p)}px rgba(63,198,200,${op * 0.4})`,
               }}
             />
           );
@@ -273,9 +292,18 @@ export function SpecialCarerMobileSplash({
                 width: size,
                 height: size,
                 borderRadius: "50%",
-                background: i % 4 === 0 ? "#fff" : BRAND.tealHi,
+                // On the light stage, white sparkles vanish — use teal
+                // for every particle and drop the glow halo (which would
+                // smudge as a soft cyan smear on white).
+                background: isLight
+                  ? BRAND.teal
+                  : i % 4 === 0
+                    ? "#fff"
+                    : BRAND.tealHi,
                 opacity,
-                boxShadow: `0 0 ${size * 2}px rgba(63,198,200,${opacity})`,
+                boxShadow: isLight
+                  ? "none"
+                  : `0 0 ${size * 2}px rgba(63,198,200,${opacity})`,
               }}
             />
           );
@@ -289,7 +317,9 @@ export function SpecialCarerMobileSplash({
           inset: 0,
           pointerEvents: "none",
           zIndex: 4,
-          background: `radial-gradient(circle at 50% 42%, rgba(255,255,255,${0.55 * flash}) 0%, rgba(63,198,200,${0.22 * flash}) 18%, rgba(63,198,200,0) 45%)`,
+          background: isLight
+            ? `radial-gradient(circle at 50% 42%, rgba(63,198,200,${0.40 * flash}) 0%, rgba(63,198,200,${0.18 * flash}) 18%, rgba(63,198,200,0) 45%)`
+            : `radial-gradient(circle at 50% 42%, rgba(255,255,255,${0.55 * flash}) 0%, rgba(63,198,200,${0.22 * flash}) 18%, rgba(63,198,200,0) 45%)`,
         }}
       />
 
@@ -331,7 +361,9 @@ export function SpecialCarerMobileSplash({
               maxWidth: "50vw",
               maxHeight: "50vw",
               transform: "translateX(-50%)",
-              background: `radial-gradient(circle, rgba(63,198,200,${0.55 * (0.4 + beat * 0.6)}) 0%, rgba(63,198,200,0) 60%)`,
+              background: isLight
+                ? `radial-gradient(circle, rgba(63,198,200,${0.28 * (0.4 + beat * 0.6)}) 0%, rgba(63,198,200,0) 60%)`
+                : `radial-gradient(circle, rgba(63,198,200,${0.55 * (0.4 + beat * 0.6)}) 0%, rgba(63,198,200,0) 60%)`,
               filter: "blur(20px)",
               opacity: clamp((t - 1.5) / 0.5, 0, 1),
               pointerEvents: "none",
@@ -359,7 +391,9 @@ export function SpecialCarerMobileSplash({
                 width: "100%",
                 height: "100%",
                 objectFit: "contain",
-                filter: `drop-shadow(0 14px 40px rgba(3,158,160,0.45)) drop-shadow(0 0 ${10 + beat * 20}px rgba(63,198,200,${0.4 + beat * 0.5}))`,
+                filter: isLight
+                  ? `drop-shadow(0 8px 22px rgba(3,158,160,0.22)) drop-shadow(0 0 ${6 + beat * 14}px rgba(63,198,200,${0.18 + beat * 0.25}))`
+                  : `drop-shadow(0 14px 40px rgba(3,158,160,0.45)) drop-shadow(0 0 ${10 + beat * 20}px rgba(63,198,200,${0.4 + beat * 0.5}))`,
               }}
             />
           </div>
@@ -415,7 +449,9 @@ export function SpecialCarerMobileSplash({
             style={{
               width: 56 * barEased,
               height: 1,
-              background: "rgba(63,198,200,0.55)",
+              background: isLight
+                ? "rgba(3,158,160,0.7)"
+                : "rgba(63,198,200,0.55)",
             }}
           />
           <div
@@ -424,7 +460,7 @@ export function SpecialCarerMobileSplash({
               fontSize: 14,
               letterSpacing: "0.32em",
               textTransform: "uppercase",
-              color: "rgba(255,255,255,0.85)",
+              color: isLight ? "#0F1416" : "rgba(255,255,255,0.85)",
             }}
           >
             Care, 4 U
@@ -461,10 +497,12 @@ export function SpecialCarerMobileSplash({
                 width: 8,
                 height: 8,
                 borderRadius: 4,
-                background: BRAND.tealHi,
+                background: isLight ? BRAND.teal : BRAND.tealHi,
                 opacity: 0.3 + v * 0.7,
                 transform: `scale(${0.8 + v * 0.4})`,
-                boxShadow: `0 0 ${4 + v * 12}px rgba(63,198,200,${0.4 + v * 0.5})`,
+                boxShadow: isLight
+                  ? "none"
+                  : `0 0 ${4 + v * 12}px rgba(63,198,200,${0.4 + v * 0.5})`,
               }}
             />
           );

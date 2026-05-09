@@ -152,8 +152,10 @@ export default function SplashIntro() {
       <div className="sc-splash-canvas">
         {/* forceAnimate: play the canonical reveal even when the user has
             iOS-level Reduce Motion enabled. The animation is bounded
-            (~7s), gentle, and tap-to-skip after a short grace. */}
-        <SpecialCarerMobileSplash forceAnimate />
+            (~10s), gentle, and tap-to-skip after a short grace.
+            theme="light": clean white stage, teal particles + ripples,
+            dark tagline. Per product owner direction. */}
+        <SpecialCarerMobileSplash forceAnimate theme="light" />
       </div>
 
       <style jsx>{`
@@ -165,7 +167,9 @@ export default function SplashIntro() {
              below the teal stage. Inner content is centred, so it does
              not need explicit safe-area padding. */
           z-index: 9999;
-          background: #06151a;
+          /* Match the inner stage background so any sliver during the
+             fade-in / fade-out reads white, not dark teal. */
+          background: #ffffff;
           opacity: 1;
           transition: opacity ${FADE_MS}ms ease-out;
           -webkit-user-select: none;
