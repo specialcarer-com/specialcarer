@@ -96,14 +96,15 @@ export default function SplashIntro() {
       // Private mode / blocked storage — just play it once.
     }
 
-    // prefers-reduced-motion → static composition, held for a beat so
-    // users still get a clear brand reveal (not a 600ms blink-and-miss).
+    // prefers-reduced-motion → gentle staged fade-in (no ripples,
+    // sparkles, or scaling — those can trigger vestibular discomfort)
+    // held long enough to comfortably read the wordmark + tagline.
     let visibleMs = VISIBLE_MS;
     try {
       const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
       if (mql.matches) {
         setReduced(true);
-        visibleMs = 2200; // hold the static composition for ~2.2s
+        visibleMs = 4500; // hold long enough to read everything
       }
     } catch {
       /* noop */
@@ -138,18 +139,26 @@ export default function SplashIntro() {
       data-fading={fading ? "1" : "0"}
     >
       {reduced ? (
-        // Reduced-motion fallback — solid teal stage with the static
-        // composition (icon mark on top, italic teal wordmark below)
-        // mirroring the animated layout. No motion, just a held frame.
+        // Reduced-motion fallback — staged fade-in with a gentle teal
+        // halo pulse around the icon. No translation, no scale changes,
+        // no flying particles — just opacity + a soft breathing glow.
+        // Total reveal sequence:
+        //   0.0s  icon halo + icon fade in
+        //   0.6s  wordmark fades in
+        //   1.4s  tagline fades in
+        //   held until visibleMs, then overlay fades.
         <div className="sc-splash-reduced">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/brand/specialcarer-icon.svg"
-            alt=""
-            className="sc-splash-reduced-icon"
-            decoding="async"
-            draggable={false}
-          />
+          <div className="sc-splash-reduced-icon-wrap">
+            <div className="sc-splash-reduced-halo" aria-hidden="true" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/specialcarer-icon.svg"
+              alt=""
+              className="sc-splash-reduced-icon"
+              decoding="async"
+              draggable={false}
+            />
+          </div>
           <div className="sc-splash-reduced-wordmark">SpecialCarer</div>
           <div className="sc-splash-reduced-tagline">CARE, 4 U</div>
         </div>
@@ -198,13 +207,43 @@ export default function SplashIntro() {
           gap: 18px;
           padding: 0 32px;
           font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        }
+
+        /* Icon + halo wrap — keeps the halo perfectly behind the mark. */
+        .sc-splash-reduced-icon-wrap {
+          position: relative;
+          width: min(60vw, 280px);
+          aspect-ratio: 3 / 2;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .sc-splash-reduced-halo {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          width: 110%;
+          height: 165%;
+          transform: translate(-50%, -50%);
+          background: radial-gradient(
+            circle,
+            rgba(63, 198, 200, 0.55) 0%,
+            rgba(63, 198, 200, 0) 65%
+          );
+          filter: blur(20px);
           opacity: 0;
-          animation: sc-fade-in 240ms ease-out forwards;
+          animation:
+            sc-fade-in 600ms ease-out 100ms forwards,
+            sc-halo-breathe 3.2s ease-in-out 700ms infinite;
         }
         .sc-splash-reduced-icon {
-          width: min(60vw, 280px);
-          height: auto;
+          position: relative;
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
           filter: drop-shadow(0 14px 40px rgba(3, 158, 160, 0.45));
+          opacity: 0;
+          animation: sc-fade-in 700ms ease-out forwards;
         }
         .sc-splash-reduced-wordmark {
           font-weight: 700;
@@ -214,6 +253,8 @@ export default function SplashIntro() {
           color: #039ea0;
           line-height: 1;
           margin-top: 4px;
+          opacity: 0;
+          animation: sc-fade-in 600ms ease-out 600ms forwards;
         }
         .sc-splash-reduced-tagline {
           margin-top: 10px;
@@ -222,10 +263,22 @@ export default function SplashIntro() {
           letter-spacing: 0.32em;
           text-transform: uppercase;
           color: rgba(255, 255, 255, 0.85);
+          opacity: 0;
+          animation: sc-fade-in 500ms ease-out 1400ms forwards;
         }
         @keyframes sc-fade-in {
           to {
             opacity: 1;
+          }
+        }
+        /* Gentle halo breathing — opacity only, no scale/translate, so
+           it stays well within reduced-motion safety. */
+        @keyframes sc-halo-breathe {
+          0%, 100% {
+            opacity: 0.55;
+          }
+          50% {
+            opacity: 0.85;
           }
         }
       `}</style>
