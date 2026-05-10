@@ -131,15 +131,63 @@ export async function GET(
     return NextResponse.json({ error: cgErr.message }, { status: 500 });
   }
 
-  if (!cgRow) {
-    return NextResponse.json(
-      { error: "Profile not found or not yet published" },
-      { status: 404 },
-    );
-  }
+  // Self-heal: when a caregiver previews their own profile and no
+  // caregiver_profiles row exists yet (e.g. their sign-up step was
+  // interrupted), create a minimal one on the fly. This keeps Preview
+  // useful for brand-new carers and avoids a confusing "not found"
+  // dead-end. For other viewers we still return 404.
+  let cg: CaregiverRow | null = (cgRow as unknown as CaregiverRow) ?? null;
+  if (!cg) {
+    if (viewer.id !== id) {
+      return NextResponse.json(
+        { error: "Profile not found or not yet published" },
+        { status: 404 },
+      );
+    }
 
-  const cg = cgRow as unknown as CaregiverRow;
-  const isPublished = cg.is_published ?? false;
+    // Pull defaults from profiles to seed the new row.
+    const { data: seedProfile } = await supabase
+      .from("profiles")
+      .select("full_name, country")
+      .eq("id", id)
+      .maybeSingle();
+    type SeedProfile = { full_name: string | null; country: string | null };
+    const sp = (seedProfile ?? {}) as SeedProfile;
+    const seedCountry = (sp.country ?? "GB").toUpperCase();
+    const seedCurrency = seedCountry === "US" ? "USD" : "GBP";
+
+    const { data: createdRow, error: createErr } = await supabase
+      .from("caregiver_profiles")
+      .insert({
+        user_id: id,
+        display_name: sp.full_name,
+        country: seedCountry,
+        currency: seedCurrency,
+        is_published: false,
+      })
+      .select(
+        "user_id, display_name, headline, bio, city, region, country, postcode, " +
+          "hide_precise_location, services, care_formats, languages, certifications, tags, " +
+          "hourly_rate_cents, weekly_rate_cents, currency, years_experience, " +
+          "rating_avg, rating_count, has_drivers_license, has_own_vehicle, gender, " +
+          "photo_url, is_published",
+      )
+      .single();
+
+    if (createErr || !createdRow) {
+      return NextResponse.json(
+        {
+          error:
+            "Could not create your profile draft. Please complete sign-up or contact support.",
+        },
+        { status: 500 },
+      );
+    }
+
+    cg = createdRow as unknown as CaregiverRow;
+  }
+  const cgSafe = cg!;
+  const isPublished = cgSafe.is_published ?? false;
   const isOwnProfile = viewer.id === id;
 
   // Access control: unpublished profiles are only visible to the carer themselves
@@ -233,32 +281,32 @@ export async function GET(
   }
 
   const profile: ApiCarerProfile = {
-    user_id: cg.user_id,
-    display_name: cg.display_name,
+    user_id: cgSafe.user_id,
+    display_name: cgSafe.display_name,
     full_name: pr.full_name ?? null,
-    headline: cg.headline,
-    bio: cg.bio,
-    photo_url: cg.photo_url,
+    headline: cgSafe.headline,
+    bio: cgSafe.bio,
+    photo_url: cgSafe.photo_url,
     avatar_url: pr.avatar_url ?? null,
-    city: cg.city,
-    region: cg.region,
-    country: cg.country,
-    postcode: cg.postcode,
-    hide_precise_location: cg.hide_precise_location ?? false,
-    services: cg.services ?? [],
-    care_formats: cg.care_formats ?? [],
-    languages: cg.languages ?? [],
-    certifications: cg.certifications ?? [],
-    tags: cg.tags ?? [],
-    hourly_rate_cents: cg.hourly_rate_cents,
-    weekly_rate_cents: cg.weekly_rate_cents,
-    currency: cg.currency ?? "GBP",
-    years_experience: cg.years_experience,
-    rating_avg: cg.rating_avg != null ? Number(cg.rating_avg) : null,
-    rating_count: cg.rating_count ?? 0,
-    has_drivers_license: cg.has_drivers_license ?? false,
-    has_own_vehicle: cg.has_own_vehicle ?? false,
-    gender: cg.gender,
+    city: cgSafe.city,
+    region: cgSafe.region,
+    country: cgSafe.country,
+    postcode: cgSafe.postcode,
+    hide_precise_location: cgSafe.hide_precise_location ?? false,
+    services: cgSafe.services ?? [],
+    care_formats: cgSafe.care_formats ?? [],
+    languages: cgSafe.languages ?? [],
+    certifications: cgSafe.certifications ?? [],
+    tags: cgSafe.tags ?? [],
+    hourly_rate_cents: cgSafe.hourly_rate_cents,
+    weekly_rate_cents: cgSafe.weekly_rate_cents,
+    currency: cgSafe.currency ?? "GBP",
+    years_experience: cgSafe.years_experience,
+    rating_avg: cgSafe.rating_avg != null ? Number(cgSafe.rating_avg) : null,
+    rating_count: cgSafe.rating_count ?? 0,
+    has_drivers_license: cgSafe.has_drivers_license ?? false,
+    has_own_vehicle: cgSafe.has_own_vehicle ?? false,
+    gender: cgSafe.gender,
   };
 
   const response: ApiCarerResponse = {
