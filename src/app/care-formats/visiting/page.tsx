@@ -23,6 +23,7 @@ export default function Page() {
         "School pickups and after-school childcare",
         "Help getting out — appointments, shopping, walks",
         "Light housekeeping and laundry",
+        "Waking-night visits — carer stays awake throughout the overnight block (billed hourly)",
         "Same caregiver for recurring visits where possible",
         "Real-time check-in and check-out so families know they've arrived",
       ]}
@@ -55,6 +56,14 @@ export default function Page() {
         {
           q: "How do I know the caregiver actually turned up?",
           a: "Every shift has a real-time check-in and check-out logged in the app. You and any nominated family member get a notification when the caregiver arrives and when they leave. Each visit is timestamped and visible in your dashboard.",
+        },
+        {
+          q: "Do you offer waking-night visits?",
+          a: "Yes. A waking-night visit is an overnight block — typically 9pm–7am or similar — where the caregiver stays awake throughout to support clients who need active care at night (for example dementia wandering risk, post-operative recovery, seizure monitoring, or complex care). Waking-night visits are billed by the hour like any other visit, often at a slightly higher overnight rate the caregiver sets on their profile. This is different from live-in waking nights, which are included in the live-in weekly rate.",
+        },
+        {
+          q: "What's the difference between a waking-night visit and a sleeping night?",
+          a: "On a waking night the carer is up and active throughout the block — billed hourly. A sleeping night is only available as part of a live-in placement: the carer sleeps in your home and is paid a flat night allowance, with up to two short wake-ups included. If you need someone awake every night without a full live-in arrangement, book waking-night visits instead.",
         },
         {
           q: "Can the same person also do live-in work?",
