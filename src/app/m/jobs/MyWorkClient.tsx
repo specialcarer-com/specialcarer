@@ -411,8 +411,10 @@ export default function MyWorkClient({ onFindWork }: MyWorkClientProps) {
       if (actionPending) return;
       setActionPending(id);
       try {
-        const res = await fetch(`/api/m/bookings/${id}`, {
-          method: "PATCH",
+        // Real handler is POST /api/bookings/[id]/action which supports
+        // both accept and decline (and forbids cross-role usage server-side).
+        const res = await fetch(`/api/bookings/${id}/action`, {
+          method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action }),
         });
