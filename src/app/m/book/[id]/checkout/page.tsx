@@ -1,176 +1,224 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   Avatar,
   Button,
   Card,
-  CarerBadges,
   IconCal,
-  IconCard,
   IconCheck,
-  IconLock,
   IconPin,
   TopBar,
 } from "../../../_components/ui";
-import {
-  CARE_FORMAT_LABEL,
-  type CareFormat,
-  SERVICE_LABEL,
-  getCarer,
-} from "../../../_lib/mock";
+import { type CareFormat } from "../../../_lib/mock";
+import { serviceLabel, formatMoney } from "@/lib/care/services";
+import { careFormatLabel } from "@/lib/care/formats";
+import type {
+  ApiCarerResponse,
+  ApiCarerProfile,
+} from "@/app/api/m/carer/[id]/route";
 
 /**
- * Booking Checkout — payment summary + Stripe (real) handoff.
+ * Booking checkout — confirmation summary.
  *
- * v1 path (mock carers): authorisation simulated, success screen shown.
- * Real path (when caregivers are seeded in Supabase): calls
- *   POST /api/stripe/create-booking-intent
- * to mint a PaymentIntent and confirms via Apple Pay / card sheet.
+ * Visiting bookings: the previous step (Create Booking) called
+ * /api/stripe/create-booking-intent which created a `bookings` row and
+ * minted a PaymentIntent. We pass the booking id, client_secret, and
+ * total via query params and currently render a "Booking submitted"
+ * confirmation. Capturing payment via Stripe PaymentElement is a
+ * deliberate follow-up — see TODO below.
+ *
+ * Live-in bookings: /api/bookings/live-in/request created a
+ * `live_in_requests` row and emailed admin. We render a
+ * "Request submitted" screen with the weekly subtotal preview.
  */
+
+function narrowCurrency(c: string | null | undefined): "GBP" | "USD" {
+  return (c ?? "GBP").toUpperCase() === "USD" ? "USD" : "GBP";
+}
+
+function carerName(profile: ApiCarerProfile): string {
+  return profile.display_name ?? profile.full_name ?? "Caregiver";
+}
+
+function carerLocation(profile: ApiCarerProfile): string {
+  const country =
+    profile.country?.toUpperCase() === "GB"
+      ? "UK"
+      : profile.country?.toUpperCase() === "US"
+        ? "US"
+        : profile.country ?? null;
+  return [profile.city, country]
+    .filter((s): s is string => Boolean(s))
+    .join(", ");
+}
 
 function CheckoutInner() {
   const params = useParams<{ id: string }>();
   const sp = useSearchParams();
-  const router = useRouter();
-  const carer = getCarer(params.id);
 
-  const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // ── Real carer fetch ────────────────────────────────────────────
+  const [profile, setProfile] = useState<ApiCarerProfile | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [notFound, setNotFound] = useState(false);
+  useEffect(() => {
+    if (!params?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/m/carer/${params.id}`, {
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (cancelled) return;
+        if (res.status === 404) {
+          setNotFound(true);
+          setLoaded(true);
+          return;
+        }
+        if (!res.ok) {
+          setLoaded(true);
+          return;
+        }
+        const json = (await res.json()) as ApiCarerResponse;
+        if (!cancelled) {
+          setProfile(json.profile);
+          setLoaded(true);
+        }
+      } catch {
+        if (!cancelled) setLoaded(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [params?.id]);
 
-  if (!carer) {
-    return (
-      <main className="min-h-[100dvh] bg-white">
-        <TopBar back={`/m/book/${params.id}`} title="Checkout" />
-        <p className="px-6 mt-10 text-center text-heading">Carer not found.</p>
-      </main>
-    );
-  }
-
+  // ── Query params from the previous step ────────────────────────
   const careType: CareFormat =
     (sp.get("careType") as CareFormat) === "live_in" ? "live_in" : "visiting";
-  const service = sp.get("service") || carer.services[0];
-  const dateRaw = sp.get("date");
-  const endDateRaw = sp.get("endDate");
-  const slot = sp.get("slot") || "—";
-  const from = sp.get("from") || "";
-  const to = sp.get("to") || "";
-  const address = sp.get("address") || "";
+  const bookingId = sp.get("booking");
+  const requestId = sp.get("request");
+  const totalCentsParam = sp.get("total");
+  const currencyParam = sp.get("currency"); // "gbp" | "usd"
+  const weeklyCentsParam = sp.get("weekly");
+  const weeksParam = sp.get("weeks");
+  const service = sp.get("service") ?? "";
 
-  const date = dateRaw ? new Date(dateRaw) : null;
-  const endDate = endDateRaw ? new Date(endDateRaw) : null;
-  const fmtLong = (d: Date) =>
-    d.toLocaleDateString("en-GB", {
-      weekday: "short",
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  const dateStr = date ? fmtLong(date) : "—";
-  const endDateStr = endDate ? fmtLong(endDate) : "—";
+  const currency: "GBP" | "USD" = useMemo(() => {
+    const fromQuery = (currencyParam ?? "").toUpperCase();
+    if (fromQuery === "USD") return "USD";
+    if (fromQuery === "GBP") return "GBP";
+    return narrowCurrency(profile?.currency);
+  }, [currencyParam, profile]);
 
-  // Visiting — duration from from/to (HH:MM strings); fall back to 2h.
-  let hours = 2;
-  if (from && to) {
-    const [fh, fm] = from.split(":").map(Number);
-    const [th, tm] = to.split(":").map(Number);
+  const totalCents: number | null = useMemo(() => {
+    if (totalCentsParam) {
+      const n = Number(totalCentsParam);
+      if (Number.isFinite(n)) return n;
+    }
     if (
-      Number.isFinite(fh) &&
-      Number.isFinite(fm) &&
-      Number.isFinite(th) &&
-      Number.isFinite(tm)
+      careType === "live_in" &&
+      weeklyCentsParam &&
+      weeksParam
     ) {
-      hours = Math.max(0.5, ((th * 60 + tm) - (fh * 60 + fm)) / 60);
+      const w = Number(weeklyCentsParam);
+      const n = Number(weeksParam);
+      if (Number.isFinite(w) && Number.isFinite(n)) return w * n;
     }
-  }
+    return null;
+  }, [totalCentsParam, careType, weeklyCentsParam, weeksParam]);
 
-  // Live-in — number of weeks (rounded up), capped at 1 week min.
-  let weeks = 1;
-  if (careType === "live_in" && date && endDate) {
-    const days = Math.ceil(
-      (endDate.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
-    );
-    weeks = Math.max(1, Math.ceil(days / 7));
-  }
-
-  // Pricing branch — visiting bills hourly, live-in bills weekly.
-  // Live-in carers without a `weekly` rate fall back to hourly × 50.
-  const weeklyUsd =
-    carer.weekly?.usd ?? Math.round(carer.hourly.usd * 50);
-  const subtotal =
-    careType === "live_in" ? weeklyUsd * weeks : carer.hourly.usd * hours;
-  const platformFee = +(subtotal * 0.05).toFixed(2);
-  const total = +(subtotal + platformFee).toFixed(2);
-
-  const onPay = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      // v1: mock authorisation. Real PaymentIntent flow lands once
-      // carers exist as Supabase rows (real UUIDs + Stripe Connect ids).
-      await new Promise((r) => setTimeout(r, 1100));
-      setDone(true);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Payment failed.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (done) {
+  if (!loaded) {
     return (
-      <main className="min-h-[100dvh] bg-white grid place-items-center px-6">
-        <div className="max-w-sm text-center">
-          <div className="mx-auto w-20 h-20 grid place-items-center rounded-full bg-primary text-white">
-            <IconCheck />
-          </div>
-          <h1 className="mt-5 text-[24px] font-bold text-heading">
-            Booking requested
-          </h1>
-          <p className="mt-2 text-subheading text-[14px] leading-relaxed">
-            We&apos;ve sent your request to {carer.name}. They have 24 hours to
-            accept — you won&apos;t be charged until they confirm.
-          </p>
-          <div className="mt-8 grid gap-3">
-            <Link href="/m/bookings">
-              <Button block>View my bookings</Button>
-            </Link>
-            <Link
-              href="/m/home"
-              className="text-primary font-bold text-[14px] py-2"
-            >
-              Back to Home
-            </Link>
-          </div>
+      <main className="min-h-[100dvh] bg-bg-screen pb-32">
+        <TopBar back={`/m/book/${params?.id ?? ""}`} title="Checkout" />
+        <div className="px-4 pt-4 space-y-4">
+          <div className="h-20 rounded-card bg-muted animate-pulse" />
+          <div className="h-24 rounded-card bg-muted animate-pulse" />
+          <div className="h-24 rounded-card bg-muted animate-pulse" />
         </div>
       </main>
     );
   }
 
+  if (notFound || !profile) {
+    return (
+      <main className="min-h-[100dvh] bg-white">
+        <TopBar back={`/m/book/${params?.id ?? ""}`} title="Checkout" />
+        <p className="px-6 mt-10 text-center text-heading">Carer not found.</p>
+      </main>
+    );
+  }
+
+  const name = carerName(profile);
+  const location = carerLocation(profile);
+
+  // The previous step has already created the booking row OR the
+  // live-in request row. This page renders confirmation UI.
+  //
+  // TODO(payments): swap the visiting confirmation for a Stripe
+  // PaymentElement that confirms the existing PaymentIntent (we already
+  // have `client_secret` in `?cs=…`). When that lands, this page becomes
+  // a "Pay £X" form; on confirm the booking moves status `pending →
+  // paid`. Until then the booking sits as `pending` and the carer is
+  // notified to accept; no card capture happens here.
+
   return (
     <main className="min-h-[100dvh] bg-bg-screen pb-32">
-      <TopBar back={`/m/book/${carer.id}`} title="Checkout" />
+      <TopBar back={`/m/book/${profile.user_id}`} title="Checkout" />
 
-      <div className="px-4 pt-2 space-y-4">
+      <div className="px-4 pt-4 space-y-4">
+        {/* Submitted banner */}
+        <Card>
+          <div className="flex items-center gap-3">
+            <span className="grid h-12 w-12 flex-none place-items-center rounded-full bg-primary text-white">
+              <IconCheck />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[16px] font-bold text-heading">
+                {careType === "live_in"
+                  ? "Live-in request submitted"
+                  : "Booking submitted"}
+              </p>
+              <p className="mt-0.5 text-[12.5px] text-subheading">
+                {careType === "live_in"
+                  ? "We'll match a carer and email you a quote shortly."
+                  : `We've sent your booking request to ${name}. They have 24 hours to accept.`}
+              </p>
+              <p className="mt-2">
+                <span className="inline-flex items-center rounded-pill bg-primary-50 text-primary px-2.5 py-1 text-[11px] font-bold">
+                  Awaiting carer response
+                </span>
+              </p>
+            </div>
+          </div>
+        </Card>
+
         {/* Carer summary */}
         <Card>
           <div className="flex items-center gap-3">
-            <Avatar src={carer.photo} name={carer.name} size={56} />
+            <Avatar
+              src={profile.photo_url ?? profile.avatar_url ?? undefined}
+              name={name}
+              size={56}
+            />
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="text-[16px] font-bold text-heading">{carer.name}</p>
-                <CarerBadges
-                  isClinical={carer.isClinical}
-                  isNurse={carer.isNurse}
-                  compact
-                />
-              </div>
-              <p className="text-[12px] text-subheading">
-                {SERVICE_LABEL[service as keyof typeof SERVICE_LABEL] || service}
-              </p>
+              <p className="text-[16px] font-bold text-heading">{name}</p>
+              {location && (
+                <p className="text-[12px] text-subheading inline-flex items-center gap-1 mt-0.5">
+                  <IconPin /> {location}
+                </p>
+              )}
+              {service && (
+                <p className="mt-1">
+                  <span className="inline-flex items-center rounded-pill bg-primary-50 text-primary px-2.5 py-0.5 text-[11px] font-bold">
+                    {serviceLabel(service)}
+                  </span>
+                </p>
+              )}
             </div>
           </div>
         </Card>
@@ -182,112 +230,57 @@ function CheckoutInner() {
           </p>
           <ul className="space-y-2 text-[13px] text-heading">
             <li className="flex items-center gap-2">
-              <span className="text-subheading">•</span>
-              <span className="font-semibold">{CARE_FORMAT_LABEL[careType]}</span>
+              <span className="text-subheading"><IconCal /></span>
+              <span className="font-semibold">{careFormatLabel(careType)}</span>
             </li>
-            {careType === "live_in" ? (
-              <li className="flex items-center gap-2">
-                <span className="text-subheading"><IconCal /></span>
-                {dateStr} → {endDateStr}
+            {bookingId && (
+              <li className="flex items-center gap-2 text-[12px] text-subheading">
+                Booking ref:{" "}
+                <span className="font-mono text-heading">
+                  {bookingId.slice(0, 8)}
+                </span>
               </li>
-            ) : (
-              <>
-                <li className="flex items-center gap-2">
-                  <span className="text-subheading"><IconCal /></span>
-                  {dateStr}
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="text-subheading"><IconCal /></span>
-                  {slot}
-                  {from && to ? ` · ${from}–${to}` : ""}
-                </li>
-              </>
             )}
-            <li className="flex items-center gap-2">
-              <span className="text-subheading"><IconPin /></span>
-              {address || "Address not set"}
-            </li>
+            {requestId && (
+              <li className="flex items-center gap-2 text-[12px] text-subheading">
+                Request ref:{" "}
+                <span className="font-mono text-heading">
+                  {requestId.slice(0, 8)}
+                </span>
+              </li>
+            )}
           </ul>
         </Card>
 
-        {/* Price breakdown */}
-        <Card>
-          <p className="text-[14px] font-bold text-heading mb-3">Price</p>
-          <div className="space-y-2 text-[13px]">
-            <Row
-              label={
-                careType === "live_in"
-                  ? `$${weeklyUsd}/week × ${weeks} week${weeks === 1 ? "" : "s"}`
-                  : `$${carer.hourly.usd}/hr × ${hours.toFixed(1)} hrs`
-              }
-              value={`$${subtotal.toFixed(2)}`}
-            />
-            <Row
-              label="Platform fee"
-              value={`$${platformFee.toFixed(2)}`}
-            />
-            <div className="h-px bg-line my-2" />
-            <Row
-              label={<span className="font-bold text-heading">Total</span>}
-              value={
-                <span className="font-bold text-heading text-[16px]">
-                  ${total.toFixed(2)}
-                </span>
-              }
-            />
-          </div>
-          <p className="mt-3 text-[11px] text-subheading leading-relaxed">
-            Authorisation only — your card is held but not charged until the
-            carer accepts and the shift is marked complete.
-          </p>
-        </Card>
-
-        {/* Payment method */}
-        <Card>
-          <div className="flex items-center gap-3">
-            <span className="h-10 w-10 rounded-btn bg-primary-50 text-primary grid place-items-center">
-              <IconCard />
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-bold text-heading">
-                Apple Pay / Card
-              </p>
-              <p className="text-[12px] text-subheading">
-                Secure checkout via Stripe
-              </p>
-            </div>
-            <span className="text-subheading"><IconLock /></span>
-          </div>
-        </Card>
-
-        {error && (
-          <p className="text-[13px] text-[#C22] bg-[#FBEBEB] border border-[#F3CCCC] rounded-btn px-3 py-2">
-            {error}
-          </p>
+        {/* Total — visiting from API total_cents, live-in derived. */}
+        {totalCents != null && (
+          <Card>
+            <p className="text-[14px] font-bold text-heading mb-2">Total</p>
+            <p className="text-[20px] font-bold text-heading">
+              {formatMoney(totalCents, currency)}
+            </p>
+            <p className="mt-2 text-[11.5px] text-subheading leading-relaxed">
+              {careType === "live_in"
+                ? "Indicative weekly subtotal — final quote follows confirmation."
+                : "Authorisation only — your card is held but not charged until the carer accepts and the shift is marked complete."}
+            </p>
+          </Card>
         )}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 bg-white border-t border-line px-4 pt-3 sc-safe-bottom">
-        <Button block disabled={busy} onClick={onPay} aria-busy={busy}>
-          {busy ? "Processing…" : `Pay $${total.toFixed(2)}`}
-        </Button>
+      {/* Sticky CTAs */}
+      <div className="fixed inset-x-0 bottom-0 z-30 bg-white border-t border-line px-4 pt-3 pb-3 sc-safe-bottom space-y-2">
+        <Link href="/m/bookings" className="block">
+          <Button block>View in Bookings</Button>
+        </Link>
+        <Link
+          href="/m/home"
+          className="block text-center text-primary font-bold text-[14px] py-2"
+        >
+          Done
+        </Link>
       </div>
     </main>
-  );
-}
-
-function Row({
-  label,
-  value,
-}: {
-  label: React.ReactNode;
-  value: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-subheading">{label}</span>
-      <span className="text-heading">{value}</span>
-    </div>
   );
 }
 
