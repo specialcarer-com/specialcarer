@@ -111,10 +111,18 @@ export async function middleware(req: NextRequest) {
     // Admins can browse anywhere on /m/* for support purposes.
     if (role !== "admin") {
       if (isSeekerOnly && role === "caregiver") {
-        const url = req.nextUrl.clone();
-        url.pathname = "/m/jobs";
-        url.searchParams.set("forbidden", "role");
-        return NextResponse.redirect(url);
+        // Carers may preview THEIR OWN public profile via the Profile page's
+        // "Preview public profile" button. The path is /m/carer/<userId>?preview=1.
+        // Allow that single case through; everything else stays blocked.
+        const carerProfileMatch = pathname.match(/^\/m\/carer\/([^\/]+)/);
+        const isOwnProfilePreview =
+          !!carerProfileMatch && carerProfileMatch[1] === user.id;
+        if (!isOwnProfilePreview) {
+          const url = req.nextUrl.clone();
+          url.pathname = "/m/jobs";
+          url.searchParams.set("forbidden", "role");
+          return NextResponse.redirect(url);
+        }
       }
       if (isCaregiverOnly && role === "seeker") {
         const url = req.nextUrl.clone();
