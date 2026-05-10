@@ -272,6 +272,31 @@ export function BottomNav({
     };
   }, [roleProp]);
   const role = roleProp ?? autoRole ?? "seeker";
+
+  // Carer inbox badge — poll /api/m/work-status every 60s.
+  const [inboxCount, setInboxCount] = useState(0);
+  useEffect(() => {
+    if (role !== "carer") return;
+    let cancelled = false;
+    const fetchInbox = async () => {
+      try {
+        const res = await fetch("/api/m/work-status");
+        if (!cancelled && res.ok) {
+          const data = (await res.json()) as { counts: { inbox: number } };
+          setInboxCount(data.counts?.inbox ?? 0);
+        }
+      } catch {
+        /* best-effort */
+      }
+    };
+    fetchInbox();
+    const timer = setInterval(fetchInbox, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [role]);
+
   // Tab sets per role. Carer Home is the dashboard (which contains shortcuts to
   // Schedule and Earnings), so the bar focuses on Home / Jobs / Chat / Profile.
   // Seeker keeps the standard 5-tab layout. Each href below is allowed for the
@@ -301,6 +326,8 @@ export function BottomNav({
       >
         {items.map((it) => {
           const isActive = it.key === active;
+          const showBadge = role === "carer" && it.key === "jobs" && inboxCount > 0;
+          const badgeLabel = inboxCount >= 10 ? "9+" : String(inboxCount);
           return (
             <li key={it.key} className="relative">
               <Link
@@ -310,8 +337,13 @@ export function BottomNav({
                 {isActive && (
                   <span className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-[3px] rounded-b-full bg-primary" />
                 )}
-                <span className={isActive ? "text-primary" : "text-subheading"}>
+                <span className={`relative ${isActive ? "text-primary" : "text-subheading"}`}>
                   {it.icon}
+                  {showBadge && (
+                    <span className="absolute -top-1.5 -right-2.5 inline-flex items-center justify-center min-w-[16px] h-[16px] rounded-full px-[3px] bg-amber-500 text-white text-[9px] font-bold leading-none">
+                      {badgeLabel}
+                    </span>
+                  )}
                 </span>
                 <span
                   className={`text-[11px] ${
