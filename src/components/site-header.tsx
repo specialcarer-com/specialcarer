@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
+import SiteHeaderNav from "@/components/site-header-nav";
 
 export default async function SiteHeader() {
   const supabase = await createClient();
@@ -30,96 +31,7 @@ export default async function SiteHeader() {
           className="h-16 md:h-20 w-auto"
         />
       </Link>
-      <nav className="hidden md:flex items-center gap-6 text-sm text-slate-600">
-        <Link href="/how-it-works" className="hover:text-slate-900">
-          How it works
-        </Link>
-        <div className="relative group">
-          <button className="hover:text-slate-900 inline-flex items-center gap-1">
-            Services
-            <svg
-              className="w-3 h-3"
-              viewBox="0 0 12 12"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M3 4.5L6 7.5L9 4.5" />
-            </svg>
-          </button>
-          <div className="absolute top-full left-0 pt-3 hidden group-hover:block">
-            <div className="bg-white rounded-xl border border-slate-100 shadow-lg p-2 w-60">
-              <p className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wider uppercase text-slate-400">
-                Type of care
-              </p>
-              <Link
-                href="/services/elderly-care"
-                className="block px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50"
-              >
-                Elderly care
-              </Link>
-              <Link
-                href="/services/childcare"
-                className="block px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50"
-              >
-                Childcare
-              </Link>
-              <Link
-                href="/services/special-needs"
-                className="block px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50"
-              >
-                Special-needs care
-              </Link>
-              <Link
-                href="/services/postnatal"
-                className="block px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50"
-              >
-                Postnatal &amp; newborn
-              </Link>
-              <Link
-                href="/services/complex-care"
-                className="block px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50"
-              >
-                Complex care
-              </Link>
-              <div className="my-2 border-t border-slate-100" />
-              <p className="px-3 pt-1 pb-1 text-[10px] font-semibold tracking-wider uppercase text-slate-400">
-                How it&rsquo;s delivered
-              </p>
-              <Link
-                href="/care-formats/live-in"
-                className="block px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50"
-              >
-                Live-in care
-              </Link>
-              <Link
-                href="/care-formats/visiting"
-                className="block px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50"
-              >
-                Visiting care
-              </Link>
-            </div>
-          </div>
-        </div>
-        <Link href="/trust" className="hover:text-slate-900">
-          Trust &amp; safety
-        </Link>
-        <Link href="/pricing" className="hover:text-slate-900">
-          Pricing
-        </Link>
-        <Link href="/employers" className="hover:text-slate-900">
-          For employers
-        </Link>
-        <Link href="/organisations" className="hover:text-slate-900">
-          For organisations
-        </Link>
-        <Link href="/become-a-caregiver" className="hover:text-slate-900">
-          For caregivers
-        </Link>
-        <Link href="/blog" className="hover:text-slate-900">
-          Blog
-        </Link>
-      </nav>
+      <SiteHeaderNav />
       <div className="flex items-center gap-3">
         {isAdmin && (
           <Link
