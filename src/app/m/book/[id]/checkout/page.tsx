@@ -1,8 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+} from "react";
 import { useParams, useSearchParams } from "next/navigation";
+import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import {
   Avatar,
   Button,
@@ -15,25 +22,42 @@ import {
 import { type CareFormat } from "../../../_lib/mock";
 import { serviceLabel, formatMoney } from "@/lib/care/services";
 import { careFormatLabel } from "@/lib/care/formats";
+import { getStripe } from "@/lib/stripe/client";
 import type {
   ApiCarerResponse,
   ApiCarerProfile,
 } from "@/app/api/m/carer/[id]/route";
 
 /**
- * Booking checkout — confirmation summary.
+ * Booking checkout — payment + confirmation.
  *
- * Visiting bookings: the previous step (Create Booking) called
- * /api/stripe/create-booking-intent which created a `bookings` row and
- * minted a PaymentIntent. We pass the booking id, client_secret, and
- * total via query params and currently render a "Booking submitted"
- * confirmation. Capturing payment via Stripe PaymentElement is a
- * deliberate follow-up — see TODO below.
+ * Visiting bookings (with `?cs=…`):
+ *   The previous step (Create Booking) already minted a manual-capture
+ *   PaymentIntent (`requires_capture` mode). This page mounts Stripe
+ *   Elements with that client_secret, renders <PaymentElement />, and
+ *   confirms via `stripe.confirmPayment`. Stripe handles the redirect
+ *   back to /m/bookings/{booking_id} via `return_url`. We do NOT pass
+ *   `capture_method` on confirm — the PI already has it set server-side.
  *
- * Live-in bookings: /api/bookings/live-in/request created a
- * `live_in_requests` row and emailed admin. We render a
- * "Request submitted" screen with the weekly subtotal preview.
+ * Visiting fallback (no client_secret) and live-in bookings:
+ *   Show a "Booking submitted" / "Live-in request submitted"
+ *   confirmation summary. Live-in has no PaymentIntent (the request
+ *   just emails ops).
  */
+
+const STRIPE_APPEARANCE = {
+  theme: "stripe" as const,
+  variables: {
+    colorPrimary: "#0E7C7B",
+    colorText: "#0F1416",
+    colorTextSecondary: "#475569",
+    colorDanger: "#C22",
+    fontFamily:
+      "'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif",
+    borderRadius: "12px",
+    spacingUnit: "4px",
+  },
+};
 
 function narrowCurrency(c: string | null | undefined): "GBP" | "USD" {
   return (c ?? "GBP").toUpperCase() === "USD" ? "USD" : "GBP";
@@ -100,6 +124,7 @@ function CheckoutInner() {
   const careType: CareFormat =
     (sp.get("careType") as CareFormat) === "live_in" ? "live_in" : "visiting";
   const bookingId = sp.get("booking");
+  const clientSecret = sp.get("cs");
   const requestId = sp.get("request");
   const totalCentsParam = sp.get("total");
   const currencyParam = sp.get("currency"); // "gbp" | "usd"
@@ -156,22 +181,18 @@ function CheckoutInner() {
   const name = carerName(profile);
   const location = carerLocation(profile);
 
-  // The previous step has already created the booking row OR the
-  // live-in request row. This page renders confirmation UI.
-  //
-  // TODO(payments): swap the visiting confirmation for a Stripe
-  // PaymentElement that confirms the existing PaymentIntent (we already
-  // have `client_secret` in `?cs=…`). When that lands, this page becomes
-  // a "Pay £X" form; on confirm the booking moves status `pending →
-  // paid`. Until then the booking sits as `pending` and the carer is
-  // notified to accept; no card capture happens here.
+  // Visiting bookings with a client_secret render the real Stripe
+  // PaymentElement form. Live-in bookings (and visiting fallback when
+  // `cs` is missing — shouldn't happen in normal flow) keep the
+  // confirmation summary unchanged.
+  const hasPaymentForm = careType === "visiting" && !!clientSecret && !!bookingId;
 
   return (
     <main className="min-h-[100dvh] bg-bg-screen pb-32">
       <TopBar back={`/m/book/${profile.user_id}`} title="Checkout" />
 
       <div className="px-4 pt-4 space-y-4">
-        {/* Submitted banner */}
+        {/* Status banner — different copy when payment is required. */}
         <Card>
           <div className="flex items-center gap-3">
             <span className="grid h-12 w-12 flex-none place-items-center rounded-full bg-primary text-white">
@@ -179,20 +200,26 @@ function CheckoutInner() {
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-[16px] font-bold text-heading">
-                {careType === "live_in"
-                  ? "Live-in request submitted"
-                  : "Booking submitted"}
+                {hasPaymentForm
+                  ? "Confirm payment"
+                  : careType === "live_in"
+                    ? "Live-in request submitted"
+                    : "Booking submitted"}
               </p>
               <p className="mt-0.5 text-[12.5px] text-subheading">
-                {careType === "live_in"
-                  ? "We'll match a carer and email you a quote shortly."
-                  : `We've sent your booking request to ${name}. They have 24 hours to accept.`}
+                {hasPaymentForm
+                  ? `Authorise your card to send the request to ${name}.`
+                  : careType === "live_in"
+                    ? "We'll match a carer and email you a quote shortly."
+                    : `We've sent your booking request to ${name}. They have 24 hours to accept.`}
               </p>
-              <p className="mt-2">
-                <span className="inline-flex items-center rounded-pill bg-primary-50 text-primary px-2.5 py-1 text-[11px] font-bold">
-                  Awaiting carer response
-                </span>
-              </p>
+              {!hasPaymentForm && (
+                <p className="mt-2">
+                  <span className="inline-flex items-center rounded-pill bg-primary-50 text-primary px-2.5 py-1 text-[11px] font-bold">
+                    Awaiting carer response
+                  </span>
+                </p>
+              )}
             </div>
           </div>
         </Card>
@@ -266,21 +293,127 @@ function CheckoutInner() {
             </p>
           </Card>
         )}
+
+        {/* Stripe payment form — visiting branch only. */}
+        {hasPaymentForm && clientSecret && bookingId && (
+          <Card>
+            <p className="text-[14px] font-bold text-heading mb-3">Payment</p>
+            <Elements
+              stripe={getStripe()}
+              options={{
+                clientSecret,
+                appearance: STRIPE_APPEARANCE,
+              }}
+            >
+              <PayWithStripe
+                bookingId={bookingId}
+                totalCents={totalCents}
+                currency={currency}
+              />
+            </Elements>
+          </Card>
+        )}
       </div>
 
-      {/* Sticky CTAs */}
-      <div className="fixed inset-x-0 bottom-0 z-30 bg-white border-t border-line px-4 pt-3 pb-3 sc-safe-bottom space-y-2">
-        <Link href="/m/bookings" className="block">
-          <Button block>View in Bookings</Button>
-        </Link>
-        <Link
-          href="/m/home"
-          className="block text-center text-primary font-bold text-[14px] py-2"
-        >
-          Done
-        </Link>
-      </div>
+      {/* Bottom CTAs only when there's no payment form (otherwise the
+          Pay button inside the Stripe Elements card is the primary
+          action). Live-in still shows "View bookings" / "Done". */}
+      {!hasPaymentForm && (
+        <div className="fixed inset-x-0 bottom-0 z-30 bg-white border-t border-line px-4 pt-3 pb-3 sc-safe-bottom space-y-2">
+          <Link href="/m/bookings" className="block">
+            <Button block>View in Bookings</Button>
+          </Link>
+          <Link
+            href="/m/home"
+            className="block text-center text-primary font-bold text-[14px] py-2"
+          >
+            Done
+          </Link>
+        </div>
+      )}
     </main>
+  );
+}
+
+/**
+ * Inner Stripe form. Must live inside <Elements> so useStripe /
+ * useElements resolve. On submit calls confirmPayment with a
+ * return_url; Stripe will redirect to /m/bookings/{booking_id} once
+ * the PI moves to `requires_capture`.
+ */
+function PayWithStripe({
+  bookingId,
+  totalCents,
+  currency,
+}: {
+  bookingId: string;
+  totalCents: number | null;
+  currency: "GBP" | "USD";
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const buttonLabel = totalCents != null
+    ? `Pay ${formatMoney(totalCents, currency)}`
+    : "Authorise card";
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!stripe || !elements || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      // Build an absolute return_url. Stripe requires absolute.
+      const origin =
+        typeof window !== "undefined" ? window.location.origin : "";
+      const returnUrl = `${origin}/m/bookings/${encodeURIComponent(bookingId)}`;
+
+      const { error: stripeError } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: returnUrl,
+        },
+      });
+
+      // If we get here without a redirect, something went wrong —
+      // typically validation or card error. Stripe still mutates the
+      // PI; expose the message inline.
+      if (stripeError) {
+        setError(stripeError.message ?? "Payment could not be confirmed.");
+      }
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Payment could not be confirmed.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-3">
+      <PaymentElement />
+
+      {error && (
+        <p
+          aria-live="polite"
+          className="text-[13px] text-[#C22] bg-[#FBEBEB] border border-[#F3CCCC] rounded-btn px-3 py-2"
+        >
+          {error}
+        </p>
+      )}
+
+      <Button block type="submit" disabled={!stripe || !elements || busy}>
+        {busy ? "Processing…" : buttonLabel}
+      </Button>
+
+      <p className="text-[11.5px] text-subheading leading-relaxed">
+        Your card is authorised now. We capture payment after the shift is
+        completed and a 24-hour hold.
+      </p>
+    </form>
   );
 }
 
