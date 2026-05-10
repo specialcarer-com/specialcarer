@@ -49,12 +49,33 @@ export type ApiCarerProfile = {
   gender: string | null;
 };
 
+/**
+ * Weekday convention: 0 = Sunday … 6 = Saturday (Postgres EXTRACT(DOW)).
+ * This matches the storage convention in `caregiver_availability_slots`
+ * and the editor at src/app/m/profile/availability/page.tsx
+ * (DAY_TO_WEEKDAY: { Sunday: 0, Monday: 1, ..., Saturday: 6 }).
+ */
+export type ApiCarerAvailabilitySlot = {
+  weekday: number; // 0=Sun..6=Sat
+  start_time: string; // "HH:MM:SS"
+  end_time: string;
+};
+
+export type ApiCarerBlockout = {
+  id: string;
+  starts_on: string; // "YYYY-MM-DD"
+  ends_on: string;
+  reason: string | null;
+};
+
 export type ApiCarerResponse = {
   preview: boolean;
   is_published: boolean;
   profile: ApiCarerProfile;
   photos: ApiCarerPhoto[];
   reviews: ApiCarerReview[];
+  availability: ApiCarerAvailabilitySlot[];
+  blockouts: ApiCarerBlockout[];
 };
 
 /**
@@ -280,6 +301,52 @@ export async function GET(
     }
   }
 
+  // Weekly availability — public-readable per
+  // `availability_slots_public_read` policy. Sorted by (weekday, start)
+  // so the UI can render in chronological order without a client sort.
+  type SlotRow = {
+    weekday: number;
+    start_time: string;
+    end_time: string;
+  };
+  const { data: slotRows } = await supabase
+    .from("caregiver_availability_slots")
+    .select("weekday, start_time, end_time")
+    .eq("user_id", id)
+    .order("weekday")
+    .order("start_time");
+  const availability: ApiCarerAvailabilitySlot[] = (
+    (slotRows ?? []) as unknown as SlotRow[]
+  ).map((r) => ({
+    weekday: Number(r.weekday),
+    start_time: r.start_time,
+    end_time: r.end_time,
+  }));
+
+  // Future block-outs only — public-readable per `blockouts_public_read`.
+  const today = new Date().toISOString().slice(0, 10);
+  type BlockoutRow = {
+    id: string;
+    starts_on: string;
+    ends_on: string;
+    reason: string | null;
+  };
+  const { data: blockoutRows } = await supabase
+    .from("caregiver_blockouts")
+    .select("id, starts_on, ends_on, reason")
+    .eq("user_id", id)
+    .gte("ends_on", today)
+    .order("starts_on")
+    .limit(10);
+  const blockouts: ApiCarerBlockout[] = (
+    (blockoutRows ?? []) as unknown as BlockoutRow[]
+  ).map((r) => ({
+    id: r.id,
+    starts_on: r.starts_on,
+    ends_on: r.ends_on,
+    reason: r.reason,
+  }));
+
   const profile: ApiCarerProfile = {
     user_id: cgSafe.user_id,
     display_name: cgSafe.display_name,
@@ -315,6 +382,8 @@ export async function GET(
     profile,
     photos,
     reviews,
+    availability,
+    blockouts,
   };
 
   return NextResponse.json(response);

@@ -28,6 +28,8 @@ import type {
   ApiCarerResponse,
   ApiCarerProfile,
   ApiCarerReview,
+  ApiCarerAvailabilitySlot,
+  ApiCarerBlockout,
 } from "@/app/api/m/carer/[id]/route";
 
 /**
@@ -203,7 +205,8 @@ export default function CarerDetailPage() {
     );
   }
 
-  const { preview, profile, photos, reviews } = apiData;
+  const { preview, profile, photos, reviews, availability, blockouts } =
+    apiData;
   const photoSrc = profile.photo_url ?? profile.avatar_url ?? undefined;
   const name = carerName(profile);
   const location = locationLine(profile);
@@ -578,11 +581,36 @@ export default function CarerDetailPage() {
               )}
             </PanelCard>
 
-            <PanelCard icon={<IconClock />} title="Time">
-              <p className="text-[12px] text-subheading">
-                Availability is shown when you set your weekly schedule.
-              </p>
+            <PanelCard icon={<IconClock />} title="Weekly availability">
+              <WeeklyAvailability
+                slots={availability}
+                preview={preview}
+                displayName={name}
+              />
             </PanelCard>
+
+            {blockouts.length > 0 && (
+              <PanelCard
+                icon={
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                    <path d="M16 2v4M8 2v4M3 10h18" />
+                  </svg>
+                }
+                title="Time off"
+              >
+                <BlockoutsList blockouts={blockouts} />
+              </PanelCard>
+            )}
           </>
         )}
 
@@ -655,6 +683,150 @@ function ReviewRow({ r }: { r: ApiCarerReview }) {
       </div>
     </Card>
   );
+}
+
+/**
+ * Weekly availability — viewer-aware empty state.
+ *
+ * Slots arrive sorted (weekday, start_time). Days with zero slots render
+ * as "Not available". We display Mon-first to match the editor, but the
+ * underlying weekday number still uses Postgres EXTRACT(DOW): 0 = Sunday.
+ */
+function WeeklyAvailability({
+  slots,
+  preview,
+  displayName,
+}: {
+  slots: ApiCarerAvailabilitySlot[];
+  preview: boolean;
+  displayName: string;
+}) {
+  // Editor display order: Mon, Tue, Wed, Thu, Fri, Sat, Sun.
+  // weekday numbers: Mon=1, Tue=2, Wed=3, Thu=4, Fri=5, Sat=6, Sun=0.
+  const ORDER: { weekday: number; label: string }[] = [
+    { weekday: 1, label: "Monday" },
+    { weekday: 2, label: "Tuesday" },
+    { weekday: 3, label: "Wednesday" },
+    { weekday: 4, label: "Thursday" },
+    { weekday: 5, label: "Friday" },
+    { weekday: 6, label: "Saturday" },
+    { weekday: 0, label: "Sunday" },
+  ];
+
+  const slotsByDay = new Map<number, ApiCarerAvailabilitySlot[]>();
+  for (const s of slots) {
+    const arr = slotsByDay.get(s.weekday) ?? [];
+    arr.push(s);
+    slotsByDay.set(s.weekday, arr);
+  }
+
+  // Empty state — viewer-aware.
+  if (slots.length === 0) {
+    if (preview) {
+      return (
+        <div className="space-y-3">
+          <p className="text-[13px] text-subheading">
+            Set your weekly schedule so seekers can see when you&rsquo;re
+            available.
+          </p>
+          <Link
+            href="/m/profile/availability"
+            className="inline-flex items-center gap-1 rounded-pill bg-primary px-4 py-2 text-[13px] font-bold text-white"
+          >
+            Set schedule →
+          </Link>
+        </div>
+      );
+    }
+    return (
+      <p className="text-[13px] text-subheading">
+        {displayName} hasn&rsquo;t shared their weekly schedule yet. You can
+        still send a booking request and ask about their availability.
+      </p>
+    );
+  }
+
+  return (
+    <ul>
+      {ORDER.map(({ weekday, label }) => {
+        const daySlots = slotsByDay.get(weekday) ?? [];
+        return (
+          <li
+            key={weekday}
+            className="flex items-start justify-between gap-3 border-b border-line py-3 first:pt-0 last:border-b-0 last:pb-0"
+          >
+            <span className="text-[13px] font-semibold text-heading">
+              {label}
+            </span>
+            {daySlots.length === 0 ? (
+              <span className="text-[12.5px] text-subheading">
+                Not available
+              </span>
+            ) : (
+              <span className="text-[12.5px] text-heading text-right">
+                {daySlots
+                  .map(
+                    (s) =>
+                      `${formatHHMM(s.start_time)} – ${formatHHMM(s.end_time)}`,
+                  )
+                  .join(", ")}
+              </span>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function BlockoutsList({ blockouts }: { blockouts: ApiCarerBlockout[] }) {
+  return (
+    <ul className="space-y-3">
+      {blockouts.map((b) => (
+        <li
+          key={b.id}
+          className="flex flex-wrap items-baseline justify-between gap-2"
+        >
+          <span className="text-[13px] font-semibold text-heading">
+            {formatBlockoutRange(b.starts_on, b.ends_on)}
+          </span>
+          {b.reason && (
+            <span className="text-[12.5px] italic text-subheading">
+              {b.reason}
+            </span>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** "14:30:00" or "14:30" → "14:30". Drops seconds; keeps leading zeros. */
+function formatHHMM(t: string): string {
+  return (t ?? "").slice(0, 5);
+}
+
+/** "2026-05-13" + "2026-05-19" → "13 May – 19 May". Same year shown once. */
+function formatBlockoutRange(starts: string, ends: string): string {
+  const dStart = new Date(`${starts}T00:00:00Z`);
+  const dEnd = new Date(`${ends}T00:00:00Z`);
+  const fmtDayMonth = new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    timeZone: "UTC",
+  });
+  const fmtFull = new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+  if (starts === ends) return fmtFull.format(dStart);
+  // If same year, omit the year on the start side; show full on the end.
+  if (dStart.getUTCFullYear() === dEnd.getUTCFullYear()) {
+    return `${fmtDayMonth.format(dStart)} – ${fmtFull.format(dEnd)}`;
+  }
+  return `${fmtFull.format(dStart)} – ${fmtFull.format(dEnd)}`;
 }
 
 function PanelCard({
