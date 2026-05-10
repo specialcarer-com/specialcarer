@@ -18,7 +18,8 @@ const ADMIN_PREFIXES = ["/admin"];
 // Anything not listed here is shared (auth flows, profile, chat,
 // notifications, track).
 const MOBILE_SEEKER_ONLY_PREFIXES = [
-  "/m/home",      // seeker-shaped widgets + bookings preview
+  // /m/home now branches by role server-side (seeker vs carer dashboard)
+  // so it is intentionally NOT in this list.
   "/m/bookings",  // mock data + UI is seeker-perspective only (carer side TBD)
   "/m/search",
   "/m/book",

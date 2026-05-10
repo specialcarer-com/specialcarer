@@ -278,7 +278,7 @@ export function BottomNav({
   const items =
     role === "carer"
       ? [
-          { key: "home", label: "Home", href: "/m/jobs", icon: <IconHome /> },
+          { key: "home", label: "Home", href: "/m/home", icon: <IconHome /> },
           { key: "bookings", label: "Schedule", href: "/m/schedule", icon: <IconCal /> },
           { key: "jobs", label: "Earnings", href: "/m/earnings", icon: <IconBag /> },
           { key: "chat", label: "Chat", href: "/m/chat", icon: <IconChat /> },
