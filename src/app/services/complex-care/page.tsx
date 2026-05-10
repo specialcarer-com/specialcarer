@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <ServicePage
+      bannerKey="services.complex_care"
       eyebrow="Complex care"
       title="Clinical-grade care, in the comfort of home."
       lede="When a loved one needs more than companionship — tube feeds, tracheostomy management, ventilator support, seizure protocols, or palliative care — you need caregivers with the clinical training and steady hands to match. SpecialCarer connects you with vetted nurses, healthcare assistants, and complex-care specialists who can step in for a shift, a respite week, or an ongoing care plan."

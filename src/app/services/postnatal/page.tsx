@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <ServicePage
+      bannerKey="services.postnatal"
       eyebrow="Postnatal & newborn"
       title="Sleep when you can. We&rsquo;ll watch the baby."
       lede="The first weeks with a newborn are extraordinary — and exhausting. Whether you need overnight help so you can sleep, daytime support to recover, or experienced multiples care, our postnatal-trained caregivers can help."

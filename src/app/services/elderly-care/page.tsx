@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <ServicePage
+      bannerKey="services.elderly_care"
       eyebrow="Elderly care"
       title="Compassionate elderly care, at home."
       lede="Whether your loved one needs a few hours of companionship, help with daily routines, or overnight respite for family carers, our background-checked caregivers can be there — often within the same day."

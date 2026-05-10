@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <ServicePage
+      bannerKey="services.childcare"
       eyebrow="Childcare"
       title="Babysitters &amp; nannies, vetted by us."
       lede="From a one-off date night to ongoing after-school care, find caregivers who are DBS- or Checkr-verified, paediatric first-aid trained, and rated by other parents in your area."

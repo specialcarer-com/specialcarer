@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import MarketingShell from "@/components/marketing-shell";
+import PageHeroBanner from "@/components/page-hero-banner";
 
 export const metadata: Metadata = {
   title: "Pricing — SpecialCarer",
@@ -45,6 +46,7 @@ const tiers = [
 export default function Page() {
   return (
     <MarketingShell>
+      <PageHeroBanner pageKey="marketing.pricing" height="md" tint="soft" />
       <section className="px-6 py-16 sm:py-24 max-w-4xl mx-auto text-center">
         <span className="inline-block px-3 py-1 rounded-full bg-brand-50 text-brand-700 text-xs font-medium">
           Pricing

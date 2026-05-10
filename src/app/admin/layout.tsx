@@ -60,7 +60,8 @@ const SECTIONS: NavSection[] = [
     items: [
       { href: "/admin/cms/blog", label: "Blog" },
       { href: "/admin/cms/faq", label: "FAQ" },
-      { href: "/admin/cms/banners", label: "Banners" },
+      { href: "/admin/cms/banners", label: "Banners (in-app)" },
+      { href: "/admin/cms/page-banners", label: "Page banners" },
     ],
   },
   {

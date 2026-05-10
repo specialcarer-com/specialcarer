@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <ServicePage
+      bannerKey="care_formats.live_in"
       eyebrow="Live-in care"
       title="A trusted carer who lives with you."
       lede="Continuity, companionship, and safety without the upheaval of moving into residential care. A live-in caregiver moves into your home for a placement, typically a week or two at a time, providing daytime support and overnight peace of mind. Live-in placements are billed as a weekly rate, not by the hour."

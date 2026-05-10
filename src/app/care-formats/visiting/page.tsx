@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <ServicePage
+      bannerKey="care_formats.visiting"
       eyebrow="Visiting care"
       title="Help that fits around your life."
       lede="A caregiver who arrives at an agreed time, supports with everyday routines, and leaves you to it. Visiting care is the most flexible format — from a single hour a week to several visits a day, on demand or on a regular schedule. Visits are billed by the hour."

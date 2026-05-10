@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import MarketingShell from "@/components/marketing-shell";
+import PageHeroBanner from "@/components/page-hero-banner";
 import ContactForm from "./_components/ContactForm";
 
 export const metadata: Metadata = {
@@ -151,6 +152,7 @@ const FAQS: { q: string; a: string }[] = [
 export default function OrganisationsPage() {
   return (
     <MarketingShell>
+      <PageHeroBanner pageKey="audience.organisations" height="md" tint="soft" />
       {/* Hero */}
       <section className="px-6 pt-16 pb-10 sm:pt-24 sm:pb-14 max-w-4xl mx-auto text-center">
         <span className="inline-block px-3 py-1 rounded-full bg-brand-50 text-brand-700 text-xs font-medium">

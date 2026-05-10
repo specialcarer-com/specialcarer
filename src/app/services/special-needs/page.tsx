@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <ServicePage
+      bannerKey="services.special_needs"
       eyebrow="Special-needs care"
       title="Care that meets your family where you are."
       lede="Finding a caregiver who actually understands your child or adult's specific needs is hard. We make it easier by letting you filter for declared experience with autism, ADHD, sensory processing differences, learning disabilities, and physical disabilities — and by verifying training credentials."

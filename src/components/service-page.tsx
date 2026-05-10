@@ -1,5 +1,6 @@
 import Link from "next/link";
 import MarketingShell from "@/components/marketing-shell";
+import PageHeroBanner from "@/components/page-hero-banner";
 
 export type ServicePageProps = {
   eyebrow: string;
@@ -9,6 +10,8 @@ export type ServicePageProps = {
   faqs: { q: string; a: string }[];
   certifications?: string[];
   notForEmergencies?: boolean;
+  /** page_hero_banners key for the editable hero media. */
+  bannerKey?: string;
 };
 
 export default function ServicePage({
@@ -19,13 +22,28 @@ export default function ServicePage({
   faqs,
   certifications,
   notForEmergencies = true,
+  bannerKey,
 }: ServicePageProps) {
   return (
     <MarketingShell>
+      {bannerKey && (
+        <PageHeroBanner
+          pageKey={bannerKey}
+          height="md"
+          tint="soft"
+          overlay={
+            <span className="inline-block px-3 py-1 rounded-full bg-white/90 text-brand-700 text-xs font-semibold w-fit">
+              {eyebrow}
+            </span>
+          }
+        />
+      )}
       <section className="px-6 py-16 sm:py-24 max-w-4xl mx-auto">
-        <span className="inline-block px-3 py-1 rounded-full bg-brand-50 text-brand-700 text-xs font-medium">
-          {eyebrow}
-        </span>
+        {!bannerKey && (
+          <span className="inline-block px-3 py-1 rounded-full bg-brand-50 text-brand-700 text-xs font-medium">
+            {eyebrow}
+          </span>
+        )}
         <h1 className="mt-4 text-4xl sm:text-5xl font-semibold tracking-tight text-slate-900">
           {title}
         </h1>
