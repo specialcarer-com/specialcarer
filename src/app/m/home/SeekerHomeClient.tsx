@@ -7,7 +7,6 @@ import {
   BottomNav,
   Button,
   Card,
-  CarerBadges,
   IconCal,
   IconChatBubble,
   IconChevronRight,
@@ -24,16 +23,24 @@ import {
 } from "../_components/ui";
 import {
   BOOKINGS,
-  CAREGIVERS,
-  SERVICE_LABEL,
   STATUS_TONE,
   getCarer,
 } from "../_lib/mock";
+import { serviceLabel, formatMoney } from "@/lib/care/services";
 import { createClient } from "@/lib/supabase/client";
+import type { ApiFeaturedCarer } from "@/app/api/m/carers/featured/route";
 
 /**
  * Home (seeker) — Figma 7:1652.
- * Welcome / search bar / Upcoming Bookings (1 card) / Professionals list.
+ * Welcome / search bar / Upcoming Bookings / Care journal / Professionals.
+ *
+ * The Professionals strip is now backed by the real `caregiver_profiles`
+ * table via /api/m/carers/featured. The mock CAREGIVERS array is no
+ * longer rendered here — tapping "See Profile" now lands on a real
+ * UUID-keyed profile at /m/carer/{user_id}.
+ *
+ * The upcoming-booking card still uses mock BOOKINGS data; that section
+ * is unchanged per the brief.
  */
 
 export default function SeekerHomeClient() {
@@ -59,8 +66,6 @@ export default function SeekerHomeClient() {
           user?.email?.split("@")[0] ||
           "there";
         setName(display);
-        // Fast path — metadata copy. Falls through to profiles below
-        // for the canonical value.
         if (meta?.avatar_url) setAvatarUrl(meta.avatar_url);
         if (user?.id) {
           const { data: prof } = await supabase
@@ -79,8 +84,7 @@ export default function SeekerHomeClient() {
     };
   }, []);
 
-  // Lightweight count of recent journal entries the user can see.
-  // Best-effort — if it fails or returns zero we just hide the card.
+  // Lightweight count of recent journal entries.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -94,6 +98,31 @@ export default function SeekerHomeClient() {
         setJournalCount(json.entries?.length ?? 0);
       } catch {
         /* keep null */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Real published carers — replaces the mock CAREGIVERS slice.
+  const [featured, setFeatured] = useState<ApiFeaturedCarer[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/m/carers/featured", {
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (!res.ok) {
+          if (!cancelled) setFeatured([]);
+          return;
+        }
+        const json = (await res.json()) as { carers?: ApiFeaturedCarer[] };
+        if (!cancelled) setFeatured(json.carers ?? []);
+      } catch {
+        if (!cancelled) setFeatured([]);
       }
     })();
     return () => {
@@ -176,7 +205,7 @@ export default function SeekerHomeClient() {
         </Link>
       </div>
 
-      {/* Upcoming Bookings */}
+      {/* Upcoming Bookings — still mock-driven; brief said leave alone. */}
       {upcoming && upcomingCarer && (
         <>
           <SectionTitle
@@ -199,8 +228,7 @@ export default function SeekerHomeClient() {
         </>
       )}
 
-      {/* Care journal quick-access. Always visible for signed-in users so
-          they can both add a note and review the recent timeline. */}
+      {/* Care journal quick-access. */}
       <SectionTitle title="Care journal" />
       <div className="px-4">
         <Link href="/m/journal" className="block">
@@ -231,12 +259,33 @@ export default function SeekerHomeClient() {
         </Link>
       </div>
 
-      {/* Professionals */}
+      {/* Professionals — backed by /api/m/carers/featured (real DB carers). */}
       <SectionTitle title="Professionals" />
       <div className="px-4 space-y-4">
-        {CAREGIVERS.slice(0, 6).map((c) => (
-          <CarerCard key={c.id} carer={c} />
-        ))}
+        {featured === null ? (
+          <>
+            <CarerCardSkeleton />
+            <CarerCardSkeleton />
+            <CarerCardSkeleton />
+          </>
+        ) : featured.length === 0 ? (
+          <Card>
+            <p className="text-[14px] font-bold text-heading">
+              No professionals available in your area yet
+            </p>
+            <p className="mt-1 text-[13px] text-subheading">
+              We&rsquo;re onboarding new carers every week. Try the search to
+              browse a wider area.
+            </p>
+            <div className="mt-3">
+              <Link href="/m/search">
+                <Button size="md">Browse all carers</Button>
+              </Link>
+            </div>
+          </Card>
+        ) : (
+          featured.map((c) => <RealCarerCard key={c.user_id} carer={c} />)
+        )}
       </div>
 
       <BottomNav active="home" role="seeker" />
@@ -316,67 +365,140 @@ function ActionIcon({
   );
 }
 
-function CarerCard({ carer }: { carer: (typeof CAREGIVERS)[number] }) {
+/* ── Real-carer card. Visual design mirrors the mock CarerCard so the
+   home page looks identical at-a-glance. ────────────────────────── */
+
+function RealCarerCard({ carer }: { carer: ApiFeaturedCarer }) {
+  const photo = carer.photo_url ?? carer.avatar_url ?? undefined;
+  const name = carer.display_name ?? carer.full_name ?? "Caregiver";
+  const ratingBlock =
+    carer.rating_count > 0 && carer.rating_avg != null ? (
+      <span className="flex items-center gap-1 text-[13px] font-bold text-heading shrink-0">
+        {carer.rating_avg.toFixed(1)} <IconStar />
+      </span>
+    ) : (
+      <span className="text-[12px] text-subheading shrink-0">New</span>
+    );
+
+  const cityLine = [carer.city, countryLabel(carer.country)]
+    .filter((s): s is string => Boolean(s))
+    .join(", ");
+
+  const rateLine =
+    carer.hourly_rate_cents != null
+      ? formatMoney(carer.hourly_rate_cents, carer.currency)
+      : null;
+
   return (
     <Card>
       <div className="flex items-start gap-3">
-        <Avatar src={carer.photo} name={carer.name} size={56} />
+        <Avatar src={photo} name={name} size={56} />
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <p className="text-[16px] font-bold text-heading truncate">
-              {carer.name}
+              {name}
             </p>
-            <span className="flex items-center gap-1 text-[13px] font-bold text-heading shrink-0">
-              {carer.rating.toFixed(1)} <IconStar />
-            </span>
+            {ratingBlock}
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            {carer.services.slice(0, 2).map((s) => (
+            {carer.services.map((s) => (
               <Tag key={s} tone="primary">
-                {SERVICE_LABEL[s]}
+                {serviceLabel(s)}
               </Tag>
             ))}
-            {carer.services.length > 2 && (
+            {carer.total_services > carer.services.length && (
               <span className="text-[12px] text-primary font-bold">
                 &amp; more
               </span>
             )}
-            <CarerBadges
-              isClinical={carer.isClinical}
-              isNurse={carer.isNurse}
-              compact
-            />
           </div>
         </div>
       </div>
 
       <ul className="mt-3 space-y-2 text-[13px] text-heading">
-        <li className="flex items-center gap-2">
-          <span className="text-subheading"><IconPin /></span>
-          {carer.city}
-        </li>
-        <li className="flex items-center gap-2">
-          <span className="text-subheading">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="9" r="6"/><path d="M9 14l-2 7 5-3 5 3-2-7"/>
-            </svg>
-          </span>
-          {carer.experienceYears}+ years
-        </li>
+        {cityLine && (
+          <li className="flex items-center gap-2">
+            <span className="text-subheading">
+              <IconPin />
+            </span>
+            {cityLine}
+          </li>
+        )}
+        {carer.years_experience != null && carer.years_experience > 0 && (
+          <li className="flex items-center gap-2">
+            <span className="text-subheading">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="9" r="6" />
+                <path d="M9 14l-2 7 5-3 5 3-2-7" />
+              </svg>
+            </span>
+            {carer.years_experience}+ years
+          </li>
+        )}
       </ul>
 
       <div className="border-t border-line mt-4 pt-3 flex items-center justify-between">
         <p className="text-[12px] text-subheading">
-          Starting from{" "}
-          <span className="text-[18px] font-bold text-heading">
-            ${carer.hourly.usd}
-          </span>
-          <span className="text-[12px] text-subheading">/hr</span>
+          {rateLine ? (
+            <>
+              Starting from{" "}
+              <span className="text-[18px] font-bold text-heading">
+                {rateLine}
+              </span>
+              <span className="text-[12px] text-subheading">/hr</span>
+            </>
+          ) : (
+            <span className="text-[14px] font-bold text-heading">
+              Rate on request
+            </span>
+          )}
         </p>
-        <Link href={`/m/carer/${carer.id}`}>
+        <Link href={`/m/carer/${carer.user_id}`}>
           <Button size="md">See Profile</Button>
         </Link>
       </div>
     </Card>
   );
+}
+
+function CarerCardSkeleton() {
+  return (
+    <Card>
+      <div className="flex items-start gap-3">
+        <div
+          className="h-14 w-14 rounded-full bg-muted animate-pulse"
+          aria-hidden
+        />
+        <div className="flex-1 min-w-0 space-y-2">
+          <div className="h-4 w-1/2 rounded bg-muted animate-pulse" />
+          <div className="h-3 w-3/4 rounded bg-muted animate-pulse" />
+        </div>
+      </div>
+      <div className="mt-3 space-y-2">
+        <div className="h-3 w-1/3 rounded bg-muted animate-pulse" />
+        <div className="h-3 w-1/4 rounded bg-muted animate-pulse" />
+      </div>
+      <div className="border-t border-line mt-4 pt-3 flex items-center justify-between">
+        <div className="h-4 w-24 rounded bg-muted animate-pulse" />
+        <div className="h-9 w-24 rounded-btn bg-muted animate-pulse" />
+      </div>
+    </Card>
+  );
+}
+
+function countryLabel(c: string | null | undefined): string | null {
+  if (!c) return null;
+  const u = c.toUpperCase();
+  if (u === "GB") return "UK";
+  if (u === "US") return "US";
+  return u;
 }
