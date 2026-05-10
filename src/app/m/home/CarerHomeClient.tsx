@@ -418,6 +418,41 @@ export default function CarerHomeClient() {
         </>
       )}
 
+      {/* Find work — always visible, primary CTA */}
+      <SectionTitle title="Find work" />
+      <div className="px-4">
+        <Link href="/m/jobs" className="block sc-no-select">
+          <div
+            className="rounded-card p-4 text-white relative overflow-hidden"
+            style={{
+              background:
+                "linear-gradient(135deg, #0E7C7B 0%, #039EA0 70%, #02787A 100%)",
+            }}
+          >
+            <div className="flex items-start gap-3">
+              <div
+                className="grid h-11 w-11 flex-none place-items-center rounded-full"
+                style={{ background: "rgba(255,255,255,0.18)" }}
+                aria-hidden
+              >
+                <IconBag />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-bold">Browse open jobs</p>
+                <p className="mt-0.5 text-[12px] text-white/85">
+                  {jobs.length > 0
+                    ? `${jobs.length} new ${jobs.length === 1 ? "opportunity" : "opportunities"} near you`
+                    : "Search shifts, set filters, and apply with one tap."}
+                </p>
+              </div>
+              <span className="text-white/90" aria-hidden>
+                <IconChevronRight />
+              </span>
+            </div>
+          </div>
+        </Link>
+      </div>
+
       {/* Quick actions */}
       <SectionTitle title="Quick actions" />
       <div className="px-4 grid grid-cols-2 gap-3">
@@ -426,6 +461,12 @@ export default function CarerHomeClient() {
           icon={<IconCal />}
           label="Schedule"
           sub="Shifts & rota"
+        />
+        <QuickAction
+          href="/m/earnings"
+          icon={<IconBag />}
+          label="Earnings"
+          sub="Payouts & history"
         />
         <QuickAction
           href="/m/schedule#availability"
@@ -438,12 +479,6 @@ export default function CarerHomeClient() {
           icon={<IconPlus />}
           label="Request time off"
           sub="Block dates"
-        />
-        <QuickAction
-          href="/m/earnings"
-          icon={<IconBag />}
-          label="Earnings"
-          sub="Payouts & history"
         />
       </div>
 

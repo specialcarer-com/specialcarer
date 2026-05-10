@@ -272,15 +272,15 @@ export function BottomNav({
     };
   }, [roleProp]);
   const role = roleProp ?? autoRole ?? "seeker";
-  // Carer tabs land on real carer pages — Home routes to the Jobs feed (their
-  // home), Schedule to /m/schedule, Earnings replaces the duplicate "Jobs"
-  // slot. Each href below is allowed for caregivers in middleware.ts.
+  // Tab sets per role. Carer Home is the dashboard (which contains shortcuts to
+  // Schedule and Earnings), so the bar focuses on Home / Jobs / Chat / Profile.
+  // Seeker keeps the standard 5-tab layout. Each href below is allowed for the
+  // respective role in middleware.ts.
   const items =
     role === "carer"
       ? [
           { key: "home", label: "Home", href: "/m/home", icon: <IconHome /> },
-          { key: "bookings", label: "Schedule", href: "/m/schedule", icon: <IconCal /> },
-          { key: "jobs", label: "Earnings", href: "/m/earnings", icon: <IconBag /> },
+          { key: "jobs", label: "Jobs", href: "/m/jobs", icon: <IconBag /> },
           { key: "chat", label: "Chat", href: "/m/chat", icon: <IconChat /> },
           { key: "profile", label: "Profile", href: "/m/profile", icon: <IconUser /> },
         ]
@@ -296,7 +296,9 @@ export function BottomNav({
       className="fixed inset-x-0 bottom-0 z-40 bg-white shadow-nav border-t border-line sc-safe-bottom sc-no-select"
       style={{ paddingBottom: "max(env(safe-area-inset-bottom), 8px)" }}
     >
-      <ul className="grid grid-cols-5">
+      <ul
+        className={`grid ${role === "carer" ? "grid-cols-4" : "grid-cols-5"}`}
+      >
         {items.map((it) => {
           const isActive = it.key === active;
           return (
