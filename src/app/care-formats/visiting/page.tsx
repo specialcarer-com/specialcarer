@@ -4,7 +4,7 @@ import ServicePage from "@/components/service-page";
 export const metadata: Metadata = {
   title: "Visiting care — SpecialCarer",
   description:
-    "Scheduled visiting care across the UK and US — daily, weekly, or one-off visits with vetted, background-checked caregivers. From £18/hour (UK), $25/hour (US).",
+    "Scheduled visiting care across the UK and US — daily, weekly, one-off, or waking-night visits with vetted, background-checked caregivers. From £18/hour (UK), $25/hour (US).",
 };
 
 export default function Page() {
@@ -12,8 +12,8 @@ export default function Page() {
     <ServicePage
       bannerKey="care_formats.visiting"
       eyebrow="Visiting care"
-      title="Help that fits around your life."
-      lede="A caregiver who arrives at an agreed time, supports with everyday routines, and leaves you to it. Visiting care is the most flexible format — from a single hour a week to several visits a day, on demand or on a regular schedule. Visits are billed by the hour."
+      title="Help that fits around your life — day or night."
+      lede="A caregiver who arrives at an agreed time and supports with everyday routines, then heads off when the visit's done. Visiting care is the most flexible format — from a single hour a week to several visits a day, plus waking-night blocks for clients who need someone awake overnight. Book on demand or on a regular schedule. Every visit is billed by the hour."
       bullets={[
         "From a single hour up to multiple visits a day",
         "Personal care: washing, dressing, toileting",
