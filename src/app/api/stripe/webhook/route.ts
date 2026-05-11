@@ -29,22 +29,7 @@ export async function POST(req: Request) {
     event = stripe.webhooks.constructEvent(raw, sig, secret);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Invalid signature";
-    // Surface non-sensitive diagnostics so we can see at runtime whether the
-    // function actually received the expected secret + body. Prefix is the
-    // first 8 chars of the secret (whsec_ + a couple chars of entropy) which
-    // is safe to log and lets us confirm it matches the dashboard secret.
-    return NextResponse.json(
-      {
-        error: message,
-        debug: {
-          raw_len: raw.length,
-          secret_len: secret.length,
-          secret_prefix: secret.slice(0, 8),
-          sig_prefix: sig.slice(0, 20),
-        },
-      },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 
   const admin = createAdminClient();
