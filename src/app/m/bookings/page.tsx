@@ -211,8 +211,29 @@ export default function BookingsPage() {
             const name = counterpartyName(b);
             const avatar = counterpartyAvatar(b);
             const location = counterpartyLocation(b);
-            const tone = STATUS_TONE[b.status] ?? "neutral";
-            const statusLabel = STATUS_LABEL[b.status] ?? b.status;
+            // Timesheet state takes precedence on completed bookings — the
+            // booking sits at status='completed' until the seeker confirms
+            // or the cron auto-approves; the pill should reflect that the
+            // user can still act, not just "Completed".
+            let tone: Tone = STATUS_TONE[b.status] ?? "neutral";
+            let statusLabel: string = STATUS_LABEL[b.status] ?? b.status;
+            if (b.timesheet_status === "pending_approval") {
+              tone = "amber";
+              statusLabel =
+                b.as_role === "seeker" ? "Timesheet pending" : "Awaiting approval";
+            } else if (b.timesheet_status === "disputed") {
+              tone = "red";
+              statusLabel = "Disputed — under review";
+            } else if (
+              b.timesheet_status === "approved" ||
+              b.timesheet_status === "auto_approved"
+            ) {
+              tone = "green";
+              statusLabel =
+                b.timesheet_status === "auto_approved"
+                  ? "Auto-approved"
+                  : "Approved";
+            }
             return (
               <Link key={b.id} href={`/m/bookings/${b.id}`} className="block">
                 <Card>

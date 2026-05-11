@@ -251,6 +251,7 @@ function CheckInPhase({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [distance, setDistance] = useState<number | null>(null);
+  const [forceOpen, setForceOpen] = useState(false);
 
   function pickPhoto(f: File) {
     setStagedFile(f);
@@ -259,7 +260,13 @@ function CheckInPhase({
     setErr(null);
   }
 
-  async function checkIn() {
+  /**
+   * Run the check-in flow. When `force` is true, geolocation is skipped
+   * and the route is called with `force: true, force_reason, lat: null,
+   * lng: null` — the server marks the booking `flagged_for_review` so
+   * admin can audit later. Selfie is still required.
+   */
+  async function checkIn(force = false, forceReason = "") {
     if (!stagedFile) {
       setErr("Take an arrival selfie first.");
       return;
@@ -267,14 +274,20 @@ function CheckInPhase({
     setBusy("checking");
     setErr(null);
     try {
-      // 1. Geolocation.
-      const pos = await getCurrentPosition();
-      if (!pos) {
-        setErr(
-          "Location permission required to check in. Open Settings → enable location for SpecialCarer.",
-        );
-        setBusy(null);
-        return;
+      // 1. Geolocation (skipped on force).
+      let lat: number | null = null;
+      let lng: number | null = null;
+      if (!force) {
+        const pos = await getCurrentPosition();
+        if (!pos) {
+          setErr(
+            "Location permission required to check in. Open Settings → enable location for SpecialCarer.",
+          );
+          setBusy(null);
+          return;
+        }
+        lat = pos.coords.latitude;
+        lng = pos.coords.longitude;
       }
       // 2. Upload selfie.
       const sb = createClient();
@@ -305,9 +318,10 @@ function CheckInPhase({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
+            lat,
+            lng,
             selfie_path: path,
+            ...(force ? { force: true, force_reason: forceReason } : {}),
           }),
         },
       );
@@ -374,7 +388,7 @@ function CheckInPhase({
           }}
         />
 
-        <Button block onClick={checkIn} disabled={busy != null || !stagedFile}>
+        <Button block onClick={() => checkIn()} disabled={busy != null || !stagedFile}>
           {busy === "checking" ? "Checking in…" : "Check in & start shift"}
         </Button>
 
@@ -386,7 +400,99 @@ function CheckInPhase({
             Last reading: {distance} m from the booking address.
           </p>
         )}
+
+        <button
+          type="button"
+          onClick={() => setForceOpen(true)}
+          className="text-[12px] font-bold text-primary underline underline-offset-2 sc-no-select"
+          disabled={busy != null}
+        >
+          Can&rsquo;t check in?
+        </button>
       </Card>
+
+      {forceOpen && (
+        <ForceCheckInSheet
+          onClose={() => setForceOpen(false)}
+          disabled={!stagedFile || busy != null}
+          missingSelfie={!stagedFile}
+          onSubmit={(reason) => {
+            setForceOpen(false);
+            void checkIn(true, reason);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Sheet shown when the carer can't get inside the geofence (bad GPS,
+ * basement flat, etc.). They type a 5–500 char reason, then we send
+ * `force: true, force_reason: ...` to the existing check-in route.
+ * Selfie is still required upstream.
+ */
+function ForceCheckInSheet({
+  onClose,
+  onSubmit,
+  disabled,
+  missingSelfie,
+}: {
+  onClose: () => void;
+  onSubmit: (reason: string) => void;
+  disabled: boolean;
+  missingSelfie: boolean;
+}) {
+  const [reason, setReason] = useState("");
+  const tooShort = reason.trim().length < 5;
+  const tooLong = reason.trim().length > 500;
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 grid place-items-end sm:place-items-center">
+      <div className="w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl p-5 space-y-3">
+        <div>
+          <p className="text-[16px] font-bold text-heading">
+            Manual check-in
+          </p>
+          <p className="mt-1 text-[12px] text-subheading">
+            Briefly explain why you can&rsquo;t check in normally. This is
+            recorded with the booking and reviewed by our team.
+          </p>
+        </div>
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value.slice(0, 500))}
+          maxLength={500}
+          rows={4}
+          placeholder="e.g. GPS signal poor in basement flat. I'm at the door now."
+          className="w-full rounded-xl border border-line p-3 text-[14px]"
+        />
+        <p className="text-[11px] text-subheading">
+          {reason.trim().length}/500 characters
+        </p>
+        {missingSelfie && (
+          <p className="text-[12px] text-rose-700">
+            Take an arrival selfie first.
+          </p>
+        )}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 rounded-xl border border-line px-4 py-3 font-bold text-heading sc-no-select"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onSubmit(reason.trim())}
+            disabled={disabled || tooShort || tooLong}
+            className="flex-1 rounded-xl bg-primary text-white px-4 py-3 font-bold sc-no-select disabled:opacity-50"
+            style={{ backgroundColor: "#0E7C7B" }}
+          >
+            Check in anyway
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -808,12 +914,149 @@ function SummaryPhase({ state }: { state: State }) {
           </p>
         </Card>
       )}
+
+      {/* Timesheet submission — only visible while still completed, hidden once approved */}
+      <TimesheetSubmitCard bookingId={state.booking.id} />
+
       <Link href={`/m/jobs/${state.booking.id}`}>
         <Button variant="outline" block>
           Back to job details
         </Button>
       </Link>
     </div>
+  );
+}
+
+/**
+ * Post-completion submission form (tasks ticked / notes / forced-checkout).
+ * Hidden once the timesheet is approved/auto-approved. Idempotent backend.
+ */
+function TimesheetSubmitCard({ bookingId }: { bookingId: string }) {
+  const [notes, setNotes] = useState("");
+  const [tasks, setTasks] = useState("");
+  const [forceOut, setForceOut] = useState(false);
+  const [forceReason, setForceReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function submit() {
+    setBusy(true);
+    setErr(null);
+    try {
+      const taskList = tasks
+        .split("\n")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0)
+        .slice(0, 50);
+      const body: Record<string, unknown> = {
+        tasks_completed: taskList,
+        carer_notes: notes.trim() || undefined,
+      };
+      if (forceOut) {
+        if (forceReason.trim().length < 5) {
+          setErr("Add a longer reason (5+ chars) to flag a forced check-out.");
+          setBusy(false);
+          return;
+        }
+        body.force_check_out = true;
+        body.force_check_out_reason = forceReason.trim();
+      }
+      const res = await fetch(
+        `/api/bookings/${bookingId}/timesheet/submit`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        },
+      );
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        setErr(j.error ?? "Couldn't submit.");
+        return;
+      }
+      setSent(true);
+    } catch {
+      setErr("Network error.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (sent) {
+    return (
+      <Card className="p-4">
+        <p className="text-[14px] font-bold text-heading">Timesheet sent</p>
+        <p className="mt-1 text-[12px] text-subheading">
+          The family/organisation has 48 hours to confirm. You&rsquo;ll be
+          notified when they approve or if anything needs your attention.
+        </p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="p-4 space-y-3">
+      <div>
+        <p className="text-[14px] font-bold text-heading">Wrap up your shift</p>
+        <p className="mt-1 text-[12px] text-subheading">
+          Optional: list anything you completed and add a short handover note.
+        </p>
+      </div>
+
+      <label className="block">
+        <span className="text-[12px] font-bold text-heading">
+          Tasks completed (one per line)
+        </span>
+        <textarea
+          rows={3}
+          value={tasks}
+          onChange={(e) => setTasks(e.target.value.slice(0, 1500))}
+          placeholder="Medication at 9am&#10;Walk in the garden"
+          className="mt-1 w-full rounded-xl border border-line p-3 text-[14px]"
+        />
+      </label>
+
+      <label className="block">
+        <span className="text-[12px] font-bold text-heading">Notes</span>
+        <textarea
+          rows={3}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value.slice(0, 4000))}
+          className="mt-1 w-full rounded-xl border border-line p-3 text-[14px]"
+        />
+      </label>
+
+      <label className="flex items-start gap-2 text-[12px] text-heading">
+        <input
+          type="checkbox"
+          checked={forceOut}
+          onChange={(e) => setForceOut(e.target.checked)}
+          className="mt-0.5"
+        />
+        <span>
+          I had to check out without GPS verification (basement, dead signal,
+          etc.). This will be flagged for review.
+        </span>
+      </label>
+      {forceOut && (
+        <textarea
+          rows={2}
+          value={forceReason}
+          onChange={(e) => setForceReason(e.target.value.slice(0, 500))}
+          placeholder="Briefly explain why."
+          className="w-full rounded-xl border border-line p-3 text-[14px]"
+        />
+      )}
+
+      {err && (
+        <p className="text-[12px] text-rose-700">{err}</p>
+      )}
+
+      <Button block onClick={submit} disabled={busy}>
+        {busy ? "Sending…" : "Submit timesheet"}
+      </Button>
+    </Card>
   );
 }
 

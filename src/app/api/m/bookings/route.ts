@@ -33,6 +33,18 @@ export type ApiBookingListItem = {
     country: string | null;
   };
   created_at: string;
+  /**
+   * Timesheet status when one exists. Drives the list-tile pill — bookings
+   * with `pending_approval` get an amber "Timesheet pending" badge, etc.
+   * Null when no timesheet row exists (most pre-completion bookings).
+   */
+  timesheet_status:
+    | "pending_approval"
+    | "approved"
+    | "auto_approved"
+    | "disputed"
+    | "cancelled"
+    | null;
 };
 
 export type ApiBookingsListResponse = {
@@ -155,6 +167,30 @@ export async function GET() {
     );
   }
 
+  // Pull timesheet statuses in one shot — only matters for completed bookings.
+  const bookingIds = list.map((b) => b.id);
+  const timesheetByBookingId = new Map<
+    string,
+    "pending_approval" | "approved" | "auto_approved" | "disputed" | "cancelled"
+  >();
+  if (bookingIds.length > 0) {
+    const { data: tsRows } = await supabase
+      .from("shift_timesheets")
+      .select("booking_id, status")
+      .in("booking_id", bookingIds);
+    for (const row of (tsRows ?? []) as {
+      booking_id: string;
+      status:
+        | "pending_approval"
+        | "approved"
+        | "auto_approved"
+        | "disputed"
+        | "cancelled";
+    }[]) {
+      timesheetByBookingId.set(row.booking_id, row.status);
+    }
+  }
+
   const bookings: ApiBookingListItem[] = list.map((b) => {
     const isSeeker = b.seeker_id === user.id;
     const counterId = isSeeker ? b.caregiver_id : b.seeker_id;
@@ -186,6 +222,7 @@ export async function GET() {
         country: carer?.country ?? null,
       },
       created_at: b.created_at,
+      timesheet_status: timesheetByBookingId.get(b.id) ?? null,
     };
   });
 

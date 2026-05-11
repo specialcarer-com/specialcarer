@@ -13,6 +13,19 @@ import { stripe, PAYOUT_HOLD_HOURS } from "@/lib/stripe/server";
  * hold window has elapsed.
  *
  * Body: { booking_id: uuid }
+ *
+ * TODO(deprecation 2026-08-01): retire this route in favour of
+ * `POST /api/bookings/[id]/action { action: "complete" }`, which is the
+ * canonical check-out path and now also generates the shift_timesheets
+ * row. Known call sites still using this legacy route:
+ *
+ *   - src/app/dashboard/bookings/[id]/booking-actions.tsx:32 (web dashboard)
+ *
+ * Once that call site is migrated, this route can be deleted. Until then
+ * we keep it for backwards compatibility — it does NOT generate the
+ * shift_timesheets row, so bookings completed via this path will sit
+ * without timesheet review until the user re-completes via the mobile
+ * action route. New deployments should not rely on this path.
  */
 export async function POST(req: Request) {
   const supabase = await createClient();

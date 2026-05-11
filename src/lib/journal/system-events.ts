@@ -15,7 +15,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export type SystemEventKind =
   | "accepted"
   | "arrival"
+  | "arrival_forced"
   | "departure"
+  | "departure_forced"
+  | "timesheet_submitted"
   | "photo_consent_on"
   | "photo_consent_off";
 
@@ -33,6 +36,11 @@ type RecordSystemEventInput = {
    * seeker's id.
    */
   authorId: string;
+  /**
+   * Carer's typed reason when forcing check-in/out outside the geofence.
+   * Appended to the body so the seeker sees it in the activity feed.
+   */
+  forceReason?: string | null;
 };
 
 function shortTime(d: Date): string {
@@ -45,13 +53,22 @@ function shortTime(d: Date): string {
 function compose(input: RecordSystemEventInput): string {
   const t = shortTime(input.time ?? new Date());
   const who = input.actorName?.trim() || "Carer";
+  const reasonSuffix = input.forceReason?.trim()
+    ? ` — reason: ${input.forceReason.trim().slice(0, 280)}`
+    : "";
   switch (input.kind) {
     case "accepted":
       return `${who} accepted the booking at ${t}.`;
     case "arrival":
       return `${who} arrived at ${t}.`;
+    case "arrival_forced":
+      return `${who} manually checked in at ${t}${reasonSuffix}.`;
     case "departure":
       return `${who} signed off at ${t}.`;
+    case "departure_forced":
+      return `${who} manually signed off at ${t}${reasonSuffix}.`;
+    case "timesheet_submitted":
+      return `${who} submitted their timesheet at ${t}.`;
     case "photo_consent_on":
       return `Photo updates enabled by family at ${t}.`;
     case "photo_consent_off":
@@ -118,8 +135,14 @@ function kindNeedle(kind: SystemEventKind): string {
   switch (kind) {
     case "arrival":
       return "arrived at";
+    case "arrival_forced":
+      return "manually checked in at";
     case "departure":
       return "signed off at";
+    case "departure_forced":
+      return "manually signed off at";
+    case "timesheet_submitted":
+      return "submitted their timesheet";
     case "accepted":
       return "accepted the booking at";
     case "photo_consent_on":

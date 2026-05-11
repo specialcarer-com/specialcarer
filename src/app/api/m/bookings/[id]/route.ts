@@ -127,6 +127,20 @@ export async function GET(
       stripe_payment_intent_id: string;
     }>();
 
+  // Timesheet status (1:1 with booking). Null when not yet generated.
+  const { data: tsRow } = await supabase
+    .from("shift_timesheets")
+    .select("status")
+    .eq("booking_id", id)
+    .maybeSingle<{
+      status:
+        | "pending_approval"
+        | "approved"
+        | "auto_approved"
+        | "disputed"
+        | "cancelled";
+    }>();
+
   const cur = (row.currency ?? "gbp").toLowerCase();
   const currency: "gbp" | "usd" = cur === "usd" ? "usd" : "gbp";
 
@@ -154,6 +168,7 @@ export async function GET(
       country: carer?.country ?? null,
     },
     created_at: row.created_at,
+    timesheet_status: tsRow?.status ?? null,
     accepted_at: row.accepted_at,
     location_postcode: row.location_postcode,
     subtotal_cents: Number(row.subtotal_cents ?? 0),

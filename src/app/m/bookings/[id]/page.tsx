@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Avatar,
   Button,
@@ -16,6 +16,11 @@ import {
   Tag,
   TopBar,
 } from "../../_components/ui";
+import {
+  TimesheetReviewCard,
+  type TimesheetRow,
+  type PendingAdjustment,
+} from "../../_components/TimesheetReviewCard";
 import { serviceLabel, formatMoney } from "@/lib/care/services";
 import type { ApiBookingDetail } from "@/app/api/m/bookings/[id]/route";
 
@@ -118,6 +123,28 @@ export default function BookingDetailPage() {
   const [data, setData] = useState<ApiBookingDetail | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  const [timesheet, setTimesheet] = useState<TimesheetRow | null>(null);
+  const [pendingAdjustment, setPendingAdjustment] =
+    useState<PendingAdjustment | null>(null);
+
+  const refreshTimesheet = useCallback(async () => {
+    if (!id) return;
+    try {
+      const res = await fetch(`/api/m/bookings/${id}/timesheet`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      if (!res.ok) return;
+      const j = (await res.json()) as {
+        timesheet: TimesheetRow | null;
+        pending_adjustment: PendingAdjustment | null;
+      };
+      setTimesheet(j.timesheet ?? null);
+      setPendingAdjustment(j.pending_adjustment ?? null);
+    } catch {
+      /* ignore */
+    }
+  }, [id]);
 
   useEffect(() => {
     if (!id) return;
@@ -147,10 +174,12 @@ export default function BookingDetailPage() {
         if (!cancelled) setLoaded(true);
       }
     })();
+    // Fetch timesheet in parallel — pure best-effort, errors are ignored.
+    void refreshTimesheet();
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, refreshTimesheet]);
 
   if (!loaded) {
     return (
@@ -222,6 +251,16 @@ export default function BookingDetailPage() {
             </div>
           )}
         </Card>
+
+        {/* Timesheet review surface — visible once the carer has checked out. */}
+        {timesheet && (
+          <TimesheetReviewCard
+            ts={timesheet}
+            pendingAdjustment={pendingAdjustment}
+            isOrgView={false}
+            onChanged={refreshTimesheet}
+          />
+        )}
 
         {/* Payment status — visible only when a payment row exists. */}
         {data.payment && (

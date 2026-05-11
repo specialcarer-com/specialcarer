@@ -260,7 +260,73 @@ export async function POST(
       console.error("[action.complete] referral bump failed", e);
     }
 
-    return NextResponse.json({ ok: true, status: "completed" });
+    // ── Timesheet generation (Phase 1: approval/overage layer) ──────────────
+    // Compute actual_minutes / booked_minutes / overage / FLSA overtime
+    // and insert the shift_timesheets row. Idempotent: re-running this
+    // action returns the existing row instead of double-inserting.
+    let timesheet: Awaited<
+      ReturnType<typeof import("@/lib/timesheet/generate").generateTimesheetOnComplete>
+    > = null;
+    try {
+      const bookingSource: "seeker" | "org" =
+        booking.booking_source === "org" ? "org" : "seeker";
+      const { generateTimesheetOnComplete } = await import(
+        "@/lib/timesheet/generate"
+      );
+      timesheet = await generateTimesheetOnComplete(admin, {
+        bookingId,
+        caregiverId: user.id,
+        seekerId: booking.seeker_id,
+        bookingSource,
+        actualStartIso: booking.actual_started_at ?? completedAt,
+        actualEndIso: completedAt,
+        bookedStartIso: booking.starts_at,
+        bookedEndIso: booking.ends_at,
+        hourlyRateCents: Number(booking.hourly_rate_cents ?? 0),
+        currency: String(booking.currency ?? "gbp"),
+        forcedCheckIn: booking.check_in_forced === true,
+        forcedCheckOut: booking.check_out_forced === true,
+      });
+
+      // Org bookings: mint the Stripe Invoice in DRAFT state now so the
+      // /api/cron/finalise-org-invoices cron can append overage line items
+      // once the 48h approval window closes. Existing immediate-finalise
+      // callers are untouched (default opts.finaliseImmediately=true).
+      if (bookingSource === "org" && timesheet) {
+        try {
+          const { createShiftInvoice } = await import("@/lib/stripe/invoicing");
+          await createShiftInvoice(
+            admin,
+            booking as unknown as import("@/lib/org/booking-types").OrgBooking,
+            14,
+            {
+              finaliseImmediately: false,
+              finaliseAfter: new Date(timesheet.autoApproveAt),
+            },
+          );
+        } catch (e) {
+          console.error("[action.complete] draft org invoice failed", e);
+        }
+      }
+    } catch (e) {
+      console.error("[action.complete] timesheet generation failed", e);
+    }
+
+    return NextResponse.json({
+      ok: true,
+      status: "completed",
+      timesheet: timesheet
+        ? {
+            id: timesheet.id,
+            auto_approve_at: timesheet.autoApproveAt,
+            overage_minutes: timesheet.overageMinutes,
+            overage_cents: timesheet.overageCents,
+            overage_requires_approval: timesheet.overageRequiresApproval,
+            overtime_minutes: timesheet.overtimeMinutes,
+            overtime_cents: timesheet.overtimeCents,
+          }
+        : null,
+    });
   }
 
   return NextResponse.json({ error: "Unhandled action" }, { status: 400 });

@@ -6,6 +6,7 @@ import { getMyOrgMembership, getOrg } from "@/lib/org/server";
 import OrgShell from "../../_components/OrgShell";
 import { Card, Button, Tag } from "../../../_components/ui";
 import CancelBookingButton from "./_components/CancelBookingButton";
+import TimesheetSection from "./_components/TimesheetSection";
 import {
   ORG_BOOKING_STATUS_LABEL,
   ORG_BOOKING_STATUS_COLOR,
@@ -102,6 +103,9 @@ export default async function OrgBookingDetailPage({
             </span>
           )}
         </div>
+
+        {/* Timesheet review — visible once the carer has checked out. */}
+        <TimesheetSection bookingId={id} />
 
         {/* Core details */}
         <Card className="p-4 space-y-3">

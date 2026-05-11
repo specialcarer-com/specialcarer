@@ -215,11 +215,30 @@ export type CreateOrgInvoiceResult = {
  * Carer earnings are accrued separately (see accrue comment below) — they are
  * NOT tied to Stripe invoice payment. The carer is always paid on schedule.
  */
+export type CreateShiftInvoiceOpts = {
+  /**
+   * When false, the invoice is created in Stripe but NOT finalised here.
+   * `org_invoices.internal_state` is stamped `draft_pending_approval` and
+   * `finalise_after` is set to the supplied Date. The new
+   * `/api/cron/finalise-org-invoices` cron picks the row up after that
+   * time, appends any approved overage/overtime line items, then finalises.
+   *
+   * Defaults to `true` so existing callers (`/api/stripe/org-invoice/create`,
+   * `/api/m/org/bookings/[id]/cancel`) keep their immediate-finalise
+   * behaviour. Only the new shift-completion path passes `false`.
+   */
+  finaliseImmediately?: boolean;
+  /** When provided with finaliseImmediately=false, when the cron may finalise. */
+  finaliseAfter?: Date;
+};
+
 export async function createShiftInvoice(
   admin: AnySupabase,
   booking: OrgBooking,
-  daysUntilDue = 14
+  daysUntilDue = 14,
+  opts: CreateShiftInvoiceOpts = {},
 ): Promise<CreateOrgInvoiceResult> {
+  const finaliseImmediately = opts.finaliseImmediately !== false;
   const customerId = await ensureStripeCustomer(admin, booking.organization_id);
   const orgChargeCents = computeOrgChargeTotalCents(booking);
   const carerPayCents = computeCarerPayTotalCents(booking);
@@ -279,7 +298,9 @@ export async function createShiftInvoice(
     customer: customerId,
     collection_method: "send_invoice",
     days_until_due: daysUntilDue,
-    auto_advance: true,
+    // When delaying finalisation, leave auto_advance off so Stripe doesn't
+    // race the cron with its own scheduled finalisation.
+    auto_advance: finaliseImmediately,
     description: `SpecialCarer shift — ${dateStr}`,
     // ── Issuer identification ──────────────────────────────────────────────
     // All B2B invoices are issued by All Care 4 U Group Ltd, NOT SpecialCarer.
@@ -298,21 +319,38 @@ export async function createShiftInvoice(
     },
   });
 
-  // Finalise: Stripe auto-emails the PDF to the customer's email address
-  const finalised = await stripe.invoices.finalizeInvoice(invoice.id);
+  // Optionally finalise immediately. Delayed finalisation leaves the
+  // invoice in `draft` so the timesheet cron can append overage line items
+  // once the 48h approval window closes.
+  const finalised = finaliseImmediately
+    ? await stripe.invoices.finalizeInvoice(invoice.id)
+    : invoice;
 
   // ── Persist to database ────────────────────────────────────────────────────
-  await admin
-    .from("bookings")
-    .update({
-      stripe_invoice_id: finalised.id,
-      invoiced_at: new Date().toISOString(),
-      status: "invoiced",
-      // Store both totals on the booking row
-      org_charge_total_cents: orgChargeCents,
-      carer_pay_total_cents: carerPayCents,
-    })
-    .eq("id", booking.id);
+  const nowIso = new Date().toISOString();
+  if (finaliseImmediately) {
+    await admin
+      .from("bookings")
+      .update({
+        stripe_invoice_id: finalised.id,
+        invoiced_at: nowIso,
+        status: "invoiced",
+        org_charge_total_cents: orgChargeCents,
+        carer_pay_total_cents: carerPayCents,
+      })
+      .eq("id", booking.id);
+  } else {
+    // Draft path: stamp invoice id + totals but do NOT mark as invoiced.
+    // status stays at 'completed' until cron finalises after the 48h window.
+    await admin
+      .from("bookings")
+      .update({
+        stripe_invoice_id: finalised.id,
+        org_charge_total_cents: orgChargeCents,
+        carer_pay_total_cents: carerPayCents,
+      })
+      .eq("id", booking.id);
+  }
 
   // Mirror in org_invoices for dashboard queries
   await admin.from("org_invoices").upsert(
@@ -321,7 +359,7 @@ export async function createShiftInvoice(
       booking_id: booking.id,
       stripe_invoice_id: finalised.id,
       stripe_customer_id: customerId,
-      status: finalised.status ?? "open",
+      status: finalised.status ?? (finaliseImmediately ? "open" : "draft"),
       amount_due_cents: finalised.amount_due,
       amount_paid_cents: finalised.amount_paid,
       currency: finalised.currency,
@@ -330,6 +368,10 @@ export async function createShiftInvoice(
         : null,
       hosted_invoice_url: finalised.hosted_invoice_url ?? null,
       invoice_pdf_url: finalised.invoice_pdf ?? null,
+      internal_state: finaliseImmediately ? "finalised" : "draft_pending_approval",
+      finalise_after: finaliseImmediately
+        ? null
+        : (opts.finaliseAfter ?? new Date()).toISOString(),
     },
     { onConflict: "stripe_invoice_id" }
   );

@@ -82,9 +82,57 @@ export async function GET(req: Request) {
     }
   }
 
+  // ── Supplemental overage / overtime PIs ──────────────────────────────────
+  // Manual-capture PIs minted by the timesheet approval flow have a 24h hold
+  // before capture, mirroring the primary PI's payout window. Tip PIs are
+  // captured immediately on creation and are excluded here.
+  const overageCutoff = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  const { data: supps } = await admin
+    .from("payments")
+    .select("id, stripe_payment_intent_id, kind, status")
+    .in("kind", ["overage", "overtime"])
+    .eq("status", "requires_capture")
+    .lte("created_at", overageCutoff)
+    .limit(200);
+
+  let suppCaptured = 0;
+  const suppErrors: { payment_id: string; error: string }[] = [];
+  for (const p of (supps ?? []) as Array<{
+    id: string;
+    stripe_payment_intent_id: string;
+    kind: string;
+    status: string;
+  }>) {
+    if (!p.stripe_payment_intent_id) continue;
+    try {
+      const captured = await stripe.paymentIntents.capture(
+        p.stripe_payment_intent_id,
+      );
+      await admin
+        .from("payments")
+        .update({
+          status: "succeeded",
+          stripe_charge_id:
+            typeof captured.latest_charge === "string"
+              ? captured.latest_charge
+              : (captured.latest_charge as { id?: string } | null)?.id ?? null,
+        })
+        .eq("id", p.id);
+      suppCaptured += 1;
+    } catch (err) {
+      suppErrors.push({
+        payment_id: p.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
   return NextResponse.json({
     scanned: due?.length ?? 0,
     released,
     errors,
+    supplemental_scanned: supps?.length ?? 0,
+    supplemental_captured: suppCaptured,
+    supplemental_errors: suppErrors,
   });
 }
