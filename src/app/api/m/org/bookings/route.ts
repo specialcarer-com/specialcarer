@@ -309,6 +309,21 @@ async function distributeOffers({
     }
   }
 
+  // Phase 2 (Channel B): only carers who have completed the agency opt-in
+  // flow may receive org-dispatched bookings. This filter does NOT affect
+  // marketplace dispatch — only this org-bookings code path. Applies to
+  // both broadcast and preferred-carer flows. The preferred-carer flow
+  // will simply return zero offers if that carer hasn't opted in.
+  if (carerIds.length > 0) {
+    const { data: optedIn } = await admin
+      .from("profiles")
+      .select("id")
+      .in("id", carerIds)
+      .eq("agency_opt_in_status", "active");
+    const allowed = new Set((optedIn ?? []).map((p) => p.id as string));
+    carerIds = carerIds.filter((id) => allowed.has(id));
+  }
+
   // Matcher integration (3.7): exclude carers with approved time-off or
   // blockouts that overlap the booking window. Soft penalty only for
   // missing availability slots (still surfaced — existing behaviour).

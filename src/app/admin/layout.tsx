@@ -35,6 +35,7 @@ const SECTIONS: NavSection[] = [
       { href: "/admin/webhooks", label: "Webhooks" },
       { href: "/admin/trust-safety", label: "Trust & safety" },
       { href: "/admin/trust-safety/re-verify", label: "↳ Re-verification" },
+      { href: "/admin/agency-optin", label: "Agency opt-in" },
       { href: "/admin/timeoff", label: "Time-off" },
       { href: "/admin/finance", label: "Finance" },
       { href: "/admin/payroll", label: "Payroll" },

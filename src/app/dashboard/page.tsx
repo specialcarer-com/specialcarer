@@ -248,6 +248,34 @@ export default async function DashboardPage() {
             </div>
           )}
 
+          {/* Caregiver: agency opt-in promo (UK only, Phase 2) */}
+          {isCaregiver && profile.country === "GB" && (
+            <Link
+              href="/dashboard/agency-optin"
+              className="mt-6 block p-5 rounded-2xl border bg-white hover:bg-slate-50 transition-colors"
+              style={{ borderColor: "#0E7C7B" }}
+            >
+              <div className="flex items-center gap-3">
+                <span
+                  className="inline-block px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide"
+                  style={{ background: "#E9F4F4", color: "#0E7C7B" }}
+                >
+                  New
+                </span>
+                <span className="font-semibold text-slate-900">
+                  Earn more — take agency shifts
+                </span>
+              </div>
+              <p className="text-sm text-slate-600 mt-2">
+                Get paid PAYE with holiday pay for organisation-dispatched
+                shifts. Four quick gates — most carers are eligible.
+              </p>
+              <span className="text-sm font-semibold mt-2 inline-block" style={{ color: "#0E7C7B" }}>
+                Learn more →
+              </span>
+            </Link>
+          )}
+
           {/* Caregiver: earnings */}
           {isCaregiver && (
             <div className="mt-6 grid sm:grid-cols-3 gap-3">
