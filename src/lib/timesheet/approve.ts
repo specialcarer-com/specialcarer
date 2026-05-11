@@ -45,11 +45,34 @@ export type SupplementalAction = {
   client_secret?: string | null;
 };
 
+/**
+ * A supplemental PI that the client must finalise with Stripe Elements.
+ * Returned in the approve response when off-session reuse fails. Each row
+ * carries the client_secret that the UI passes to `<Elements>` / its
+ * `stripe.confirmPayment()` call.
+ */
+export type PendingConfirmation = {
+  payment_id: string;
+  kind: "overage" | "overtime" | "tip";
+  amount_cents: number;
+  currency: string;
+  client_secret: string;
+  payment_intent_id: string;
+};
+
 export type ApproveResult = {
   ok: true;
   timesheet_id: string;
   status: "approved" | "auto_approved";
   actions: SupplementalAction[];
+  /**
+   * Sum of amounts already moved to `requires_capture` or `succeeded`.
+   * Mirrors what the client can announce as "paid" without waiting on
+   * Elements confirmation.
+   */
+  total_captured_cents: number;
+  /** PIs the UI must confirm via Stripe Elements before they can capture. */
+  pending_confirmations: PendingConfirmation[];
 };
 
 export type ApproveError = {
@@ -166,12 +189,16 @@ export async function approveTimesheet(
   if (!ts) return { ok: false, status: 404, error: "timesheet_not_found" };
 
   if (ts.status === "approved" || ts.status === "auto_approved") {
-    // Idempotent — return what's there.
+    // Idempotent — return what's there. Surface any payments that are still
+    // unconfirmed so the UI can resume the Elements flow on a second visit.
+    const pending = await loadPendingConfirmations(admin, ts.booking_id);
     return {
       ok: true,
       timesheet_id: ts.id,
       status: ts.status,
       actions: [],
+      total_captured_cents: 0,
+      pending_confirmations: pending,
     };
   }
   if (ts.status !== "pending_approval") {
@@ -354,10 +381,92 @@ export async function approveTimesheet(
     /* best-effort */
   }
 
+  // Aggregate the Stripe outcomes the UI cares about.
+  let totalCapturedCents = 0;
+  const pendingConfirmations: PendingConfirmation[] = [];
+  for (const a of actions) {
+    if (a.status === "requires_capture" || a.status === "succeeded" || a.status === "captured") {
+      totalCapturedCents += a.amount_cents;
+      continue;
+    }
+    if (a.status === "requires_client_action" && a.client_secret) {
+      pendingConfirmations.push({
+        payment_id: a.payment_id,
+        kind: a.kind,
+        amount_cents: a.amount_cents,
+        currency: String(ts.currency ?? "gbp"),
+        client_secret: a.client_secret,
+        payment_intent_id: a.stripe_payment_intent_id,
+      });
+    }
+  }
+
   return {
     ok: true,
     timesheet_id: ts.id,
     status: finalStatus,
     actions,
+    total_captured_cents: totalCapturedCents,
+    pending_confirmations: pendingConfirmations,
   };
 }
+
+/**
+ * Load any payments for this booking that are still in a "needs client
+ * confirmation" state. Used both for idempotent approve replies and for
+ * the resume-payment retry flow.
+ */
+async function loadPendingConfirmations(
+  admin: AnySupabase,
+  bookingId: string,
+): Promise<PendingConfirmation[]> {
+  const { data } = await admin
+    .from("payments")
+    .select(
+      "id, stripe_payment_intent_id, status, amount_cents, currency, kind",
+    )
+    .eq("booking_id", bookingId)
+    .in("kind", ["overage", "overtime", "tip"])
+    .in("status", [
+      "requires_payment_method",
+      "requires_confirmation",
+      "requires_action",
+    ]);
+  const rows = (data ?? []) as Array<{
+    id: string;
+    stripe_payment_intent_id: string;
+    status: string;
+    amount_cents: number;
+    currency: string;
+    kind: "overage" | "overtime" | "tip";
+  }>;
+  const result: PendingConfirmation[] = [];
+  for (const r of rows) {
+    try {
+      const pi = await stripe.paymentIntents.retrieve(r.stripe_payment_intent_id);
+      // Skip anything Stripe has already moved past needing client action.
+      if (
+        pi.status === "succeeded" ||
+        pi.status === "requires_capture" ||
+        pi.status === "canceled"
+      ) {
+        continue;
+      }
+      if (!pi.client_secret) continue;
+      result.push({
+        payment_id: r.id,
+        kind: r.kind,
+        amount_cents: r.amount_cents,
+        currency: r.currency,
+        client_secret: pi.client_secret,
+        payment_intent_id: pi.id,
+      });
+    } catch (e) {
+      console.error("[approve.loadPending] retrieve failed", e);
+    }
+  }
+  return result;
+}
+
+// Re-exported so the retry endpoint can call it without re-importing Stripe.
+export { loadPendingConfirmations };

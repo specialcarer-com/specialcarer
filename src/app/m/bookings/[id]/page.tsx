@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import {
   Avatar,
   Button,
@@ -117,7 +117,16 @@ function paymentLine(p: NonNullable<ApiBookingDetail["payment"]>): string {
 }
 
 export default function BookingDetailPage() {
+  return (
+    <Suspense fallback={null}>
+      <BookingDetailInner />
+    </Suspense>
+  );
+}
+
+function BookingDetailInner() {
   const params = useParams<{ id: string }>();
+  const sp = useSearchParams();
   const id = params?.id ?? "";
 
   const [data, setData] = useState<ApiBookingDetail | null>(null);
@@ -126,6 +135,12 @@ export default function BookingDetailPage() {
   const [timesheet, setTimesheet] = useState<TimesheetRow | null>(null);
   const [pendingAdjustment, setPendingAdjustment] =
     useState<PendingAdjustment | null>(null);
+  // ?resume_payment=1 → drop the user straight into the Elements step.
+  // Consumed once on first read so subsequent re-renders don't reopen the sheet.
+  const [resumePayment, setResumePayment] = useState(false);
+  useEffect(() => {
+    if (sp?.get("resume_payment") === "1") setResumePayment(true);
+  }, [sp]);
 
   const refreshTimesheet = useCallback(async () => {
     if (!id) return;
@@ -259,6 +274,18 @@ export default function BookingDetailPage() {
             pendingAdjustment={pendingAdjustment}
             isOrgView={false}
             onChanged={refreshTimesheet}
+            resumePayment={resumePayment}
+            onResumeConsumed={() => {
+              setResumePayment(false);
+              // Strip the query param so a soft refresh doesn't reopen the sheet.
+              if (typeof window !== "undefined") {
+                const url = new URL(window.location.href);
+                if (url.searchParams.has("resume_payment")) {
+                  url.searchParams.delete("resume_payment");
+                  window.history.replaceState(null, "", url.toString());
+                }
+              }
+            }}
           />
         )}
 

@@ -149,5 +149,25 @@ export async function POST(
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
+
+  // If any PIs need client-side confirmation, fire a retry email so the
+  // user can resume from their inbox if they bail out of the Elements step.
+  // Best-effort — never fail the approve response over an SMTP hiccup.
+  if (result.pending_confirmations.length > 0) {
+    try {
+      const { sendResumePaymentEmail } = await import(
+        "@/lib/timesheet/notify"
+      );
+      await sendResumePaymentEmail({
+        admin,
+        userId: user.id,
+        bookingId,
+        pendingConfirmations: result.pending_confirmations,
+      });
+    } catch (e) {
+      console.error("[timesheet.approve] resume email failed", e);
+    }
+  }
+
   return NextResponse.json(result);
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { approveTimesheet } from "@/lib/timesheet/approve";
+import { sendResumePaymentEmail } from "@/lib/timesheet/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,30 @@ export async function GET(req: Request) {
       continue;
     }
     approved += 1;
+
+    // Auto-approval mints supplemental PIs the same way an explicit
+    // approval does. When off-session reuse fails, the seeker never sees
+    // the in-app Elements step (it's the cron, not the seeker). Email
+    // them the resume link instead.
+    if (result.pending_confirmations.length > 0) {
+      try {
+        const { data: booking } = await admin
+          .from("bookings")
+          .select("seeker_id")
+          .eq("id", ts.booking_id)
+          .maybeSingle<{ seeker_id: string }>();
+        if (booking?.seeker_id) {
+          await sendResumePaymentEmail({
+            admin,
+            userId: booking.seeker_id,
+            bookingId: ts.booking_id,
+            pendingConfirmations: result.pending_confirmations,
+          });
+        }
+      } catch (e) {
+        console.error("[auto-approve] resume email failed", e);
+      }
+    }
   }
 
   return NextResponse.json({

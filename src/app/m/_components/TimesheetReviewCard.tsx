@@ -15,7 +15,44 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  Elements,
+  PaymentElement,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js";
+import { getStripe } from "@/lib/stripe/client";
 import { Button, Card, Tag } from "./ui";
+
+/** Shared Stripe Elements appearance — mirrors the booking checkout flow. */
+const STRIPE_APPEARANCE = {
+  theme: "stripe" as const,
+  variables: {
+    colorPrimary: "#0E7C7B",
+    colorText: "#0F1416",
+    colorTextSecondary: "#475569",
+    colorDanger: "#C22",
+    fontFamily:
+      "'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif",
+    borderRadius: "12px",
+    spacingUnit: "4px",
+  },
+};
+
+const KIND_LABEL = {
+  overage: "Overage charge",
+  overtime: "Overtime premium",
+  tip: "Tip",
+} as const;
+
+export type PendingConfirmation = {
+  payment_id: string;
+  kind: "overage" | "overtime" | "tip";
+  amount_cents: number;
+  currency: string;
+  client_secret: string;
+  payment_intent_id: string;
+};
 
 type Tone = "primary" | "amber" | "green" | "red" | "neutral";
 
@@ -108,15 +145,58 @@ export function TimesheetReviewCard({
   pendingAdjustment,
   isOrgView,
   onChanged,
+  resumePayment = false,
+  onResumeConsumed,
 }: {
   ts: TimesheetRow;
   pendingAdjustment: PendingAdjustment | null;
   isOrgView: boolean;
   onChanged: () => void;
+  /**
+   * When true, the ConfirmSheet opens directly to the Elements step
+   * after fetching outstanding `pending_confirmations` from the API.
+   * Used by `/m/bookings/[id]?resume_payment=1` (retry email link).
+   */
+  resumePayment?: boolean;
+  onResumeConsumed?: () => void;
 }) {
   const [sheet, setSheet] = useState<null | "confirm" | "adjust" | "dispute">(
     null,
   );
+  const [resumePendings, setResumePendings] = useState<
+    PendingConfirmation[] | null
+  >(null);
+
+  // Resume flow — fetch outstanding pending confirmations and open the
+  // ConfirmSheet at the Elements step.
+  useEffect(() => {
+    if (!resumePayment) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/bookings/${ts.booking_id}/timesheet/payments/pending`,
+          { credentials: "include", cache: "no-store" },
+        );
+        if (!res.ok) return;
+        const j = (await res.json()) as {
+          pending_confirmations: PendingConfirmation[];
+        };
+        if (cancelled) return;
+        if ((j.pending_confirmations ?? []).length > 0) {
+          setResumePendings(j.pending_confirmations);
+          setSheet("confirm");
+        }
+      } catch {
+        /* ignore */
+      } finally {
+        onResumeConsumed?.();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [resumePayment, ts.booking_id, onResumeConsumed]);
 
   const bookedCost = useMemo(
     () =>
@@ -305,9 +385,14 @@ export function TimesheetReviewCard({
         <ConfirmSheet
           ts={ts}
           isOrgView={isOrgView}
-          onClose={() => setSheet(null)}
+          initialPendings={resumePendings}
+          onClose={() => {
+            setSheet(null);
+            setResumePendings(null);
+          }}
           onDone={() => {
             setSheet(null);
+            setResumePendings(null);
             onChanged();
           }}
         />
@@ -348,14 +433,26 @@ function KeyValue({ label, value }: { label: string; value: string }) {
 }
 
 // ── Confirm sheet ───────────────────────────────────────────────────────────
+/**
+ * Two-step flow:
+ *   1. Review — breakdown + tip + (optional) typed reason → POST to approve
+ *   2. Confirm payment — Stripe Elements per pending PI, only shown when
+ *      the server returned a non-empty `pending_confirmations` array.
+ *
+ * If `initialPendings` is supplied (resume-payment flow from email link),
+ * step 1 is skipped entirely — we jump straight to Elements with the rows
+ * the GET /payments/pending endpoint already supplied.
+ */
 function ConfirmSheet({
   ts,
   isOrgView,
+  initialPendings,
   onClose,
   onDone,
 }: {
   ts: TimesheetRow;
   isOrgView: boolean;
+  initialPendings: PendingConfirmation[] | null;
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -363,6 +460,11 @@ function ConfirmSheet({
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // Step machine. Resume mode jumps straight to confirm.
+  const [pendings, setPendings] = useState<PendingConfirmation[] | null>(
+    initialPendings,
+  );
+  const [doneState, setDoneState] = useState<"none" | "all_done">("none");
 
   const overageCost = ts.overage_cents;
   const overtimeCost = ts.overtime_cents;
@@ -372,7 +474,7 @@ function ConfirmSheet({
   const totalCents = bookedCost + overageCost + overtimeCost + tipCents;
   const needsReason = ts.overage_requires_approval;
 
-  async function submit() {
+  async function submitApproval() {
     if (needsReason && reason.trim().length < 5) {
       setErr("Please add a brief reason (5+ chars).");
       return;
@@ -397,13 +499,69 @@ function ConfirmSheet({
         setBusy(false);
         return;
       }
-      onDone();
+      const json = (await res.json()) as {
+        ok: boolean;
+        pending_confirmations?: PendingConfirmation[];
+      };
+      const pc = json.pending_confirmations ?? [];
+      if (pc.length === 0) {
+        // Happy path — everything captured off-session.
+        onDone();
+        return;
+      }
+      // Off-session reuse failed for at least one PI — switch to Elements step.
+      setPendings(pc);
+      setBusy(false);
     } catch {
       setErr("Network error.");
       setBusy(false);
     }
   }
 
+  // Step 2 — Elements per pending PI.
+  if (pendings && pendings.length > 0 && doneState === "none") {
+    return (
+      <SheetShell onClose={onClose} title="Confirm payment">
+        <p className="text-[12px] text-subheading">
+          Your timesheet is approved. A couple of charges need one final
+          confirmation on your card.
+        </p>
+        <ElementsConfirmList
+          pendings={pendings}
+          onAllDone={() => {
+            setDoneState("all_done");
+          }}
+          onPaymentSettled={(payment_id) => {
+            // Remove the settled one from the local list so the next renders.
+            setPendings((cur) =>
+              (cur ?? []).filter((p) => p.payment_id !== payment_id),
+            );
+          }}
+        />
+        <p className="text-[10px] text-subheading">
+          If you close this window, we&rsquo;ll email you a link to finish later.
+        </p>
+      </SheetShell>
+    );
+  }
+
+  // Step 2.5 — all PIs confirmed.
+  if (doneState === "all_done") {
+    return (
+      <SheetShell onClose={onDone} title="Payment confirmed">
+        <p className="text-[14px] text-heading font-bold">All done.</p>
+        <p className="text-[12px] text-subheading">
+          Your card has been charged for the timesheet&rsquo;s extras. The
+          carer will see this on their next earnings statement.
+        </p>
+        <Button block onClick={onDone}>
+          Close
+        </Button>
+      </SheetShell>
+    );
+  }
+
+  // Step 1 — review.
   return (
     <SheetShell onClose={onClose} title="Confirm timesheet">
       <div className="space-y-2 text-[13px] text-heading">
@@ -469,10 +627,152 @@ function ConfirmSheet({
 
       {err && <p className="text-[12px] text-rose-700">{err}</p>}
 
-      <Button block onClick={submit} disabled={busy}>
+      <Button block onClick={submitApproval} disabled={busy}>
         {busy ? "Confirming…" : `Pay ${fmtMoney(totalCents, ts.currency)}`}
       </Button>
     </SheetShell>
+  );
+}
+
+/**
+ * Walks the user through each pending PI sequentially with Stripe Elements.
+ * Each row gets its own <Elements> provider (Stripe requires one per
+ * client_secret). On success we mark that row settled and advance to the
+ * next; on failure we surface the error inline but leave the timesheet
+ * approved — the retry email will let the user come back later.
+ */
+function ElementsConfirmList({
+  pendings,
+  onAllDone,
+  onPaymentSettled,
+}: {
+  pendings: PendingConfirmation[];
+  onAllDone: () => void;
+  onPaymentSettled: (payment_id: string) => void;
+}) {
+  // We render the FIRST pending; once it settles, parent pops it from the
+  // list and we re-render with the next. When the list drains, fire
+  // onAllDone(). Tracked via a useEffect so we don't run during render.
+  const head = pendings[0];
+
+  useEffect(() => {
+    if (pendings.length === 0) onAllDone();
+  }, [pendings.length, onAllDone]);
+
+  if (!head) return null;
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-line p-3 text-[12px]">
+        <p className="font-bold text-heading">
+          {KIND_LABEL[head.kind]} ·{" "}
+          <span style={{ color: "#0E7C7B" }}>
+            {fmtMoney(head.amount_cents, head.currency)}
+          </span>
+        </p>
+        {pendings.length > 1 && (
+          <p className="mt-1 text-subheading">
+            {pendings.length - 1} more after this.
+          </p>
+        )}
+      </div>
+      <Elements
+        // key forces a fresh <Elements> instance per client_secret — Stripe
+        // does not support switching clientSecret on a mounted provider.
+        key={head.client_secret}
+        stripe={getStripe()}
+        options={{
+          clientSecret: head.client_secret,
+          appearance: STRIPE_APPEARANCE,
+        }}
+      >
+        <ElementsConfirmOne
+          pending={head}
+          onSettled={() => onPaymentSettled(head.payment_id)}
+        />
+      </Elements>
+    </div>
+  );
+}
+
+function ElementsConfirmOne({
+  pending,
+  onSettled,
+}: {
+  pending: PendingConfirmation;
+  onSettled: () => void;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function onConfirm() {
+    if (!stripe || !elements || busy) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      // return_url must be absolute. We point back at the current page so
+      // the user lands here if Stripe needs a 3DS redirect mid-flow.
+      const returnUrl =
+        typeof window !== "undefined" ? window.location.href : "/";
+      const { error: stripeError, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: returnUrl,
+        },
+        redirect: "if_required",
+      });
+      if (stripeError) {
+        setErr(stripeError.message ?? "Couldn't confirm this charge.");
+        setBusy(false);
+        return;
+      }
+      // Manual-capture PIs land at `requires_capture`; tips land at `succeeded`.
+      if (
+        paymentIntent &&
+        (paymentIntent.status === "requires_capture" ||
+          paymentIntent.status === "succeeded" ||
+          paymentIntent.status === "processing")
+      ) {
+        onSettled();
+        return;
+      }
+      // Unexpected — surface as a soft error but let the user retry.
+      setErr(
+        paymentIntent?.status
+          ? `Payment is in state "${paymentIntent.status}". Please retry.`
+          : "Couldn't confirm this charge.",
+      );
+    } catch (e) {
+      setErr(
+        e instanceof Error ? e.message : "Couldn't confirm this charge.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <PaymentElement />
+      {err && (
+        <p
+          aria-live="polite"
+          className="text-[12px] text-[#C22] bg-[#FBEBEB] border border-[#F3CCCC] rounded-btn px-3 py-2"
+        >
+          {err}
+        </p>
+      )}
+      <Button
+        block
+        onClick={onConfirm}
+        disabled={!stripe || !elements || busy}
+      >
+        {busy
+          ? "Confirming…"
+          : `Confirm ${fmtMoney(pending.amount_cents, pending.currency)}`}
+      </Button>
+    </div>
   );
 }
 
