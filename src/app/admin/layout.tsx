@@ -37,6 +37,7 @@ const SECTIONS: NavSection[] = [
       { href: "/admin/trust-safety/re-verify", label: "↳ Re-verification" },
       { href: "/admin/timeoff", label: "Time-off" },
       { href: "/admin/finance", label: "Finance" },
+      { href: "/admin/payroll", label: "Payroll" },
       { href: "/admin/analytics", label: "Analytics" },
       { href: "/admin/audit-log", label: "Audit log" },
     ],
