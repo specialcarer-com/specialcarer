@@ -1,0 +1,95 @@
+# ios-tag-guard
+# =============
+# Enforces the post-ITMS-90382 tagging policy: an `ios-v*` tag must only
+# be cut for commits that actually touch native-iOS paths. Web/CMS/marketing
+# changes ship via Vercel and must not trigger a Codemagic TestFlight upload.
+#
+# This workflow runs on every `ios-v*` tag push. It re-runs the same
+# native-path check that scripts/cut-ios-tag.sh performs locally:
+#
+#   - Resolve the previous ios-v* tag (the predecessor of the just-pushed tag).
+#   - Diff <previous tag>..<this tag>.
+#   - If no changed file matches the native-relevant path patterns, fail loudly.
+#
+# CI cannot delete a tag once it's been pushed, and Codemagic listens to the
+# same tag push independently — so a failure here will NOT prevent the
+# TestFlight upload that's already in flight. The goal is paper trail and
+# review surface: a red check on the tag is a visible signal that policy
+# was bypassed (e.g. somebody ran raw `git tag ios-v...` instead of
+# scripts/cut-ios-tag.sh). Follow up with the tagger and tighten process.
+#
+# Keep NATIVE_PATTERN below in lock-step with scripts/cut-ios-tag.sh.
+
+name: ios-tag-guard
+
+on:
+  push:
+    tags:
+      - 'ios-v*'
+
+jobs:
+  check-native-paths:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo with full history
+        uses: actions/checkout@v4
+        with:
+          # Need full history + all tags so we can find the predecessor tag.
+          fetch-depth: 0
+
+      - name: Verify native-relevant changes since previous ios-v* tag
+        env:
+          NEW_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          NATIVE_PATTERN='^(ios/|mobile/|expo-app/|capacitor\.config(\.[a-z]+)?$)|(Info\.plist$)|(PrivacyInfo[^/]*$)|(\.entitlements$)|(^pubspec\.yaml$)'
+
+          echo "🏷  Tag under inspection: $NEW_TAG"
+
+          # Find the most recent ios-v* tag whose creator-date is strictly
+          # before the tag we're checking. `git tag --sort=-creatordate`
+          # lists newest first; skip $NEW_TAG itself.
+          PREV_TAG="$(
+            git tag --sort=-creatordate --list 'ios-v*' \
+              | grep -v -x "$NEW_TAG" \
+              | head -1 || true
+          )"
+
+          if [ -z "$PREV_TAG" ]; then
+            echo "ℹ️  No prior ios-v* tag — treating this as the first iOS tag. Skipping diff check."
+            exit 0
+          fi
+
+          echo "🔎 Comparing $PREV_TAG..$NEW_TAG"
+          CHANGED="$(git diff --name-only "$PREV_TAG..$NEW_TAG" || true)"
+
+          if [ -z "$CHANGED" ]; then
+            echo "❌ No file changes between $PREV_TAG and $NEW_TAG — empty tag."
+            echo "   Cutting an identical tag burns an Apple upload slot for nothing."
+            exit 1
+          fi
+
+          echo "Files changed since $PREV_TAG:"
+          printf '  %s\n' $CHANGED
+
+          NATIVE="$(printf '%s\n' "$CHANGED" | grep -E "$NATIVE_PATTERN" || true)"
+
+          if [ -z "$NATIVE" ]; then
+            cat >&2 <<EOF
+
+          ❌ POLICY VIOLATION — ios-v* tag cut for non-native changes.
+
+             None of the commits between $PREV_TAG and $NEW_TAG touched native
+             iOS paths (ios/, mobile/, expo-app/, capacitor.config*, Info.plist,
+             PrivacyInfo*, *.entitlements, pubspec.yaml).
+
+             This tag will still trigger a Codemagic TestFlight upload — please
+             investigate and avoid repeating. See the ITMS-90382 incident from
+             2026-05-09/10 and scripts/cut-ios-tag.sh for the policy.
+          EOF
+            exit 1
+          fi
+
+          echo "✅ Native-relevant changes detected:"
+          printf '  %s\n' $NATIVE

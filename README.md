@@ -52,6 +52,14 @@ supabase/
 
 Pushed to `main` → auto-deploys to Vercel → live at `specialcarer.com`.
 
+### Cutting an iOS TestFlight build
+
+Use `./scripts/cut-ios-tag.sh` — never raw `git tag ios-v*`. Tags trigger
+Codemagic's TestFlight upload, and Apple's daily upload cap (ITMS-90382)
+gets tripped fast if tags are cut for web-only changes. See
+[`docs/ios-release-runbook.md`](docs/ios-release-runbook.md) for the
+policy and the post-incident background.
+
 ## Next steps
 
 - [ ] Apply `0001_init.sql` migration in Supabase
