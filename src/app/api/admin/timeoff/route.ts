@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireAdmin } from "@/lib/admin/auth";
+import { requireAdminApi } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,9 @@ export const dynamic = "force-dynamic";
  * List all time-off requests. Defaults to status=pending; pass ?status=all for all.
  */
 export async function GET(req: Request) {
-  await requireAdmin();
+  const _adminGuard = await requireAdminApi();
+
+  if (!_adminGuard.ok) return _adminGuard.response;
   const admin = createAdminClient();
 
   const url = new URL(req.url);

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin, logAdminAction } from "@/lib/admin/auth";
+import { requireAdminApi, logAdminAction } from "@/lib/admin/auth";
 import {
   grantCompMembership,
   listMembershipsAdmin,
@@ -20,7 +20,9 @@ const VALID_PLANS: MembershipPlan[] = ["lite", "plus", "premium"];
  * email + display name.
  */
 export async function GET(req: Request) {
-  await requireAdmin();
+  const _adminGuard = await requireAdminApi();
+
+  if (!_adminGuard.ok) return _adminGuard.response;
   const url = new URL(req.url);
   const status = (url.searchParams.get("status") ?? "all") as
     | MembershipStatus
@@ -40,7 +42,11 @@ export async function GET(req: Request) {
  * Grants a complimentary membership. Admin-only.
  */
 export async function POST(req: Request) {
-  const adminUser = await requireAdmin();
+  const _adminGuard_adminUser = await requireAdminApi();
+
+  if (!_adminGuard_adminUser.ok) return _adminGuard_adminUser.response;
+
+  const adminUser = _adminGuard_adminUser.admin;
   let body: {
     user_id?: string;
     plan?: string;

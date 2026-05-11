@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin/auth";
+import { requireAdminApi } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { COMPLIANCE_DOC_TYPES } from "@/lib/admin-ops/types";
 
@@ -10,7 +10,9 @@ export const dynamic = "force-dynamic";
  * Returns rollup counts by status + per-doc-type expiry buckets.
  */
 export async function GET() {
-  await requireAdmin();
+  const _adminGuard = await requireAdminApi();
+
+  if (!_adminGuard.ok) return _adminGuard.response;
   const admin = createAdminClient();
   const today = new Date().toISOString().slice(0, 10);
   const in30 = new Date();

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin/auth";
+import { requireAdminApi } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   KPI_METRICS,
@@ -25,7 +25,9 @@ type Row = {
  * Reads from kpi_rollups_daily where dimension @> '{"scope":"national"}'.
  */
 export async function GET(req: Request) {
-  await requireAdmin();
+  const _adminGuard = await requireAdminApi();
+
+  if (!_adminGuard.ok) return _adminGuard.response;
   const url = new URL(req.url);
   const metricsParam = url.searchParams.get("metrics");
   const daysParam = url.searchParams.get("days");

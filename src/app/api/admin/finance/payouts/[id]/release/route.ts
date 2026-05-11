@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin, logAdminAction } from "@/lib/admin/auth";
+import { requireAdminApi, logAdminAction } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,11 @@ export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const me = await requireAdmin();
+  const _adminGuard_me = await requireAdminApi();
+
+  if (!_adminGuard_me.ok) return _adminGuard_me.response;
+
+  const me = _adminGuard_me.admin;
   const { id } = await params;
   const admin = createAdminClient();
 

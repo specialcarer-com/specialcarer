@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin/auth";
+import { requireAdminApi } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SAFETY_REPORT_STATUSES } from "@/lib/safety/types";
 
@@ -10,7 +10,9 @@ export const dynamic = "force-dynamic";
  * Admin-only listing across all carers' safety reports.
  */
 export async function GET(req: Request) {
-  await requireAdmin();
+  const _adminGuard = await requireAdminApi();
+
+  if (!_adminGuard.ok) return _adminGuard.response;
   const url = new URL(req.url);
   const status = url.searchParams.get("status");
   const admin = createAdminClient();

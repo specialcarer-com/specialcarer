@@ -14,22 +14,67 @@ export async function POST(req: Request) {
   const sig = req.headers.get("stripe-signature");
   // Trim defensively — pasting via dashboards/CLIs occasionally introduces
   // a trailing newline or surrounding whitespace that silently breaks HMAC.
-  const secret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
+  const secretTest = process.env.STRIPE_WEBHOOK_SECRET?.trim();
+  const secretLive = process.env.STRIPE_WEBHOOK_SECRET_LIVE?.trim();
   const raw = await req.text();
 
-  if (!sig || !secret) {
+  if (!sig || (!secretTest && !secretLive)) {
     return NextResponse.json(
       { error: "Webhook signature or secret missing" },
       { status: 400 }
     );
   }
 
-  let event: Stripe.Event;
-  try {
-    event = stripe.webhooks.constructEvent(raw, sig, secret);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Invalid signature";
-    return NextResponse.json({ error: message }, { status: 400 });
+  // Single endpoint serves both test and live Stripe dashboards. We can't
+  // tell which mode the event is from until we successfully verify HMAC,
+  // so try live first (production traffic), fall back to test. The
+  // verification step is the security boundary — we never trust parsed
+  // body fields like `livemode` until HMAC has cleared.
+  let event: Stripe.Event | null = null;
+  let verifiedWith: "live" | "test" | null = null;
+  let lastError: string | null = null;
+  if (secretLive) {
+    try {
+      event = stripe.webhooks.constructEvent(raw, sig, secretLive);
+      verifiedWith = "live";
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : "Invalid signature";
+    }
+  }
+  if (!event && secretTest) {
+    try {
+      event = stripe.webhooks.constructEvent(raw, sig, secretTest);
+      verifiedWith = "test";
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : "Invalid signature";
+    }
+  }
+  if (!event || !verifiedWith) {
+    console.warn(
+      "[stripe.webhook] neither secret matched signature",
+      lastError ?? "(no detail)"
+    );
+    return NextResponse.json(
+      { error: "Signature verification failed" },
+      { status: 400 }
+    );
+  }
+  // Sanity check: livemode flag on the verified event should match the
+  // secret that verified it. If not, something is misconfigured (e.g. the
+  // live secret was put in the test env var or vice versa) — refuse rather
+  // than process the event under the wrong mode.
+  const expectLive = verifiedWith === "live";
+  if (event.livemode !== expectLive) {
+    console.error(
+      "[stripe.webhook] livemode/secret mismatch — verified with",
+      verifiedWith,
+      "but event.livemode=",
+      event.livemode
+    );
+    return NextResponse.json(
+      { error: "Signature verification failed" },
+      { status: 400 }
+    );
   }
 
   const admin = createAdminClient();

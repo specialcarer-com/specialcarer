@@ -53,7 +53,7 @@ async function mintCookie(email) {
   return { user_id: user.id, cookie: `${COOKIE_NAME}=${b64}` };
 }
 
-async function call(method, path, cookie, body) {
+async function call(method, path, cookie, body, opts2 = {}) {
   const headers = { Accept: "application/json" };
   if (cookie) headers.Cookie = cookie;
   const opts = { method, headers };
@@ -61,6 +61,9 @@ async function call(method, path, cookie, body) {
     headers["Content-Type"] = "application/json";
     opts.body = JSON.stringify(body);
   }
+  // Manual redirect mode lets us assert routes return JSON 401/403 instead of
+  // 307-ing into /login (the symptom of the redirect()-based admin guard).
+  if (opts2.manualRedirect) opts.redirect = "manual";
   const res = await fetch(`${BASE}${path}`, opts);
   const text = await res.text();
   let json;
@@ -201,6 +204,57 @@ async function main() {
     // Vercel cron jobs are conventionally GET.
     const r = await call("GET", "/api/cron/auto-approve-timesheets", admin_user.cookie);
     check("cron auto-approve-timesheets reachable (200/202/204/401/403)", [200, 202, 204, 401, 403].includes(r.status), `status=${r.status}`);
+  }
+
+  // ─── Admin role-guard sweep ─────────────────────────────────────────────
+  // Every admin GET endpoint should return JSON 401/403 for non-admin callers,
+  // never a 307 (which is what the broken redirect()-based helper produced).
+  // We use redirect:"manual" so that a 307→/login isn't silently followed and
+  // mistaken for a 200 from the admin route.
+  console.log("\n[Admin guards] Non-admin must get 401/403, never 3xx, on admin GETs");
+  const ADMIN_GET_ROUTES = [
+    "/api/admin/payroll/runs",
+    "/api/admin/payroll/disputes",
+    "/api/admin/safety/reports",
+    "/api/admin/safety/leave-requests",
+    "/api/admin/timeoff",
+    "/api/admin/finance/payouts",
+    "/api/admin/finance/fraud",
+    "/api/admin/finance/tax-docs",
+    "/api/admin/community/reports",
+    "/api/admin/compliance/dashboard",
+    "/api/admin/compliance/documents",
+    "/api/admin/cms/posts",
+    "/api/admin/cms/faqs",
+    "/api/admin/cms/banners",
+    "/api/admin/cms/page-hero-banners",
+    "/api/admin/support/tickets",
+    "/api/admin/memberships",
+    "/api/admin/ops/heatmap",
+    "/api/admin/ops/surge-rules",
+    "/api/admin/analytics/kpis",
+    "/api/admin/vetting/interviews",
+  ];
+  const opt = { manualRedirect: true };
+  for (const path of ADMIN_GET_ROUTES) {
+    const rSeeker = await call("GET", path, family.cookie, undefined, opt);
+    check(
+      `seeker GET ${path} → 401/403 (JSON, not 3xx redirect)`,
+      rSeeker.status === 401 || rSeeker.status === 403,
+      `status=${rSeeker.status}`,
+    );
+    const rCarer = await call("GET", path, carerUk.cookie, undefined, opt);
+    check(
+      `carer GET ${path} → 401/403 (JSON, not 3xx redirect)`,
+      rCarer.status === 401 || rCarer.status === 403,
+      `status=${rCarer.status}`,
+    );
+    const rAnon = await call("GET", path, undefined, undefined, opt);
+    check(
+      `anon GET ${path} → 401/403 (JSON, not 3xx redirect)`,
+      rAnon.status === 401 || rAnon.status === 403,
+      `status=${rAnon.status}`,
+    );
   }
 
   // ─── Summary ───────────────────────────────────────────────────────────

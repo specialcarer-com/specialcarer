@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
-import { requireAdmin, logAdminAction } from "@/lib/admin/auth";
+import { requireAdminApi, logAdminAction } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSlot } from "@/lib/page-banners/registry";
 
@@ -10,7 +10,11 @@ type Ctx = { params: Promise<{ pageKey: string }> };
 
 /** PATCH — update metadata (alt, focal point, active) without re-uploading. */
 export async function PATCH(req: Request, { params }: Ctx) {
-  const me = await requireAdmin();
+  const _adminGuard_me = await requireAdminApi();
+
+  if (!_adminGuard_me.ok) return _adminGuard_me.response;
+
+  const me = _adminGuard_me.admin;
   const { pageKey } = await params;
   if (!getSlot(pageKey))
     return NextResponse.json({ error: "unknown_page_key" }, { status: 400 });
@@ -59,7 +63,11 @@ export async function PATCH(req: Request, { params }: Ctx) {
 
 /** DELETE — remove the row and the stored object. */
 export async function DELETE(_req: Request, { params }: Ctx) {
-  const me = await requireAdmin();
+  const _adminGuard_me = await requireAdminApi();
+
+  if (!_adminGuard_me.ok) return _adminGuard_me.response;
+
+  const me = _adminGuard_me.admin;
   const { pageKey } = await params;
   if (!getSlot(pageKey))
     return NextResponse.json({ error: "unknown_page_key" }, { status: 400 });

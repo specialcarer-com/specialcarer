@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin/auth";
+import { requireAdminApi } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { FRAUD_SIGNAL_STATUSES } from "@/lib/admin-ops/types";
 
@@ -11,7 +11,9 @@ export const dynamic = "force-dynamic";
  * and minimum severity (1-5).
  */
 export async function GET(req: Request) {
-  await requireAdmin();
+  const _adminGuard = await requireAdminApi();
+
+  if (!_adminGuard.ok) return _adminGuard.response;
   const url = new URL(req.url);
   const status = url.searchParams.get("status");
   const severity = url.searchParams.get("severity");

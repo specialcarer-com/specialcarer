@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin/auth";
+import { requireAdminApi } from "@/lib/admin/auth";
 import { sendPush, type ApnsPayload } from "@/lib/push/apns";
 
 export const dynamic = "force-dynamic";
@@ -18,12 +18,9 @@ export const dynamic = "force-dynamic";
  * for those, see lib/push/notify.ts (booking confirmed, message received).
  */
 export async function POST(req: Request) {
-  let admin;
-  try {
-    admin = await requireAdmin();
-  } catch {
-    return NextResponse.json({ error: "Admin only" }, { status: 403 });
-  }
+  const _adminGuard = await requireAdminApi();
+  if (!_adminGuard.ok) return _adminGuard.response;
+  const admin = _adminGuard.admin;
 
   let body: {
     deviceToken?: string;

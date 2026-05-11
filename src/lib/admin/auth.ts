@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
+import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -29,6 +30,49 @@ export async function requireAdmin(): Promise<AdminUser> {
     redirect("/dashboard?forbidden=1");
   }
   return { id: user.id, email: user.email ?? null };
+}
+
+export type AdminApiGuardResult =
+  | { ok: true; admin: AdminUser; response?: undefined }
+  | { ok: false; admin?: undefined; response: NextResponse };
+
+/**
+ * For use in API route handlers under /api/admin/**.
+ * Unlike requireAdmin() (which uses redirect() and is correct only for RSCs),
+ * this returns a discriminated result so the caller can early-return a proper
+ * 401 / 403 JSON response instead of throwing a NEXT_REDIRECT.
+ *
+ * Usage:
+ *   const guard = await requireAdminApi();
+ *   if (!guard.ok) return guard.response;
+ *   const me = guard.admin;
+ */
+export async function requireAdminApi(): Promise<AdminApiGuardResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Not authenticated" },
+        { status: 401 },
+      ),
+    };
+  }
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (!profile || profile.role !== "admin") {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+    };
+  }
+  return { ok: true, admin: { id: user.id, email: user.email ?? null } };
 }
 
 /**

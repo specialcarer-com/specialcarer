@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireAdmin } from "@/lib/admin/auth";
+import { requireAdminApi } from "@/lib/admin/auth";
 import { logAdminAction } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,11 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const adminUser = await requireAdmin();
+  const _adminGuard_adminUser = await requireAdminApi();
+
+  if (!_adminGuard_adminUser.ok) return _adminGuard_adminUser.response;
+
+  const adminUser = _adminGuard_adminUser.admin;
   const admin = createAdminClient();
 
   const { id } = await params;

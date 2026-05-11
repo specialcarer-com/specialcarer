@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin/auth";
+import { requireAdminApi } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,11 @@ type Body = {
 };
 
 export async function POST(req: Request) {
-  const me = await requireAdmin();
+  const _adminGuard_me = await requireAdminApi();
+
+  if (!_adminGuard_me.ok) return _adminGuard_me.response;
+
+  const me = _adminGuard_me.admin;
   let body: Body;
   try {
     body = (await req.json()) as Body;
@@ -52,7 +56,9 @@ export async function POST(req: Request) {
  * signed URL for the video so admins can stream/preview it.
  */
 export async function GET(req: Request) {
-  await requireAdmin();
+  const _adminGuard = await requireAdminApi();
+
+  if (!_adminGuard.ok) return _adminGuard.response;
   const url = new URL(req.url);
   const id = url.searchParams.get("id") ?? "";
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });

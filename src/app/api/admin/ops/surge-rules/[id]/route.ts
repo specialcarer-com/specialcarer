@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin, logAdminAction } from "@/lib/admin/auth";
+import { requireAdminApi, logAdminAction } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SURGE_MAX_MULTIPLIER } from "@/lib/admin-ops/types";
 
@@ -9,7 +9,11 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const me = await requireAdmin();
+  const _adminGuard_me = await requireAdminApi();
+
+  if (!_adminGuard_me.ok) return _adminGuard_me.response;
+
+  const me = _adminGuard_me.admin;
   const { id } = await params;
   let body: unknown;
   try {
@@ -61,7 +65,11 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const me = await requireAdmin();
+  const _adminGuard_me = await requireAdminApi();
+
+  if (!_adminGuard_me.ok) return _adminGuard_me.response;
+
+  const me = _adminGuard_me.admin;
   const { id } = await params;
   const admin = createAdminClient();
   const { error } = await admin.from("surge_rules").delete().eq("id", id);

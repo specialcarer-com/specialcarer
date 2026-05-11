@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin/auth";
+import { requireAdminApi } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
 /** GET /api/admin/payroll/runs — list recent payroll runs */
 export async function GET() {
-  await requireAdmin();
+  const _adminGuard = await requireAdminApi();
+
+  if (!_adminGuard.ok) return _adminGuard.response;
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("payroll_runs")

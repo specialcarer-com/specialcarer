@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin, logAdminAction } from "@/lib/admin/auth";
+import { requireAdminApi, logAdminAction } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   COMPLIANCE_DOC_TYPES,
@@ -11,7 +11,9 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-  await requireAdmin();
+  const _adminGuard = await requireAdminApi();
+
+  if (!_adminGuard.ok) return _adminGuard.response;
   const url = new URL(req.url);
   const docType = url.searchParams.get("doc_type");
   const status = url.searchParams.get("status");
@@ -47,7 +49,11 @@ export async function GET(req: Request) {
  * Body: { caregiver_id, doc_type, status?, file_url?, issued_at?, expires_at?, notes? }
  */
 export async function POST(req: Request) {
-  const me = await requireAdmin();
+  const _adminGuard_me = await requireAdminApi();
+
+  if (!_adminGuard_me.ok) return _adminGuard_me.response;
+
+  const me = _adminGuard_me.admin;
   let body: unknown;
   try {
     body = await req.json();

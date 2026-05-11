@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
-import { requireAdmin, logAdminAction } from "@/lib/admin/auth";
+import { requireAdminApi, logAdminAction } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  await requireAdmin();
+  const _adminGuard = await requireAdminApi();
+
+  if (!_adminGuard.ok) return _adminGuard.response;
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("cms_faqs")
@@ -21,7 +23,11 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const me = await requireAdmin();
+  const _adminGuard_me = await requireAdminApi();
+
+  if (!_adminGuard_me.ok) return _adminGuard_me.response;
+
+  const me = _adminGuard_me.admin;
   let body: unknown;
   try {
     body = await req.json();

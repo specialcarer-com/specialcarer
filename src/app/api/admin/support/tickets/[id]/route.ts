@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin, logAdminAction } from "@/lib/admin/auth";
+import { requireAdminApi, logAdminAction } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   TICKET_PRIORITIES,
@@ -14,7 +14,9 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  await requireAdmin();
+  const _adminGuard = await requireAdminApi();
+
+  if (!_adminGuard.ok) return _adminGuard.response;
   const { id } = await params;
   const admin = createAdminClient();
   const { data: ticket, error } = await admin
@@ -45,7 +47,11 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const me = await requireAdmin();
+  const _adminGuard_me = await requireAdminApi();
+
+  if (!_adminGuard_me.ok) return _adminGuard_me.response;
+
+  const me = _adminGuard_me.admin;
   const { id } = await params;
   let body: unknown;
   try {

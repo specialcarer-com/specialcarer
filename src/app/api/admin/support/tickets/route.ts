@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin/auth";
+import { requireAdminApi } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   TICKET_PRIORITIES,
@@ -16,7 +16,9 @@ export const dynamic = "force-dynamic";
  *   Body: { subject, user_id?, priority?, channel?, body? }
  */
 export async function GET(req: Request) {
-  await requireAdmin();
+  const _adminGuard = await requireAdminApi();
+
+  if (!_adminGuard.ok) return _adminGuard.response;
   const url = new URL(req.url);
   const status = url.searchParams.get("status");
   const priority = url.searchParams.get("priority");
@@ -52,7 +54,11 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const me = await requireAdmin();
+  const _adminGuard_me = await requireAdminApi();
+
+  if (!_adminGuard_me.ok) return _adminGuard_me.response;
+
+  const me = _adminGuard_me.admin;
   let body: unknown;
   try {
     body = await req.json();

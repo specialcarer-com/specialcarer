@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { logAdminAction, requireAdmin } from "@/lib/admin/auth";
+import { requireAdminApi, logAdminAction } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { executeRun, openPreview } from "@/lib/payroll/run-engine";
 
@@ -17,7 +17,11 @@ export async function POST(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const adminUser = await requireAdmin();
+  const _adminGuard_adminUser = await requireAdminApi();
+
+  if (!_adminGuard_adminUser.ok) return _adminGuard_adminUser.response;
+
+  const adminUser = _adminGuard_adminUser.admin;
   const { id } = await ctx.params;
   const body = (await req.json().catch(() => ({}))) as { action?: string };
   const action = body.action;

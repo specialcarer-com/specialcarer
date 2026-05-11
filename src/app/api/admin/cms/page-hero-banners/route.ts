@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
-import { requireAdmin, logAdminAction } from "@/lib/admin/auth";
+import { requireAdminApi, logAdminAction } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSlot } from "@/lib/page-banners/registry";
 
@@ -8,7 +8,9 @@ export const dynamic = "force-dynamic";
 
 /** GET — list every existing banner row. */
 export async function GET() {
-  await requireAdmin();
+  const _adminGuard = await requireAdminApi();
+
+  if (!_adminGuard.ok) return _adminGuard.response;
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("page_hero_banners")
@@ -32,7 +34,11 @@ export async function GET() {
  * Replaces the row at page_key, replacing any existing storage object.
  */
 export async function POST(req: Request) {
-  const me = await requireAdmin();
+  const _adminGuard_me = await requireAdminApi();
+
+  if (!_adminGuard_me.ok) return _adminGuard_me.response;
+
+  const me = _adminGuard_me.admin;
   const form = await req.formData().catch(() => null);
   if (!form)
     return NextResponse.json({ error: "invalid_form" }, { status: 400 });
