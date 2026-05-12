@@ -6,6 +6,20 @@ import { computeReadiness } from "@/lib/care/profile";
 import { CARER_FEE_PERCENT } from "@/lib/fees/config";
 import Image from "next/image";
 import RecurringSuggestionBanner from "@/components/RecurringSuggestionBanner";
+import UpcomingBookingsWidget, {
+  type UpcomingBookingRow,
+} from "@/components/dashboard/UpcomingBookingsWidget";
+import FavouriteCaregiversWidget, {
+  type FavouriteRow,
+} from "@/components/dashboard/FavouriteCaregiversWidget";
+import ActivityFeedWidget from "@/components/dashboard/ActivityFeedWidget";
+import CareTipsWidget from "@/components/dashboard/CareTipsWidget";
+import ReferralBanner from "@/components/dashboard/ReferralBanner";
+import { defaultCareTipsSource } from "@/lib/care-tips/source";
+import { selectTips, weekKey } from "@/lib/care-tips/select";
+import { getOrCreateReferralCode } from "@/lib/referrals/engine";
+import type { ServiceType } from "@/lib/ai/types";
+import { SERVICE_TYPES } from "@/lib/ai/types";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -96,6 +110,192 @@ export default async function DashboardPage() {
 
   // Caregiver-only: readiness + earnings
   const readiness = isCaregiver ? await computeReadiness(user.id) : null;
+
+  // ── Widget data (Phase 5: 5 widgets on the dashboard) ─────────────
+  // Upcoming bookings (next 3 only — strict spec)
+  const upcomingNext3Raw = (bookings ?? [])
+    .filter(
+      (b) =>
+        ["pending", "accepted", "paid", "in_progress"].includes(b.status) &&
+        new Date(b.starts_at).getTime() >= now,
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
+    )
+    .slice(0, 3);
+  const upcomingNext3: UpcomingBookingRow[] = upcomingNext3Raw.map((b) => ({
+    id: b.id,
+    starts_at: b.starts_at,
+    status: b.status,
+    hours: b.hours ?? null,
+    location_city: b.location_city ?? null,
+    service_type: b.service_type ?? null,
+    total_cents: isCaregiver
+      ? carerPayoutCents(b.subtotal_cents ?? 0)
+      : (b.total_cents ?? null),
+    currency: b.currency ?? null,
+    counterpartyName:
+      (nameById.get(isCaregiver ? b.seeker_id : b.caregiver_id) as
+        | string
+        | null
+        | undefined) ?? null,
+  }));
+
+  // Favourites (seekers only)
+  let favourites: FavouriteRow[] = [];
+  if (!isCaregiver) {
+    const { data: saved } = await admin
+      .from("saved_caregivers")
+      .select("caregiver_id, created_at")
+      .eq("seeker_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(6);
+    const carerIds = (saved ?? []).map((s) => s.caregiver_id as string);
+    if (carerIds.length > 0) {
+      const { data: cprof } = await admin
+        .from("caregiver_profiles")
+        .select(
+          "user_id, display_name, city, services, hourly_rate_cents, currency, avatar_url",
+        )
+        .in("user_id", carerIds);
+      // Verified = both DBS and RTW cleared. Check best-effort; if the
+      // tables/columns don't shape up exactly, fall back to false.
+      const { data: bgChecks } = await admin
+        .from("background_checks")
+        .select("user_id, check_type, status")
+        .in("user_id", carerIds);
+      const verifiedSet = new Set<string>();
+      const byUser = new Map<string, Set<string>>();
+      for (const row of bgChecks ?? []) {
+        const uid = row.user_id as string;
+        if (row.status !== "cleared") continue;
+        const set = byUser.get(uid) ?? new Set<string>();
+        set.add(row.check_type as string);
+        byUser.set(uid, set);
+      }
+      for (const [uid, types] of byUser) {
+        if (
+          (types.has("dbs") || types.has("DBS")) &&
+          (types.has("rtw") || types.has("RTW"))
+        ) {
+          verifiedSet.add(uid);
+        }
+      }
+      favourites = (cprof ?? []).map((p) => ({
+        user_id: p.user_id as string,
+        display_name: (p.display_name as string | null) ?? null,
+        city: (p.city as string | null) ?? null,
+        services: (p.services as string[] | null) ?? null,
+        hourly_rate_cents: (p.hourly_rate_cents as number | null) ?? null,
+        currency: (p.currency as "GBP" | "USD" | null) ?? null,
+        avatar_url: (p.avatar_url as string | null) ?? null,
+        verified: verifiedSet.has(p.user_id as string),
+      }));
+    }
+  }
+
+  // Activity feed (best-effort — view may not be applied yet in some envs)
+  type ActivityRow = {
+    ts: string;
+    event_type: string;
+    event_data: Record<string, unknown> | null;
+    booking_id: string | null;
+  };
+  let activityRows: ActivityRow[] = [];
+  try {
+    const { data: feed } = await admin
+      .from("v_user_activity_feed")
+      .select("ts, event_type, event_data, booking_id")
+      .eq("user_id", user.id)
+      .eq("role", isCaregiver ? "caregiver" : "seeker")
+      .order("ts", { ascending: false })
+      .limit(30);
+    activityRows = (feed ?? []) as ActivityRow[];
+  } catch {
+    activityRows = [];
+  }
+  const activityEvents = activityRows.map((r) => ({
+    ts: r.ts,
+    event_type: r.event_type,
+    event_data: r.event_data ?? {},
+    booking_id: r.booking_id,
+  }));
+
+  // Care tips — infer user's verticals from booking history (seeker) or
+  // caregiver profile (caregiver).
+  let userVerticals: ServiceType[] = [];
+  if (isCaregiver) {
+    const { data: caregiverProfile } = await admin
+      .from("caregiver_profiles")
+      .select("services")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    userVerticals = ((caregiverProfile?.services as string[] | null) ?? [])
+      .filter((s): s is ServiceType =>
+        (SERVICE_TYPES as readonly string[]).includes(s),
+      );
+  } else {
+    const seen = new Set<ServiceType>();
+    for (const b of bookings ?? []) {
+      const v = b.service_type as string | null;
+      if (v && (SERVICE_TYPES as readonly string[]).includes(v)) {
+        seen.add(v as ServiceType);
+      }
+    }
+    userVerticals = Array.from(seen);
+  }
+  const allTips = await defaultCareTipsSource.getAll();
+  const tipPicks = selectTips({
+    tips: allTips,
+    audience: isCaregiver ? "caregiver" : "seeker",
+    month: new Date().getMonth() + 1,
+    verticals: userVerticals,
+    seed: `${user.id}-${weekKey()}`,
+    count: 2,
+  });
+
+  // Referral banner data — getOrCreateReferralCode lazily allocates on
+  // first dashboard view.
+  let referralData: {
+    code: string;
+    shareUrl: string;
+    invited: number;
+    qualified: number;
+    availableCents: number;
+  } | null = null;
+  try {
+    const code = await getOrCreateReferralCode(
+      admin,
+      user.id,
+      profile.full_name,
+    );
+    const origin =
+      process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
+      "https://specialcarer.com";
+    const { data: claims } = await admin
+      .from("referral_claims")
+      .select("status")
+      .eq("referrer_id", user.id);
+    const invited = claims?.length ?? 0;
+    const qualified =
+      claims?.filter((c) => c.status === "qualified").length ?? 0;
+    const { data: balance } = await admin
+      .from("v_user_credit_balance")
+      .select("available_cents")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    referralData = {
+      code,
+      shareUrl: `${origin}/r/${code}`,
+      invited,
+      qualified,
+      availableCents: Number(balance?.available_cents ?? 0),
+    };
+  } catch {
+    // Migration not yet applied — banner stays hidden rather than crashing.
+    referralData = null;
+  }
 
   // Carer take-home = subtotal − carer-side deduction (CARER_FEE_PERCENT).
   // The `platform_fee_cents` column stores the *combined* platform take
@@ -291,6 +491,31 @@ export default async function DashboardPage() {
               <Stat label="Bookings to date" value={String((bookings ?? []).length)} />
             </div>
           )}
+
+          {/* ── Phase 5 widgets (additive) ────────────────────────── */}
+          {referralData && (
+            <ReferralBanner
+              data={referralData}
+              role={isCaregiver ? "caregiver" : "seeker"}
+            />
+          )}
+
+          <UpcomingBookingsWidget
+            rows={upcomingNext3}
+            role={isCaregiver ? "caregiver" : "seeker"}
+          />
+
+          {!isCaregiver && favourites.length >= 0 && (
+            <FavouriteCaregiversWidget rows={favourites} />
+          )}
+
+          <ActivityFeedWidget
+            events={activityEvents}
+            role={isCaregiver ? "caregiver" : "seeker"}
+          />
+
+          <CareTipsWidget tips={tipPicks} />
+          {/* ── end Phase 5 widgets ───────────────────────────────── */}
 
           {/* Bookings */}
           <div className="mt-10">

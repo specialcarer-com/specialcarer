@@ -3,6 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/server";
 import { logAdminAction, type AdminUser } from "@/lib/admin/auth";
+import {
+  findPendingClaimForUser,
+  qualifyClaim,
+} from "@/lib/referrals/engine";
 
 export const dynamic = "force-dynamic";
 
@@ -129,6 +133,25 @@ export async function POST(
       targetId: bookingId,
       details: { ...snapshot, reason },
     });
+
+    // Referral auto-qualify: if the seeker is a referee with a pending
+    // claim, their first paid_out booking qualifies the referral.
+    // Idempotent — unique(claim_id, reason) on referral_credits.
+    try {
+      if (booking.seeker_id) {
+        const pending = await findPendingClaimForUser(admin, booking.seeker_id);
+        if (pending) {
+          await qualifyClaim(admin, {
+            claimId: pending.id,
+            bookingId,
+          });
+        }
+      }
+    } catch (err) {
+      // Never block the release on a referral-side error.
+      console.error("[referrals.autoQualify] failed", err);
+    }
+
     return NextResponse.json({ ok: true, status: "paid_out" });
   }
 
