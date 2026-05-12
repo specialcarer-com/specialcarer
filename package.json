@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "node --import tsx --test-name-pattern=. --test src/lib/stripe/milestone-alert.test.ts",
     "cap:add:ios": "cap add ios",
     "cap:sync": "cap sync ios",
     "cap:copy": "cap copy ios",
@@ -54,6 +55,7 @@
     "eslint-config-next": "15.5.15",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

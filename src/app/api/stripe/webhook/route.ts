@@ -155,6 +155,18 @@ export async function POST(req: Request) {
             })
             .eq("stripe_payment_intent_id", pi.id);
         }
+        // One-shot platform-owner alert on the FIRST livemode payment.
+        // Production-safety insurance — verifies the live webhook wiring
+        // works end-to-end. Helper never throws; an alert-side failure
+        // will not break webhook processing.
+        try {
+          const { alertOnFirstLivePaymentSucceeded } = await import(
+            "@/lib/stripe/milestone-alert"
+          );
+          await alertOnFirstLivePaymentSucceeded(event, { admin });
+        } catch (e) {
+          console.error("[stripe.webhook] milestone alert failed", e);
+        }
         break;
       }
       case "payment_intent.payment_failed": {
