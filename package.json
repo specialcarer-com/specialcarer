@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "node --import tsx --test-name-pattern=. --test src/lib/stripe/milestone-alert.test.ts src/lib/dbs/provider.test.ts",
+    "test": "node --import tsx --test-name-pattern=. --test src/lib/stripe/milestone-alert.test.ts src/lib/dbs/provider.test.ts src/lib/payroll/__tests__/bacs18.test.ts src/lib/payroll/__tests__/compute-pay.test.ts src/lib/email/grace-period-blast.test.ts",
     "cap:add:ios": "cap add ios",
     "cap:sync": "cap sync ios",
     "cap:copy": "cap copy ios",
