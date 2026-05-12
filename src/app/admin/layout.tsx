@@ -64,6 +64,7 @@ const SECTIONS: NavSection[] = [
       { href: "/admin/cms/faq", label: "FAQ" },
       { href: "/admin/cms/banners", label: "Banners (in-app)" },
       { href: "/admin/cms/page-banners", label: "Page banners" },
+      { href: "/admin/training", label: "Training courses" },
     ],
   },
   {
