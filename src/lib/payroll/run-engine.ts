@@ -17,6 +17,7 @@ import { computePay, taxPeriodForDate } from "./compute-pay";
 import { taxYearForDate } from "./tax-constants";
 import { renderPayslipPdf, type PayslipData } from "./render-payslip";
 import { sendEmail } from "@/lib/email/smtp";
+import { computeHolidayLedgerEntry } from "./holiday-pot";
 
 export const EMPLOYER_NAME = "All Care 4 U Group Ltd";
 const PAYSLIP_BUCKET = "payslips";
@@ -350,6 +351,26 @@ export async function executeRun(
         .from("org_carer_payouts")
         .update({ status: "confirmed" })
         .eq("id", dd.id);
+
+      // Phase 4 stage 1: also write an 'accrued' entry to the holiday-pot
+      // ledger. The legacy carer_holiday_pots upsert below continues to run
+      // in parallel until stage 2 retires it. Idempotent via the partial
+      // unique index holiday_pot_ledger_accrued_unique on org_carer_payout_id.
+      const ledgerEntry = computeHolidayLedgerEntry({
+        id: dd.id,
+        carer_id: dd.carer_id,
+        holiday_accrued_cents: dd.holiday_accrued_cents,
+        run_id: run.id,
+      });
+      if (ledgerEntry) {
+        const { error: ledgerErr } = await admin
+          .from("holiday_pot_ledger")
+          .insert(ledgerEntry);
+        // 23505 = unique_violation — re-runs of executeRun are safe.
+        if (ledgerErr && ledgerErr.code !== "23505") {
+          console.error("[payroll] ledger insert failed", ledgerErr);
+        }
+      }
 
       // Upsert holiday pot
       const { data: existingPot } = await admin

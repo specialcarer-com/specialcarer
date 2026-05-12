@@ -173,6 +173,13 @@ export default async function CarerPayslipsPage() {
                 12.07% of your gross pay is accrued here as paid-leave entitlement.
                 Request leave via your manager to draw it down.
               </p>
+              <Link
+                href="/dashboard/holiday-pot"
+                className="mt-3 inline-block rounded-lg px-3 py-1.5 text-xs font-semibold text-white"
+                style={{ background: "#0E7C7B" }}
+              >
+                Open holiday pot →
+              </Link>
             </div>
           </aside>
         </div>
