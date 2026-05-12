@@ -198,6 +198,69 @@ export function renderOptInPausedEmail(args: {
   return { subject, html, text };
 }
 
+export function renderComplianceUpdateGraceEmail(args: {
+  name: string;
+}): EmailContent {
+  const subject = "Compliance update: 30 days to complete two new courses";
+  const html = shell(
+    "New mandatory training",
+    `<p>Hi ${esc(args.name)},</p>
+    <p>Our compliance policy has expanded. To keep your Channel B agency status active, you must complete <strong>two new mandatory courses</strong> within the next 30 days:</p>
+    <ul>
+      <li>Food Hygiene</li>
+      <li>Medication Administration</li>
+    </ul>
+    <p>Carers working with children must also complete the new <strong>Safeguarding Children</strong> course.</p>
+    <p>You'll continue receiving agency shifts during the 30-day grace period. After that, missing courses will move your status to <em>gates pending</em> until they're complete.</p>
+    <p style="margin:24px 0">
+      <a href="${DASHBOARD_URL}" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
+        Open training
+      </a>
+    </p>`,
+  );
+  const text = [
+    `Hi ${args.name},`,
+    "",
+    "Our compliance policy has expanded. You have 30 days to complete:",
+    "  · Food Hygiene",
+    "  · Medication Administration",
+    "Carers working with children must also complete Safeguarding Children.",
+    "",
+    `Open training: ${DASHBOARD_URL}`,
+    "",
+    "— SpecialCarer",
+  ].join("\n");
+  return { subject, html, text };
+}
+
+export function renderOptInGraceExpiredEmail(args: {
+  name: string;
+}): EmailContent {
+  const subject = "Action required: agency status paused";
+  const html = shell(
+    "Grace period expired",
+    `<p>Hi ${esc(args.name)},</p>
+    <p>Your 30-day compliance grace period has ended and you have outstanding mandatory training. Your agency status has been moved to <strong>gates pending</strong> — you will not be offered Channel B shifts until you complete the remaining courses.</p>
+    <p>Your marketplace bookings are unaffected.</p>
+    <p style="margin:24px 0">
+      <a href="${DASHBOARD_URL}" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
+        Open application
+      </a>
+    </p>`,
+  );
+  const text = [
+    `Hi ${args.name},`,
+    "",
+    "Your 30-day grace period has ended. Agency status moved to 'gates pending' until you complete the mandatory training.",
+    "Marketplace bookings are unaffected.",
+    "",
+    `Open application: ${DASHBOARD_URL}`,
+    "",
+    "— SpecialCarer",
+  ].join("\n");
+  return { subject, html, text };
+}
+
 export function renderOptInResumedEmail(args: { name: string }): EmailContent {
   const subject = "You're live for agency shifts again";
   const html = shell(

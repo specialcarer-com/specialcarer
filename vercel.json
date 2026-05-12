@@ -24,6 +24,10 @@
     {
       "path": "/api/cron/run-monthly-payroll",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/expire-agency-optin-grace",
+      "schedule": "0 4 * * *"
     }
   ]
 }

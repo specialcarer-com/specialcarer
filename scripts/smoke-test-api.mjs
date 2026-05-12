@@ -82,17 +82,53 @@ function check(name, ok, detail = "") {
 async function main() {
   console.log("\n=== SpecialCarer API smoke test ===\n");
 
-  // Reset Priya's agency_opt_in_status to ready_for_review so the queue check
-  // and the approval step both have a clean starting point. Idempotent.
-  console.log("[reset] Priya agency_opt_in_status → ready_for_review");
+  // Reset Priya: ready_for_review, adults-only, ALL 4 always-required + safeguarding-adults
+  // courses passed so overall_ready=true under the v2 population model. Clear any grace
+  // period so the approval-flow checks aren't muddied. Idempotent.
+  console.log("[reset] Priya agency_opt_in_status → ready_for_review (v2)");
   {
     const { error } = await admin
       .from("profiles")
-      .update({ agency_opt_in_status: "ready_for_review" })
+      .update({
+        agency_opt_in_status: "ready_for_review",
+        works_with_adults: true,
+        works_with_children: false,
+        works_with_children_admin_approved_at: null,
+        agency_optin_grace_period_until: null,
+      })
       .eq("id", PRIYA_ID);
     if (error) {
       console.error(`  reset failed: ${error.message}`);
       process.exit(2);
+    }
+    // Ensure Priya has passed enrollments for ALL required courses for an adults-only carer
+    // (manual-handling, infection-control, food-hygiene, medication-administration,
+    // safeguarding-adults). Idempotent.
+    const requiredSlugs = [
+      "manual-handling",
+      "infection-control",
+      "food-hygiene",
+      "medication-administration",
+      "safeguarding-adults",
+    ];
+    const { data: courses } = await admin
+      .from("training_courses")
+      .select("id, slug")
+      .in("slug", requiredSlugs);
+    const nowIso = new Date().toISOString();
+    for (const c of courses ?? []) {
+      const { data: existing } = await admin
+        .from("training_enrollments")
+        .select("id")
+        .eq("carer_id", PRIYA_ID)
+        .eq("course_id", c.id)
+        .maybeSingle();
+      const payload = { carer_id: PRIYA_ID, course_id: c.id, quiz_passed_at: nowIso };
+      if (existing) {
+        await admin.from("training_enrollments").update(payload).eq("id", existing.id);
+      } else {
+        await admin.from("training_enrollments").insert(payload);
+      }
     }
   }
 
@@ -172,6 +208,205 @@ async function main() {
     } else {
       check("Priya NOT in ready_for_review queue (post-approval)", false, `status=${r.status}`);
     }
+  }
+
+  // ─── Phase 2.1: v2 compliance (populations, child opt-in, grace) ────────
+  console.log("\n[Phase 2.1] v2 compliance (populations, child opt-in, grace)");
+
+  // Carer can toggle works_with_children=true → enters pending admin approval.
+  {
+    const r = await call("POST", "/api/agency-optin/population", carerUk.cookie, {
+      works_with_children: true,
+    });
+    check(
+      "carer POST population works_with_children=true → 2xx",
+      r.status >= 200 && r.status < 300,
+      `status=${r.status} body=${JSON.stringify(r.body).slice(0,200)}`,
+    );
+    check(
+      "child_pending_admin_approval flag returned",
+      r.body?.child_pending_admin_approval === true,
+      `flag=${r.body?.child_pending_admin_approval}`,
+    );
+  }
+  {
+    const { data } = await admin
+      .from("profiles")
+      .select("works_with_children, works_with_children_admin_approved_at")
+      .eq("id", PRIYA_ID)
+      .single();
+    check(
+      "Priya works_with_children=true in DB",
+      data?.works_with_children === true,
+      `wwc=${data?.works_with_children}`,
+    );
+    check(
+      "Priya child-population NOT yet admin-approved",
+      data?.works_with_children_admin_approved_at == null,
+      `approved_at=${data?.works_with_children_admin_approved_at}`,
+    );
+  }
+  // Admin child-opt-ins queue exposes Priya.
+  {
+    const r = await call("GET", "/api/admin/agency-optin/child-opt-ins", admin_user.cookie);
+    check(
+      "admin GET /api/admin/agency-optin/child-opt-ins → 200",
+      r.status === 200,
+      `status=${r.status}`,
+    );
+    if (r.status === 200) {
+      const items = Array.isArray(r.body?.rows) ? r.body.rows : [];
+      const priya = items.find((x) => x.id === PRIYA_ID);
+      check("Priya appears in child-opt-ins queue", !!priya, `size=${items.length}`);
+    }
+  }
+  // Admin approves Priya's child population → admin_approved_at gets set.
+  {
+    const r = await call(
+      "POST",
+      `/api/admin/agency-optin/child-opt-ins/${PRIYA_ID}/approve`,
+      admin_user.cookie,
+      {},
+    );
+    check(
+      "admin POST child-opt-ins approve → 2xx",
+      r.status >= 200 && r.status < 300,
+      `status=${r.status}`,
+    );
+  }
+  {
+    const { data } = await admin
+      .from("profiles")
+      .select("works_with_children_admin_approved_at")
+      .eq("id", PRIYA_ID)
+      .single();
+    check(
+      "Priya child-population approved timestamp set",
+      data?.works_with_children_admin_approved_at != null,
+      `approved_at=${data?.works_with_children_admin_approved_at}`,
+    );
+  }
+  // Revoke for cleanup.
+  {
+    const r = await call("POST", "/api/agency-optin/population", carerUk.cookie, {
+      works_with_children: false,
+    });
+    check(
+      "carer POST population works_with_children=false (revoke) → 2xx",
+      r.status >= 200 && r.status < 300,
+      `status=${r.status}`,
+    );
+  }
+
+  // Grace-period cron: set Priya's grace_until = yesterday + remove one
+  // required enrollment so her gates would otherwise be red, status='active'.
+  // Cron should flip her to in_progress.
+  {
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    // Find the food-hygiene enrollment and delete it so overall_ready=false.
+    const { data: fh } = await admin
+      .from("training_courses")
+      .select("id")
+      .eq("slug", "food-hygiene")
+      .maybeSingle();
+    if (fh?.id) {
+      await admin
+        .from("training_enrollments")
+        .delete()
+        .eq("carer_id", PRIYA_ID)
+        .eq("course_id", fh.id);
+    }
+    await admin
+      .from("profiles")
+      .update({
+        agency_opt_in_status: "active",
+        agency_optin_grace_period_until: yesterday,
+      })
+      .eq("id", PRIYA_ID);
+
+    const r = await call("GET", "/api/cron/expire-agency-optin-grace", admin_user.cookie);
+    check(
+      "cron expire-agency-optin-grace reachable (200)",
+      r.status === 200,
+      `status=${r.status}`,
+    );
+
+    const { data: prof } = await admin
+      .from("profiles")
+      .select("agency_opt_in_status")
+      .eq("id", PRIYA_ID)
+      .single();
+    check(
+      "Priya flipped active → in_progress after expired grace",
+      prof?.agency_opt_in_status === "in_progress",
+      `status=${prof?.agency_opt_in_status}`,
+    );
+  }
+  // Now seed the grace window into the future + restore the food-hygiene
+  // enrollment, set status back to active → cron should be a no-op AND the
+  // gate query should report in_grace_period=true (carer stays active).
+  {
+    const future = new Date(Date.now() + 25 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: fh } = await admin
+      .from("training_courses")
+      .select("id")
+      .eq("slug", "food-hygiene")
+      .maybeSingle();
+    if (fh?.id) {
+      const { data: existing } = await admin
+        .from("training_enrollments")
+        .select("id")
+        .eq("carer_id", PRIYA_ID)
+        .eq("course_id", fh.id)
+        .maybeSingle();
+      const payload = {
+        carer_id: PRIYA_ID,
+        course_id: fh.id,
+        quiz_passed_at: new Date().toISOString(),
+      };
+      if (existing) {
+        await admin.from("training_enrollments").update(payload).eq("id", existing.id);
+      } else {
+        await admin.from("training_enrollments").insert(payload);
+      }
+    }
+    await admin
+      .from("profiles")
+      .update({
+        agency_opt_in_status: "active",
+        agency_optin_grace_period_until: future,
+      })
+      .eq("id", PRIYA_ID);
+
+    const r = await call("GET", "/api/cron/expire-agency-optin-grace", admin_user.cookie);
+    check(
+      "cron no-op when still in grace window",
+      r.status === 200,
+      `status=${r.status}`,
+    );
+    const { data: prof } = await admin
+      .from("profiles")
+      .select("agency_opt_in_status, agency_optin_grace_period_until")
+      .eq("id", PRIYA_ID)
+      .single();
+    check(
+      "Priya stays 'active' while in grace window",
+      prof?.agency_opt_in_status === "active",
+      `status=${prof?.agency_opt_in_status}`,
+    );
+    check(
+      "Priya grace_period_until persisted in future",
+      prof?.agency_optin_grace_period_until != null
+        && new Date(prof.agency_optin_grace_period_until).getTime() > Date.now(),
+      `until=${prof?.agency_optin_grace_period_until}`,
+    );
+  }
+  // Clear grace + leave Priya in a clean 'active' state for downstream phases.
+  {
+    await admin
+      .from("profiles")
+      .update({ agency_optin_grace_period_until: null })
+      .eq("id", PRIYA_ID);
   }
 
   // ─── Phase 3: payroll ──────────────────────────────────────────────────

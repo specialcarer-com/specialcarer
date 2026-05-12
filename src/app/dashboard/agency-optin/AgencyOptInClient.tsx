@@ -106,6 +106,10 @@ export default function AgencyOptInClient({
       await refresh();
     }
   }
+  async function onTogglePopulation(field: "works_with_adults" | "works_with_children", value: boolean) {
+    const { ok } = await callJson("/api/agency-optin/population", { [field]: value });
+    if (ok) await refresh();
+  }
 
   const isNotStarted = status === "not_started";
   const isInProgress = status === "in_progress";
@@ -113,6 +117,20 @@ export default function AgencyOptInClient({
   const isActive = status === "active";
   const isRejected = status === "rejected";
   const isPaused = status === "paused";
+
+  const worksWithAdults = gates?.works_with_adults ?? true;
+  const worksWithChildren = gates?.works_with_children ?? false;
+  const childApproved = !!gates?.works_with_children_admin_approved_at;
+  const inGrace = !!gates?.in_grace_period;
+  const graceUntil = gates?.agency_optin_grace_period_until ?? null;
+  const graceDaysLeft = graceUntil
+    ? Math.max(
+        0,
+        Math.ceil(
+          (new Date(graceUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+        ),
+      )
+    : 0;
 
   return (
     <div className="max-w-3xl mx-auto p-6" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
@@ -132,7 +150,20 @@ export default function AgencyOptInClient({
           <StatusBadge status={status} />
         </div>
 
-        {isActive && (
+        {isActive && inGrace && (
+          <div className="mt-6 p-4 rounded-xl border border-amber-200 bg-amber-50">
+            <strong className="text-amber-800">
+              {graceDaysLeft} day{graceDaysLeft === 1 ? "" : "s"} remaining to complete new mandatory training
+            </strong>
+            <p className="text-sm text-slate-700 mt-1">
+              Compliance policy has expanded. Complete <strong>Food Hygiene</strong> and{" "}
+              <strong>Medication Administration</strong> (and Safeguarding Children if you work
+              with children) before the grace period ends to keep your agency status.
+            </p>
+          </div>
+        )}
+
+        {isActive && !inGrace && (
           <div className="mt-6 p-4 rounded-xl border" style={{ borderColor: BRAND, background: "#E9F4F4" }}>
             <strong style={{ color: BRAND }}>You're live for agency shifts.</strong>
             <p className="text-sm text-slate-700 mt-1">
@@ -181,7 +212,57 @@ export default function AgencyOptInClient({
 
         {(isInProgress || isReady || isActive || isPaused) && gates && (
           <div className="mt-8 space-y-3">
-            <h2 className="text-lg font-bold text-slate-900 mb-2">Your gates</h2>
+            <h2 className="text-lg font-bold text-slate-900 mb-2">Population of work</h2>
+            <div className="p-4 border border-slate-200 rounded-xl space-y-3">
+              <p className="text-sm text-slate-600">
+                Select the population(s) you want to support. This determines which
+                safeguarding course(s) you must complete.
+              </p>
+              <label className="flex items-start gap-3 text-sm text-slate-800">
+                <input
+                  type="checkbox"
+                  checked={worksWithAdults}
+                  disabled={busy !== null}
+                  onChange={(e) => onTogglePopulation("works_with_adults", e.target.checked)}
+                  className="mt-1"
+                />
+                <span>
+                  <strong>I want to work with adults</strong>
+                  <span className="block text-xs text-slate-500">
+                    Requires the Safeguarding Adults course.
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-3 text-sm text-slate-800">
+                <input
+                  type="checkbox"
+                  checked={worksWithChildren}
+                  disabled={busy !== null}
+                  onChange={(e) => onTogglePopulation("works_with_children", e.target.checked)}
+                  className="mt-1"
+                />
+                <span>
+                  <strong>I want to work with children</strong>
+                  <span className="block text-xs text-slate-500">
+                    Requires admin approval and the Safeguarding Children course.
+                  </span>
+                </span>
+              </label>
+              {worksWithChildren && !childApproved && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                  <strong>Pending admin approval.</strong> Required for child-population
+                  safeguarding compliance. Your other gates can progress in the meantime.
+                </div>
+              )}
+              {worksWithChildren && childApproved && (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900">
+                  <strong>Child-population approved.</strong> Complete Safeguarding Children to
+                  satisfy your training gate.
+                </div>
+              )}
+            </div>
+
+            <h2 className="text-lg font-bold text-slate-900 mb-2 mt-6">Your gates</h2>
 
             <GateRow
               label="Worker agreement"
@@ -255,7 +336,7 @@ export default function AgencyOptInClient({
             <GateRow
               label="Mandatory training"
               ok={!!gates.training_ok}
-              detail={`${gates.training_passed_count ?? 0}/${gates.training_required_count ?? 0} courses complete (Safeguarding · Manual Handling · Infection Control)`}
+              detail={renderTrainingDetail(gates)}
               cta={
                 !gates.training_ok ? (
                   <Link
@@ -310,6 +391,13 @@ export default function AgencyOptInClient({
       )}
     </div>
   );
+}
+
+function renderTrainingDetail(g: GatesRow): string {
+  const required: string[] = ["Manual Handling", "Infection Control", "Food Hygiene", "Medication"];
+  if (g.works_with_adults) required.push("Safeguarding Adults");
+  if (g.works_with_children) required.push("Safeguarding Children");
+  return `${g.training_passed_count ?? 0}/${g.training_required_count ?? 0} courses complete · ${required.join(" · ")}`;
 }
 
 function GateRow({
@@ -408,8 +496,10 @@ function ContractModal({
           </p>
           <p>
             <strong>Compliance.</strong> You must maintain a current Enhanced DBS (within 12
-            months), Right to Work (no expiry within 60 days), and complete mandatory training:
-            Safeguarding Adults, Manual Handling, Infection Control.
+            months), Right to Work (no expiry within 60 days), and complete all mandatory
+            training applicable to your population of work (Manual Handling, Infection
+            Control, Food Hygiene, Medication Administration, plus Safeguarding Adults
+            and/or Safeguarding Children).
           </p>
           <p>
             <strong>Termination.</strong> Either party may terminate on written notice.
