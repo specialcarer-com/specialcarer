@@ -8,11 +8,10 @@
 -- path in v_agency_opt_in_gates continues to satisfy the gate; this
 -- migration adds a second OR-branch alongside it.
 --
--- Sequencing note: must run AFTER the parallel courses-population
--- migration (filename `agency_optin_v2_courses_population.sql` or
--- similar) so that any new gate columns on the view are not clobbered.
--- The 20260514_* prefix gives a one-day buffer beyond the 2026-05-13
--- platform_milestones migration.
+-- Sequencing: must run AFTER 20260512_agency_optin_v2_courses_population.sql
+-- because it preserves and extends that migration's view shape
+-- (works_with_adults / works_with_children / grace period / per-course
+-- training flags).
 
 -- 1. Extend background_checks with Update Service columns.
 alter table public.background_checks
@@ -110,26 +109,17 @@ do $$ begin
   end if;
 end $$;
 
--- service_role bypasses RLS for inserts/updates from cron + admin
--- routes; no explicit insert policy needed.
-
--- 3. Refresh v_agency_opt_in_gates to accept the Update Service path.
+-- 3. Refresh v_agency_opt_in_gates to accept the Update Service path
+-- while preserving the population + training + grace fields from
+-- 20260512_agency_optin_v2_courses_population.sql.
 --
--- The DBS gate is green when EITHER:
---   (a) the existing fresh Enhanced DBS branch passes, OR
---   (b) a row exists with source='update_service' whose last_us_check_at
---       resolved to status='current' within the last 12 months AND
+-- DBS gate is green when EITHER:
+--   (a) the existing fresh Enhanced DBS branch passes (any source other
+--       than 'update_service' — covers historic rows with NULL source
+--       via coalesce), OR
+--   (b) source='update_service' check with last_us_check_at within 12
+--       months whose latest us_check_result.status = 'current' AND
 --       whose workforce_type covers the carer's needs.
---
--- workforce compatibility: a cert covering 'both' covers any carer;
--- a cert covering 'adult' covers carers with works_with_adults=true and
--- works_with_children=false (or NULL); same logic for 'child'.
---
--- We reference profiles.works_with_adults / works_with_children if
--- those columns exist (added by the parallel courses migration). If
--- they're missing, the workforce test degrades to "cert is non-null",
--- which is the safe default during the brief window before the
--- courses migration lands.
 create or replace view public.v_agency_opt_in_gates as
 with carer as (
   select p.id as user_id,
@@ -139,16 +129,10 @@ with carer as (
          p.agency_opt_in_approved_at,
          p.agency_opt_in_rejected_reason,
          p.agency_opt_in_paused_reason,
-         -- Read works_with_* if present; coalesce to NULL so the
-         -- workforce test below short-circuits to "any cert works".
-         coalesce(
-           (to_jsonb(p) ->> 'works_with_adults')::boolean,
-           null
-         ) as works_with_adults,
-         coalesce(
-           (to_jsonb(p) ->> 'works_with_children')::boolean,
-           null
-         ) as works_with_children
+         p.works_with_adults,
+         p.works_with_children,
+         p.works_with_children_admin_approved_at,
+         p.agency_optin_grace_period_until
   from public.profiles p
   where p.role = 'caregiver'
 ), contract_gate as (
@@ -192,13 +176,8 @@ with carer as (
              and bc.last_us_check_at is not null
              and bc.last_us_check_at > (now() - interval '12 months')
              and coalesce(bc.us_check_result ->> 'status', '') = 'current'
-             -- workforce compatibility
              and (
-               -- cert covers both => always compatible
                bc.workforce_type = 'both'
-               or (
-                 c.works_with_adults is null and c.works_with_children is null
-               )
                or (
                  bc.workforce_type = 'adult'
                  and coalesce(c.works_with_adults, false) = true
@@ -217,7 +196,7 @@ with carer as (
   from carer c
 ), dbs_gate as (
   select c.user_id,
-         (df.fresh_ok or du.us_ok) as dbs_ok,
+         (coalesce(df.fresh_ok, false) or coalesce(du.us_ok, false)) as dbs_ok,
          greatest(df.fresh_cleared_at, du.us_last_checked_at) as dbs_cleared_at
   from carer c
   left join dbs_fresh df using (user_id)
@@ -238,17 +217,62 @@ with carer as (
               and bc.check_type = 'right_to_work'
               and bc.status = 'cleared') as rtw_cleared_at
   from carer c
+), course_pass as (
+  select c.user_id,
+         tc.slug as course_slug,
+         exists (
+           select 1
+           from public.training_enrollments te
+           where te.carer_id  = c.user_id
+             and te.course_id = tc.id
+             and te.quiz_passed_at is not null
+         ) as passed
+  from carer c
+  cross join public.training_courses tc
+  where tc.required_for_agency_optin = true
+), required_set as (
+  select c.user_id,
+         cpr.course_slug,
+         cpr.always_required,
+         cpr.required_for_adults,
+         cpr.required_for_children
+  from carer c
+  join public.course_population_requirements cpr
+    on  cpr.always_required = true
+     or (cpr.required_for_adults  and c.works_with_adults)
+     or (cpr.required_for_children and c.works_with_children)
 ), training_gate as (
   select c.user_id,
-         coalesce(
-           (select count(*) from public.training_enrollments te
-              join public.training_courses tc on tc.id = te.course_id
-              where te.carer_id = c.user_id
-                and tc.required_for_agency_optin = true
-                and te.quiz_passed_at is not null), 0) as training_passed_count,
-         (select count(*) from public.training_courses tc
-            where tc.required_for_agency_optin = true) as training_required_count
+         (select count(*) from required_set rs where rs.user_id = c.user_id) as training_required_count,
+         (select count(*) from required_set rs
+            join course_pass cp
+              on cp.user_id = rs.user_id
+             and cp.course_slug = rs.course_slug
+           where rs.user_id = c.user_id and cp.passed) as training_passed_count,
+         (select coalesce(bool_and(cp.passed), false)
+            from required_set rs
+            left join course_pass cp
+              on cp.user_id = rs.user_id
+             and cp.course_slug = rs.course_slug
+           where rs.user_id = c.user_id) as all_required_passed,
+         (case
+            when c.works_with_children
+                 and c.works_with_children_admin_approved_at is null
+            then false
+            else true
+          end) as child_approval_ok
   from carer c
+), per_course as (
+  select c.user_id,
+         bool_or(cp.course_slug = 'manual-handling'           and cp.passed) as manual_handling_passed,
+         bool_or(cp.course_slug = 'infection-control'         and cp.passed) as infection_control_passed,
+         bool_or(cp.course_slug = 'food-hygiene'              and cp.passed) as food_hygiene_passed,
+         bool_or(cp.course_slug = 'medication-administration' and cp.passed) as medication_administration_passed,
+         bool_or(cp.course_slug = 'safeguarding-adults'       and cp.passed) as safeguarding_adults_passed,
+         bool_or(cp.course_slug = 'safeguarding-children'     and cp.passed) as safeguarding_children_passed
+  from carer c
+  left join course_pass cp on cp.user_id = c.user_id
+  group by c.user_id
 )
 select c.user_id,
        c.agency_opt_in_status,
@@ -257,6 +281,12 @@ select c.user_id,
        c.agency_opt_in_approved_at,
        c.agency_opt_in_rejected_reason,
        c.agency_opt_in_paused_reason,
+       c.works_with_adults,
+       c.works_with_children,
+       c.works_with_children_admin_approved_at,
+       c.agency_optin_grace_period_until,
+       (c.agency_optin_grace_period_until is not null
+          and c.agency_optin_grace_period_until > now()) as in_grace_period,
        cg.contract_ok,
        cg.contract_countersigned_at,
        dg.dbs_ok,
@@ -265,18 +295,24 @@ select c.user_id,
        rg.rtw_cleared_at,
        tg.training_passed_count,
        tg.training_required_count,
-       (tg.training_required_count > 0
-         and tg.training_passed_count >= tg.training_required_count) as training_ok,
+       coalesce(tg.all_required_passed and tg.child_approval_ok, false) as training_ok,
+       pc.manual_handling_passed,
+       pc.infection_control_passed,
+       pc.food_hygiene_passed,
+       pc.medication_administration_passed,
+       pc.safeguarding_adults_passed,
+       pc.safeguarding_children_passed,
        (cg.contract_ok
         and dg.dbs_ok
         and rg.rtw_ok
         and tg.training_required_count > 0
-        and tg.training_passed_count >= tg.training_required_count) as overall_ready
+        and coalesce(tg.all_required_passed and tg.child_approval_ok, false)) as overall_ready
 from carer c
   left join contract_gate cg using (user_id)
   left join dbs_gate      dg using (user_id)
   left join rtw_gate      rg using (user_id)
-  left join training_gate tg using (user_id);
+  left join training_gate tg using (user_id)
+  left join per_course    pc using (user_id);
 
 comment on view public.v_agency_opt_in_gates is
-  'Phase 2 + DBS US: DBS gate satisfied by either a fresh Enhanced DBS (Checkr) or an Update Service verification within 12 months with matching workforce.';
+  'Phase 2.1 + DBS US: per-carer Channel B opt-in gates. DBS gate satisfied by EITHER fresh Enhanced DBS (Checkr) OR an Update Service verification within 12 months whose workforce_type matches the carer.';
