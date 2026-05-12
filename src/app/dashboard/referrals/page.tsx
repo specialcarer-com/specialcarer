@@ -57,10 +57,32 @@ export default async function ReferralsPage() {
 
   const { data: credits } = await admin
     .from("referral_credits")
-    .select("id, amount_cents, reason, created_at, redeemed_at, expires_at")
+    .select(
+      "id, amount_cents, reason, created_at, redeemed_at, expires_at, redeemed_booking_id",
+    )
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(50);
+
+  function creditStatus(c: {
+    redeemed_at: string | null;
+    expires_at: string;
+    redeemed_booking_id: string | null;
+  }): { label: string; tone: "available" | "applied" | "expired" } {
+    if (c.redeemed_at) {
+      const shortBooking = c.redeemed_booking_id
+        ? c.redeemed_booking_id.slice(0, 8)
+        : "—";
+      return {
+        label: `Applied to booking #${shortBooking}`,
+        tone: "applied",
+      };
+    }
+    if (new Date(c.expires_at).getTime() < Date.now()) {
+      return { label: "Expired", tone: "expired" };
+    }
+    return { label: "Available", tone: "available" };
+  }
 
   const { data: balance } = await admin
     .from("v_user_credit_balance")
@@ -193,7 +215,7 @@ export default async function ReferralsPage() {
         </div>
 
         <div className="mt-6 p-6 rounded-2xl bg-white border border-slate-100">
-          <h2 className="text-lg font-semibold">Credit history</h2>
+          <h2 className="text-lg font-semibold">Credits history</h2>
           {(credits ?? []).length === 0 ? (
             <p className="mt-3 text-sm text-slate-600">
               No credits yet — credits appear here when a friend&rsquo;s
@@ -201,29 +223,47 @@ export default async function ReferralsPage() {
             </p>
           ) : (
             <ul className="mt-3 divide-y divide-slate-100">
-              {(credits ?? []).map((c) => (
-                <li
-                  key={c.id}
-                  className="py-2 flex items-center justify-between text-sm"
-                >
-                  <span>
-                    {c.reason === "referrer_reward"
-                      ? "Referral reward (you)"
-                      : c.reason === "referee_reward"
-                        ? "Welcome credit"
-                        : "Adjustment"}
-                    <span className="ml-2 text-xs text-slate-500">
-                      {new Date(c.created_at).toLocaleDateString()}
-                      {c.redeemed_at
-                        ? ` · redeemed ${new Date(c.redeemed_at).toLocaleDateString()}`
-                        : ""}
+              {(credits ?? []).map((c) => {
+                const status = creditStatus(c);
+                return (
+                  <li
+                    key={c.id}
+                    className="py-2 flex items-center justify-between gap-3 text-sm"
+                  >
+                    <span className="min-w-0">
+                      <span className="block">
+                        {c.reason === "referrer_reward"
+                          ? "Referral reward (you)"
+                          : c.reason === "referee_reward"
+                            ? "Welcome credit"
+                            : "Adjustment"}
+                      </span>
+                      <span className="block text-xs text-slate-500">
+                        {new Date(c.created_at).toLocaleDateString()}
+                        {c.redeemed_at
+                          ? ` · redeemed ${new Date(c.redeemed_at).toLocaleDateString()}`
+                          : ` · expires ${new Date(c.expires_at).toLocaleDateString()}`}
+                      </span>
                     </span>
-                  </span>
-                  <span className="font-semibold">
-                    £{(c.amount_cents / 100).toFixed(2)}
-                  </span>
-                </li>
-              ))}
+                    <span className="flex items-center gap-3">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                          status.tone === "available"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : status.tone === "applied"
+                              ? "bg-sky-50 text-sky-700"
+                              : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        {status.label}
+                      </span>
+                      <span className="font-semibold">
+                        £{(c.amount_cents / 100).toFixed(2)}
+                      </span>
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

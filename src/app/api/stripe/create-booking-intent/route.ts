@@ -12,6 +12,7 @@ import {
   inferCountryFromPostcode,
 } from "@/lib/care/postcode";
 import { geocodePostcode } from "@/lib/mapbox/server";
+import { applyCreditToBooking } from "@/lib/referrals/redemption";
 
 /**
  * POST /api/stripe/create-booking-intent
@@ -68,6 +69,9 @@ export async function POST(req: Request) {
     recipient_ids?: string[];
     preferences?: BookingPreferences;
     is_instant?: boolean;
+    // Referral credit (optional). Server-enforces 50% cap and balance;
+    // value passed here is treated as a "requested cents", capped down.
+    referral_credit_cents?: number;
   };
   const body = (await req.json()) as BookingBody;
 
@@ -293,12 +297,51 @@ export async function POST(req: Request) {
     }
   }
 
+  // Apply referral credit (if any) BEFORE creating the PaymentIntent so
+  // the seeker's authorisation amount is reduced. The booking row's
+  // `total_cents` deliberately stays at the full pre-credit value — the
+  // carer payout pipeline reads that. Only the PI amount and Stripe
+  // application_fee are adjusted to absorb the discount on platform side.
+  let appliedCreditCents = 0;
+  if (
+    typeof body.referral_credit_cents === "number" &&
+    body.referral_credit_cents > 0
+  ) {
+    try {
+      const credit = await applyCreditToBooking({
+        supabase: admin,
+        bookingId: booking.id,
+        userId: user.id,
+        requestedCents: body.referral_credit_cents,
+      });
+      if (credit.ok) {
+        appliedCreditCents = credit.value.appliedCents;
+      } else {
+        console.warn(
+          "[create-booking-intent] credit apply failed:",
+          credit.error.code,
+          credit.error.message,
+        );
+      }
+    } catch (err) {
+      console.error("[create-booking-intent] credit apply threw", err);
+    }
+  }
+  const intentAmount = totalCents - appliedCreditCents;
+  // Application fee scales with the seeker payment — platform absorbs the
+  // credit, so the platform fee is reduced by min(fee, credit). Carer
+  // still receives the full pre-credit subtotal on capture/transfer.
+  const intentApplicationFee = Math.max(
+    0,
+    platformFeeCents - appliedCreditCents,
+  );
+
   // Create PaymentIntent with manual capture — funds held in escrow
   const intent = await stripe.paymentIntents.create({
-    amount: totalCents,
+    amount: intentAmount,
     currency: body.currency,
     capture_method: "manual",
-    application_fee_amount: platformFeeCents,
+    application_fee_amount: intentApplicationFee,
     transfer_data: {
       destination: caregiverStripe.stripe_account_id,
     },
@@ -314,8 +357,8 @@ export async function POST(req: Request) {
     booking_id: booking.id,
     stripe_payment_intent_id: intent.id,
     status: "requires_payment_method",
-    amount_cents: totalCents,
-    application_fee_cents: platformFeeCents,
+    amount_cents: intentAmount,
+    application_fee_cents: intentApplicationFee,
     currency: body.currency,
     destination_account_id: caregiverStripe.stripe_account_id,
     raw: intent as unknown as Record<string, unknown>,
@@ -351,6 +394,8 @@ export async function POST(req: Request) {
     client_secret: intent.client_secret,
     total_cents: totalCents,
     platform_fee_cents: platformFeeCents,
+    referral_credit_applied_cents: appliedCreditCents,
+    amount_due_cents: intentAmount,
     currency: body.currency,
   });
 }

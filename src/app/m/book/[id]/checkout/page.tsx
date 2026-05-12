@@ -156,6 +156,93 @@ function CheckoutInner() {
     return null;
   }, [totalCentsParam, careType, weeklyCentsParam, weeksParam]);
 
+  // ── Referral credit ─────────────────────────────────────────────
+  // Pull the seeker's available balance + offer to apply it to this
+  // booking. We keep the booking's total_cents intact (carer payout
+  // invariant) and just lower the PaymentIntent amount via /apply-credit.
+  const [availableCents, setAvailableCents] = useState<number>(0);
+  const [appliedCents, setAppliedCents] = useState<number>(0);
+  const [creditBusy, setCreditBusy] = useState(false);
+  const [creditError, setCreditError] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/me/referral", {
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const j = (await res.json()) as { available_cents?: number };
+        if (!cancelled && typeof j.available_cents === "number") {
+          setAvailableCents(j.available_cents);
+        }
+      } catch {
+        /* soft-fail */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const maxApplicableCents =
+    totalCents != null
+      ? Math.min(availableCents, Math.floor(totalCents * 0.5))
+      : 0;
+  const dueNowCents =
+    totalCents != null ? Math.max(0, totalCents - appliedCents) : null;
+
+  async function applyCredit() {
+    if (!bookingId || creditBusy) return;
+    setCreditBusy(true);
+    setCreditError(null);
+    try {
+      const res = await fetch(
+        `/api/bookings/${encodeURIComponent(bookingId)}/apply-credit`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        },
+      );
+      const j = (await res.json().catch(() => ({}))) as {
+        applied_cents?: number;
+        error?: string;
+      };
+      if (!res.ok) {
+        setCreditError(j.error ?? "Could not apply credit.");
+        return;
+      }
+      setAppliedCents(j.applied_cents ?? 0);
+    } catch (err) {
+      setCreditError(err instanceof Error ? err.message : "Could not apply credit.");
+    } finally {
+      setCreditBusy(false);
+    }
+  }
+  async function removeCredit() {
+    if (!bookingId || creditBusy) return;
+    setCreditBusy(true);
+    setCreditError(null);
+    try {
+      const res = await fetch(
+        `/api/bookings/${encodeURIComponent(bookingId)}/apply-credit`,
+        { method: "DELETE", credentials: "include" },
+      );
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        setCreditError(j.error ?? "Could not remove credit.");
+        return;
+      }
+      setAppliedCents(0);
+    } catch (err) {
+      setCreditError(err instanceof Error ? err.message : "Could not remove credit.");
+    } finally {
+      setCreditBusy(false);
+    }
+  }
+
   if (!loaded) {
     return (
       <main className="min-h-[100dvh] bg-bg-screen pb-32">
@@ -279,13 +366,99 @@ function CheckoutInner() {
           </ul>
         </Card>
 
+        {/* Referral credit — visiting only, while a booking + balance exist. */}
+        {careType === "visiting" &&
+          bookingId &&
+          totalCents != null &&
+          availableCents > 0 && (
+            <Card>
+              <p className="text-[14px] font-bold text-heading mb-1">
+                Referral credit
+              </p>
+              <p className="text-[12.5px] text-subheading">
+                You have{" "}
+                <span className="font-semibold text-heading">
+                  {formatMoney(availableCents, currency)}
+                </span>{" "}
+                in referral credit available.
+              </p>
+              {appliedCents === 0 ? (
+                <>
+                  <p className="mt-1 text-[11.5px] text-subheading leading-relaxed">
+                    Apply up to{" "}
+                    <span className="font-semibold text-heading">
+                      {formatMoney(maxApplicableCents, currency)}
+                    </span>{" "}
+                    (50% of this booking).
+                  </p>
+                  <div className="mt-3">
+                    <Button
+                      onClick={applyCredit}
+                      disabled={creditBusy || maxApplicableCents <= 0}
+                    >
+                      {creditBusy
+                        ? "Applying…"
+                        : `Apply ${formatMoney(maxApplicableCents, currency)} credit`}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="mt-1 text-[12.5px] text-heading">
+                    <span className="font-semibold">
+                      −{formatMoney(appliedCents, currency)}
+                    </span>{" "}
+                    applied to this booking.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={removeCredit}
+                    disabled={creditBusy}
+                    className="mt-2 text-[12.5px] text-primary font-semibold underline underline-offset-2 disabled:opacity-60"
+                  >
+                    {creditBusy ? "Removing…" : "Remove credit"}
+                  </button>
+                </>
+              )}
+              {creditError && (
+                <p
+                  aria-live="polite"
+                  className="mt-2 text-[12px] text-[#C22] bg-[#FBEBEB] border border-[#F3CCCC] rounded-btn px-2.5 py-1.5"
+                >
+                  {creditError}
+                </p>
+              )}
+            </Card>
+          )}
+
         {/* Total — visiting from API total_cents, live-in derived. */}
         {totalCents != null && (
           <Card>
             <p className="text-[14px] font-bold text-heading mb-2">Total</p>
-            <p className="text-[20px] font-bold text-heading">
-              {formatMoney(totalCents, currency)}
-            </p>
+            {appliedCents > 0 && dueNowCents != null ? (
+              <>
+                <ul className="space-y-1 text-[13.5px] text-heading">
+                  <li className="flex items-center justify-between">
+                    <span className="text-subheading">Subtotal</span>
+                    <span>{formatMoney(totalCents, currency)}</span>
+                  </li>
+                  <li className="flex items-center justify-between">
+                    <span className="text-subheading">Referral credit</span>
+                    <span className="text-primary">
+                      −{formatMoney(appliedCents, currency)}
+                    </span>
+                  </li>
+                </ul>
+                <p className="mt-2 text-[20px] font-bold text-heading flex items-center justify-between">
+                  <span>Due now</span>
+                  <span>{formatMoney(dueNowCents, currency)}</span>
+                </p>
+              </>
+            ) : (
+              <p className="text-[20px] font-bold text-heading">
+                {formatMoney(totalCents, currency)}
+              </p>
+            )}
             <p className="mt-2 text-[11.5px] text-subheading leading-relaxed">
               {careType === "live_in"
                 ? "Indicative weekly subtotal — final quote follows confirmation."

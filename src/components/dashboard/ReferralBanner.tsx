@@ -120,7 +120,11 @@ export default function ReferralBanner({ data, role }: Props) {
         <Stat
           label="Available credit"
           value={`£${(data.availableCents / 100).toFixed(2)}`}
-          hint="Apply at checkout (coming soon)"
+          hint={
+            data.availableCents > 0
+              ? `Apply your £${(data.availableCents / 100).toFixed(2)} balance at checkout.`
+              : "Earn credit when a friend completes their first paid booking."
+          }
         />
       </div>
 

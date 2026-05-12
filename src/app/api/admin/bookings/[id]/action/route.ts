@@ -7,6 +7,7 @@ import {
   findPendingClaimForUser,
   qualifyClaim,
 } from "@/lib/referrals/engine";
+import { unredeemCreditsForBooking } from "@/lib/referrals/redemption";
 
 export const dynamic = "force-dynamic";
 
@@ -204,6 +205,13 @@ export async function POST(
       targetId: bookingId,
       details: { ...snapshot, reason },
     });
+    // Un-redeem any referral credit applied to this booking — only credits
+    // still within their expiry window are restored.
+    try {
+      await unredeemCreditsForBooking({ supabase: admin, bookingId });
+    } catch (err) {
+      console.error("[admin.booking.refund] unredeem failed", err);
+    }
     return NextResponse.json({ ok: true, status: "refunded" });
   }
 

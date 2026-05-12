@@ -76,6 +76,10 @@ async function loadBatches(
 
   if (error) throw new Error(error.message);
 
+  // Invariant: carer payout is calculated from the booking's full
+  // pre-credit pay total. Referral credit redeemed at checkout is
+  // platform-absorbed (only the seeker's PaymentIntent amount is reduced)
+  // — bookings.referral_credit_applied_cents must NOT enter this sum.
   const byCarer = new Map<string, CarerBatch>();
   for (const b of (bookings as Booking[] | null) ?? []) {
     const carerId = b.caregiver_id;

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/server";
+import { unredeemCreditsForBooking } from "@/lib/referrals/redemption";
 
 export const dynamic = "force-dynamic";
 
@@ -106,6 +107,15 @@ export async function POST(
         updated_at: now,
       })
       .eq("id", bookingId);
+
+    // Un-redeem any referral credit applied to this booking. Idempotent —
+    // safe to call even when nothing was applied. Expired credits are
+    // intentionally left spent.
+    try {
+      await unredeemCreditsForBooking({ supabase: admin, bookingId });
+    } catch (err) {
+      console.error("[booking.cancel] unredeem failed", err);
+    }
 
     return NextResponse.json({ ok: true, status: "cancelled" });
   }

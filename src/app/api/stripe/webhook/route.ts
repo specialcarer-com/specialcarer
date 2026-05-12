@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { unredeemCreditsForBooking } from "@/lib/referrals/redemption";
 
 export const runtime = "nodejs";
 
@@ -201,6 +202,48 @@ export async function POST(req: Request) {
                 : "partially_refunded",
             })
             .eq("stripe_payment_intent_id", pid);
+          // Restore any referral credit on the underlying booking. Idempotent
+          // — the webhook event log above guarantees this body only runs
+          // once per Stripe event id, and `unredeemCreditsForBooking` is
+          // itself a no-op the second time round.
+          try {
+            const { data: pay } = await admin
+              .from("payments")
+              .select("booking_id")
+              .eq("stripe_payment_intent_id", pid)
+              .maybeSingle();
+            if (pay?.booking_id) {
+              await unredeemCreditsForBooking({
+                supabase: admin,
+                bookingId: pay.booking_id as string,
+              });
+            }
+          } catch (err) {
+            console.error("[stripe.webhook] unredeem on refund failed", err);
+          }
+        }
+        break;
+      }
+      case "payment_intent.canceled": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        await admin
+          .from("payments")
+          .update({
+            status: "cancelled",
+            raw: pi as unknown as Record<string, unknown>,
+          })
+          .eq("stripe_payment_intent_id", pi.id);
+        // Restore referral credit if any was applied.
+        try {
+          const bookingId = pi.metadata?.booking_id;
+          if (bookingId) {
+            await unredeemCreditsForBooking({
+              supabase: admin,
+              bookingId,
+            });
+          }
+        } catch (err) {
+          console.error("[stripe.webhook] unredeem on PI cancel failed", err);
         }
         break;
       }
