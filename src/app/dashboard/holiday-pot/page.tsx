@@ -74,7 +74,7 @@ export default async function CarerHolidayPotPage() {
         .order("created_at", { ascending: false })
         .limit(20),
       admin
-        .from("leave_requests")
+        .from("holiday_leave_requests")
         .select(
           "id, requested_hours, requested_amount_cents, status, start_date, end_date, created_at",
         )

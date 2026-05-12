@@ -70,7 +70,7 @@ export async function GET() {
 
   const admin = createAdminClient();
   const { data: rows } = await admin
-    .from("leave_requests")
+    .from("holiday_leave_requests")
     .select(
       "id, requested_hours, requested_amount_cents, status, reason, start_date, end_date, admin_notes, decided_at, paid_at, created_at",
     )
@@ -129,7 +129,7 @@ export async function POST(req: Request) {
   }
 
   const { data: inserted, error } = await admin
-    .from("leave_requests")
+    .from("holiday_leave_requests")
     .insert({
       carer_id: user.id,
       requested_hours: hours,

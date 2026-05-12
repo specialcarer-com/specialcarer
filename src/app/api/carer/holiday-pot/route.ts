@@ -65,7 +65,7 @@ export async function GET() {
     .limit(20);
 
   const { data: pending } = await admin
-    .from("leave_requests")
+    .from("holiday_leave_requests")
     .select("requested_amount_cents")
     .eq("carer_id", user.id)
     .eq("status", "pending");

@@ -51,7 +51,7 @@ export default async function AdminLeaveRequestsPage({
   const statusFilter = sp.status ?? "pending";
 
   let q = admin
-    .from("leave_requests")
+    .from("holiday_leave_requests")
     .select(
       "id, carer_id, requested_hours, requested_amount_cents, status, reason, start_date, end_date, admin_notes, decided_at, created_at",
     )

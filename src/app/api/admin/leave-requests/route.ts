@@ -30,7 +30,7 @@ export async function GET(req: Request) {
   const admin = createAdminClient();
 
   let q = admin
-    .from("leave_requests")
+    .from("holiday_leave_requests")
     .select(
       "id, carer_id, requested_hours, requested_amount_cents, status, reason, start_date, end_date, admin_notes, decided_at, paid_at, created_at",
     )

@@ -72,8 +72,8 @@ end $$;
 -- Writes are service-role only — no insert/update/delete policy for
 -- 'authenticated', so RLS denies by default.
 
--- 2. leave_requests ----------------------------------------------------------
-create table if not exists public.leave_requests (
+-- 2. holiday_leave_requests --------------------------------------------------
+create table if not exists public.holiday_leave_requests (
   id                       uuid primary key default gen_random_uuid(),
   carer_id                 uuid not null references public.profiles(id) on delete cascade,
   requested_hours          numeric(6,2) not null check (requested_hours > 0),
@@ -91,19 +91,19 @@ create table if not exists public.leave_requests (
   created_at               timestamptz not null default now()
 );
 
-create index if not exists idx_leave_requests_carer_status_created
-  on public.leave_requests (carer_id, status, created_at desc);
+create index if not exists idx_holiday_leave_requests_carer_status_created
+  on public.holiday_leave_requests (carer_id, status, created_at desc);
 
-alter table public.leave_requests enable row level security;
+alter table public.holiday_leave_requests enable row level security;
 
 -- carer-self read
 do $$ begin
   if not exists (
     select 1 from pg_policies
-    where policyname = 'leave_requests_self_read'
-      and tablename = 'leave_requests'
+    where policyname = 'holiday_leave_requests_self_read'
+      and tablename = 'holiday_leave_requests'
   ) then
-    create policy leave_requests_self_read on public.leave_requests
+    create policy holiday_leave_requests_self_read on public.holiday_leave_requests
       for select to authenticated
       using (carer_id = (select auth.uid()));
   end if;
@@ -113,10 +113,10 @@ end $$;
 do $$ begin
   if not exists (
     select 1 from pg_policies
-    where policyname = 'leave_requests_self_insert'
-      and tablename = 'leave_requests'
+    where policyname = 'holiday_leave_requests_self_insert'
+      and tablename = 'holiday_leave_requests'
   ) then
-    create policy leave_requests_self_insert on public.leave_requests
+    create policy holiday_leave_requests_self_insert on public.holiday_leave_requests
       for insert to authenticated
       with check (
         carer_id = (select auth.uid())
@@ -129,10 +129,10 @@ end $$;
 do $$ begin
   if not exists (
     select 1 from pg_policies
-    where policyname = 'leave_requests_admin_all'
-      and tablename = 'leave_requests'
+    where policyname = 'holiday_leave_requests_admin_all'
+      and tablename = 'holiday_leave_requests'
   ) then
-    create policy leave_requests_admin_all on public.leave_requests
+    create policy holiday_leave_requests_admin_all on public.holiday_leave_requests
       for all to authenticated
       using (
         exists (
@@ -169,5 +169,5 @@ comment on view public.v_holiday_pot_balances is
 comment on table public.holiday_pot_ledger is
   'Phase 4 stage 1: signed ledger of holiday-pot movements (+ accrued, − debited/expired, ± adjusted). Source of truth for v_holiday_pot_balances.';
 
-comment on table public.leave_requests is
+comment on table public.holiday_leave_requests is
   'Phase 4 stage 1: carer-initiated request to draw down accrued holiday pot. Admin approves → payroll engine later writes the matching ledger debit and pays via the next run (Phase 4 stage 2).';

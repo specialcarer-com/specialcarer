@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  *
  * Persists the admin decision. Approval does NOT yet write a ledger debit —
  * that disbursement happens at the next payroll run when the engine picks up
- * approved + unpaid leave_requests, writes one 'debited_paid_leave' ledger
+ * approved + unpaid holiday_leave_requests, writes one 'debited_paid_leave' ledger
  * entry per request and adds a matching payslip line.
  * TODO(phase-4 stage 2): wire this disbursement into run-engine.executeRun —
  * see phase4-spec.md "Item B: Payroll integration".
@@ -42,7 +42,7 @@ export async function POST(
 
   // Verify the request exists and is pending.
   const { data: existing } = await admin
-    .from("leave_requests")
+    .from("holiday_leave_requests")
     .select("id, status")
     .eq("id", id)
     .maybeSingle<{ id: string; status: string }>();
@@ -59,7 +59,7 @@ export async function POST(
   const newStatus = body.decision === "approve" ? "approved" : "rejected";
 
   const { data: updated, error } = await admin
-    .from("leave_requests")
+    .from("holiday_leave_requests")
     .update({
       status: newStatus,
       admin_id: guard.admin.id,
