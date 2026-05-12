@@ -168,14 +168,15 @@ export async function renderPayslipPdf(data: PayslipData): Promise<Uint8Array> {
   ];
   for (const [label, val, kind] of rows) {
     drawText(page, label, margin + 4, y, 10, fontReg);
-    const sign = kind === "debit" ? "−" : kind === "info" ? " " : "+";
+    const sign = kind === "debit" ? "-" : kind === "info" ? " " : "+";
     const color = kind === "info" ? MUTED : SLATE;
     drawText(page, `${sign} ${gbp(val)}`, width - margin - 90, y, 10, fontReg, color);
     y -= 16;
   }
 
-  // Net pay row — highlighted
-  y -= 4;
+  // Net pay row — highlighted. Add extra gap so the band doesn't
+  // overlap the holiday row above (height 28 > prior gap 16+4=20).
+  y -= 14;
   page.drawRectangle({
     x: margin,
     y: y - 6,
