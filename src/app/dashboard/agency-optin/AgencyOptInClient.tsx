@@ -91,12 +91,8 @@ export default function AgencyOptInClient({
     }
   }
   async function onRequestDbs() {
-    const { ok, data } = await callJson("/api/agency-optin/request-dbs");
-    if (ok && data?.action === "redirect" && typeof data.redirect_to === "string") {
-      router.push(data.redirect_to);
-    } else if (ok) {
-      await refresh();
-    }
+    // Route to the dual-path DBS chooser (Update Service vs fresh DBS).
+    router.push("/dashboard/agency-optin/dbs");
   }
   async function onRequestRtw() {
     const { ok, data } = await callJson("/api/agency-optin/request-rtw-reverify");

@@ -28,6 +28,14 @@
     {
       "path": "/api/cron/expire-agency-optin-grace",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/dbs-update-service-recheck",
+      "schedule": "12 4 * * *"
+    },
+    {
+      "path": "/api/cron/dbs-update-service-reminder",
+      "schedule": "47 8 * * *"
     }
   ]
 }
