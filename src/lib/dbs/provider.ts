@@ -2,7 +2,7 @@
  * DBS provider abstraction — Update Service path.
  *
  * The Update Service (https://www.gov.uk/dbs-update-service) lets a carer
- * keep an existing Enhanced DBS certificate "live" with an annual £16
+ * keep an existing Enhanced DBS certificate "live" with a £16/year
  * subscription. With consent, the platform can verify status online at
  * https://secure.crbonline.gov.uk/enquiry/enquirySearch.do — saving the
  * £40-60 cost of a fresh Checkr DBS.
@@ -69,13 +69,28 @@ export function getDbsProvider(): DbsProvider {
 }
 
 /**
- * Compute the next 12-month re-check timestamp from a base instant.
- * Exposed for testing.
+ * Default re-check cadence: 6 months. Configurable via
+ * `DBS_RECHECK_INTERVAL_DAYS` (any positive integer; defaults to 183).
+ */
+export const DEFAULT_DBS_RECHECK_INTERVAL_DAYS = 183;
+
+export function getDbsRecheckIntervalDays(): number {
+  const raw = process.env.DBS_RECHECK_INTERVAL_DAYS;
+  if (!raw) return DEFAULT_DBS_RECHECK_INTERVAL_DAYS;
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return DEFAULT_DBS_RECHECK_INTERVAL_DAYS;
+  }
+  return parsed;
+}
+
+/**
+ * Compute the next re-check timestamp from a base instant.
+ * Defaults to +6 months (183 days). Exposed for testing.
  */
 export function computeNextUsCheckDueAt(from: Date = new Date()): Date {
-  const next = new Date(from.getTime());
-  next.setUTCFullYear(next.getUTCFullYear() + 1);
-  return next;
+  const days = getDbsRecheckIntervalDays();
+  return new Date(from.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
 /**

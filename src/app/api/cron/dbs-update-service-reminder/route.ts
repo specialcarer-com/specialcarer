@@ -67,13 +67,13 @@ export async function GET(req: Request) {
         Math.ceil((dueDate.getTime() - now.getTime()) / (24 * 3600 * 1000)),
       );
       const name = profile?.full_name ?? "there";
-      const subject = `Your annual DBS Update Service check is in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`;
+      const subject = `Your DBS Update Service check is in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`;
       const html = `<!DOCTYPE html>
 <html><body style="font-family:'Plus Jakarta Sans',Arial,sans-serif;background:#F7FAFA;margin:0;padding:24px;color:#2F2E31">
   <div style="max-width:560px;margin:0 auto;background:#FFFFFF;border-radius:16px;padding:32px">
-    <h2 style="color:#0E7C7B;margin:0 0 8px">Annual DBS recheck due soon</h2>
+    <h2 style="color:#0E7C7B;margin:0 0 8px">DBS recheck due soon</h2>
     <p>Hi ${name},</p>
-    <p>Your annual DBS Update Service status check is due on <strong>${dueDate.toLocaleDateString("en-GB")}</strong> (${daysLeft} day${daysLeft === 1 ? "" : "s"} away).</p>
+    <p>Your DBS Update Service status check is due on <strong>${dueDate.toLocaleDateString("en-GB")}</strong> (${daysLeft} day${daysLeft === 1 ? "" : "s"} away). We recheck every 6 months as a safeguarding measure.</p>
     <p>Please make sure your £16/year DBS Update Service subscription is <strong>still active</strong> — if it lapses, your Channel B gate will go red and we&apos;ll have to arrange a fresh DBS.</p>
     <p>You can check your subscription status here: <a href="https://www.gov.uk/dbs-update-service" style="color:#0E7C7B">gov.uk/dbs-update-service</a></p>
     <p style="margin:24px 0">
@@ -87,7 +87,7 @@ export async function GET(req: Request) {
       const text = [
         `Hi ${name},`,
         "",
-        `Your annual DBS Update Service status check is due on ${dueDate.toLocaleDateString("en-GB")} (${daysLeft} days).`,
+        `Your DBS Update Service status check is due on ${dueDate.toLocaleDateString("en-GB")} (${daysLeft} days).`,
         "Please make sure your £16/year DBS Update Service subscription is still active.",
         "Check: https://www.gov.uk/dbs-update-service",
         "",

@@ -54,10 +54,37 @@ describe("validateUpdateServiceInput", () => {
 });
 
 describe("computeNextUsCheckDueAt", () => {
-  it("adds exactly 12 months", () => {
+  const originalInterval = process.env.DBS_RECHECK_INTERVAL_DAYS;
+  afterEach(() => {
+    if (originalInterval === undefined) {
+      delete process.env.DBS_RECHECK_INTERVAL_DAYS;
+    } else {
+      process.env.DBS_RECHECK_INTERVAL_DAYS = originalInterval;
+    }
+  });
+
+  it("defaults to 183 days (~6 months)", () => {
+    delete process.env.DBS_RECHECK_INTERVAL_DAYS;
     const from = new Date("2026-05-12T10:00:00.000Z");
     const next = computeNextUsCheckDueAt(from);
-    assert.equal(next.toISOString(), "2027-05-12T10:00:00.000Z");
+    const expected = new Date(from.getTime() + 183 * 24 * 60 * 60 * 1000);
+    assert.equal(next.toISOString(), expected.toISOString());
+  });
+
+  it("honours DBS_RECHECK_INTERVAL_DAYS env override", () => {
+    process.env.DBS_RECHECK_INTERVAL_DAYS = "30";
+    const from = new Date("2026-05-12T10:00:00.000Z");
+    const next = computeNextUsCheckDueAt(from);
+    const expected = new Date(from.getTime() + 30 * 24 * 60 * 60 * 1000);
+    assert.equal(next.toISOString(), expected.toISOString());
+  });
+
+  it("falls back to default when env is invalid", () => {
+    process.env.DBS_RECHECK_INTERVAL_DAYS = "not-a-number";
+    const from = new Date("2026-05-12T10:00:00.000Z");
+    const next = computeNextUsCheckDueAt(from);
+    const expected = new Date(from.getTime() + 183 * 24 * 60 * 60 * 1000);
+    assert.equal(next.toISOString(), expected.toISOString());
   });
 });
 

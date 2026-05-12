@@ -117,9 +117,11 @@ end $$;
 --   (a) the existing fresh Enhanced DBS branch passes (any source other
 --       than 'update_service' — covers historic rows with NULL source
 --       via coalesce), OR
---   (b) source='update_service' check with last_us_check_at within 12
+--   (b) source='update_service' check with last_us_check_at within 6
 --       months whose latest us_check_result.status = 'current' AND
 --       whose workforce_type covers the carer's needs.
+--       Recheck cadence is 6 months (gov.uk Update Service has no public
+--       API; admins verify via the gov.uk portal and stamp the result).
 create or replace view public.v_agency_opt_in_gates as
 with carer as (
   select p.id as user_id,
@@ -174,7 +176,7 @@ with carer as (
            where bc.user_id = c.user_id
              and bc.source = 'update_service'
              and bc.last_us_check_at is not null
-             and bc.last_us_check_at > (now() - interval '12 months')
+             and bc.last_us_check_at > (now() - interval '6 months')
              and coalesce(bc.us_check_result ->> 'status', '') = 'current'
              and (
                bc.workforce_type = 'both'
@@ -315,4 +317,4 @@ from carer c
   left join per_course    pc using (user_id);
 
 comment on view public.v_agency_opt_in_gates is
-  'Phase 2.1 + DBS US: per-carer Channel B opt-in gates. DBS gate satisfied by EITHER fresh Enhanced DBS (Checkr) OR an Update Service verification within 12 months whose workforce_type matches the carer.';
+  'Phase 2.1 + DBS US: per-carer Channel B opt-in gates. DBS gate satisfied by EITHER fresh Enhanced DBS (Checkr) OR an Update Service verification within 6 months whose workforce_type matches the carer.';

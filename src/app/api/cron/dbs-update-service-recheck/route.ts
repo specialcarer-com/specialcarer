@@ -12,10 +12,11 @@ export const dynamic = "force-dynamic";
  * GET /api/cron/dbs-update-service-recheck
  *
  * Daily. Picks carers whose Update Service-backed DBS row is due for
- * its annual recheck (`next_us_check_due_at <= now()`), calls the
+ * its recheck (`next_us_check_due_at <= now()`), calls the
  * provider's verifyUpdateService(), and:
  *
- * - 'current'   → push the recheck timestamp + 12 months, gate stays green.
+ * - 'current'   → push the recheck timestamp +DBS_RECHECK_INTERVAL_DAYS
+ *                 (default 183 ≈ 6 months); gate stays green.
  * - 'changed'   → mark row as failed, raise a dbs_change_event row, AND
  *                 flip the carer's agency_opt_in_status to 'paused' so
  *                 they cannot accept new Channel B bookings.
