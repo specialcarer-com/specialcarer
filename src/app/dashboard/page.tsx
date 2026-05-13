@@ -287,7 +287,7 @@ export default async function DashboardPage() {
       .maybeSingle();
     referralData = {
       code,
-      shareUrl: `${origin}/r/${code}`,
+      shareUrl: `${origin}/refer/${code}`,
       invited,
       qualified,
       availableCents: Number(balance?.available_cents ?? 0),

@@ -53,7 +53,7 @@ export async function GET() {
 
   return NextResponse.json({
     code,
-    share_url: `${origin}/r/${code}`,
+    share_url: `${origin}/refer/${code}`,
     invited,
     qualified,
     available_cents: Number(balance.data?.available_cents ?? 0),
