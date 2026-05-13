@@ -157,6 +157,7 @@ export default function CoverageMap({
   initialBounds = "all",
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [stub, setStub] = useState(false);
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
@@ -217,6 +218,34 @@ export default function CoverageMap({
       });
       mapInstance = map;
 
+      // Recover from the common case where the container has height 0
+      // at mount time (e.g. component far below the fold, parent layout
+      // not yet settled). Without this, mapbox-gl defaults the canvas to
+      // ~300px and never repaints, leaving a blank teaser.
+      const triggerResize = () => {
+        try {
+          map.resize();
+        } catch {
+          /* map may be torn down already */
+        }
+      };
+      // One immediate retry on the next animation frame…
+      if (typeof window !== "undefined") {
+        window.requestAnimationFrame(triggerResize);
+        // …and a delayed one to catch late-hydrating CSS / font swaps.
+        window.setTimeout(triggerResize, 400);
+      }
+      // Live-recover whenever the container itself changes size.
+      let resizeObserver: ResizeObserver | null = null;
+      if (
+        typeof ResizeObserver !== "undefined" &&
+        containerRef.current
+      ) {
+        resizeObserver = new ResizeObserver(triggerResize);
+        resizeObserver.observe(containerRef.current);
+      }
+      resizeObserverRef.current = resizeObserver;
+
       map.addControl(
         new mapboxgl.NavigationControl({ showCompass: false }),
         "top-right",
@@ -261,6 +290,10 @@ export default function CoverageMap({
 
     return () => {
       cancelled = true;
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+        resizeObserverRef.current = null;
+      }
       if (popupInstance) popupInstance.remove();
       for (const m of markers) m.remove();
       if (mapInstance) mapInstance.remove();
