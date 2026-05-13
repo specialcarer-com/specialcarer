@@ -17,6 +17,8 @@ type LeaveRow = {
   end_date: string | null;
   admin_notes: string | null;
   decided_at: string | null;
+  paid_at: string | null;
+  paid_via_run_id: string | null;
   created_at: string;
 };
 
@@ -53,7 +55,7 @@ export default async function AdminLeaveRequestsPage({
   let q = admin
     .from("holiday_leave_requests")
     .select(
-      "id, carer_id, requested_hours, requested_amount_cents, status, reason, start_date, end_date, admin_notes, decided_at, created_at",
+      "id, carer_id, requested_hours, requested_amount_cents, status, reason, start_date, end_date, admin_notes, decided_at, paid_at, paid_via_run_id, created_at",
     )
     .order("created_at", { ascending: false })
     .limit(200);
@@ -188,6 +190,19 @@ export default async function AdminLeaveRequestsPage({
                     >
                       {r.status}
                     </span>
+                    {r.status === "approved" && !r.paid_at && (
+                      <p className="mt-1 text-xs" style={{ color: "#0E7C7B" }}>
+                        Will be paid in next run
+                      </p>
+                    )}
+                    {r.status === "paid" && r.paid_via_run_id && (
+                      <p className="mt-1 text-xs text-slate-500">
+                        Paid via run{" "}
+                        <span className="font-mono">
+                          {r.paid_via_run_id.slice(0, 8)}
+                        </span>
+                      </p>
+                    )}
                     {r.admin_notes && (
                       <p className="mt-1 text-xs text-slate-400 italic">
                         {r.admin_notes}

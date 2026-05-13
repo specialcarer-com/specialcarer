@@ -17,7 +17,11 @@ import { computePay, taxPeriodForDate } from "./compute-pay";
 import { taxYearForDate } from "./tax-constants";
 import { renderPayslipPdf, type PayslipData } from "./render-payslip";
 import { sendEmail } from "@/lib/email/smtp";
-import { computeHolidayLedgerEntry } from "./holiday-pot";
+import {
+  computeHolidayDisbursementForCarer,
+  computeHolidayLedgerEntry,
+  type LeaveRequestForDisbursement,
+} from "./holiday-pot";
 
 export const EMPLOYER_NAME = "All Care 4 U Group Ltd";
 const PAYSLIP_BUCKET = "payslips";
@@ -160,6 +164,87 @@ function periodLabel(periodStart: string): string {
 }
 
 /**
+ * Phase 4 stage 2 — load approved+unpaid leave requests and the carer's
+ * current ledger balance, then return the disbursement decision plus the
+ * raw decision so the caller can apply rejections and snapshot which
+ * requests are scheduled to pay this run.
+ *
+ * Returns { decision } where decision.total_payout_cents is the gross amount
+ * that should be added to the carer's payslip as a taxable holiday-payout
+ * line. The caller is also responsible for auto-rejecting the requests in
+ * decision.to_reject before computing pay so they don't keep being retried.
+ */
+async function loadHolidayDisbursement(
+  admin: SupabaseClient,
+  carerId: string,
+): Promise<{
+  decision: ReturnType<typeof computeHolidayDisbursementForCarer>;
+  requestIds: string[];
+}> {
+  const [{ data: requests }, { data: balanceRow }] = await Promise.all([
+    admin
+      .from("holiday_leave_requests")
+      .select("id, requested_hours, requested_amount_cents, created_at")
+      .eq("carer_id", carerId)
+      .eq("status", "approved")
+      .is("paid_at", null)
+      .is("paid_via_run_id", null)
+      .order("created_at", { ascending: true }),
+    admin
+      .from("v_holiday_pot_balances")
+      .select("balance_cents")
+      .eq("carer_id", carerId)
+      .maybeSingle<{ balance_cents: number | null }>(),
+  ]);
+
+  const reqList: LeaveRequestForDisbursement[] = (requests ?? []).map((r) => {
+    const row = r as {
+      id: string;
+      requested_hours: number | string;
+      requested_amount_cents: number;
+      created_at: string;
+    };
+    return {
+      id: row.id,
+      requested_hours: Number(row.requested_hours),
+      requested_amount_cents: row.requested_amount_cents,
+      created_at: row.created_at,
+    };
+  });
+
+  const decision = computeHolidayDisbursementForCarer({
+    requests: reqList,
+    balanceCents: balanceRow?.balance_cents ?? 0,
+  });
+  return {
+    decision,
+    requestIds: decision.to_pay.map((p) => p.request_id),
+  };
+}
+
+/**
+ * Apply the rejections decided by computeHolidayDisbursementForCarer — sets
+ * status='rejected' and admin_notes on each. Run at preview time so the
+ * carer sees the rejection before payroll executes.
+ */
+async function applyDisbursementRejections(
+  admin: SupabaseClient,
+  rejections: Array<{ request_id: string; reason: string }>,
+): Promise<void> {
+  for (const r of rejections) {
+    await admin
+      .from("holiday_leave_requests")
+      .update({
+        status: "rejected",
+        admin_notes: r.reason,
+        decided_at: new Date().toISOString(),
+      })
+      .eq("id", r.request_id)
+      .eq("status", "approved");
+  }
+}
+
+/**
  * Compute draft payouts, upload draft payslip PDFs, mark run as preview_open,
  * and notify each carer.
  */
@@ -175,7 +260,22 @@ export async function openPreview(
   const taxPeriod = taxPeriodForDate(periodEndDate);
   const errors: string[] = [];
 
-  for (const [carerId, batch] of batches) {
+  // Phase 4 stage 2: a carer with no bookings this period but with approved
+  // unpaid leave still needs a payslip so they get paid. Build the union of
+  // carer ids: batches ∪ carers with approved+unpaid leave.
+  const { data: leaveCarers } = await admin
+    .from("holiday_leave_requests")
+    .select("carer_id")
+    .eq("status", "approved")
+    .is("paid_at", null)
+    .is("paid_via_run_id", null);
+  const leaveCarerIds = new Set<string>(
+    (leaveCarers ?? []).map((r) => (r as { carer_id: string }).carer_id),
+  );
+  const allCarerIds = new Set<string>([...batches.keys(), ...leaveCarerIds]);
+
+  for (const carerId of allCarerIds) {
+    const batch = batches.get(carerId);
     try {
       const { data: profile } = await admin
         .from("profiles")
@@ -189,9 +289,21 @@ export async function openPreview(
           ni_number: string | null;
         }>();
 
+      const { decision, requestIds } = await loadHolidayDisbursement(admin, carerId);
+      await applyDisbursementRejections(admin, decision.to_reject);
+      const holidayPayoutCents = decision.total_payout_cents;
+
+      const bookingsGross = batch?.total_gross_cents ?? 0;
+      const bookingsItems = batch?.items ?? [];
+      const totalGrossForCompute = bookingsGross + holidayPayoutCents;
+      if (totalGrossForCompute <= 0) {
+        // Nothing to pay — skip this carer entirely.
+        continue;
+      }
+
       const ytd = await getYtd(admin, carerId, taxYear);
       const pay = computePay({
-        gross_cents: batch.total_gross_cents,
+        gross_cents: totalGrossForCompute,
         ytd_gross_cents: ytd.ytd_gross,
         ytd_paye_cents: ytd.ytd_paye,
         tax_year: taxYear,
@@ -207,18 +319,20 @@ export async function openPreview(
             carer_id: carerId,
             period_start: run.period_start,
             period_end: run.period_end,
-            booking_count: batch.items.length,
-            total_pay_cents: batch.total_gross_cents,
+            booking_count: bookingsItems.length,
+            total_pay_cents: bookingsGross,
             gross_pay_cents: pay.gross_cents,
             paye_deducted_cents: pay.paye_cents,
             ni_employee_cents: pay.ni_employee_cents,
             ni_employer_cents: pay.ni_employer_cents,
             holiday_accrued_cents: pay.holiday_accrued_cents,
+            holiday_payout_cents: holidayPayoutCents,
+            holiday_payout_request_ids: requestIds,
             net_pay_cents: pay.net_cents,
             tax_year: taxYear,
             tax_code: pay.effective_tax_code,
             run_id: run.id,
-            currency: batch.currency,
+            currency: batch?.currency ?? "gbp",
             status: "draft",
           },
           { onConflict: "carer_id,period_start" },
@@ -231,14 +345,16 @@ export async function openPreview(
       }
 
       // Items
-      await admin.from("org_carer_payout_items").upsert(
-        batch.items.map((it) => ({
-          payout_id: payout.id,
-          booking_id: it.booking_id,
-          carer_pay_cents: it.pay_cents,
-        })),
-        { onConflict: "payout_id,booking_id" },
-      );
+      if (bookingsItems.length > 0) {
+        await admin.from("org_carer_payout_items").upsert(
+          bookingsItems.map((it) => ({
+            payout_id: payout.id,
+            booking_id: it.booking_id,
+            carer_pay_cents: it.pay_cents,
+          })),
+          { onConflict: "payout_id,booking_id" },
+        );
+      }
 
       // Render and upload draft PDF
       const pdfData: PayslipData = {
@@ -257,12 +373,13 @@ export async function openPreview(
         ni_employee_cents: pay.ni_employee_cents,
         ni_employer_cents: pay.ni_employer_cents,
         holiday_accrued_cents: pay.holiday_accrued_cents,
+        holiday_payout_cents: holidayPayoutCents,
         net_cents: pay.net_cents,
         ytd_gross_cents: ytd.ytd_gross,
         ytd_paye_cents: ytd.ytd_paye,
         ytd_ni_cents: ytd.ytd_ni,
         ytd_net_cents: ytd.ytd_net,
-        items: batch.items,
+        items: bookingsItems,
       };
       const bytes = await renderPayslipPdf(pdfData);
       const path = await uploadPayslipPdf(admin, bytes, carerId, run.id, true);
@@ -291,12 +408,12 @@ export async function openPreview(
     .from("payroll_runs")
     .update({
       status: "preview_open",
-      carer_count: batches.size,
+      carer_count: allCarerIds.size,
       updated_at: new Date().toISOString(),
     })
     .eq("id", run.id);
 
-  return { carers: batches.size, errors };
+  return { carers: allCarerIds.size, errors };
 }
 
 /**
@@ -319,7 +436,7 @@ export async function executeRun(
   const { data: drafts, error } = await admin
     .from("org_carer_payouts")
     .select(
-      "id, carer_id, period_start, period_end, gross_pay_cents, paye_deducted_cents, ni_employee_cents, ni_employer_cents, holiday_accrued_cents, net_pay_cents, tax_year, tax_code, currency, status, booking_count",
+      "id, carer_id, period_start, period_end, gross_pay_cents, paye_deducted_cents, ni_employee_cents, ni_employer_cents, holiday_accrued_cents, holiday_payout_cents, holiday_payout_request_ids, net_pay_cents, tax_year, tax_code, currency, status, booking_count",
     )
     .eq("run_id", run.id)
     .in("status", ["draft"]);
@@ -344,6 +461,8 @@ export async function executeRun(
       ni_employee_cents: number;
       ni_employer_cents: number;
       holiday_accrued_cents: number;
+      holiday_payout_cents: number | null;
+      holiday_payout_request_ids: string[] | null;
       net_pay_cents: number;
       tax_year: string;
       tax_code: string;
@@ -373,6 +492,62 @@ export async function executeRun(
         // 23505 = unique_violation — re-runs of executeRun are safe.
         if (ledgerErr && ledgerErr.code !== "23505") {
           console.error("[payroll] ledger insert failed", ledgerErr);
+        }
+      }
+
+      // Phase 4 stage 2: post the holiday-pot debits for each leave request
+      // that this payslip is paying out. The unique partial index
+      // holiday_pot_ledger_debited_leave_request_unique on (leave_request_id)
+      // WHERE entry_type='debited_paid_leave' guarantees we can never double-
+      // pay even if executeRun runs twice for the same run.
+      const requestIds = dd.holiday_payout_request_ids ?? [];
+      if (requestIds.length > 0) {
+        const { data: leaveRows } = await admin
+          .from("holiday_leave_requests")
+          .select("id, requested_hours, requested_amount_cents, status, paid_at")
+          .in("id", requestIds);
+        for (const lr of (leaveRows ?? []) as Array<{
+          id: string;
+          requested_hours: number | string;
+          requested_amount_cents: number;
+          status: string;
+          paid_at: string | null;
+        }>) {
+          // Skip if already paid (idempotency belt-and-braces alongside the
+          // unique index). Approved → paid is the only valid transition; if
+          // it was cancelled/rejected in the meantime the engine skips it.
+          if (lr.paid_at) continue;
+          if (lr.status !== "approved" && lr.status !== "paid") continue;
+          const hours = Number(lr.requested_hours) || 0;
+          const { error: debitErr } = await admin
+            .from("holiday_pot_ledger")
+            .insert({
+              carer_id: dd.carer_id,
+              entry_type: "debited_paid_leave",
+              amount_cents: -lr.requested_amount_cents,
+              hours: -hours,
+              payroll_run_id: run.id,
+              org_carer_payout_id: dd.id,
+              leave_request_id: lr.id,
+              notes: `Paid leave drawn down via run ${run.id}`,
+            });
+          // 23505 = unique_violation. Re-runs of executeRun for the same
+          // request are silently safe.
+          if (debitErr && debitErr.code !== "23505") {
+            console.error("[payroll] leave debit insert failed", debitErr);
+            continue;
+          }
+          // Mark request paid. Conditional on still being approved so we
+          // never overwrite a mid-flight cancel.
+          await admin
+            .from("holiday_leave_requests")
+            .update({
+              status: "paid",
+              paid_at: new Date().toISOString(),
+              paid_via_run_id: run.id,
+            })
+            .eq("id", lr.id)
+            .in("status", ["approved"]);
         }
       }
 
@@ -435,6 +610,7 @@ export async function executeRun(
         ni_employee_cents: dd.ni_employee_cents,
         ni_employer_cents: dd.ni_employer_cents,
         holiday_accrued_cents: dd.holiday_accrued_cents,
+        holiday_payout_cents: dd.holiday_payout_cents ?? 0,
         net_cents: dd.net_pay_cents,
         ytd_gross_cents: ytdGrossBefore,
         ytd_paye_cents: ytdPayeBefore,

@@ -36,6 +36,13 @@ export type PayslipData = {
   ni_employee_cents: number;
   ni_employer_cents: number;
   holiday_accrued_cents: number;
+  /**
+   * Phase 4 stage 2 — gross holiday-pot payout included in this payslip
+   * (in pence). Already counted inside gross_cents so PAYE/NI compute on
+   * it. Shown as a separate informational line on the payslip so the
+   * carer can see what part of their gross pay came from their pot.
+   */
+  holiday_payout_cents?: number;
   net_cents: number;
   ytd_gross_cents: number;
   ytd_paye_cents: number;
@@ -162,10 +169,19 @@ export async function renderPayslipPdf(data: PayslipData): Promise<Uint8Array> {
 
   const rows: Array<[string, number, "credit" | "debit" | "info"]> = [
     ["Gross pay", data.gross_cents, "credit"],
+  ];
+  if ((data.holiday_payout_cents ?? 0) > 0) {
+    rows.push([
+      "  of which: holiday pot payout",
+      data.holiday_payout_cents ?? 0,
+      "info",
+    ]);
+  }
+  rows.push(
     ["PAYE income tax", data.paye_cents, "debit"],
     ["NI (employee)", data.ni_employee_cents, "debit"],
     ["Holiday accrued (12.07%)", data.holiday_accrued_cents, "info"],
-  ];
+  );
   for (const [label, val, kind] of rows) {
     drawText(page, label, margin + 4, y, 10, fontReg);
     const sign = kind === "debit" ? "-" : kind === "info" ? " " : "+";

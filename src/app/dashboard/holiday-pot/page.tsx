@@ -22,6 +22,8 @@ type LeaveRow = {
   status: string;
   start_date: string | null;
   end_date: string | null;
+  paid_at: string | null;
+  paid_via_run_id: string | null;
   created_at: string;
 };
 
@@ -76,7 +78,7 @@ export default async function CarerHolidayPotPage() {
       admin
         .from("holiday_leave_requests")
         .select(
-          "id, requested_hours, requested_amount_cents, status, start_date, end_date, created_at",
+          "id, requested_hours, requested_amount_cents, status, start_date, end_date, paid_at, paid_via_run_id, created_at",
         )
         .eq("carer_id", user.id)
         .order("created_at", { ascending: false })
@@ -179,6 +181,19 @@ export default async function CarerHolidayPotPage() {
                         <span className="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold bg-slate-100 text-slate-700">
                           {r.status}
                         </span>
+                        {r.status === "approved" && !r.paid_at && (
+                          <div className="mt-1 text-xs" style={{ color: "#0E7C7B" }}>
+                            Will be paid in next run
+                          </div>
+                        )}
+                        {r.status === "paid" && r.paid_via_run_id && (
+                          <div className="mt-1 text-xs text-slate-500">
+                            Paid via run{" "}
+                            <span className="font-mono">
+                              {r.paid_via_run_id.slice(0, 8)}
+                            </span>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}

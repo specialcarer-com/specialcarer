@@ -1,20 +1,25 @@
 /**
- * Unit tests for computeHolidayLedgerEntry — the pure helper extracted from
- * the payroll engine that maps a confirmed payout to a holiday_pot_ledger row.
+ * Unit tests for the holiday-pot pure helpers.
  *
- * Pattern matches src/lib/payroll/__tests__/compute-pay.test.ts — no
- * external test runner, just `node:assert` + tsx. Run with:
- *   npx tsx src/lib/payroll/__tests__/holiday-pot.test.ts
+ *   - computeHolidayLedgerEntry — accrual row produced per confirmed payout
+ *   - computeHolidayDisbursementForCarer — Phase 4 stage 2 disbursement
+ *     decision for a carer's approved-and-unpaid leave requests
+ *
+ * Pattern matches src/lib/payroll/__tests__/compute-pay.test.ts — uses the
+ * built-in node:test runner via `node --import tsx --test`.
  */
 
 import { strict as assert } from "node:assert";
-import { computeHolidayLedgerEntry } from "../holiday-pot";
+import { test } from "node:test";
+import {
+  computeHolidayLedgerEntry,
+  computeHolidayDisbursementForCarer,
+  type LeaveRequestForDisbursement,
+} from "../holiday-pot";
 
-type Test = { name: string; run: () => void };
-const tests: Test[] = [];
-const test = (name: string, run: () => void) => tests.push({ name, run });
+/* -------------------- computeHolidayLedgerEntry -------------------------- */
 
-test("returns null when holiday_accrued_cents is zero", () => {
+test("ledger: returns null when holiday_accrued_cents is zero", () => {
   const entry = computeHolidayLedgerEntry({
     id: "payout-1",
     carer_id: "carer-1",
@@ -24,7 +29,7 @@ test("returns null when holiday_accrued_cents is zero", () => {
   assert.equal(entry, null);
 });
 
-test("returns null when holiday_accrued_cents is negative", () => {
+test("ledger: returns null when holiday_accrued_cents is negative", () => {
   const entry = computeHolidayLedgerEntry({
     id: "payout-1",
     carer_id: "carer-1",
@@ -34,7 +39,7 @@ test("returns null when holiday_accrued_cents is negative", () => {
   assert.equal(entry, null);
 });
 
-test("returns null when holiday_accrued_cents is missing", () => {
+test("ledger: returns null when holiday_accrued_cents is missing", () => {
   const entry = computeHolidayLedgerEntry({
     id: "payout-1",
     carer_id: "carer-1",
@@ -44,7 +49,7 @@ test("returns null when holiday_accrued_cents is missing", () => {
   assert.equal(entry, null);
 });
 
-test("amount_cents matches payout.holiday_accrued_cents and is positive accrual", () => {
+test("ledger: amount_cents matches payout.holiday_accrued_cents and is positive accrual", () => {
   const entry = computeHolidayLedgerEntry({
     id: "payout-1",
     carer_id: "carer-1",
@@ -57,7 +62,7 @@ test("amount_cents matches payout.holiday_accrued_cents and is positive accrual"
   assert.equal(entry.entry_type, "accrued");
 });
 
-test("carries through payroll_run_id, org_carer_payout_id and carer_id", () => {
+test("ledger: carries through payroll_run_id, org_carer_payout_id and carer_id", () => {
   const entry = computeHolidayLedgerEntry({
     id: "payout-xyz",
     carer_id: "carer-abc",
@@ -71,18 +76,161 @@ test("carries through payroll_run_id, org_carer_payout_id and carer_id", () => {
   assert.match(entry.notes, /Auto-accrued from payslip payout-xyz/);
 });
 
-let pass = 0;
-let fail = 0;
-for (const t of tests) {
-  try {
-    t.run();
-    console.log(`  PASS  ${t.name}`);
-    pass++;
-  } catch (e) {
-    fail++;
-    console.error(`  FAIL  ${t.name}`);
-    console.error(e instanceof Error ? e.message : e);
-  }
-}
-console.log(`\n${pass} passed, ${fail} failed`);
-process.exit(fail === 0 ? 0 : 1);
+/* -------------------- computeHolidayDisbursementForCarer ----------------- */
+
+const req = (
+  id: string,
+  amount_cents: number,
+  hours: number,
+  created_at: string,
+): LeaveRequestForDisbursement => ({
+  id,
+  requested_amount_cents: amount_cents,
+  requested_hours: hours,
+  created_at,
+});
+
+test("disbursement: empty request list yields zero payout, no actions", () => {
+  const d = computeHolidayDisbursementForCarer({
+    requests: [],
+    balanceCents: 50_000,
+  });
+  assert.equal(d.total_payout_cents, 0);
+  assert.equal(d.total_payout_hours, 0);
+  assert.deepEqual(d.to_pay, []);
+  assert.deepEqual(d.to_reject, []);
+});
+
+test("disbursement: single request fully within balance pays in full", () => {
+  const d = computeHolidayDisbursementForCarer({
+    requests: [req("r1", 20_000, 8, "2026-05-01T00:00:00Z")],
+    balanceCents: 50_000,
+  });
+  assert.equal(d.total_payout_cents, 20_000);
+  assert.equal(d.total_payout_hours, 8);
+  assert.equal(d.to_pay.length, 1);
+  assert.equal(d.to_pay[0]!.request_id, "r1");
+  assert.equal(d.to_pay[0]!.amount_cents, 20_000);
+  assert.equal(d.to_reject.length, 0);
+});
+
+test("disbursement: single request over balance is auto-rejected — never partially paid", () => {
+  const d = computeHolidayDisbursementForCarer({
+    requests: [req("r1", 60_000, 24, "2026-05-01T00:00:00Z")],
+    balanceCents: 50_000,
+  });
+  assert.equal(d.total_payout_cents, 0);
+  assert.equal(d.total_payout_hours, 0);
+  assert.equal(d.to_pay.length, 0);
+  assert.equal(d.to_reject.length, 1);
+  assert.equal(d.to_reject[0]!.request_id, "r1");
+  assert.match(d.to_reject[0]!.reason, /Insufficient balance/);
+});
+
+test("disbursement: multi-request FIFO — earlier requests paid first, later one rejected if no headroom", () => {
+  const d = computeHolidayDisbursementForCarer({
+    requests: [
+      req("late", 20_000, 8, "2026-05-05T00:00:00Z"),
+      req("early", 40_000, 16, "2026-05-01T00:00:00Z"),
+    ],
+    balanceCents: 50_000,
+  });
+  // Earliest first — "early" pays, "late" then exceeds remaining 10k and rejects.
+  assert.equal(d.to_pay.length, 1);
+  assert.equal(d.to_pay[0]!.request_id, "early");
+  assert.equal(d.to_pay[0]!.amount_cents, 40_000);
+  assert.equal(d.to_reject.length, 1);
+  assert.equal(d.to_reject[0]!.request_id, "late");
+  assert.equal(d.total_payout_cents, 40_000);
+  assert.equal(d.total_payout_hours, 16);
+});
+
+test("disbursement: multi-request partial coverage — all that fit FIFO are paid, the rest rejected", () => {
+  const d = computeHolidayDisbursementForCarer({
+    requests: [
+      req("a", 10_000, 4, "2026-05-01T00:00:00Z"),
+      req("b", 10_000, 4, "2026-05-02T00:00:00Z"),
+      req("c", 10_000, 4, "2026-05-03T00:00:00Z"),
+      req("d", 10_000, 4, "2026-05-04T00:00:00Z"),
+    ],
+    balanceCents: 25_000,
+  });
+  assert.deepEqual(
+    d.to_pay.map((p) => p.request_id),
+    ["a", "b"],
+  );
+  // c is 10k but remaining after a+b is 5k → reject.
+  // d is also 10k > 5k → reject.
+  assert.deepEqual(
+    d.to_reject.map((r) => r.request_id).sort(),
+    ["c", "d"],
+  );
+  assert.equal(d.total_payout_cents, 20_000);
+  assert.equal(d.total_payout_hours, 8);
+});
+
+test("disbursement: zero/negative amount request is auto-rejected", () => {
+  const d = computeHolidayDisbursementForCarer({
+    requests: [
+      req("zero", 0, 0, "2026-05-01T00:00:00Z"),
+      req("neg", -1_000, -1, "2026-05-02T00:00:00Z"),
+      req("ok", 5_000, 2, "2026-05-03T00:00:00Z"),
+    ],
+    balanceCents: 10_000,
+  });
+  assert.equal(d.to_pay.length, 1);
+  assert.equal(d.to_pay[0]!.request_id, "ok");
+  assert.equal(d.to_reject.length, 2);
+});
+
+test("disbursement: zero balance rejects every request", () => {
+  const d = computeHolidayDisbursementForCarer({
+    requests: [
+      req("a", 100, 1, "2026-05-01T00:00:00Z"),
+      req("b", 200, 1, "2026-05-02T00:00:00Z"),
+    ],
+    balanceCents: 0,
+  });
+  assert.equal(d.to_pay.length, 0);
+  assert.equal(d.to_reject.length, 2);
+  assert.equal(d.total_payout_cents, 0);
+});
+
+test("disbursement: negative balance treated as zero — all rejected", () => {
+  const d = computeHolidayDisbursementForCarer({
+    requests: [req("a", 100, 1, "2026-05-01T00:00:00Z")],
+    balanceCents: -500,
+  });
+  assert.equal(d.to_pay.length, 0);
+  assert.equal(d.to_reject.length, 1);
+});
+
+test("disbursement: idempotency — same inputs produce identical decision (deterministic ordering, no clock)", () => {
+  const requests = [
+    req("a", 10_000, 4, "2026-05-01T00:00:00Z"),
+    req("b", 10_000, 4, "2026-05-02T00:00:00Z"),
+    req("c", 10_000, 4, "2026-05-03T00:00:00Z"),
+  ];
+  const d1 = computeHolidayDisbursementForCarer({ requests, balanceCents: 25_000 });
+  const d2 = computeHolidayDisbursementForCarer({
+    requests: [...requests].reverse(),
+    balanceCents: 25_000,
+  });
+  assert.deepEqual(d1, d2);
+  // And re-running the helper on the original list never double-counts —
+  // the caller's idempotency contract is: only feed approved+unpaid into it.
+  // The DB-level unique index on holiday_pot_ledger (leave_request_id)
+  // WHERE entry_type='debited_paid_leave' is the safety net for that.
+});
+
+test("disbursement: created_at tiebreaker is stable on id", () => {
+  const d = computeHolidayDisbursementForCarer({
+    requests: [
+      req("zzz", 10_000, 4, "2026-05-01T00:00:00Z"),
+      req("aaa", 10_000, 4, "2026-05-01T00:00:00Z"),
+    ],
+    balanceCents: 10_000,
+  });
+  assert.equal(d.to_pay.length, 1);
+  assert.equal(d.to_pay[0]!.request_id, "aaa", "id-lex tiebreak when created_at ties");
+});
