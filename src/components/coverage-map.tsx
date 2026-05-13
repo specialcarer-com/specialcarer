@@ -220,31 +220,46 @@ export default function CoverageMap({
 
       // Recover from the common case where the container has height 0
       // at mount time (e.g. component far below the fold, parent layout
-      // not yet settled). Without this, mapbox-gl defaults the canvas to
-      // ~300px and never repaints, leaving a blank teaser.
-      const triggerResize = () => {
-        try {
-          map.resize();
-        } catch {
-          /* map may be torn down already */
+      // not yet settled, or font-swap reflow). Without this, mapbox-gl
+      // defaults the canvas to ~300px and never repaints, leaving a
+      // blank teaser.
+      //
+      // We retry at several beats AFTER the style has loaded, because
+      // calling resize() before the GL canvas is wired in is a no-op,
+      // and a single resize() right after init often runs while the
+      // parent layout is still settling.
+      const scheduleResizeRetries = () => {
+        const doResize = () => {
+          try {
+            map.resize();
+          } catch {
+            /* torn down */
+          }
+        };
+        if (typeof window === "undefined") return;
+        // Multiple beats to catch hydration timing variation. Each call
+        // is cheap (no-op if size already matches).
+        const delays = [0, 100, 250, 500, 1000, 2000];
+        for (const d of delays) {
+          window.setTimeout(doResize, d);
+        }
+        // Live-recover on container size changes (responsive layout,
+        // sidebar toggles, font swap, parent grew from 0 to its final
+        // height after layout settled, etc.).
+        if (
+          typeof ResizeObserver !== "undefined" &&
+          containerRef.current
+        ) {
+          const ro = new ResizeObserver(doResize);
+          ro.observe(containerRef.current);
+          resizeObserverRef.current = ro;
         }
       };
-      // One immediate retry on the next animation frame…
-      if (typeof window !== "undefined") {
-        window.requestAnimationFrame(triggerResize);
-        // …and a delayed one to catch late-hydrating CSS / font swaps.
-        window.setTimeout(triggerResize, 400);
-      }
-      // Live-recover whenever the container itself changes size.
-      let resizeObserver: ResizeObserver | null = null;
-      if (
-        typeof ResizeObserver !== "undefined" &&
-        containerRef.current
-      ) {
-        resizeObserver = new ResizeObserver(triggerResize);
-        resizeObserver.observe(containerRef.current);
-      }
-      resizeObserverRef.current = resizeObserver;
+      // Run retries once the style is loaded—before that map.resize()
+      // is partially a no-op (the painter isn’t ready).
+      map.on("style.load", scheduleResizeRetries);
+      // Also schedule one round immediately in case style is cached.
+      scheduleResizeRetries();
 
       map.addControl(
         new mapboxgl.NavigationControl({ showCompass: false }),
@@ -337,7 +352,11 @@ export default function CoverageMap({
       ) : error ? (
         <div className="p-6 text-sm text-rose-700">{error}</div>
       ) : (
-        <div ref={containerRef} className="absolute inset-0" />
+        // Use w-full/h-full instead of absolute inset-0: mapbox-gl.css
+        // forces .mapboxgl-map { position: relative; } which overrides
+        // position:absolute and collapses inset-0, making the container
+        // 0px tall and yielding a blank canvas.
+        <div ref={containerRef} className="w-full h-full" />
       )}
 
       {/* Tiny inline stylesheet for popups. Keeps everything self-contained. */}
