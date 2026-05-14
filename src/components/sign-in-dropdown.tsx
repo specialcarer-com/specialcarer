@@ -134,11 +134,11 @@ export default function SignInDropdown() {
       {open && (
         <div
           role="menu"
-          // Mobile: anchor to the wrapper's LEFT edge so the menu always grows
-          // into the visible viewport (the trigger sits in the middle of the
-          // header on phones, so right-aligned would clip off-screen).
-          // Desktop (sm+): keep right-aligned under the trigger.
-          className="absolute top-full left-0 sm:left-auto sm:right-0 w-[min(18rem,calc(100vw-2rem))] sm:w-72 rounded-2xl bg-white border border-slate-200 shadow-lg py-2 z-50"
+          // Right-aligned under the trigger. Width is 18rem (288px) on desktop
+          // and clamped to 14rem (224px) on phones so it fits within the
+          // viewport even on a 320px-wide device when the trigger sits near
+          // the right edge of the header.
+          className="absolute right-0 top-full w-56 sm:w-72 rounded-2xl bg-white border border-slate-200 shadow-lg py-2 z-50"
           style={{ marginTop: 0 }}
           onMouseEnter={isTouch ? undefined : cancelClose}
           onMouseLeave={isTouch ? undefined : scheduleClose}
