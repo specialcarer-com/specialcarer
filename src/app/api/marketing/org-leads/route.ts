@@ -2,30 +2,13 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/smtp";
 import { isFreeEmail } from "@/lib/org/types";
+import { rateLimit, getRequestIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 const ADMIN_EMAIL =
   process.env.ORG_LEADS_EMAIL ?? process.env.ORG_ADMIN_EMAIL ?? "hello@specialcarer.com";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-// Tiny in-memory rate limiter — 5 submissions per IP per hour. Ample
-// for genuine users; blocks the obvious form-spammer pattern.
-const HITS = new Map<string, { count: number; reset: number }>();
-const WINDOW_MS = 60 * 60 * 1000;
-const LIMIT = 5;
-
-function rateLimit(ip: string): boolean {
-  const now = Date.now();
-  const cur = HITS.get(ip);
-  if (!cur || cur.reset < now) {
-    HITS.set(ip, { count: 1, reset: now + WINDOW_MS });
-    return true;
-  }
-  if (cur.count >= LIMIT) return false;
-  cur.count += 1;
-  return true;
-}
 
 type Body = {
   full_name?: string;
@@ -53,11 +36,8 @@ function escHtml(s: string): string {
  * then fires a best-effort ops notification email. No auth required.
  */
 export async function POST(req: Request) {
-  const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    req.headers.get("x-real-ip") ||
-    "unknown";
-  if (!rateLimit(ip)) {
+  const ip = getRequestIp(req);
+  if (!rateLimit(`org-leads:${ip}`, { limit: 5, windowMs: 60 * 60 * 1000 })) {
     return NextResponse.json(
       { error: "rate_limited" },
       { status: 429 },

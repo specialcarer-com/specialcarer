@@ -78,6 +78,21 @@ html, body { height: 100%; }
   .sc-phone-tilt-left  { transform: rotate(-14deg); }
   .sc-phone-tilt-right { transform: rotate(8deg); }
   .sc-cta-shimmer { background-image: none; background-color: #039EA0; }
+
+  /*
+   * Global brake on Tailwind transitions and any other animation we may add
+   * later. Users with motion sensitivity get instant state changes instead
+   * of fades/slides/rotations. Keeps a token amount (0.01ms) so any code
+   * waiting on transitionend still fires.
+   */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ── Duration slider used in /book/visiting When picker ─────────── */

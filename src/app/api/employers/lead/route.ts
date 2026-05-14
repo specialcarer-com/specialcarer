@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { rateLimit, getRequestIp } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
+  // Per-IP rate limit: 5 submissions per hour. Returns the user to the
+  // /employers/contact page with a friendly status so they're not stuck.
+  const ip = getRequestIp(req);
+  if (!rateLimit(`employers-lead:${ip}`, { limit: 5, windowMs: 60 * 60 * 1000 })) {
+    return NextResponse.redirect(
+      new URL(`/employers/contact?status=rate_limited`, req.url),
+      { status: 303 },
+    );
+  }
+
   const formData = await req.formData();
   const company_name = String(formData.get("company_name") || "").trim();
   const contact_name = String(formData.get("contact_name") || "").trim();

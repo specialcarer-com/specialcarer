@@ -45,24 +45,23 @@ const GROUPS: FooterGroup[] = [
 ];
 
 function LinkList({ links }: { links: FooterLink[] }) {
+  // Each link gets min-h-[44px] + vertical padding so footer rows are
+  // tappable on phones (WCAG 2.5.5). The flex+items-center keeps the
+  // label vertically centered inside the larger target.
+  const linkClass =
+    "flex items-center min-h-[44px] py-2 hover:text-brand-700 transition truncate";
   return (
-    <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-[#1f4e4d] sm:grid-cols-1">
+    <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-[#1f4e4d] sm:grid-cols-1">
       {links.map((l) =>
         l.external ? (
           <li key={l.href} className="min-w-0">
-            <a
-              href={l.href}
-              className="block truncate hover:text-brand-700 transition"
-            >
+            <a href={l.href} className={linkClass}>
               {l.label}
             </a>
           </li>
         ) : (
           <li key={l.href} className="min-w-0">
-            <Link
-              href={l.href}
-              className="block truncate hover:text-brand-700 transition"
-            >
+            <Link href={l.href} className={linkClass}>
               {l.label}
             </Link>
           </li>
@@ -138,7 +137,7 @@ export default function SiteFooter() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={label}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-brand-700 ring-1 ring-brand-700/15 hover:bg-brand-700 hover:text-white transition"
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-brand-700 ring-1 ring-brand-700/15 hover:bg-brand-700 hover:text-white transition"
                 >
                   <Icon className="h-4 w-4" />
                 </a>

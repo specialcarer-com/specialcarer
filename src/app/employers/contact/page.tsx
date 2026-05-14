@@ -54,6 +54,19 @@ export default async function Page({
             invalid.
           </div>
         )}
+        {status === "rate_limited" && (
+          <div className="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900">
+            You’ve submitted this form a few times in the last hour. Please
+            wait a little while before trying again, or email{" "}
+            <a
+              href="mailto:employers@specialcarer.com"
+              className="underline"
+            >
+              employers@specialcarer.com
+            </a>{" "}
+            directly.
+          </div>
+        )}
 
         <form
           method="post"
