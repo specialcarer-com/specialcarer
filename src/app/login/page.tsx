@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LoginForm } from "./login-form";
-import Image from "next/image";
+import MarketingShell from "@/components/marketing-shell";
+import PageHeroBanner from "@/components/page-hero-banner";
 
 export const metadata = {
   title: "Sign in — SpecialCarer",
@@ -18,12 +19,8 @@ export default async function LoginPage({
   const error = params.error;
 
   return (
-    <main className="min-h-screen flex flex-col">
-      <header className="px-6 py-5 border-b border-slate-100">
-        <Link href="/" className="flex items-center gap-2 w-fit">
-          <Image src="/brand/logo.svg" alt="SpecialCarer" width={161} height={121} className="h-9 w-auto" priority />
-        </Link>
-      </header>
+    <MarketingShell>
+      <PageHeroBanner pageKey="account.login" height="md" tint="soft" />
 
       <section className="flex-1 flex items-center justify-center px-6 py-16">
         <div className="w-full max-w-md">
@@ -67,6 +64,6 @@ export default async function LoginPage({
           </p>
         </div>
       </section>
-    </main>
+    </MarketingShell>
   );
 }

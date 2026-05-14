@@ -162,6 +162,16 @@ export const PAGE_BANNER_SLOTS: PageBannerSlot[] = [
     fallbackGradient: tealCream,
     defaultAlt: "Become a SpecialCarer caregiver",
   },
+  // ── Account ──
+  {
+    key: "account.login",
+    label: "Sign in",
+    group: "Account",
+    path: "/login",
+    fallbackGradient: tealCream,
+    defaultAlt:
+      "A woman at her kitchen counter checking her phone, laptop open, signing in to SpecialCarer",
+  },
 ];
 
 export function getSlot(key: string): PageBannerSlot | undefined {
