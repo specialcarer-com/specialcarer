@@ -27,6 +27,14 @@ export const metadata: Metadata = {
     url: "https://specialcarer.com/",
     siteName: "SpecialCarer",
     type: "website",
+    images: [
+      {
+        url: "/brand/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "SpecialCarer — trusted care, on your schedule",
+      },
+    ],
   },
 };
 
@@ -150,24 +158,24 @@ export default async function Home() {
           </Link>
         </div>
 
-        <div className="mt-5 flex flex-col sm:flex-row gap-3 justify-center text-sm">
+        <div className="mt-3 flex flex-col sm:flex-row gap-1 sm:gap-2 items-center justify-center text-sm">
           <Link
             href="/book?when=now"
-            className="text-slate-600 hover:text-slate-900 transition"
+            className="inline-flex items-center min-h-[44px] px-3 py-2.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition"
           >
             Find a carer right now
           </Link>
-          <span className="hidden sm:inline text-slate-300">·</span>
+          <span className="hidden sm:inline text-slate-300" aria-hidden>·</span>
           <Link
             href="/find-care"
-            className="text-slate-600 hover:text-slate-900 transition"
+            className="inline-flex items-center min-h-[44px] px-3 py-2.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition"
           >
             Browse all caregivers
           </Link>
-          <span className="hidden sm:inline text-slate-300">·</span>
+          <span className="hidden sm:inline text-slate-300" aria-hidden>·</span>
           <Link
             href="/become-a-caregiver"
-            className="text-slate-600 hover:text-slate-900 transition"
+            className="inline-flex items-center min-h-[44px] px-3 py-2.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition"
           >
             Apply as a caregiver
           </Link>
