@@ -78,6 +78,10 @@ export default function BannerVariantPicker({
     <img
       src={v.media_url}
       alt={v.alt ?? ""}
+      // LCP element — same priority hints as the SSR variant in page-hero-banner.
+      fetchPriority="high"
+      loading="eager"
+      decoding="async"
       className="absolute inset-0 h-full w-full object-cover"
       style={{ objectPosition: `${v.focal_x}% ${v.focal_y}%` }}
     />

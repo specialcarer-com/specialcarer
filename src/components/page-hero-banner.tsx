@@ -70,6 +70,11 @@ export default async function PageHeroBanner({
           <img
             src={resolved.variant.media_url}
             alt={resolved.variant.alt ?? fallbackAlt}
+            // LCP element on every marketing page — hint the browser to fetch
+            // it ahead of anything else and decode off the main thread.
+            fetchPriority="high"
+            loading="eager"
+            decoding="async"
             className="absolute inset-0 h-full w-full object-cover"
             style={{
               objectPosition: `${resolved.variant.focal_x}% ${resolved.variant.focal_y}%`,
