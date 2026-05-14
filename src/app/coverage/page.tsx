@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import MarketingShell from "@/components/marketing-shell";
-import CoverageMap from "@/components/coverage-map";
+import CoverageMap from "@/components/coverage-map-lazy";
 import { listCoverageCities } from "@/lib/coverage-server";
 import { COVERAGE_STATUS_LABEL } from "@/lib/coverage-types";
 import CityFilters from "./CityFilters";

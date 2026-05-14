@@ -12,7 +12,7 @@ import { searchCaregivers, listPublishedCities } from "@/lib/care/search";
 import { CITIES } from "@/lib/care/cities";
 import { getAllPosts } from "@/lib/blog/posts";
 import { listCoverageCities } from "@/lib/coverage-server";
-import CoverageMap from "@/components/coverage-map";
+import CoverageMap from "@/components/coverage-map-lazy";
 
 export const metadata: Metadata = {
   title:
@@ -939,6 +939,7 @@ export default async function Home() {
               </div>
               <Link
                 href="/blog"
+                prefetch={false}
                 className="inline-flex items-center min-h-[44px] py-2 text-sm text-brand-700 font-medium hover:underline"
               >
                 Read all posts →
@@ -949,6 +950,7 @@ export default async function Home() {
                 <Link
                   key={p.slug}
                   href={`/blog/${p.slug}`}
+                  prefetch={false}
                   className="group bg-white p-6 rounded-2xl border border-slate-100 hover:border-brand-100 hover:shadow-sm transition flex flex-col"
                 >
                   <div className="text-xs text-slate-500">
