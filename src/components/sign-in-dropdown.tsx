@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
+// Small delay before closing on mouse-leave so the cursor can travel from the
+// trigger to the menu without the dropdown vanishing mid-traverse.
+const CLOSE_DELAY_MS = 180;
+
 const ITEMS = [
   {
     label: "For caregivers",
@@ -24,6 +28,18 @@ const ITEMS = [
 export default function SignInDropdown() {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelClose = () => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  };
+  const scheduleClose = () => {
+    cancelClose();
+    closeTimer.current = setTimeout(() => setOpen(false), CLOSE_DELAY_MS);
+  };
 
   // Close on outside click / Escape
   useEffect(() => {
@@ -47,12 +63,28 @@ export default function SignInDropdown() {
     };
   }, [open]);
 
+  // Clear any pending close timer on unmount.
+  useEffect(() => () => cancelClose(), []);
+
   return (
     <div
       ref={wrapRef}
       className="relative hidden sm:inline-block"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
+      onMouseEnter={() => {
+        cancelClose();
+        setOpen(true);
+      }}
+      onMouseLeave={scheduleClose}
+      onFocus={() => {
+        cancelClose();
+        setOpen(true);
+      }}
+      onBlur={(e) => {
+        // Only close when focus leaves the wrapper entirely.
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+          scheduleClose();
+        }
+      }}
     >
       <button
         type="button"
@@ -83,8 +115,18 @@ export default function SignInDropdown() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full mt-2 w-72 rounded-2xl bg-white border border-slate-200 shadow-lg py-2 z-50"
+          className="absolute right-0 top-full w-72 rounded-2xl bg-white border border-slate-200 shadow-lg py-2 z-50"
+          style={{ marginTop: 0 }}
+          onMouseEnter={cancelClose}
+          onMouseLeave={scheduleClose}
         >
+          {/* Invisible hover bridge that fills the gap between the trigger
+              and the menu so the cursor never "leaves" the dropdown when
+              moving from one to the other. */}
+          <span
+            aria-hidden
+            className="absolute -top-3 left-0 right-0 h-3"
+          />
           {ITEMS.map((it) => (
             <Link
               key={it.href}
