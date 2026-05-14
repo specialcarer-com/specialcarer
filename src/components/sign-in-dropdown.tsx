@@ -134,7 +134,11 @@ export default function SignInDropdown() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full w-72 max-w-[calc(100vw-2rem)] rounded-2xl bg-white border border-slate-200 shadow-lg py-2 z-50"
+          // Fixed positioning anchors the menu to the viewport's right edge so
+          // narrow phones don't clip it off-screen. The wrapper is part of the
+          // header which can be in the middle of the row on mobile, so a
+          // wrapper-relative `right-0` would still overflow the left edge.
+          className="fixed right-4 top-16 w-72 max-w-[calc(100vw-2rem)] rounded-2xl bg-white border border-slate-200 shadow-lg py-2 z-50 sm:absolute sm:right-0 sm:top-full sm:w-72"
           style={{ marginTop: 0 }}
           onMouseEnter={isTouch ? undefined : cancelClose}
           onMouseLeave={isTouch ? undefined : scheduleClose}
