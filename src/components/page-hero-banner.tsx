@@ -1,5 +1,7 @@
-import { getBanner } from "@/lib/page-banners/get";
+import { getBanner, getBannerVariants } from "@/lib/page-banners/get";
+import { resolveVariant } from "@/lib/page-banners/pick-variant";
 import { getSlot } from "@/lib/page-banners/registry";
+import BannerVariantPicker from "./banner-variant-picker";
 
 type Props = {
   pageKey: string;
@@ -38,10 +40,12 @@ export default async function PageHeroBanner({
 }: Props) {
   const slot = getSlot(pageKey);
   const banner = await getBanner(pageKey);
+  const variants = banner ? getBannerVariants(banner) : [];
+  const resolved = banner && variants.length > 0
+    ? await resolveVariant(pageKey, variants)
+    : null;
 
-  const focalX = banner?.focal_x ?? 50;
-  const focalY = banner?.focal_y ?? 50;
-  const alt = banner?.alt ?? slot?.defaultAlt ?? "";
+  const fallbackAlt = slot?.defaultAlt ?? "";
   const fallbackBg =
     slot?.fallbackGradient ??
     "linear-gradient(135deg, #0E7C7B 0%, #039EA0 50%, #02787A 100%)";
@@ -53,14 +57,25 @@ export default async function PageHeroBanner({
       style={banner ? undefined : { background: fallbackBg }}
     >
       {/* Media layer */}
-      {banner?.media_kind === "image" && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={banner.media_url}
-          alt={alt}
-          className="absolute inset-0 h-full w-full object-cover"
-          style={{ objectPosition: `${focalX}% ${focalY}%` }}
-        />
+      {banner?.media_kind === "image" && resolved && (
+        variants.length > 1 ? (
+          <BannerVariantPicker
+            pageKey={pageKey}
+            variants={variants}
+            ssrIndex={resolved.index}
+            needsClientPick={resolved.needsClientPick}
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={resolved.variant.media_url}
+            alt={resolved.variant.alt ?? fallbackAlt}
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{
+              objectPosition: `${resolved.variant.focal_x}% ${resolved.variant.focal_y}%`,
+            }}
+          />
+        )
       )}
       {banner?.media_kind === "video" && (
         <video
@@ -70,9 +85,9 @@ export default async function PageHeroBanner({
           muted
           loop
           playsInline
-          aria-label={alt}
+          aria-label={banner.alt ?? fallbackAlt}
           className="absolute inset-0 h-full w-full object-cover"
-          style={{ objectPosition: `${focalX}% ${focalY}%` }}
+          style={{ objectPosition: `${banner.focal_x}% ${banner.focal_y}%` }}
         />
       )}
 
