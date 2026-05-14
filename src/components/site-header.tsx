@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import SiteHeaderNav from "@/components/site-header-nav";
+import SignInDropdown from "@/components/sign-in-dropdown";
 
 export default async function SiteHeader() {
   const supabase = await createClient();
@@ -50,9 +51,11 @@ export default async function SiteHeader() {
           </Link>
         ) : (
           <>
+            <SignInDropdown />
+            {/* Mobile: keep a simple link since the dropdown is sm:inline only */}
             <Link
               href="/login"
-              className="text-sm text-slate-700 hover:text-slate-900 hidden sm:inline"
+              className="text-sm text-slate-700 hover:text-slate-900 sm:hidden"
             >
               Sign in
             </Link>
