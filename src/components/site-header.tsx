@@ -52,10 +52,7 @@ export default async function SiteHeader() {
           </Link>
         ) : (
           <>
-            {/* Sign in dropdown only on lg+ — phones and tablets get sign-in inside the hamburger sheet */}
-            <div className="hidden lg:contents">
-              <SignInDropdown />
-            </div>
+            <SignInDropdown />
             <Link
               href="/find-care"
               className="px-3 sm:px-4 py-2 rounded-full bg-brand text-white text-sm font-medium hover:bg-brand-600 transition"
