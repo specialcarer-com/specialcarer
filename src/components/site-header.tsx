@@ -3,6 +3,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import SiteHeaderNav from "@/components/site-header-nav";
 import SignInDropdown from "@/components/sign-in-dropdown";
+import MobileMenu from "@/components/mobile-menu";
 
 export default async function SiteHeader() {
   const supabase = await createClient();
@@ -51,15 +52,19 @@ export default async function SiteHeader() {
           </Link>
         ) : (
           <>
-            <SignInDropdown />
+            {/* Sign in dropdown only on md+ — mobile users get sign-in inside the hamburger sheet */}
+            <div className="hidden md:contents">
+              <SignInDropdown />
+            </div>
             <Link
               href="/find-care"
-              className="px-4 py-2 rounded-full bg-brand text-white text-sm font-medium hover:bg-brand-600 transition"
+              className="px-3 sm:px-4 py-2 rounded-full bg-brand text-white text-sm font-medium hover:bg-brand-600 transition"
             >
               Find care
             </Link>
           </>
         )}
+        <MobileMenu />
       </div>
     </header>
   );
