@@ -32,10 +32,33 @@ const CARE_FORMATS = [
   { href: "/care-formats/visiting", label: "Visiting care" },
 ];
 
+// Top-level marketing nav items in display order, used both for rendering and
+// for matching the current pathname to highlight the active section.
+const TOP_LEVEL: { href: string; label: string }[] = [
+  { href: "/how-it-works", label: "How it works" },
+  { href: "/trust", label: "Trust & safety" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/employers", label: "For employers" },
+  { href: "/organisations", label: "For organisations" },
+  { href: "/become-a-caregiver", label: "For caregivers" },
+  { href: "/blog", label: "Blog" },
+];
+
+// Treat a nav item as active if the current path matches it exactly or sits
+// under it as a sub-route (e.g. /blog/post-slug under /blog).
+function isActive(pathname: string | null, href: string): boolean {
+  if (!pathname) return false;
+  if (pathname === href) return true;
+  return pathname.startsWith(href + "/");
+}
+
 export default function SiteHeaderNav() {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+
+  const servicesActive =
+    pathname?.startsWith("/services/") || pathname?.startsWith("/care-formats/") || false;
 
   // Close on route change.
   useEffect(() => {
@@ -65,7 +88,16 @@ export default function SiteHeaderNav() {
 
   return (
     <nav className="hidden lg:flex items-center gap-6 text-sm text-slate-600">
-      <Link href="/how-it-works" className="hover:text-slate-900">
+      {/* How it works (no sub-menu) */}
+      <Link
+        href="/how-it-works"
+        aria-current={isActive(pathname, "/how-it-works") ? "page" : undefined}
+        className={`relative hover:text-slate-900 py-1 ${
+          isActive(pathname, "/how-it-works")
+            ? "text-slate-900 font-semibold after:absolute after:left-0 after:right-0 after:-bottom-1 after:h-[2px] after:bg-brand after:rounded-full"
+            : ""
+        }`}
+      >
         How it works
       </Link>
 
@@ -81,7 +113,12 @@ export default function SiteHeaderNav() {
           onClick={() => setOpen((v) => !v)}
           aria-haspopup="menu"
           aria-expanded={open}
-          className="hover:text-slate-900 inline-flex items-center gap-1 py-1"
+          aria-current={servicesActive ? "page" : undefined}
+          className={`relative hover:text-slate-900 inline-flex items-center gap-1 py-1 ${
+            servicesActive
+              ? "text-slate-900 font-semibold after:absolute after:left-0 after:right-0 after:-bottom-1 after:h-[2px] after:bg-brand after:rounded-full"
+              : ""
+          }`}
         >
           Services
           <svg
@@ -136,24 +173,24 @@ export default function SiteHeaderNav() {
         )}
       </div>
 
-      <Link href="/trust" className="hover:text-slate-900">
-        Trust &amp; safety
-      </Link>
-      <Link href="/pricing" className="hover:text-slate-900">
-        Pricing
-      </Link>
-      <Link href="/employers" className="hover:text-slate-900">
-        For employers
-      </Link>
-      <Link href="/organisations" className="hover:text-slate-900">
-        For organisations
-      </Link>
-      <Link href="/become-a-caregiver" className="hover:text-slate-900">
-        For caregivers
-      </Link>
-      <Link href="/blog" className="hover:text-slate-900">
-        Blog
-      </Link>
+      {/* Remaining top-level links, with active-state highlight */}
+      {TOP_LEVEL.filter((i) => i.href !== "/how-it-works").map((item) => {
+        const active = isActive(pathname, item.href);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            aria-current={active ? "page" : undefined}
+            className={`relative hover:text-slate-900 py-1 ${
+              active
+                ? "text-slate-900 font-semibold after:absolute after:left-0 after:right-0 after:-bottom-1 after:h-[2px] after:bg-brand after:rounded-full"
+                : ""
+            }`}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
     </nav>
   );
 }

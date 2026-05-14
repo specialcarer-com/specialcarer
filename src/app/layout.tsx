@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import CookieBanner from "@/components/cookie-banner";
+import SkipToContent from "@/components/skip-to-content";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -53,6 +54,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className="font-sans antialiased bg-white text-slate-900">
+        <SkipToContent />
         {/* Site-wide "Beta is live" banner — only renders when
             NEXT_PUBLIC_TESTFLIGHT_URL is set in the deploy env. */}
         {process.env.NEXT_PUBLIC_TESTFLIGHT_URL ? (
