@@ -12,7 +12,8 @@
     "cap:sync": "cap sync ios",
     "cap:copy": "cap copy ios",
     "cap:assets": "capacitor-assets generate --ios",
-    "mobile:build": "echo \"v1 uses remote web; webDir is offline shell only\""
+    "mobile:build": "echo \"v1 uses remote web; webDir is offline shell only\"",
+    "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.1",
@@ -46,6 +47,7 @@
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.3.1",
+    "@next/bundle-analyzer": "^16.2.6",
     "@types/mapbox-gl": "^3.4.1",
     "@types/node": "^22",
     "@types/react": "^19",
