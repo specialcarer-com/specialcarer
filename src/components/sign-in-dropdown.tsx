@@ -110,7 +110,7 @@ export default function SignInDropdown() {
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="text-sm text-slate-700 hover:text-slate-900 inline-flex items-center gap-1 py-2 px-1 -mx-1"
+        className="text-sm text-slate-700 hover:text-slate-900 inline-flex items-center gap-1 min-h-[44px] px-2 -mx-2 rounded-lg hover:bg-slate-50"
       >
         Sign in
         <svg
