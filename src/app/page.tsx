@@ -208,7 +208,7 @@ export default async function Home() {
             <span>24h escrow before payout</span>
             <Link
               href="/pricing"
-              className="text-brand-700 font-medium hover:underline"
+              className="inline-flex items-center min-h-[44px] py-2 text-brand-700 font-medium hover:underline"
             >
               See pricing →
             </Link>
@@ -375,7 +375,7 @@ export default async function Home() {
               </div>
               <Link
                 href="/find-care"
-                className="text-sm text-brand-700 font-medium hover:underline"
+                className="inline-flex items-center min-h-[44px] py-2 text-sm text-brand-700 font-medium hover:underline"
               >
                 See all caregivers →
               </Link>
@@ -420,7 +420,7 @@ export default async function Home() {
           <div className="text-center mt-8">
             <Link
               href="/trust"
-              className="text-sm text-brand-700 font-medium hover:underline"
+              className="inline-flex items-center min-h-[44px] py-2 text-sm text-brand-700 font-medium hover:underline"
             >
               Read the full Trust &amp; Safety standards →
             </Link>
@@ -473,7 +473,7 @@ export default async function Home() {
           <div className="mt-10 text-center">
             <Link
               href="/how-it-works"
-              className="text-sm text-brand-700 font-medium hover:underline"
+              className="inline-flex items-center min-h-[44px] py-2 text-sm text-brand-700 font-medium hover:underline"
             >
               See the full process →
             </Link>
@@ -939,7 +939,7 @@ export default async function Home() {
               </div>
               <Link
                 href="/blog"
-                className="text-sm text-brand-700 font-medium hover:underline"
+                className="inline-flex items-center min-h-[44px] py-2 text-sm text-brand-700 font-medium hover:underline"
               >
                 Read all posts →
               </Link>
