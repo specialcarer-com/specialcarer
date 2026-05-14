@@ -134,7 +134,7 @@ export default function SignInDropdown() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full w-72 rounded-2xl bg-white border border-slate-200 shadow-lg py-2 z-50"
+          className="absolute right-0 top-full w-72 max-w-[calc(100vw-2rem)] rounded-2xl bg-white border border-slate-200 shadow-lg py-2 z-50"
           style={{ marginTop: 0 }}
           onMouseEnter={isTouch ? undefined : cancelClose}
           onMouseLeave={isTouch ? undefined : scheduleClose}
