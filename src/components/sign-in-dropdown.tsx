@@ -29,6 +29,10 @@ export default function SignInDropdown() {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Touch devices fire hover events synthetically after a tap, which would
+  // immediately re-open a menu the user just tapped to close. Track whether the
+  // last interaction was a touch so we can ignore mouseenter on those devices.
+  const isTouchRef = useRef(false);
 
   const cancelClose = () => {
     if (closeTimer.current) {
@@ -69,12 +73,16 @@ export default function SignInDropdown() {
   return (
     <div
       ref={wrapRef}
-      className="relative hidden sm:inline-block"
+      className="relative inline-block"
       onMouseEnter={() => {
+        if (isTouchRef.current) return;
         cancelClose();
         setOpen(true);
       }}
-      onMouseLeave={scheduleClose}
+      onMouseLeave={() => {
+        if (isTouchRef.current) return;
+        scheduleClose();
+      }}
       onFocus={() => {
         cancelClose();
         setOpen(true);
@@ -88,6 +96,9 @@ export default function SignInDropdown() {
     >
       <button
         type="button"
+        onPointerDown={(e) => {
+          isTouchRef.current = e.pointerType !== "mouse";
+        }}
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}

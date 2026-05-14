@@ -52,13 +52,6 @@ export default async function SiteHeader() {
         ) : (
           <>
             <SignInDropdown />
-            {/* Mobile: keep a simple link since the dropdown is sm:inline only */}
-            <Link
-              href="/login"
-              className="text-sm text-slate-700 hover:text-slate-900 sm:hidden"
-            >
-              Sign in
-            </Link>
             <Link
               href="/find-care"
               className="px-4 py-2 rounded-full bg-brand text-white text-sm font-medium hover:bg-brand-600 transition"
