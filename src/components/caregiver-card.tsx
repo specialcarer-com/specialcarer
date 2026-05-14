@@ -80,7 +80,7 @@ export default function CaregiverCard({
   const rate = formatRate(c);
 
   return (
-    <article className="bg-white p-5 rounded-2xl border border-slate-100 hover:border-brand-100 hover:shadow-sm transition flex flex-col">
+    <article className="min-w-0 bg-white p-5 rounded-2xl border border-slate-100 hover:border-brand-100 hover:shadow-sm transition flex flex-col">
       <div className="flex items-start gap-4">
         <Link
           href={`/caregiver/${c.user_id}`}
