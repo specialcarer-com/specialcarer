@@ -52,8 +52,8 @@ export default async function SiteHeader() {
           </Link>
         ) : (
           <>
-            {/* Sign in dropdown only on md+ — mobile users get sign-in inside the hamburger sheet */}
-            <div className="hidden md:contents">
+            {/* Sign in dropdown only on lg+ — phones and tablets get sign-in inside the hamburger sheet */}
+            <div className="hidden lg:contents">
               <SignInDropdown />
             </div>
             <Link

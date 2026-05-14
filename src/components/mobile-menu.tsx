@@ -75,7 +75,7 @@ export default function MobileMenu() {
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls="mobile-nav-sheet"
-        className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg text-slate-700 hover:bg-slate-100"
+        className="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg text-slate-700 hover:bg-slate-100"
       >
         <svg
           width="22"
@@ -98,7 +98,7 @@ export default function MobileMenu() {
             type="button"
             aria-label="Close menu"
             onClick={() => setOpen(false)}
-            className="md:hidden fixed inset-0 bg-slate-900/40 z-[60]"
+            className="lg:hidden fixed inset-0 bg-slate-900/40 z-[60]"
           />
 
           {/* Sheet */}
@@ -107,7 +107,7 @@ export default function MobileMenu() {
             role="dialog"
             aria-modal="true"
             aria-label="Site navigation"
-            className="md:hidden fixed top-0 right-0 bottom-0 w-[86%] max-w-sm bg-white z-[70] shadow-2xl flex flex-col"
+            className="lg:hidden fixed top-0 right-0 bottom-0 w-[86%] max-w-sm bg-white z-[70] shadow-2xl flex flex-col"
           >
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <span className="text-sm font-semibold text-slate-900">Menu</span>

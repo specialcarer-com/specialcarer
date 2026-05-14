@@ -64,7 +64,7 @@ export default function SiteHeaderNav() {
   }, [open]);
 
   return (
-    <nav className="hidden md:flex items-center gap-6 text-sm text-slate-600">
+    <nav className="hidden lg:flex items-center gap-6 text-sm text-slate-600">
       <Link href="/how-it-works" className="hover:text-slate-900">
         How it works
       </Link>
