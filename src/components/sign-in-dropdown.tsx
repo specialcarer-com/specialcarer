@@ -27,12 +27,20 @@ const ITEMS = [
 
 export default function SignInDropdown() {
   const [open, setOpen] = useState(false);
+  const [isTouch, setIsTouch] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Touch devices fire hover events synthetically after a tap, which would
-  // immediately re-open a menu the user just tapped to close. Track whether the
-  // last interaction was a touch so we can ignore mouseenter on those devices.
-  const isTouchRef = useRef(false);
+
+  // Touch devices don't have real hover. We detect this once on mount and
+  // disable the hover-to-open behaviour so tap-to-toggle stays predictable.
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(hover: none), (pointer: coarse)");
+    setIsTouch(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setIsTouch(e.matches);
+    mq.addEventListener?.("change", onChange);
+    return () => mq.removeEventListener?.("change", onChange);
+  }, []);
 
   const cancelClose = () => {
     if (closeTimer.current) {
@@ -70,19 +78,22 @@ export default function SignInDropdown() {
   // Clear any pending close timer on unmount.
   useEffect(() => () => cancelClose(), []);
 
+  // Hover handlers are only active on devices with real hover (desktop).
+  const hoverProps = isTouch
+    ? {}
+    : {
+        onMouseEnter: () => {
+          cancelClose();
+          setOpen(true);
+        },
+        onMouseLeave: scheduleClose,
+      };
+
   return (
     <div
       ref={wrapRef}
       className="relative inline-block"
-      onMouseEnter={() => {
-        if (isTouchRef.current) return;
-        cancelClose();
-        setOpen(true);
-      }}
-      onMouseLeave={() => {
-        if (isTouchRef.current) return;
-        scheduleClose();
-      }}
+      {...hoverProps}
       onFocus={() => {
         cancelClose();
         setOpen(true);
@@ -96,9 +107,6 @@ export default function SignInDropdown() {
     >
       <button
         type="button"
-        onPointerDown={(e) => {
-          isTouchRef.current = e.pointerType !== "mouse";
-        }}
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -128,8 +136,8 @@ export default function SignInDropdown() {
           role="menu"
           className="absolute right-0 top-full w-72 rounded-2xl bg-white border border-slate-200 shadow-lg py-2 z-50"
           style={{ marginTop: 0 }}
-          onMouseEnter={cancelClose}
-          onMouseLeave={scheduleClose}
+          onMouseEnter={isTouch ? undefined : cancelClose}
+          onMouseLeave={isTouch ? undefined : scheduleClose}
         >
           {/* Invisible hover bridge that fills the gap between the trigger
               and the menu so the cursor never "leaves" the dropdown when
