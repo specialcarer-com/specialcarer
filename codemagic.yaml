@@ -100,11 +100,24 @@ definitions:
         test -f ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png \
           || { echo "❌ AppIcon-512@2x.png not generated — icon would ship as placeholder"; exit 1; }
 
-    - name: Apply iOS overlay (PrivacyInfo + Info.plist usage strings)
+    - name: Apply iOS overlay (PrivacyInfo + Info.plist usage strings + LaunchScreen)
       script: |
         set -e
         # Drop the privacy manifest into the app target.
         cp mobile/ios-overlay/App/App/PrivacyInfo.xcprivacy ios/App/App/PrivacyInfo.xcprivacy
+
+        # Ship the branded LaunchScreen.storyboard (teal background +
+        # centred SpecialCarer logo). Replaces the default Capacitor-
+        # generated storyboard, which is plain white and causes a visible
+        # white flash for ~150-300ms on cold launch before the
+        # SplashScreen plugin paints. Also drop in the SplashScreen image
+        # set referenced by the storyboard.
+        mkdir -p ios/App/App/Base.lproj
+        cp mobile/ios-overlay/App/App/Base.lproj/LaunchScreen.storyboard \
+           ios/App/App/Base.lproj/LaunchScreen.storyboard
+        mkdir -p ios/App/App/Assets.xcassets/SplashScreen.imageset
+        cp -R mobile/ios-overlay/App/App/Assets.xcassets/SplashScreen.imageset/. \
+              ios/App/App/Assets.xcassets/SplashScreen.imageset/
 
         # Merge required usage-description keys into the generated Info.plist.
         # `plutil -insert` is idempotent: re-inserting an existing key is a no-op

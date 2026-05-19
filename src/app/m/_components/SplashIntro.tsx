@@ -195,9 +195,10 @@ export default function SplashIntro() {
              below the teal stage. Inner content is centred, so it does
              not need explicit safe-area padding. */
           z-index: 9999;
-          /* Match the inner stage background so any sliver during the
-             fade-in / fade-out reads white, not dark teal. */
-          background: #ffffff;
+          /* Teal #0E7C7B — matches the native LaunchScreen.storyboard
+             and Capacitor SplashScreen plugin so the handoff from native
+             splash → web splash overlay has no colour flash. */
+          background: #0E7C7B;
           opacity: 1;
           /* Smooth, gentle ease for the cross-fade to the next screen. */
           transition: opacity ${FADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1);

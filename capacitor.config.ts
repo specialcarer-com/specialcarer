@@ -44,15 +44,15 @@ const config: CapacitorConfig = {
     // Allow remote pages to access JS bridge (required for plugins).
     limitsNavigationsToAppBoundDomains: false,
     contentInset: "automatic",
-    // Show a small white background while web content is loading.
-    // White to match the in-app splash overlay (light-themed). Any sliver
-    // of native chrome around the WebView at cold launch reads as white,
-    // matching the splash stage with no colour seam.
-    backgroundColor: "#FFFFFF",
+    // Teal #0E7C7B — matches LaunchScreen.storyboard so cold-launch has
+    // no colour seam between native splash and SplashScreen plugin frame.
+    backgroundColor: "#0E7C7B",
   },
 
   android: {
-    backgroundColor: "#FFFFFF",
+    // Teal #0E7C7B — matches LaunchScreen.storyboard so cold-launch has
+    // no colour seam between native splash and SplashScreen plugin frame.
+    backgroundColor: "#0E7C7B",
     allowMixedContent: false,
     captureInput: true,
   },
@@ -61,10 +61,9 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchShowDuration: 1200,
       launchAutoHide: true,
-      // White stage matches the in-app SpecialCarerMobileSplash overlay
-      // (light theme) so the handoff from native splash → web splash has
-      // no colour flash.
-      backgroundColor: "#FFFFFF",
+      // Teal #0E7C7B — matches LaunchScreen.storyboard so cold-launch has
+      // no colour seam between native splash and SplashScreen plugin frame.
+      backgroundColor: "#0E7C7B",
       androidScaleType: "CENTER_CROP",
       showSpinner: false,
       splashFullScreen: true,
@@ -75,10 +74,13 @@ const config: CapacitorConfig = {
       presentationOptions: ["badge", "sound", "alert"],
     },
     StatusBar: {
-      // DARK glyphs read on the white splash stage and on the app's
-      // white surfaces afterwards — no runtime flip needed.
-      style: "DARK",
-      backgroundColor: "#FFFFFF",
+      // LIGHT glyphs read on the teal splash stage. Switched from DARK
+      // when the cold-launch background moved to teal to remove the
+      // white flash before the SplashScreen plugin frame.
+      style: "LIGHT",
+      // Teal #0E7C7B — matches LaunchScreen.storyboard so cold-launch has
+      // no colour seam between native splash and SplashScreen plugin frame.
+      backgroundColor: "#0E7C7B",
       // Let the WebView paint behind the status bar so the splash overlay
       // is truly edge-to-edge — no coloured strip at the top.
       overlaysWebView: true,

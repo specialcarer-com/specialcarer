@@ -6,6 +6,8 @@ These files must be merged into the native iOS project **after** `npx cap add io
 
 - **`App/App/PrivacyInfo.xcprivacy`** — Apple Privacy Manifest. Declares all collected data types and required-reason API usage. Required for App Store submission since 1 May 2024.
 - **`App/App/Info.plist`** — Full Info.plist with all required `*UsageDescription` strings. **MERGE** the usage strings into your existing Info.plist (do not blindly overwrite — Capacitor adds keys you want to keep).
+- **`App/App/Base.lproj/LaunchScreen.storyboard`** — Branded launch storyboard. Teal (#0E7C7B) background + centred SpecialCarer logo. This is the FIRST frame the user sees on cold launch, before the Capacitor SplashScreen plugin paints. **DO NOT change to white** — the previous default white storyboard caused a visible white flash for ~150-300ms before the splash plugin took over.
+- **`App/App/Assets.xcassets/SplashScreen.imageset/`** — The image referenced by `LaunchScreen.storyboard`. To update the splash logo, drop a new PNG into this directory (keep the `splash@1x.png` / `splash@2x.png` / `splash@3x.png` naming) and re-tag `ios-v*` to cut a fresh TestFlight build.
 
 ## How to install on the Mac
 
