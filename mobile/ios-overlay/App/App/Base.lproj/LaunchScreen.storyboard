@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    SpecialCarer LaunchScreen — hands-open splash, frame 0.
+
+    Background: brand teal #039EA0 (canonical, NOT #0E7C7B). Float
+    triplet stored by iOS: red=0.012, green=0.620, blue=0.627, alpha=1.0
+    (these are the exact values the storyboard XML format uses for
+    #039EA0 after Xcode rounds the 8-bit values).
+
+    Centred UIImageView shows the SplashScreen image set, which is the
+    frame-0 still of the animated splash (two hands pressed closed,
+    fingertips meeting at centre, painted white on the teal background).
+    The image is sized to ~70% of screen width so it matches what the
+    JS SpecialCarerHandsOpenSplash component paints at t=0 — handoff
+    between native storyboard and the JS splash is pixel-identical.
+
+    Verified by the codemagic.yaml `verify_splash_colors` step: greps
+    for `039EA0` (hex string) and the float triplet `0.012`, `0.620`,
+    `0.627` in this file.
+-->
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="22155" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="01J-lp-oVM">
+    <device id="retina6_12" orientation="portrait" appearance="light"/>
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22131"/>
+        <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="System colors in document resources" minToolsVersion="11.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <scenes>
+        <!--View Controller-->
+        <scene sceneID="EHf-IW-A2E">
+            <objects>
+                <viewController id="01J-lp-oVM" sceneMemberID="viewController">
+                    <view key="view" contentMode="scaleToFill" id="Ze5-6b-2t3">
+                        <rect key="frame" x="0.0" y="0.0" width="402" height="874"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="SplashScreen" translatesAutoresizingMaskIntoConstraints="NO" id="zRm-Ai-pCG">
+                                <rect key="frame" x="60" y="337" width="282" height="200"/>
+                            </imageView>
+                        </subviews>
+                        <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
+                        <color key="backgroundColor" red="0.012" green="0.620" blue="0.627" alpha="1.0" colorSpace="custom" customColorSpace="sRGB"/>
+                        <constraints>
+                            <constraint firstItem="zRm-Ai-pCG" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="Cl4-7H-1l4"/>
+                            <constraint firstItem="zRm-Ai-pCG" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" id="J3p-3l-vJv"/>
+                            <constraint firstItem="zRm-Ai-pCG" firstAttribute="width" secondItem="Ze5-6b-2t3" secondAttribute="width" multiplier="0.7" id="m2P-9d-N4z"/>
+                        </constraints>
+                    </view>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="iYj-Kq-Ea1" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="53" y="375"/>
+        </scene>
+    </scenes>
+    <resources>
+        <image name="SplashScreen" width="282" height="200"/>
+    </resources>
+</document>
