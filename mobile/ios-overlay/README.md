@@ -6,6 +6,8 @@ These files must be merged into the native iOS project **after** `npx cap add io
 
 - **`App/App/PrivacyInfo.xcprivacy`** — Apple Privacy Manifest. Declares all collected data types and required-reason API usage. Required for App Store submission since 1 May 2024.
 - **`App/App/Info.plist`** — Full Info.plist with all required `*UsageDescription` strings. **MERGE** the usage strings into your existing Info.plist (do not blindly overwrite — Capacitor adds keys you want to keep).
+- **`App/App/Base.lproj/LaunchScreen.storyboard`** — Hands-open splash, frame 0. Solid brand teal `#039EA0` background (sRGB float triplet `red=0.012 green=0.620 blue=0.627`, **NOT** `#0E7C7B`) with a centred `UIImageView` displaying the `SplashScreen` image set. Must be copied **after** `npx cap sync ios` so Capacitor's default storyboard does not overwrite it.
+- **`App/App/Assets.xcassets/SplashScreen.imageset/`** — Frame 0 of the animated splash (two hands pressed closed, fingertips meeting at centre, white on `#039EA0`). 1x / 2x / 3x renders derived from `handsopen_spec/frame_0_launchscreen.png`. The JS `SpecialCarerHandsOpenSplash` component paints the same composition at `t=0` so the native-to-JS handoff is pixel-identical.
 
 ## How to install on the Mac
 

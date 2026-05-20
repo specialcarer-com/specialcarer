@@ -22,3 +22,8 @@ export {
   type LogoStaticTheme,
   type SpecialCarerLogoStaticProps,
 } from "./SpecialCarerLogoStatic";
+
+export {
+  SpecialCarerHandsOpenSplash,
+  type SpecialCarerHandsOpenSplashProps,
+} from "./SpecialCarerHandsOpenSplash";

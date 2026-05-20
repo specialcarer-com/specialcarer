@@ -48,38 +48,39 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { SpecialCarerMobileSplash } from "@/components/motion/SpecialCarerMobileSplash";
+import { SpecialCarerHandsOpenSplash } from "@/components/motion/SpecialCarerHandsOpenSplash";
 
 const SESSION_KEY = "sc:splash:played";
 /**
  * How long the splash overlay is visible before the fade-out begins.
  *
- * Using the slowed cinematic pacing (SLOW=2.5, totalSec=14):
- *   t = rawT / 2.5  (scene-time)
- *   - icon impact:           t ≈ 2.4  → ~6000ms real
- *   - wordmark begins typing: t ≈ 2.6  → ~6500ms real
- *   - wordmark complete:      t ≈ 3.4  → ~8500ms real
- *   - tagline begins:         t = 4.0  → 10000ms real
- *   - tagline complete:       t = 5.0  → 12500ms real
- *   - settle/breath finishes: t = 5.5  → 13750ms real
+ * Hands-open v3 walk-in choreography (see SpecialCarerHandsOpenSplash):
+ *   - wheelchair walks in (LEFT):  0.00..0.80s
+ *   - kids walk in (LEFT):         0.80..1.60s
+ *   - adults walk in (RIGHT):      1.60..2.50s
+ *   - 2x2 colour cubes pop:        2.40..2.90s
+ *   - heart fades in:              2.90..3.40s
+ *   - hands open + settle:         3.40..4.50s
+ *   - baseline + wordmark types:   4.50..5.10s
+ *   - tagline fade + letter-space: 5.40..5.90s
+ *   - hold full lockup:            5.90..6.50s
  *
- * Hold to 15800ms so the tagline lands fully and the user gets ~3.3s
- * to dwell on the full composition before the slow cross-fade to the
- * next screen begins.
+ * Visible to 6700ms so the user dwells briefly on the full lockup
+ * before the cross-fade to the next screen.
  */
-const VISIBLE_MS = 15800;
-/** Long, gentle cross-fade so the next screen drifts in. */
-const FADE_MS = 1700;
+const VISIBLE_MS = 6700;
+/** Cross-fade so the next screen drifts in. */
+const FADE_MS = 700;
 const TAP_GRACE_MS = 500;
 
 /**
  * Pathnames the splash is allowed to start on:
- *   - /m       → cold-launch entry (app open from icon)
  *   - /m/login → returning user signing in
- * Sign-up and onboarding intentionally do NOT trigger the splash; if a
- * user lands there directly via deep-link they don't get the reveal.
+ * Sign-up, onboarding, and the bare /m entry intentionally do NOT
+ * trigger the splash; if a user lands there directly via deep-link they
+ * don't get the reveal.
  */
-const ALLOWED_PATHS = new Set(["/m", "/m/login"]);
+const ALLOWED_PATHS = new Set(["/m/login"]);
 
 export default function SplashIntro() {
   const pathname = usePathname();
@@ -175,15 +176,12 @@ export default function SplashIntro() {
       data-fading={fading ? "1" : "0"}
     >
       <div className="sc-splash-canvas">
-        {/* forceAnimate: play the canonical reveal even when the user has
-            iOS-level Reduce Motion enabled. The animation is bounded
-            (~14s scene-time at slow pacing) and tap-to-skip after a
-            short grace.
-            slow: SLOW=2.5, scene runs 14s instead of 10s for a calmer
-            cinematic feel.
-            theme="light": clean white stage, teal particles + ripples,
-            dark tagline. Per product owner direction. */}
-        <SpecialCarerMobileSplash forceAnimate slow theme="light" />
+        {/* forceAnimate: play the canonical hands-open reveal even when
+            the user has iOS-level Reduce Motion enabled. The animation
+            is bounded (~6.5s + 700ms hold) and tap-to-skip after a
+            short grace. forceAnimate is honoured at every animation
+            layer inside the component (rAF gate too). */}
+        <SpecialCarerHandsOpenSplash forceAnimate />
       </div>
 
       <style jsx>{`
@@ -191,13 +189,13 @@ export default function SplashIntro() {
           position: fixed;
           inset: 0;
           /* Cover the iOS status bar / home indicator too. The overlay
-             must be edge-to-edge so there's no white strip above or
+             must be edge-to-edge so there's no colour seam above or
              below the teal stage. Inner content is centred, so it does
              not need explicit safe-area padding. */
           z-index: 9999;
-          /* Match the inner stage background so any sliver during the
-             fade-in / fade-out reads white, not dark teal. */
-          background: #ffffff;
+          /* Match the splash stage background (brand teal) so any sliver
+             during fade-in/fade-out reads as brand teal, not white. */
+          background: #039EA0;
           opacity: 1;
           /* Smooth, gentle ease for the cross-fade to the next screen. */
           transition: opacity ${FADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1);

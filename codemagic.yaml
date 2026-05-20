@@ -158,6 +158,55 @@ definitions:
       script: |
         npx cap sync ios
 
+    - name: Apply hands-open splash overlay (LaunchScreen + SplashScreen imageset)
+      script: |
+        set -euxo pipefail
+        # Brand teal #039EA0 splash. Runs AFTER `npx cap sync ios` so the
+        # teal LaunchScreen.storyboard + SplashScreen imageset survive
+        # (cap sync re-writes the storyboard otherwise).
+
+        # 1. Copy the hands-open LaunchScreen.storyboard.
+        cp mobile/ios-overlay/App/App/Base.lproj/LaunchScreen.storyboard \
+           ios/App/App/Base.lproj/LaunchScreen.storyboard
+
+        # 2. Copy the SplashScreen.imageset (frame 0 of the animation:
+        #    hands pressed closed on brand teal).
+        rm -rf ios/App/App/Assets.xcassets/SplashScreen.imageset
+        cp -R mobile/ios-overlay/App/App/Assets.xcassets/SplashScreen.imageset \
+              ios/App/App/Assets.xcassets/SplashScreen.imageset
+
+        # 3. Verify the brand teal #039EA0 is present in the storyboard.
+        #    Canonical hex is #039EA0 (NOT #0E7C7B). The iOS storyboard
+        #    format stores the colour as a sRGB float triplet — for
+        #    #039EA0 these round to red=0.012 green=0.620 blue=0.627.
+        STORYBOARD="ios/App/App/Base.lproj/LaunchScreen.storyboard"
+
+        echo "--- Verifying LaunchScreen.storyboard teal ---"
+        if grep -qiE 'red="0\.0?1[12]"\s+green="0\.6[12]0?"\s+blue="0\.62[67]"' "$STORYBOARD"; then
+          echo "✅ float triplet for #039EA0 present in storyboard"
+        else
+          echo "❌ float triplet for #039EA0 (red≈0.012 green≈0.620 blue≈0.627) missing in storyboard"
+          grep -n 'backgroundColor\|<color' "$STORYBOARD" || true
+          exit 1
+        fi
+
+        # Defensive: fail loudly if the wrong teal (#0E7C7B) leaked back in.
+        if grep -qiE '0[eE]7[cC]7[bB]' "$STORYBOARD"; then
+          echo "❌ wrong teal #0E7C7B found in storyboard — must be #039EA0"
+          exit 1
+        fi
+
+        # 4. Verify Capacitor + native backgrounds are also #039EA0.
+        if grep -qiE '0[eE]7[cC]7[bB]' capacitor.config.ts; then
+          echo "❌ wrong teal #0E7C7B found in capacitor.config.ts — must be #039EA0"
+          exit 1
+        fi
+        if ! grep -q '#039EA0' capacitor.config.ts; then
+          echo "❌ #039EA0 missing from capacitor.config.ts"
+          exit 1
+        fi
+        echo "✅ capacitor.config.ts uses canonical #039EA0"
+
     - name: Install iOS dependencies (CocoaPods or SPM)
       script: |
         set -euxo pipefail
