@@ -54,18 +54,21 @@ const SESSION_KEY = "sc:splash:played";
 /**
  * How long the splash overlay is visible before the fade-out begins.
  *
- * Hands-open animation timeline (see SpecialCarerHandsOpenSplash):
- *   - hands closed → open: 0..1.0s
- *   - heart fade in:       0.5..1.0s
- *   - figures/baseline:    1.0..1.5s
- *   - wordmark types:      1.6..2.0s
- *   - tagline fades:       2.4..2.8s
- *   - hold full lockup:    2.8..3.5s
+ * Hands-open v3 walk-in choreography (see SpecialCarerHandsOpenSplash):
+ *   - wheelchair walks in (LEFT):  0.00..0.80s
+ *   - kids walk in (LEFT):         0.80..1.60s
+ *   - adults walk in (RIGHT):      1.60..2.50s
+ *   - 2x2 colour cubes pop:        2.40..2.90s
+ *   - heart fades in:              2.90..3.40s
+ *   - hands open + settle:         3.40..4.50s
+ *   - baseline + wordmark types:   4.50..5.10s
+ *   - tagline fade + letter-space: 5.40..5.90s
+ *   - hold full lockup:            5.90..6.50s
  *
- * Visible to 3700ms so the user dwells briefly on the full lockup
+ * Visible to 6700ms so the user dwells briefly on the full lockup
  * before the cross-fade to the next screen.
  */
-const VISIBLE_MS = 3700;
+const VISIBLE_MS = 6700;
 /** Cross-fade so the next screen drifts in. */
 const FADE_MS = 700;
 const TAP_GRACE_MS = 500;
@@ -175,7 +178,7 @@ export default function SplashIntro() {
       <div className="sc-splash-canvas">
         {/* forceAnimate: play the canonical hands-open reveal even when
             the user has iOS-level Reduce Motion enabled. The animation
-            is bounded (~2.8s + 700ms hold) and tap-to-skip after a
+            is bounded (~6.5s + 700ms hold) and tap-to-skip after a
             short grace. forceAnimate is honoured at every animation
             layer inside the component (rAF gate too). */}
         <SpecialCarerHandsOpenSplash forceAnimate />

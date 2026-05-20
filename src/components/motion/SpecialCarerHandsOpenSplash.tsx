@@ -3,21 +3,27 @@
 /**
  * SpecialCarerHandsOpenSplash
  *
- * Hands-open animated splash for mobile boot. The two hands start pressed
- * upright (closed, fingertips toward centre) and rotate outward through
- * the logo's natural cradling pose. Heart/cross, figures, baseline,
- * wordmark, and tagline reveal in sequence. Total ~2.8s + hold.
+ * Hands-open animated splash for mobile boot. V3 "walk-in" choreography:
+ * figures walk in from the sides, colour cubes pop, heart fades in,
+ * hands open from the closed cradle, then the baseline + wordmark +
+ * tagline lockup lands. Total 6.5s + hold.
  *
  * Pivots:
- *   - LEFT hand:  wrist at (28.85, 71.52), closed angle -30 (CCW)
- *   - RIGHT hand: wrist at (131.65, 71.51), closed angle +30 (CW)
+ *   - LEFT hand:  wrist at (28.85, 71.52), closed angle +30 (CCW in render
+ *                 via the negative rotate; spec describes magnitude)
+ *   - RIGHT hand: wrist at (131.65, 71.51), closed angle -30 (CW in render)
  *
- * At t=0 the hands are at +/- 30 degrees (pressed). At t=1.0s and onward
- * the hands are at 0 degrees (logo's natural geometry). We never rotate
- * past 0 -- that would break the cradle pose.
+ * Frame 0 (t=0) shows ONLY the hands in their closed cradle pose
+ * (+/-30°), matching the shipped iOS LaunchScreen image. Every other
+ * element is invisible until its window opens.
+ *
+ * Hands open between 3.40s and 4.50s with an `easeOutCubic` sweep from
+ * +30° down through 0° to a -3° overshoot, then `easeInOut` settle back
+ * to 0°. Heart renders LAST (above the open hands), opacity only — we
+ * never scale the heart (the SVG bbox is misleading).
  *
  * Reference: design/motion-brand/assets/specialcarer-icon.svg (12 paths)
- * Spec:      handsopen_spec/SPEC.md, build_keyframes_reference.py
+ * Spec:      splash_inspect/V3_SPEC.md, v3_choreography_reference.py
  *
  * IMPORTANT: forceAnimate must be honoured at every layer. We read
  * prefers-reduced-motion only to decide the static-end fallback, but
@@ -38,17 +44,51 @@ const VB_H = 82;
 const LEFT_PIVOT = { x: 28.85, y: 71.52 };
 const RIGHT_PIVOT = { x: 131.65, y: 71.51 };
 
-// Animation timeline (seconds, scene-time at speed=1).
-const DUR_HANDS_OPEN = 1.0;   // hands sweep from closed to open
-const DUR_HEART_FADE = 0.5;   // heart fades in 0.5s..1.0s
-const DUR_FIG_FADE = 0.5;     // figures fade in 1.0s..1.5s
-const DUR_BASE_FADE = 0.5;    // baseline 1.0s..1.5s
-const DUR_WORD_TYPE = 0.4;    // wordmark types 1.6s..2.0s
-const DUR_TAG_FADE = 0.4;     // tagline fades 2.4s..2.8s
-const TOTAL_SEC = 2.8;
+// ----- V3 timeline anchors (seconds) ---------------------------------
+// See splash_inspect/V3_SPEC.md for the canonical timing windows.
+const T_WHEEL_START = 0.00;
+const T_WHEEL_END = 0.80;
+const T_KIDS_START = 0.80;
+const T_KIDS_END = 1.60;
+const T_ADULTS_START = 1.60;
+const T_ADULTS_END = 2.40;
+const T_MALE_DELAY = 0.10; // path 11 starts 100ms behind path 10
+const T_CUBES_START = 2.40;
+const T_CUBE_STAGGER = 0.08;
+const T_CUBE_POP_DUR = 0.30;
+const T_HEART_START = 2.90;
+const T_HEART_END = 3.40;
+const T_HANDS_START = 3.40;
+const T_HANDS_OVERSHOOT = 4.30;
+const T_HANDS_SETTLED = 4.50;
+const T_BASELINE_START = 4.50;
+const T_BASELINE_END = 4.90;
+const T_WM_START = 4.50;
+const T_WM_END = 5.10;
+const T_TAG_START = 5.40;
+const T_TAG_END = 5.90;
 
-// Hand closed angle (degrees). LEFT goes -30 (CCW), RIGHT goes +30 (CW).
+/** Total scene duration (animation only; consumer adds hold-ms on top). */
+export const DURATION_SEC = 6.5;
+
+// Hand closed angle (degrees). Sweep goes 30 -> -3 (overshoot) -> 0.
 const CLOSED_ANGLE = 30;
+const OVERSHOOT_ANGLE = 3;
+
+// Walk-in entry offset (SVG user units; viewBox is 161 wide).
+const ENTRY_OFFSET = 80;
+
+// Cube centroids in viewBox coordinates (paths 3..6).
+const CUBE_CENTERS: ReadonlyArray<{ cx: number; cy: number }> = [
+  { cx: 77.68, cy: 39.72 }, // path 3 (lower-left)
+  { cx: 82.86, cy: 39.72 }, // path 4 (lower-right)
+  { cx: 77.68, cy: 34.49 }, // path 5 (upper-left)
+  { cx: 82.86, cy: 34.49 }, // path 6 (upper-right)
+];
+
+// Tagline letter-spacing animation range (in em).
+const TAG_LS_START_EM = 0.08;
+const TAG_LS_END_EM = 0.30;
 
 // Path data extracted from design/motion-brand/assets/specialcarer-icon.svg.
 // 12 paths in canonical order (see SPEC.md Path inventory).
@@ -165,6 +205,66 @@ function useAnimTime(opts: {
   return { t, reducedMotion, done };
 }
 
+/**
+ * Per-figure walk-in: alpha + dx (in SVG user units).
+ *
+ * Before window: alpha 0, dx at off-canvas entry offset (so on the
+ * static-end fallback for Reduce Motion users we never render an empty
+ * placeholder — alpha being 0 is enough to hide it).
+ * Inside window: alpha ramps linearly (full by 60% of window),
+ * dx slides from ±entryOffset to 0 with easeOutCubic.
+ * After window: alpha 1, dx 0.
+ */
+function walkInState(
+  t: number,
+  tStart: number,
+  tEnd: number,
+  fromLeft: boolean,
+): { alpha: number; dx: number } {
+  const offset = fromLeft ? -ENTRY_OFFSET : ENTRY_OFFSET;
+  if (t < tStart) return { alpha: 0, dx: offset };
+  if (t >= tEnd) return { alpha: 1, dx: 0 };
+  const u = (t - tStart) / (tEnd - tStart);
+  const eased = Easing.easeOutCubic(u);
+  const alpha = clamp(u / 0.6);
+  const dx = offset * (1 - eased);
+  return { alpha, dx };
+}
+
+/** Per-cube pop: opacity + scale around the cube's own centroid. */
+function cubeState(t: number, staggerIdx: number): { alpha: number; scale: number } {
+  const popStart = T_CUBES_START + staggerIdx * T_CUBE_STAGGER;
+  const popEnd = popStart + T_CUBE_POP_DUR;
+  if (t < popStart) return { alpha: 0, scale: 0 };
+  if (t >= popEnd) return { alpha: 1, scale: 1 };
+  const u = (t - popStart) / T_CUBE_POP_DUR;
+  const scale = Easing.easeOutBack(u);
+  const alpha = clamp(u / 0.5);
+  return { alpha, scale };
+}
+
+/**
+ * Hand angle magnitude (degrees). Positive = closed-inward.
+ *   t < 3.40s            -> +30 (closed cradle, frame-0 state)
+ *   3.40s..4.30s         -> easeOutCubic from +30 to -3 (overshoot past 0)
+ *   4.30s..4.50s         -> easeInOut settle from -3 back to 0
+ *   t >= 4.50s           -> 0 (open, natural cradle)
+ */
+function handsAngleAt(t: number): number {
+  if (t < T_HANDS_START) return CLOSED_ANGLE;
+  if (t >= T_HANDS_SETTLED) return 0;
+  if (t < T_HANDS_OVERSHOOT) {
+    const u = (t - T_HANDS_START) / (T_HANDS_OVERSHOOT - T_HANDS_START);
+    const eased = Easing.easeOutCubic(u);
+    return CLOSED_ANGLE + eased * (-OVERSHOOT_ANGLE - CLOSED_ANGLE);
+  }
+  const u = (t - T_HANDS_OVERSHOOT) / (T_HANDS_SETTLED - T_HANDS_OVERSHOOT);
+  // easeInOut(u) = u*u*(3-2u). Easing.easeInOutCubic is a cubic-power
+  // variant; we use the spec's smoothstep form directly here.
+  const eased = u * u * (3 - 2 * u);
+  return -OVERSHOOT_ANGLE + eased * OVERSHOOT_ANGLE;
+}
+
 export function SpecialCarerHandsOpenSplash({
   onComplete,
   forceAnimate = false,
@@ -176,7 +276,7 @@ export function SpecialCarerHandsOpenSplash({
   className,
   style,
 }: SpecialCarerHandsOpenSplashProps) {
-  const total = TOTAL_SEC + holdMs / 1000;
+  const total = DURATION_SEC + holdMs / 1000;
   const { t: rawT, reducedMotion, done } = useAnimTime({
     durationSec: total,
     loop,
@@ -198,25 +298,46 @@ export function SpecialCarerHandsOpenSplash({
     }
   }, [done, onComplete]);
 
-  // ----- Scalars -----------------------------------------------------
-  // Hand sweep: closed at t=0, open at t=DUR_HANDS_OPEN, stays open after.
-  const handsProg = clamp(Easing.easeOutCubic(clamp(t / DUR_HANDS_OPEN)));
-  const handAngle = CLOSED_ANGLE * (1 - handsProg);
-  const leftRot = -handAngle;   // CCW for left
-  const rightRot = +handAngle;  // CW for right
+  // ----- Scalars (per-frame state) -----------------------------------
+  // Hands: closed cradle at t=0 (+30 / -30), opens 3.40s..4.50s.
+  const handAngle = handsAngleAt(t);
+  const leftRot = -handAngle;  // visual rotate for left-hand group
+  const rightRot = +handAngle; // visual rotate for right-hand group
 
-  // Heart/figures/baseline opacity envelopes.
-  const heartAlpha = clamp((t - 0.5) / DUR_HEART_FADE);
-  const figAlpha = clamp((t - 1.0) / DUR_FIG_FADE);
-  const baseAlpha = clamp((t - 1.0) / DUR_BASE_FADE);
+  // Walk-in figures.
+  const wheel = walkInState(t, T_WHEEL_START, T_WHEEL_END, true);
+  const kids = walkInState(t, T_KIDS_START, T_KIDS_END, true);
+  const female = walkInState(t, T_ADULTS_START, T_ADULTS_END, false);
+  const male = walkInState(
+    t,
+    T_ADULTS_START + T_MALE_DELAY,
+    T_ADULTS_END + T_MALE_DELAY,
+    false,
+  );
 
-  // Wordmark: letter-by-letter type-in starting at 1.6s, full by 2.0s.
-  const wordProg = clamp((t - 1.6) / DUR_WORD_TYPE);
-  const wordCharCount = Math.max(0, Math.min(WORDMARK.length, Math.round(WORDMARK.length * wordProg)));
+  // Cubes (paths 3..6), staggered 80ms apart.
+  const cubes = CUBE_CENTERS.map((c, i) => ({ ...c, ...cubeState(t, i) }));
+
+  // Heart fades 2.90..3.40 (opacity only, never scale).
+  const heartAlpha = clamp((t - T_HEART_START) / (T_HEART_END - T_HEART_START));
+
+  // Baseline fades 4.50..4.90.
+  const baseAlpha = clamp((t - T_BASELINE_START) / (T_BASELINE_END - T_BASELINE_START));
+
+  // Wordmark types 4.50..5.10.
+  const wordProg = clamp((t - T_WM_START) / (T_WM_END - T_WM_START));
+  const wordCharCount = Math.max(
+    0,
+    Math.min(WORDMARK.length, Math.floor(WORDMARK.length * wordProg)),
+  );
   const wordVisible = WORDMARK.slice(0, wordCharCount);
 
-  // Tagline: fade in 2.4s..2.8s.
-  const tagAlpha = clamp((t - 2.4) / DUR_TAG_FADE);
+  // Tagline fades + letter-spacing eases 5.40..5.90.
+  const tagAlpha = clamp((t - T_TAG_START) / (T_TAG_END - T_TAG_START));
+  const tagSpreadU = clamp((t - T_TAG_START) / (T_TAG_END - T_TAG_START));
+  const tagSpread = Easing.easeOutCubic(tagSpreadU);
+  const tagLetterSpacingEm =
+    TAG_LS_START_EM + (TAG_LS_END_EM - TAG_LS_START_EM) * tagSpread;
 
   // ----- Render ------------------------------------------------------
   const iconFill = "#FFFFFF";
@@ -236,7 +357,6 @@ export function SpecialCarerHandsOpenSplash({
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        // Ensure the SVG is centred and the lockup hangs below it.
         ...style,
       }}
     >
@@ -257,29 +377,42 @@ export function SpecialCarerHandsOpenSplash({
           height="100%"
           fill="none"
         >
-          {/* Baseline (path 2) — drawn first so figures sit on top. */}
-          <g opacity={baseAlpha}>
-            <path d={PATHS[2]} fill={iconFill} />
+          {/* logo-base: wheelchair + kids + adults walk in from sides. Rendered
+              first so the hands sit on top of them in the cradle pose. */}
+          <g id="logo-base">
+            <g opacity={wheel.alpha} transform={`translate(${wheel.dx} 0)`}>
+              <path d={PATHS[8]} fill={iconFill} />
+            </g>
+            <g opacity={kids.alpha} transform={`translate(${kids.dx} 0)`}>
+              <path d={PATHS[9]} fill={iconFill} />
+            </g>
+            <g opacity={female.alpha} transform={`translate(${female.dx} 0)`}>
+              <path d={PATHS[10]} fill={iconFill} />
+            </g>
+            <g opacity={male.alpha} transform={`translate(${male.dx} 0)`}>
+              <path d={PATHS[11]} fill={iconFill} />
+            </g>
+
+            {/* 2x2 colour cubes (paths 3..6) pop in around their own centroids. */}
+            {cubes.map((c, i) => (
+              <g
+                key={`cube-${i}`}
+                opacity={c.alpha}
+                transform={`translate(${c.cx} ${c.cy}) scale(${c.scale}) translate(${-c.cx} ${-c.cy})`}
+              >
+                <path d={PATHS[3 + i]} fill={iconFill} />
+              </g>
+            ))}
+
+            {/* Baseline curve (path 2) fades in 4.50..4.90s. */}
+            <g opacity={baseAlpha}>
+              <path d={PATHS[2]} fill={iconFill} />
+            </g>
           </g>
 
-          {/* Figures + 2x2 grid accents (paths 3..6, 8..11). */}
-          <g opacity={figAlpha}>
-            <path d={PATHS[3]} fill={iconFill} />
-            <path d={PATHS[4]} fill={iconFill} />
-            <path d={PATHS[5]} fill={iconFill} />
-            <path d={PATHS[6]} fill={iconFill} />
-            <path d={PATHS[8]} fill={iconFill} />
-            <path d={PATHS[9]} fill={iconFill} />
-            <path d={PATHS[10]} fill={iconFill} />
-            <path d={PATHS[11]} fill={iconFill} />
-          </g>
-
-          {/* Heart + cross (path 7) — opacity only, never scale. */}
-          <g opacity={heartAlpha}>
-            <path d={PATHS[7]} fill={iconFill} />
-          </g>
-
-          {/* Hands LAST so they sit on top of the figures (cradle pose). */}
+          {/* Hands LAST among icon groups so they sit on top of the figures.
+              Closed cradle at t=0 (+/-30 deg) matches the shipped iOS
+              LaunchScreen image exactly. */}
           <g
             id="hand-left"
             transform={`rotate(${leftRot} ${LEFT_PIVOT.x} ${LEFT_PIVOT.y})`}
@@ -292,6 +425,13 @@ export function SpecialCarerHandsOpenSplash({
           >
             <path d={PATHS[1]} fill={iconFill} />
           </g>
+
+          {/* Heart + cross (path 7) renders LAST overall so it appears above
+              the open hands. Opacity only — never scale (the SVG bbox is
+              misleading for this glyph). */}
+          <g id="heart" opacity={heartAlpha}>
+            <path d={PATHS[7]} fill={iconFill} />
+          </g>
         </svg>
       </div>
 
@@ -302,7 +442,6 @@ export function SpecialCarerHandsOpenSplash({
           width: "80%",
           textAlign: "center",
           color: "#FFFFFF",
-          // Prevent the typing cursor from shifting the centred layout.
           fontFamily:
             '"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         }}
@@ -326,7 +465,9 @@ export function SpecialCarerHandsOpenSplash({
             marginTop: "0.6em",
             fontWeight: 500,
             fontSize: "clamp(12px, 3vw, 18px)",
-            letterSpacing: "0.30em",
+            // Letter-spacing tweened in JS (5.40..5.90s) so we don't pay a
+            // CSS transition tax alongside the rAF loop.
+            letterSpacing: `${tagLetterSpacingEm}em`,
             textTransform: "uppercase",
             opacity: tagAlpha,
           }}
