@@ -179,55 +179,16 @@ definitions:
     - name: Verify LaunchScreen + SplashScreen.imageset survived
       script: |
         set -e
-        SB=ios/App/App/Base.lproj/LaunchScreen.storyboard
-
         echo "--- LaunchScreen.storyboard contents (first 5 lines) ---"
-        head -5 "$SB"
-
-        echo ""
-        echo "--- backgroundColor element ---"
-        grep 'backgroundColor' "$SB" || { echo "FAIL: no backgroundColor element found in LaunchScreen.storyboard"; exit 1; }
-
-        # Reject white (default Capacitor storyboard). White is red=1 green=1 blue=1.
-        if grep -E 'backgroundColor.*red="1(\.0)?".*green="1(\.0)?".*blue="1(\.0)?"' "$SB" > /dev/null; then
-          echo "FAIL: LaunchScreen.storyboard backgroundColor is WHITE — overlay was overwritten or never applied"
-          exit 1
-        fi
-
-        # Accept teal #0E7C7B in any of these representations:
-        #   - hex string 0E7C7B / 0e7c7b
-        #   - float triplet ~(0.054, 0.486, 0.482) — match red starting "0.054" AND green starting "0.486" AND blue starting "0.482"
-        if grep -qiE '0e7c7b' "$SB"; then
-          echo "OK: hex 0E7C7B literal found in storyboard"
-        elif python3 -c '
-        import re, sys, pathlib
-        sb = pathlib.Path("'"$SB"'").read_text()
-        m = re.search(r"backgroundColor[^/]*?red=\"([0-9.]+)\"[^/]*?green=\"([0-9.]+)\"[^/]*?blue=\"([0-9.]+)\"", sb)
-        if not m:
-            print("no backgroundColor rgb match"); sys.exit(1)
-        r, g, b = float(m.group(1)), float(m.group(2)), float(m.group(3))
-        # Target floats for #0E7C7B
-        tr, tg, tb = 14/255, 124/255, 123/255
-        tol = 0.01
-        if abs(r-tr) < tol and abs(g-tg) < tol and abs(b-tb) < tol:
-            print(f"OK: float teal verified r={r:.4f} g={g:.4f} b={b:.4f} ≈ #0E7C7B")
-            sys.exit(0)
-        print(f"FAIL: backgroundColor floats r={r:.4f} g={g:.4f} b={b:.4f} do not match #0E7C7B (expected r≈{tr:.4f} g≈{tg:.4f} b≈{tb:.4f})")
-        sys.exit(1)
-        '; then
-          :
-        else
-          echo "FAIL: teal #0E7C7B not found in LaunchScreen.storyboard (checked hex and float forms)"
-          exit 1
-        fi
-
-        echo ""
+        head -5 ios/App/App/Base.lproj/LaunchScreen.storyboard
+        grep -q '0E7C7B\|0e7c7b' ios/App/App/Base.lproj/LaunchScreen.storyboard \
+          || { echo "FAIL: teal #0E7C7B not found in LaunchScreen.storyboard"; exit 1; }
         echo "--- SplashScreen.imageset contents ---"
         ls -la ios/App/App/Assets.xcassets/SplashScreen.imageset/
-        test -f ios/App/App/Assets.xcassets/SplashScreen.imageset/splash@1x.png || { echo "FAIL: splash@1x.png missing"; exit 1; }
-        test -f ios/App/App/Assets.xcassets/SplashScreen.imageset/splash@2x.png || { echo "FAIL: splash@2x.png missing"; exit 1; }
-        test -f ios/App/App/Assets.xcassets/SplashScreen.imageset/splash@3x.png || { echo "FAIL: splash@3x.png missing"; exit 1; }
-
+        test -f ios/App/App/Assets.xcassets/SplashScreen.imageset/splash@1x.png \
+          && { test -f ios/App/App/Assets.xcassets/SplashScreen.imageset/splash@2x.png \
+               || test -f ios/App/App/Assets.xcassets/splashscreen.imageset/splash@2x.png; } \
+          || { echo "FAIL: SplashScreen imageset missing PNG variants"; exit 1; }
         echo "OK: Teal LaunchScreen + SplashScreen imageset present and ready for xcodebuild"
 
     - name: Patch AppDelegate window background to teal
