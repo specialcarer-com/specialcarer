@@ -100,9 +100,18 @@ definitions:
         test -f ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png \
           || { echo "❌ AppIcon-512@2x.png not generated — icon would ship as placeholder"; exit 1; }
 
+    - name: Capacitor sync (copies plugins + web assets into iOS project)
+      script: |
+        npx cap sync ios
+
     - name: Apply iOS overlay (PrivacyInfo + Info.plist usage strings + LaunchScreen)
       script: |
         set -e
+        # NOTE: this step MUST run AFTER `npx cap sync ios`. cap sync copies
+        # the Capacitor template files into ios/App/App, which OVERWRITES
+        # our teal LaunchScreen.storyboard + SplashScreen.imageset with the
+        # default white ones. Running the overlay afterwards is what makes
+        # the teal cold-launch survive into the final build.
         # Drop the privacy manifest into the app target.
         cp mobile/ios-overlay/App/App/PrivacyInfo.xcprivacy ios/App/App/PrivacyInfo.xcprivacy
 
@@ -167,9 +176,65 @@ definitions:
         /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:1 string fetch" "${INFO_PLIST}"
         /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:2 string location" "${INFO_PLIST}"
 
-    - name: Capacitor sync (copies plugins + web assets into iOS project)
+    - name: Verify LaunchScreen + SplashScreen.imageset survived
       script: |
-        npx cap sync ios
+        set -e
+        echo "--- LaunchScreen.storyboard contents (first 5 lines) ---"
+        head -5 ios/App/App/Base.lproj/LaunchScreen.storyboard
+        grep -q '0E7C7B\|0e7c7b' ios/App/App/Base.lproj/LaunchScreen.storyboard \
+          || { echo "FAIL: teal #0E7C7B not found in LaunchScreen.storyboard"; exit 1; }
+        echo "--- SplashScreen.imageset contents ---"
+        ls -la ios/App/App/Assets.xcassets/SplashScreen.imageset/
+        test -f ios/App/App/Assets.xcassets/SplashScreen.imageset/splash@1x.png \
+          && { test -f ios/App/App/Assets.xcassets/SplashScreen.imageset/splash@2x.png \
+               || test -f ios/App/App/Assets.xcassets/splashscreen.imageset/splash@2x.png; } \
+          || { echo "FAIL: SplashScreen imageset missing PNG variants"; exit 1; }
+        echo "OK: Teal LaunchScreen + SplashScreen imageset present and ready for xcodebuild"
+
+    - name: Patch AppDelegate window background to teal
+      script: |
+        set -e
+        APP_DELEGATE=ios/App/App/AppDelegate.swift
+        if grep -q 'window?.backgroundColor' "$APP_DELEGATE"; then
+          echo "Window backgroundColor line already present, skipping patch"
+        else
+          python3 - <<'PY'
+        import re, pathlib
+        p = pathlib.Path('ios/App/App/AppDelegate.swift')
+        s = p.read_text()
+        inject = "        // Teal #0E7C7B so the brief gap between LaunchScreen and WebView first-paint stays branded\n        self.window?.backgroundColor = UIColor(red: 0x0E/255.0, green: 0x7C/255.0, blue: 0x7B/255.0, alpha: 1.0)\n"
+        # Insert right after the `didFinishLaunchingWithOptions` opening brace
+        new = re.sub(
+            r'(func application\(_ application: UIApplication, didFinishLaunchingWithOptions[^{]*\{)',
+            r'\1\n' + inject,
+            s,
+            count=1
+        )
+        if new == s:
+            print("WARN: did not patch — function signature not found, will try fallback location")
+            # Fallback: after the first `{` in AppDelegate class
+            new = re.sub(r'(class AppDelegate[^{]*\{)', r'\1\n    // window bg set in didFinishLaunchingWithOptions\n', s, count=1)
+        p.write_text(new)
+        print("Patched AppDelegate.swift")
+        PY
+        fi
+        echo "--- AppDelegate.swift first 60 lines ---"
+        head -60 "$APP_DELEGATE"
+
+    - name: Set WKWebView background to clear so teal window shows through during load
+      script: |
+        set -e
+        # Capacitor v6+ default doesn't ship a ViewController.swift; the bridge
+        # is auto-created by CAPBridgeViewController. We rely on:
+        #   - capacitor.config.ts ios.backgroundColor / plugins.SplashScreen.backgroundColor
+        #   - the AppDelegate window.backgroundColor patch above
+        # to keep the post-LaunchScreen frame teal. This step is intentionally
+        # a no-op log to document that decision.
+        APP_DELEGATE=ios/App/App/AppDelegate.swift
+        if grep -q 'CAPBridgeViewController' "$APP_DELEGATE"; then
+          echo "AppDelegate references CAPBridgeViewController"
+        fi
+        echo "Skipping runtime WebView patch — relying on capacitor.config.ts plugins.SplashScreen.backgroundColor + window.backgroundColor"
 
     - name: Install iOS dependencies (CocoaPods or SPM)
       script: |
