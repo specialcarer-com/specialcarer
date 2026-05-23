@@ -159,7 +159,9 @@ export function SignInRippleReveal({
   // overlay. forceAnimate bypasses reduce-motion at THIS layer too.
   useEffect(() => {
     if (!shouldPlay) return;
-    if (phase !== "pending") return;
+    // Effect deps no longer include `phase`; this effect runs exactly once
+    // after shouldPlay+viewport are set, schedules the rAF tick chain, and
+    // the cleanup at line 189-192 only fires on full unmount.
     if (viewport == null) return;
 
     // Reduce Motion (without forceAnimate): use a simple cross-fade
@@ -190,7 +192,7 @@ export function SignInRippleReveal({
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     };
-  }, [shouldPlay, phase, reducedMotion, forceAnimate, viewport]);
+  }, [shouldPlay, reducedMotion, forceAnimate, viewport]);
 
   // Tile-settle phase → done.
   useEffect(() => {

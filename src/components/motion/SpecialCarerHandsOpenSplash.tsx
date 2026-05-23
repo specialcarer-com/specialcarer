@@ -67,8 +67,8 @@ const T_HANDS_SETTLED = 4.50;
 // Heart appears AFTER the hands are open and held (4.50..4.70s hold on
 // open palms). Pure opacity fade over 250ms at the canonical (path 7)
 // position — no translate, no scale.
-const T_HEART_START = 4.70;
-const T_HEART_END = 4.95;
+const T_HEART_START = 4.30;
+const T_HEART_END = 4.90; // 600ms fade-in, opacity-only
 const T_BASELINE_START = 4.50;
 const T_BASELINE_END = 4.90;
 const T_WM_START = 5.10;
@@ -333,10 +333,12 @@ export function SpecialCarerHandsOpenSplash({
   // Cubes (paths 3..6), staggered 80ms apart.
   const cubes = CUBE_CENTERS.map((c, i) => ({ ...c, ...cubeState(t, i) }));
 
-  // Heart DROPS in 4.70..5.10s — translateY (-25 -> 0) + opacity (0 -> 1)
-  // with ease-IN cubic so the motion reads as gravity (slow start, fast
-  // finish). Resting position is canonical (path 7), unchanged from v3.
-  // No scale, no horizontal motion, no rotation — translateY + opacity only.
+  // Heart appears 4.30..4.90s — OPACITY-ONLY entrance (no translate, no
+  // scale). HEART_DROP_FROM_Y is intentionally 0; the heart is placed at
+  // its canonical position from frame 0 and only fades in. The cube-pop
+  // overshoot below settles at 2.72s — the 1.58s gap before heart fade
+  // start lets vertical motion dissipate so the static-position fade is
+  // not misread as a drop.
   const heartU = clamp((t - T_HEART_START) / (T_HEART_END - T_HEART_START));
   // ease-in cubic: t**3 (slow start, fast finish — gravity feel).
   const heartEase = heartU * heartU * heartU;
