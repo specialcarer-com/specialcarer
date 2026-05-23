@@ -2,14 +2,24 @@
 Generate the master 1024x1024 iOS/Android app icon and the splash screens
 from the existing SpecialCarer logo mark.
 
+NOTE (canonical artwork): `mobile/resources/icon.png` is now the hand-
+curated canonical hands+family-on-teal artwork (mono-white mark on
+#039EA0, 1024x1024, RGB no alpha — see
+`mobile/resources/source-brand-mark.svg`). The script is retained for
+foreground/background variants + splash regeneration, but DO NOT
+overwrite icon.png from this script unless the canonical artwork is
+also updated to source from the hands+family mark. Earlier versions
+of this script produced a simple heart-cross stroke mark from
+`public/brand/logo-mark.svg`; that drift is what caused the wrong
+AppIcon to ship.
+
 Requirements: CairoSVG + Pillow (already installed in the dev sandbox).
 
 iOS app icons MUST NOT have an alpha channel — Apple rejects RGBA PNGs
-at App Store Connect. We composite the heart mark onto a solid brand
-teal background, then save as RGB.
+at App Store Connect.
 
 Outputs:
-  mobile/resources/icon.png            (1024x1024, brand teal background)
+  mobile/resources/icon.png            (1024x1024, brand teal background) — CANONICAL, hand-curated
   mobile/resources/icon-foreground.png (1024x1024 transparent — Android adaptive)
   mobile/resources/icon-background.png (1024x1024 solid teal — Android adaptive)
   mobile/resources/splash.png          (2732x2732 light, brand teal)
@@ -105,9 +115,11 @@ def main() -> None:
     mark_white = colourise(raw_mark, WHITE)
     mark_teal = colourise(raw_mark, BRAND)
 
-    # 1) Main iOS icon — teal bg, white mark, NO alpha
-    icon = make_icon_with_background(mark_white, BRAND)
-    icon.save(OUT_DIR / "icon.png", "PNG", optimize=True)
+    # 1) Main iOS icon — DO NOT overwrite. icon.png is the hand-curated
+    #    canonical hands+family-on-teal artwork (see module docstring).
+    #    Re-wire this step against the canonical SVG before regenerating.
+    # icon = make_icon_with_background(mark_white, BRAND)
+    # icon.save(OUT_DIR / "icon.png", "PNG", optimize=True)
 
     # 2) Android adaptive icon — separate fg (transparent) + bg (solid teal)
     fg_canvas = Image.new("RGBA", (ICON_SIZE, ICON_SIZE), (0, 0, 0, 0))

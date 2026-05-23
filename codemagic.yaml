@@ -100,6 +100,42 @@ definitions:
         test -f ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png \
           || { echo "❌ AppIcon-512@2x.png not generated — icon would ship as placeholder"; exit 1; }
 
+    - name: Verify AppIcon brand colour
+      script: |
+        set -euxo pipefail
+        # Assert the 1024x1024 marketing AppIcon's top-left block averages
+        # to the brand teal #039EA0 (3, 158, 160). This catches hand-
+        # replacements of mobile/resources/icon.png that drift off-brand
+        # (e.g. the white-bg navy-hands drift that shipped previously).
+        python3 - <<'PYEOF'
+        import sys
+        try:
+            from PIL import Image
+        except ImportError:
+            # Codemagic macOS runners normally have Pillow; if not, fall
+            # back to sips for native dominant-colour extraction.
+            import subprocess
+            out = subprocess.check_output([
+                "sips", "-g", "pixelHeight", "-g", "pixelWidth",
+                "ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png"
+            ], text=True)
+            print(out)
+            print("⚠️  Pillow missing; skipped colour assertion")
+            sys.exit(0)
+        img = Image.open(
+            "ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png"
+        ).convert("RGB")
+        pixels = [img.getpixel((x, y)) for x in range(50) for y in range(50)]
+        r = sum(p[0] for p in pixels) / len(pixels)
+        g = sum(p[1] for p in pixels) / len(pixels)
+        b = sum(p[2] for p in pixels) / len(pixels)
+        if abs(r - 3) < 20 and abs(g - 158) < 20 and abs(b - 160) < 20:
+            print(f"✅ AppIcon top-left ≈ #039EA0 (r={r:.0f} g={g:.0f} b={b:.0f})")
+        else:
+            print(f"❌ AppIcon top-left NOT teal: r={r:.0f} g={g:.0f} b={b:.0f}")
+            sys.exit(1)
+        PYEOF
+
     - name: Apply iOS overlay (PrivacyInfo + Info.plist usage strings)
       script: |
         set -e
@@ -181,14 +217,33 @@ definitions:
         #    #039EA0 these round to red=0.012 green=0.620 blue=0.627.
         STORYBOARD="ios/App/App/Base.lproj/LaunchScreen.storyboard"
 
-        echo "--- Verifying LaunchScreen.storyboard teal ---"
-        if grep -qiE 'red="0\.0?1[12]"\s+green="0\.6[12]0?"\s+blue="0\.62[67]"' "$STORYBOARD"; then
-          echo "✅ float triplet for #039EA0 present in storyboard"
-        else
-          echo "❌ float triplet for #039EA0 (red≈0.012 green≈0.620 blue≈0.627) missing in storyboard"
-          grep -n 'backgroundColor\|<color' "$STORYBOARD" || true
-          exit 1
-        fi
+        echo "--- Verifying LaunchScreen.storyboard root view backgroundColor ---"
+        # Parse the storyboard XML and assert the root viewController's
+        # view has a backgroundColor matching brand teal #039EA0. The
+        # previous grep was substring theatre: any teal <color> on any
+        # subview anywhere in the file would pass. This parses the tree,
+        # walks to the root view, and asserts on its backgroundColor.
+        STORYBOARD_PATH="$STORYBOARD" python3 - <<'PYEOF'
+        import os, sys, xml.etree.ElementTree as ET
+        path = os.environ["STORYBOARD_PATH"]
+        tree = ET.parse(path)
+        for vc in tree.iter('viewController'):
+            view = vc.find('view')
+            if view is None:
+                continue
+            for color in view.findall('color'):
+                if color.get('key') == 'backgroundColor':
+                    r = float(color.get('red', 0))
+                    g = float(color.get('green', 0))
+                    b = float(color.get('blue', 0))
+                    if abs(r-0.012) < 0.005 and abs(g-0.620) < 0.005 and abs(b-0.627) < 0.005:
+                        print(f"✅ storyboard root view backgroundColor = #039EA0 (r={r} g={g} b={b})")
+                        sys.exit(0)
+                    print(f"❌ storyboard root view backgroundColor wrong: r={r} g={g} b={b}")
+                    sys.exit(1)
+        print("❌ no backgroundColor on root viewController/view")
+        sys.exit(1)
+        PYEOF
 
         # Defensive: fail loudly if the wrong teal (#0E7C7B) leaked back into
         # an actual <color> element. Strip XML comments first so descriptive

@@ -3,10 +3,8 @@
 /**
  * Animated splash overlay shown immediately before the sign-in screen.
  *
- * Scope (per product direction): the splash plays on cold app launch
- * (the /m entry route, before the auth-decision redirect lands) and on
- * /m/login (returning users signing back in). Both are one-per-session,
- * so users don't see the same reveal twice in the same launch.
+ * Scope (per product direction): plays on every cold launch on any
+ * /m/* route, locks once played to avoid replays on navigation.
  *
  * Critically: once the splash mounts on /m, it stays mounted across the
  * client-side router.replace() to /m/onboarding or /m/home so the full
@@ -84,8 +82,8 @@ export function didSplashPlayThisMount(): boolean {
  *   - 2x2 colour cubes pop:        2.40..2.90s
  *   - hands open + settle:         3.40..4.50s
  *   - hold open hands:             4.50..4.70s
- *   - heart drops (translateY + opacity, ease-in cubic):
- *                                  4.70..5.10s
+ *   - heart appears (opacity-only, 250ms):
+ *                                  4.70..4.95s
  *   - baseline curve fades in:     4.50..4.90s
  *   - wordmark types:              5.10..5.70s
  *   - tagline fade + letter-space: 6.00..6.50s
@@ -100,13 +98,17 @@ const FADE_MS = 700;
 const TAP_GRACE_MS = 500;
 
 /**
- * Pathnames the splash is allowed to start on:
- *   - /m/login → returning user signing in
- * Sign-up, onboarding, and the bare /m entry intentionally do NOT
- * trigger the splash; if a user lands there directly via deep-link they
- * don't get the reveal.
+ * Pathnames the splash is allowed to start on. Plays on every cold
+ * launch on any /m/* route; once locked the gate ignores subsequent
+ * navigations so the reveal plays through the auth-decision redirect.
  */
-const ALLOWED_PATHS = new Set(["/m/login"]);
+const ALLOWED_PATHS = new Set([
+  "/m",
+  "/m/login",
+  "/m/onboarding",
+  "/m/welcome",
+  "/m/home",
+]);
 
 export default function SplashIntro() {
   const pathname = usePathname();

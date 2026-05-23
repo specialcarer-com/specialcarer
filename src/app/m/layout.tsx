@@ -10,7 +10,8 @@ import { LocaleProvider } from "@/lib/i18n/LocaleContext";
  * Mobile app shell — Capacitor loads /m/* directly.
  *
  * Notes
- *  - No marketing site header / footer / cookie banner.
+ *  - No marketing site header / footer. Cookie banner is suppressed
+ *    inside Capacitor via runtime platform check in cookie-banner.tsx.
  *  - Plus Jakarta Sans is the closest free match to the Figma "Nuckle" font.
  *  - Status bar overlays the WebView (Capacitor StatusBar.overlaysWebView=true)
  *    so the splash overlay reaches edge-to-edge. StatusBarController flips

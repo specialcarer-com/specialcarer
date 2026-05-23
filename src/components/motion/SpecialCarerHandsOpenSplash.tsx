@@ -21,11 +21,10 @@
  * Hands open between 3.40s and 4.50s with an `easeOutCubic` sweep from
  * +30° down through 0° to a -3° overshoot, then `easeInOut` settle back
  * to 0°. The hands then hold open from 4.50s to 4.70s so the viewer
- * registers the open palms. The heart then drops from 4.70s to 5.10s
- * (translateY -25 -> 0, opacity 0 -> 1, ease-in cubic) into its
- * canonical resting position. Heart renders LAST (above the open hands).
- * Translate Y + opacity ONLY — never scale, never horizontal motion,
- * never rotate the heart (the SVG bbox is misleading).
+ * registers the open palms. The heart then appears from 4.70s to 4.95s
+ * (opacity 0 -> 1, 250ms) at its canonical resting position. Heart
+ * renders LAST (above the open hands). Opacity ONLY — never scale,
+ * never translate, never rotate (the SVG bbox is misleading).
  *
  * Reference: design/motion-brand/assets/specialcarer-icon.svg (12 paths)
  * Spec:      splash_inspect/V3_2_SPEC.md, splash_inspect/V3_SPEC.md,
@@ -65,12 +64,11 @@ const T_CUBE_POP_DUR = 0.30;
 const T_HANDS_START = 3.40;
 const T_HANDS_OVERSHOOT = 4.30;
 const T_HANDS_SETTLED = 4.50;
-// v3.2 retime — the heart now drops in AFTER the hands are open and held
-// open briefly (4.50..4.70s hold on open palms), instead of fading in
-// opacity-only during the busy hands-opening window. Final resting
-// position is unchanged (canonical, path 7). See splash_inspect/V3_2_SPEC.md.
+// Heart appears AFTER the hands are open and held (4.50..4.70s hold on
+// open palms). Pure opacity fade over 250ms at the canonical (path 7)
+// position — no translate, no scale.
 const T_HEART_START = 4.70;
-const T_HEART_END = 5.10;
+const T_HEART_END = 4.95;
 const T_BASELINE_START = 4.50;
 const T_BASELINE_END = 4.90;
 const T_WM_START = 5.10;
@@ -79,17 +77,11 @@ const T_TAG_START = 6.00;
 const T_TAG_END = 6.50;
 
 /**
- * Heart entrance is Y-translate + opacity only — NEVER scale, NEVER
- * horizontal motion, NEVER rotation. Starts 25 user-units above the
- * canonical resting position (translateY = -25), lands at translateY = 0
- * (the path-7 position from the source SVG) at T_HEART_END.
- *
- * 25 user units in a 161x82 viewBox is a small drop in screen pixels but
- * a clear gravity feel for the heart-cross — slow-start (ease-in cubic),
- * fast finish — so it reads as falling into the cradle of the open
- * hands.
+ * Heart entrance is opacity-only — NEVER scale, NEVER translate,
+ * NEVER rotation. Appears in place at its canonical resting position
+ * (the path-7 position from the source SVG) with a 250ms fade.
  */
-const HEART_DROP_FROM_Y = -25;
+const HEART_DROP_FROM_Y = 0;
 
 /** Total scene duration (animation only; consumer adds hold-ms on top). */
 export const DURATION_SEC = 7.0;

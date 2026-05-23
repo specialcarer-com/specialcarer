@@ -58,7 +58,10 @@ const config: CapacitorConfig = {
 
   plugins: {
     SplashScreen: {
-      launchShowDuration: 1200,
+      // 2500ms holds the native teal splash long enough for the
+      // remote WebView bundle to land, eliminating the white flash
+      // between native splash dismissal and React mount.
+      launchShowDuration: 2500,
       launchAutoHide: true,
       // Brand teal stage matches the in-app SpecialCarerHandsOpenSplash
       // overlay so the handoff from native splash → web splash is
