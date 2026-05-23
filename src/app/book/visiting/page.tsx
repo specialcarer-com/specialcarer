@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import MarketingShell from "@/components/marketing-shell";
 import WhenPicker from "../when-picker";
+import { BookingTypeTabs } from "../_components/booking-type-tabs";
 
 export const metadata: Metadata = {
   title: "Visiting care · SpecialCarer",
@@ -28,6 +29,7 @@ export default async function VisitingBookPage({
     <MarketingShell>
       <div className="pt-10 sm:pt-14 pb-6">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
+          <BookingTypeTabs current="visiting" />
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">
             Visiting care
           </h1>

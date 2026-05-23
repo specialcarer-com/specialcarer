@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import MarketingShell from "@/components/marketing-shell";
 import LiveInForm from "./live-in-form";
+import { BookingTypeTabs } from "../_components/booking-type-tabs";
 import type { Country } from "@/lib/pricing";
 
 export const metadata: Metadata = {
@@ -25,6 +26,7 @@ export default async function LiveInBookPage() {
     <MarketingShell>
       <div className="pt-10 sm:pt-14 pb-6">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
+          <BookingTypeTabs current="live-in" />
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">
             Live-in care
           </h1>
