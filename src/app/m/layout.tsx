@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "../globals.css";
 import "./mobile.css";
-import SplashIntro from "./_components/SplashIntro";
 import StatusBarController from "@/components/native/StatusBarController";
 import { LocaleProvider } from "@/lib/i18n/LocaleContext";
 
@@ -54,8 +53,6 @@ export default function MobileLayout({
         >
           Skip to main content
         </a>
-        {/* Animated wordmark intro — plays once per session, fades out. */}
-        <SplashIntro />
         {/* Runtime status-bar glyph controller (no-op on web). */}
         <StatusBarController />
         <LocaleProvider>

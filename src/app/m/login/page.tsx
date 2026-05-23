@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { AppLogo, Button, Input, PasswordInput } from "../_components/ui";
-import { SignInRippleReveal } from "../_components/SignInRippleReveal";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -46,17 +45,12 @@ export default function LoginPage() {
   };
 
   return (
-    <SignInRippleReveal>
-      <main className="min-h-[100dvh] bg-white sc-keyboard-aware">
-        <div className="sc-safe-top px-6 pt-8 flex flex-col items-center">
-          {/* data-sc-auth-tile marks the icon tile so the v3.2 ripple
-              hand-off can scale-settle it (95% → 100%, 200ms) after the
-              ripple finishes. Only this element animates — the rest of
-              the sign-in screen stays still. */}
-          <div data-sc-auth-tile>
-            <AppLogo size={92} />
-          </div>
+    <main className="min-h-[100dvh] bg-white sc-keyboard-aware">
+      <div className="sc-safe-top px-6 pt-8 flex flex-col items-center">
+        <div>
+          <AppLogo size={92} />
         </div>
+      </div>
 
       <div className="px-6 mt-8">
         <h1 className="text-center text-[28px] font-bold text-heading">
@@ -113,14 +107,13 @@ export default function LoginPage() {
           </Button>
         </form>
 
-          <p className="mt-6 text-center text-subheading text-[14px]">
-            Don&apos;t have an account?{" "}
-            <Link href="/m/sign-up" className="text-secondary font-bold">
-              Sign Up
-            </Link>
-          </p>
-        </div>
-      </main>
-    </SignInRippleReveal>
+        <p className="mt-6 text-center text-subheading text-[14px]">
+          Don&apos;t have an account?{" "}
+          <Link href="/m/sign-up" className="text-secondary font-bold">
+            Sign Up
+          </Link>
+        </p>
+      </div>
+    </main>
   );
 }
