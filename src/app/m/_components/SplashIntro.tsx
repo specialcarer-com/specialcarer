@@ -51,24 +51,50 @@ import { usePathname } from "next/navigation";
 import { SpecialCarerHandsOpenSplash } from "@/components/motion/SpecialCarerHandsOpenSplash";
 
 const SESSION_KEY = "sc:splash:played";
+
+/**
+ * Module-scoped flag — set to true when the splash actually plays in
+ * THIS JS mount cycle. Consumers (e.g. SignInRippleReveal) read this
+ * to decide whether to play their hand-off animation. Reset on full
+ * page reload because the module re-evaluates. Returning from background
+ * does NOT reset this — it stays whatever it was set to.
+ *
+ * Distinct from the sessionStorage gate, which lives across navigations
+ * within the same browser session. We need both:
+ *   - sessionStorage: "did the splash play at any point this session?"
+ *   - this flag:      "did the splash play in this exact mount cycle?"
+ */
+let splashPlayedThisMount = false;
+
+/**
+ * Returns true when the splash played in the current JS mount cycle.
+ * Use to gate cold-launch-only handoff animations on the sign-in screen.
+ */
+export function didSplashPlayThisMount(): boolean {
+  return splashPlayedThisMount;
+}
 /**
  * How long the splash overlay is visible before the fade-out begins.
  *
- * Hands-open v3 walk-in choreography (see SpecialCarerHandsOpenSplash):
+ * Hands-open v3.2 walk-in + heart-drop choreography
+ * (see SpecialCarerHandsOpenSplash):
  *   - wheelchair walks in (LEFT):  0.00..0.80s
  *   - kids walk in (LEFT):         0.80..1.60s
  *   - adults walk in (RIGHT):      1.60..2.50s
  *   - 2x2 colour cubes pop:        2.40..2.90s
- *   - heart fades in:              2.90..3.40s
  *   - hands open + settle:         3.40..4.50s
- *   - baseline + wordmark types:   4.50..5.10s
- *   - tagline fade + letter-space: 5.40..5.90s
- *   - hold full lockup:            5.90..6.50s
+ *   - hold open hands:             4.50..4.70s
+ *   - heart drops (translateY + opacity, ease-in cubic):
+ *                                  4.70..5.10s
+ *   - baseline curve fades in:     4.50..4.90s
+ *   - wordmark types:              5.10..5.70s
+ *   - tagline fade + letter-space: 6.00..6.50s
+ *   - hold full lockup:            6.50..7.00s
  *
- * Visible to 6700ms so the user dwells briefly on the full lockup
+ * Visible to 7000ms so the user dwells briefly on the full lockup
  * before the cross-fade to the next screen.
  */
-const VISIBLE_MS = 6700;
+const VISIBLE_MS = 7000;
 /** Cross-fade so the next screen drifts in. */
 const FADE_MS = 700;
 const TAP_GRACE_MS = 500;
@@ -114,6 +140,12 @@ export default function SplashIntro() {
     } catch {
       // Private mode / blocked storage — just play it once.
     }
+
+    // Mark THIS mount cycle as having played the splash. Downstream
+    // cold-launch-only animations (ripple reveal on /m/login) gate on
+    // this so they don't fire on subsequent navigations or background
+    // returns.
+    splashPlayedThisMount = true;
 
     // Mark the document so the first /m screen runs its slow entrance
     // animation (see mobile.css → sc-mobile-enter). Cleared after the

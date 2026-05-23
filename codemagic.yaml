@@ -190,9 +190,12 @@ definitions:
           exit 1
         fi
 
-        # Defensive: fail loudly if the wrong teal (#0E7C7B) leaked back in.
-        if grep -qiE '0[eE]7[cC]7[bB]' "$STORYBOARD"; then
-          echo "❌ wrong teal #0E7C7B found in storyboard — must be #039EA0"
+        # Defensive: fail loudly if the wrong teal (#0E7C7B) leaked back into
+        # an actual <color> element. Strip XML comments first so descriptive
+        # text like "NOT #0E7C7B" in the comment header doesn't false-positive.
+        STORYBOARD_NO_COMMENTS="$(sed 's/<!--/\n<!--/g; s/-->/-->\n/g' "$STORYBOARD" | sed '/<!--/,/-->/d')"
+        if echo "$STORYBOARD_NO_COMMENTS" | grep -qiE '0[eE]7[cC]7[bB]'; then
+          echo "❌ wrong teal #0E7C7B found in a <color> element in storyboard — must be #039EA0"
           exit 1
         fi
 
@@ -356,14 +359,10 @@ workflows:
     triggering:
       events:
         - push
-        - tag
       branch_patterns:
         - pattern: "main"
           include: true
           source: true
-      tag_patterns:
-        - pattern: "ios-v*"
-          include: true
       cancel_previous_builds: true
 
     # Skip iOS builds for web-only changes — WebView app serves
