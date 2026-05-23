@@ -34,6 +34,16 @@ export default function CookieBanner() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    // PECR/ePrivacy applies to web; inside Capacitor the App Store
+    // privacy disclosure is the legal control, so we suppress here.
+    if (typeof window !== "undefined") {
+      const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean; getPlatform?: () => string } }).Capacitor;
+      const isNative = !!cap && (
+        (typeof cap.isNativePlatform === "function" && cap.isNativePlatform()) ||
+        (typeof cap.getPlatform === "function" && cap.getPlatform() !== "web")
+      );
+      if (isNative) return;
+    }
     if (readChoice() === null) setVisible(true);
   }, []);
 
