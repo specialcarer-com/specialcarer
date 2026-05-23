@@ -3,10 +3,11 @@
 /**
  * SpecialCarerHandsOpenSplash
  *
- * Hands-open animated splash for mobile boot. V3 "walk-in" choreography:
- * figures walk in from the sides, colour cubes pop, heart fades in,
- * hands open from the closed cradle, then the baseline + wordmark +
- * tagline lockup lands. Total 6.5s + hold.
+ * Hands-open animated splash for mobile boot. V3.2 "heart-drop" retime
+ * on top of the v3 walk-in choreography: figures walk in from the sides,
+ * colour cubes pop, hands open from the closed cradle and hold open
+ * briefly, the heart drops into its canonical position above the open
+ * palms, then the wordmark + tagline lockup lands. Total 7.0s + hold.
  *
  * Pivots:
  *   - LEFT hand:  wrist at (28.85, 71.52), closed angle +30 (CCW in render
@@ -19,11 +20,16 @@
  *
  * Hands open between 3.40s and 4.50s with an `easeOutCubic` sweep from
  * +30° down through 0° to a -3° overshoot, then `easeInOut` settle back
- * to 0°. Heart renders LAST (above the open hands), opacity only — we
- * never scale the heart (the SVG bbox is misleading).
+ * to 0°. The hands then hold open from 4.50s to 4.70s so the viewer
+ * registers the open palms. The heart then drops from 4.70s to 5.10s
+ * (translateY -25 -> 0, opacity 0 -> 1, ease-in cubic) into its
+ * canonical resting position. Heart renders LAST (above the open hands).
+ * Translate Y + opacity ONLY — never scale, never horizontal motion,
+ * never rotate the heart (the SVG bbox is misleading).
  *
  * Reference: design/motion-brand/assets/specialcarer-icon.svg (12 paths)
- * Spec:      splash_inspect/V3_SPEC.md, v3_choreography_reference.py
+ * Spec:      splash_inspect/V3_2_SPEC.md, splash_inspect/V3_SPEC.md,
+ *            splash_inspect/v3_choreography_reference.py
  *
  * IMPORTANT: forceAnimate must be honoured at every layer. We read
  * prefers-reduced-motion only to decide the static-end fallback, but
@@ -56,20 +62,37 @@ const T_MALE_DELAY = 0.10; // path 11 starts 100ms behind path 10
 const T_CUBES_START = 2.40;
 const T_CUBE_STAGGER = 0.08;
 const T_CUBE_POP_DUR = 0.30;
-const T_HEART_START = 2.90;
-const T_HEART_END = 3.40;
 const T_HANDS_START = 3.40;
 const T_HANDS_OVERSHOOT = 4.30;
 const T_HANDS_SETTLED = 4.50;
+// v3.2 retime — the heart now drops in AFTER the hands are open and held
+// open briefly (4.50..4.70s hold on open palms), instead of fading in
+// opacity-only during the busy hands-opening window. Final resting
+// position is unchanged (canonical, path 7). See splash_inspect/V3_2_SPEC.md.
+const T_HEART_START = 4.70;
+const T_HEART_END = 5.10;
 const T_BASELINE_START = 4.50;
 const T_BASELINE_END = 4.90;
-const T_WM_START = 4.50;
-const T_WM_END = 5.10;
-const T_TAG_START = 5.40;
-const T_TAG_END = 5.90;
+const T_WM_START = 5.10;
+const T_WM_END = 5.70;
+const T_TAG_START = 6.00;
+const T_TAG_END = 6.50;
+
+/**
+ * Heart entrance is Y-translate + opacity only — NEVER scale, NEVER
+ * horizontal motion, NEVER rotation. Starts 25 user-units above the
+ * canonical resting position (translateY = -25), lands at translateY = 0
+ * (the path-7 position from the source SVG) at T_HEART_END.
+ *
+ * 25 user units in a 161x82 viewBox is a small drop in screen pixels but
+ * a clear gravity feel for the heart-cross — slow-start (ease-in cubic),
+ * fast finish — so it reads as falling into the cradle of the open
+ * hands.
+ */
+const HEART_DROP_FROM_Y = -25;
 
 /** Total scene duration (animation only; consumer adds hold-ms on top). */
-export const DURATION_SEC = 6.5;
+export const DURATION_SEC = 7.0;
 
 // Hand closed angle (degrees). Sweep goes 30 -> -3 (overshoot) -> 0.
 const CLOSED_ANGLE = 30;
@@ -318,8 +341,15 @@ export function SpecialCarerHandsOpenSplash({
   // Cubes (paths 3..6), staggered 80ms apart.
   const cubes = CUBE_CENTERS.map((c, i) => ({ ...c, ...cubeState(t, i) }));
 
-  // Heart fades 2.90..3.40 (opacity only, never scale).
-  const heartAlpha = clamp((t - T_HEART_START) / (T_HEART_END - T_HEART_START));
+  // Heart DROPS in 4.70..5.10s — translateY (-25 -> 0) + opacity (0 -> 1)
+  // with ease-IN cubic so the motion reads as gravity (slow start, fast
+  // finish). Resting position is canonical (path 7), unchanged from v3.
+  // No scale, no horizontal motion, no rotation — translateY + opacity only.
+  const heartU = clamp((t - T_HEART_START) / (T_HEART_END - T_HEART_START));
+  // ease-in cubic: t**3 (slow start, fast finish — gravity feel).
+  const heartEase = heartU * heartU * heartU;
+  const heartAlpha = heartU; // linear opacity ramp over the same window
+  const heartTranslateY = HEART_DROP_FROM_Y * (1 - heartEase);
 
   // Baseline fades 4.50..4.90.
   const baseAlpha = clamp((t - T_BASELINE_START) / (T_BASELINE_END - T_BASELINE_START));
@@ -427,9 +457,15 @@ export function SpecialCarerHandsOpenSplash({
           </g>
 
           {/* Heart + cross (path 7) renders LAST overall so it appears above
-              the open hands. Opacity only — never scale (the SVG bbox is
-              misleading for this glyph). */}
-          <g id="heart" opacity={heartAlpha}>
+              the open hands. v3.2: drops in via translateY + opacity ONLY.
+              Final resting position is canonical (the path-7 position from
+              the source SVG); never scale, never horizontal motion, never
+              rotate. */}
+          <g
+            id="heart"
+            opacity={heartAlpha}
+            transform={`translate(0 ${heartTranslateY})`}
+          >
             <path d={PATHS[7]} fill={iconFill} />
           </g>
         </svg>
