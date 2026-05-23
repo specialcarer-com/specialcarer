@@ -372,7 +372,7 @@ export default function SearchPage() {
                 </span>
                 <span className="text-[12px] text-subheading">/hr</span>
               </p>
-              <Link href={`/m/carer/${c.id}`}>
+              <Link href={`/m/carer/${c.id}?from=search`}>
                 <Button size="md">See Profile</Button>
               </Link>
             </div>

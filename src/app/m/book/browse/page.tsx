@@ -238,9 +238,10 @@ export default function MobileBrowseCarersPage() {
   }, [maxDistanceKm, minRating]);
 
   function carerHref(id: string): string {
-    if (!searchedAt) return `/m/carer/${id}`;
+    if (!searchedAt) return `/m/carer/${id}?from=browse`;
     const { start, end } = searchedAt;
     const params = new URLSearchParams({
+      from: "browse",
       service,
       date: `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`,
       start: `${pad(start.getHours())}:${pad(start.getMinutes())}`,

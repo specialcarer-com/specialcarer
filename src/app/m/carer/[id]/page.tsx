@@ -75,6 +75,26 @@ export default function CarerDetailPage() {
     const qs = searchParams?.toString() ?? "";
     return qs ? `/m/book/${carerId}?${qs}` : `/m/book/${carerId}`;
   })();
+  // Back destination derived from the `from` query param set by the
+  // referring screen. Falls back to /m/book/browse when arriving with
+  // browse-context search params (postcode/service), else /m/home.
+  const backHref = (() => {
+    const from = searchParams?.get("from") ?? "";
+    const allowed: Record<string, string> = {
+      home: "/m/home",
+      search: "/m/search",
+      browse: "/m/book/browse",
+      bookings: "/m/bookings",
+      profile: "/m/profile",
+    };
+    if (from && allowed[from]) return allowed[from];
+    // Heuristic fallback: if the URL carries browse-context params, the
+    // user almost certainly came from /m/book/browse.
+    if (searchParams?.get("postcode") || searchParams?.get("service")) {
+      return "/m/book/browse";
+    }
+    return "/m/home";
+  })();
   const [tab, setTab] = useState<Tab>("about");
 
   const isUuidId =
@@ -172,7 +192,7 @@ export default function CarerDetailPage() {
   if (!apiLoaded) {
     return (
       <main className="min-h-[100dvh] bg-white">
-        <TopBar back="/m/book/browse" title="Professional" />
+        <TopBar back={backHref} title="Professional" />
         <div className="px-6 mt-6 flex flex-col items-center gap-3" aria-busy="true">
           <div className="h-28 w-28 rounded-full bg-muted animate-pulse" />
           <div className="h-5 w-40 rounded bg-muted animate-pulse" />
@@ -191,7 +211,7 @@ export default function CarerDetailPage() {
   if (apiNotFound || !apiData) {
     return (
       <main className="min-h-[100dvh] bg-white">
-        <TopBar back="/m/book/browse" title="Professional" />
+        <TopBar back={backHref} title="Professional" />
         <div className="px-6 mt-10 text-center">
           <p className="text-heading font-semibold">Carer not found</p>
           <Link
@@ -217,7 +237,7 @@ export default function CarerDetailPage() {
   return (
     <main className="min-h-[100dvh] bg-white pb-32">
       <TopBar
-        back="/m/book/browse"
+        back={backHref}
         title="Professionals"
         right={
           <div className="flex items-center gap-2">
