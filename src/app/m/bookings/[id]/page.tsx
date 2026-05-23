@@ -419,7 +419,7 @@ function BookingDetailInner() {
             Cancel booking
           </Button>
         ) : data.status === "completed" ? (
-          <Link href={`/m/carer/${data.counterparty.user_id}`}>
+          <Link href={`/m/carer/${data.counterparty.user_id}?from=bookings`}>
             <Button block>Book again</Button>
           </Link>
         ) : (

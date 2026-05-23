@@ -462,7 +462,7 @@ function RealCarerCard({ carer }: { carer: ApiFeaturedCarer }) {
             </span>
           )}
         </p>
-        <Link href={`/m/carer/${carer.user_id}`}>
+        <Link href={`/m/carer/${carer.user_id}?from=home`}>
           <Button size="md">See Profile</Button>
         </Link>
       </div>

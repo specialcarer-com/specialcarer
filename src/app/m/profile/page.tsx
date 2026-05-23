@@ -280,7 +280,7 @@ export default function ProfilePage() {
             </Link>
             {role === "caregiver" && userId && (
               <Link
-                href={`/m/carer/${userId}?preview=1`}
+                href={`/m/carer/${userId}?preview=1&from=profile`}
                 className="inline-flex h-9 items-center rounded-pill bg-muted px-4 text-[13px] font-semibold text-heading"
               >
                 Preview public profile
