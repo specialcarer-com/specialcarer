@@ -1,27 +1,45 @@
-import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { listThreads } from "@/lib/chat/server";
-import type {
-  ApiThreadListItem,
-  ApiThreadPeer,
-} from "@/lib/chat/client";
-import ChatListClient from "./ChatListClient";
+import type { ApiThreadListItem, ApiThreadPeer } from "@/lib/chat/client";
 
 export const dynamic = "force-dynamic";
 
-export default async function ChatListPage() {
+export type ApiChatListResponse = {
+  items: ApiThreadListItem[];
+  next_cursor: string | null;
+};
+
+/**
+ * GET /api/m/chat/list?cursor=<iso>&limit=<int>
+ *
+ * Returns the caller's threads with participants + last-message preview
+ * + per-thread unread count. Keyset paginated by last_message_at desc.
+ */
+export async function GET(req: Request) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    redirect("/signin?next=/m/chat");
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const result = await listThreads(user.id, { limit: 20 });
-  const items: ApiThreadListItem[] = [];
+  const url = new URL(req.url);
+  const cursor = url.searchParams.get("cursor");
+  const limitRaw = url.searchParams.get("limit");
+  const limit = limitRaw ? Number.parseInt(limitRaw, 10) : undefined;
 
+  const result = await listThreads(user.id, { cursor, limit });
+  if (result.items.length === 0) {
+    const empty: ApiChatListResponse = { items: [], next_cursor: null };
+    return NextResponse.json(empty);
+  }
+
+  // Resolve a "peer" profile per thread: the other participant. For 1:1
+  // booking threads this is unambiguous; group threads would need a
+  // richer rollup which the UI doesn't surface yet.
   const peerIds = Array.from(
     new Set(
       result.items
@@ -40,10 +58,11 @@ export default async function ChatListPage() {
     full_name: string | null;
     avatar_url: string | null;
   };
+
+  const admin = createAdminClient();
   let carerById = new Map<string, CarerProfile>();
   let profileById = new Map<string, Profile>();
   if (peerIds.length > 0) {
-    const admin = createAdminClient();
     const [{ data: carers }, { data: profs }] = await Promise.all([
       admin
         .from("caregiver_profiles")
@@ -62,7 +81,7 @@ export default async function ChatListPage() {
     );
   }
 
-  for (const t of result.items) {
+  const items: ApiThreadListItem[] = result.items.map((t) => {
     const peer = t.participants.find((p) => p.user_id !== user.id) ?? null;
     let resolved: ApiThreadPeer | null = null;
     if (peer) {
@@ -75,8 +94,12 @@ export default async function ChatListPage() {
         photo_url: carer?.photo_url ?? prof?.avatar_url ?? null,
       };
     }
-    items.push({ ...t, peer: resolved });
-  }
+    return { ...t, peer: resolved };
+  });
 
-  return <ChatListClient me={user.id} initialItems={items} />;
+  const response: ApiChatListResponse = {
+    items,
+    next_cursor: result.next_cursor,
+  };
+  return NextResponse.json(response);
 }

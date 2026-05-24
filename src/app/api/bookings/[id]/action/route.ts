@@ -322,6 +322,16 @@ export async function POST(
       console.error("[action.complete] timesheet generation failed", e);
     }
 
+    // Auto-archive any chat threads tied to this booking (gap-5). The
+    // thread stays visible to participants but moves to the "Archived"
+    // filter in /m/chat.
+    try {
+      const { archiveThreadsForBooking } = await import("@/lib/chat/server");
+      await archiveThreadsForBooking(bookingId);
+    } catch (e) {
+      console.error("[action.complete] chat archive failed", e);
+    }
+
     return NextResponse.json({
       ok: true,
       status: "completed",

@@ -74,6 +74,13 @@ export async function POST(req: Request) {
     })
     .eq("id", booking_id);
 
+  try {
+    const { archiveThreadsForBooking } = await import("@/lib/chat/server");
+    await archiveThreadsForBooking(booking_id);
+  } catch (e) {
+    console.error("[complete-shift] chat archive failed", e);
+  }
+
   return NextResponse.json({
     ok: true,
     payout_eligible_at: eligibleAt.toISOString(),
