@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { OrgBooking } from "@/lib/org/booking-types";
 import { computeCarerPayTotalCents } from "@/lib/stripe/invoicing";
+import { dispatch } from "@/lib/push/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -128,6 +129,18 @@ export async function POST(
       carer_pay_total_cents: carerPayCents,
     })
     .eq("id", bookingId);
+
+  // Notify the seeker that their booking was accepted. Fire-and-forget;
+  // errors are swallowed inside dispatch.
+  if (booking.seeker_id) {
+    void dispatch({
+      type: "booking.accepted",
+      bookingId,
+      seekerId: booking.seeker_id,
+      carerId: user.id,
+      startsAt: booking.starts_at,
+    });
+  }
 
   return NextResponse.json({ ok: true, action: "accepted" });
 }

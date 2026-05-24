@@ -5,6 +5,7 @@ import { getMyOrgMembership } from "@/lib/org/server";
 import { computeCancellationPreview } from "@/lib/org/booking-types";
 import type { OrgBooking } from "@/lib/org/booking-types";
 import { computeOrgChargeTotalCents } from "@/lib/stripe/invoicing";
+import { dispatch } from "@/lib/push/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -128,6 +129,23 @@ export async function POST(
       cancelled_at: new Date().toISOString(),
     })
     .eq("id", id);
+
+  // Notify the counterparty. Fire-and-forget; errors swallowed in dispatch.
+  // `seeker_id` lives on the underlying bookings row but isn't on OrgBooking's
+  // public surface (org bookings track booker via booker_member_id), so we
+  // narrow via a cast here.
+  const seekerId = (booking as unknown as { seeker_id: string | null }).seeker_id;
+  const recipientId =
+    user.id === seekerId ? booking.caregiver_id : seekerId;
+  if (recipientId) {
+    void dispatch({
+      type: "booking.cancelled",
+      bookingId: id,
+      cancelledBy: user.id,
+      recipientId,
+      reason: reason || null,
+    });
+  }
 
   // TODO (Phase C): if fee_charged_cents > 0, auto-create a Stripe Invoice
   // for the cancellation fee via createShiftInvoice with a cancellation line item.
