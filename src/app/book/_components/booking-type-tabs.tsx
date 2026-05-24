@@ -25,7 +25,7 @@ export function BookingTypeTabs({ current }: { current: TabKey }) {
                 className={[
                   "inline-flex items-center rounded-full px-3 sm:px-4 py-2 text-sm font-medium transition-colors",
                   active
-                    ? "bg-white text-slate-900 shadow-sm"
+                    ? "bg-brand text-white shadow-sm"
                     : "text-slate-600 hover:text-slate-900 hover:bg-white/60",
                 ].join(" ")}
               >
