@@ -3,11 +3,19 @@ import * as Device from "expo-device";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
+// Foreground push behaviour. We intentionally show banner + list + sound + badge
+// when a notification arrives while the app is open — suppressing it would
+// strand the user on the wrong screen even though PR-A5 wires deeplink tap
+// handling. `shouldShowAlert` is the legacy iOS field kept for back-compat with
+// older expo-notifications versions; `shouldShowBanner` / `shouldShowList` are
+// the modern split (banner = transient HUD, list = notification centre).
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
-    shouldSetBadge: false,
+    shouldSetBadge: true,
   }),
 });
 

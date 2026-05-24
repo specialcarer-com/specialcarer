@@ -9,6 +9,7 @@ import {
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 import * as Application from "expo-application";
 import Constants from "expo-constants";
+import * as Notifications from "expo-notifications";
 import {
   WEB_SCRIPT,
   type NativeToWeb,
@@ -23,6 +24,7 @@ import {
 } from "./location";
 import { getSession, setSession } from "./storage";
 import { registerForPushNotifications } from "./notifications";
+import { buildNavigationScript, classifyDeeplink } from "./deeplink";
 
 const WEB_ORIGIN: string =
   (Constants.expoConfig?.extra as { webOrigin?: string } | undefined)?.webOrigin ||
@@ -40,6 +42,11 @@ const WEB_ORIGIN: string =
 export default function WebShell() {
   const webRef = useRef<WebView>(null);
   const [ready, setReady] = useState(false);
+  // Deeplink stash for cold-start: the listener may fire before the WebView is
+  // mounted and ready to receive injectJavaScript calls. We hold the path here
+  // and flush it the first time `onLoadEnd` runs.
+  const pendingDeeplinkRef = useRef<string | null>(null);
+  const hasFlushedColdStartRef = useRef(false);
   // Track the most recently registered push token per native shell so we can
   // revoke it on sign-out. Survives across re-renders without re-fetching.
   const lastRegisteredToken = useRef<string | null>(null);
@@ -48,6 +55,33 @@ export default function WebShell() {
     const js = `window.postMessage(${JSON.stringify(JSON.stringify(msg))}, '*'); true;`;
     webRef.current?.injectJavaScript(js);
   }, []);
+
+  const navigateWebView = useCallback((path: string) => {
+    const view = webRef.current;
+    if (!view) return false;
+    view.injectJavaScript(buildNavigationScript(path));
+    return true;
+  }, []);
+
+  const handleDeeplink = useCallback(
+    (raw: unknown) => {
+      const route = classifyDeeplink(raw, WEB_ORIGIN);
+      if (route.kind === "invalid") return;
+      if (route.kind === "external") {
+        Linking.openURL(route.url).catch(() => {
+          // Swallow — system handler unavailable (e.g. no mail app). The notif
+          // already reached the user; nothing more we can do here.
+        });
+        return;
+      }
+      const navigated = navigateWebView(route.path);
+      if (!navigated) {
+        // WebView not mounted yet — stash for the first onLoadEnd.
+        pendingDeeplinkRef.current = route.path;
+      }
+    },
+    [navigateWebView],
+  );
 
   /**
    * POSTs to a same-origin endpoint from inside the WebView. The native
@@ -194,6 +228,37 @@ export default function WebShell() {
     });
   }, [ready, sendToWeb]);
 
+  // Push-notification deeplink wiring (PR-A5 — closes gap-11 last mile).
+  useEffect(() => {
+    // Cold-start: if the app was launched by tapping a notification, that
+    // response is available via `getLastNotificationResponseAsync`. The
+    // listener below would NOT fire for it on iOS.
+    let mounted = true;
+    Notifications.getLastNotificationResponseAsync()
+      .then((resp) => {
+        if (!mounted || !resp) return;
+        const data = resp.notification.request.content.data as
+          | { deeplink?: unknown }
+          | undefined;
+        if (data && "deeplink" in data) handleDeeplink(data.deeplink);
+      })
+      .catch(() => {
+        // Non-fatal: cold-start deeplinking will simply no-op.
+      });
+
+    const sub = Notifications.addNotificationResponseReceivedListener((resp) => {
+      const data = resp.notification.request.content.data as
+        | { deeplink?: unknown }
+        | undefined;
+      if (data && "deeplink" in data) handleDeeplink(data.deeplink);
+    });
+
+    return () => {
+      mounted = false;
+      sub.remove();
+    };
+  }, [handleDeeplink]);
+
   const platform = Platform.OS;
   const userAgentSuffix = `SpecialCarerApp/${Application.nativeApplicationVersion ?? "0.1.0"} (${platform})`;
   const injectedScript = WEB_SCRIPT.replace("__PLATFORM__", platform).replace(
@@ -208,7 +273,19 @@ export default function WebShell() {
         source={{ uri: `${WEB_ORIGIN}/?native=1` }}
         injectedJavaScriptBeforeContentLoaded={injectedScript}
         onMessage={onMessage}
-        onLoadEnd={() => setReady(true)}
+        onLoadEnd={() => {
+          setReady(true);
+          // Flush a cold-start deeplink exactly once. Subsequent loads
+          // (login redirects, in-app nav) must not re-trigger it.
+          if (!hasFlushedColdStartRef.current && pendingDeeplinkRef.current) {
+            const path = pendingDeeplinkRef.current;
+            pendingDeeplinkRef.current = null;
+            hasFlushedColdStartRef.current = true;
+            navigateWebView(path);
+          } else if (!hasFlushedColdStartRef.current) {
+            hasFlushedColdStartRef.current = true;
+          }
+        }}
         applicationNameForUserAgent={userAgentSuffix}
         sharedCookiesEnabled
         thirdPartyCookiesEnabled

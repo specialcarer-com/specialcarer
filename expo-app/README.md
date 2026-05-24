@@ -32,7 +32,9 @@ Endpoints accept `{ platform: 'ios'|'android'|'web', token, device_id?, app_vers
 | `src/WebShell.tsx` | The `WebView`, postMessage bridge handler |
 | `src/bridge.ts` | Web ↔ native message protocol + injected userscript |
 | `src/location.ts` | `TaskManager` background location task + permission helpers |
-| `src/notifications.ts` | Push token registration |
+| `src/notifications.ts` | Push token registration + foreground handler |
+| `src/deeplink.ts` | Pure helpers for classifying + injecting push deeplinks |
+| `__tests__/deeplink.test.ts` | Unit tests for the deeplink helpers |
 | `src/storage.ts` | `SecureStore` helpers (session + active booking) |
 | `app.json` | Expo config: bundle IDs, permissions, plugins |
 | `eas.json` | EAS build profiles + submit credentials |
@@ -53,6 +55,24 @@ Endpoints accept `{ platform: 'ios'|'android'|'web', token, device_id?, app_vers
 - `POST_NOTIFICATIONS`
 
 A persistent foreground notification appears on Android while tracking is active (Android 8+ requirement for foreground services).
+
+## Push-notification deeplink contract
+
+Every push event delivered to the device — produced by `src/lib/push/notify.ts` on the backend (PR-A2) — **must include a `data.deeplink` string** in its APNs/FCM payload. The Expo shell reads that field in `src/WebShell.tsx` via `Notifications.addNotificationResponseReceivedListener` and routes the tap as follows:
+
+| `data.deeplink` shape | Behaviour |
+|---|---|
+| `"/m/chat/<id>"` (any in-app path starting with `/`) | `webRef.injectJavaScript("window.location.href = …; true;")` — escaped with `JSON.stringify` so apostrophes/quotes in the path can't break out of the JS string |
+| `"https://specialcarer.com/m/track/xyz"` (absolute URL on the configured `webOrigin`) | Same as above — origin stripped, navigated in-WebView |
+| `"tel:+44…"`, `"mailto:…"`, `"sms:…"` | `Linking.openURL` → system handler |
+| any other `http(s)://` host | `Linking.openURL` → system browser |
+| missing / non-string / `"javascript:…"` | dropped |
+
+Cold-start (app launched by tapping the notification) is handled via `Notifications.getLastNotificationResponseAsync()` + a `pendingDeeplinkRef`: if the WebView isn't yet mounted, the path is stashed and replayed inside the first `onLoadEnd`. Subsequent loads do not re-trigger the cold-start path.
+
+The foreground notification handler in `src/notifications.ts` returns `shouldShowBanner: true` / `shouldShowList: true` / `shouldPlaySound: true` / `shouldSetBadge: true` so push events are **not** suppressed while the app is open — the user still sees the banner and can tap it.
+
+The deeplink helpers live in `src/deeplink.ts` and are unit-tested in `__tests__/deeplink.test.ts`.
 
 ## Local development
 
