@@ -21,7 +21,7 @@ import {
   startBackgroundUpdates,
   stopBackgroundUpdates,
 } from "./location";
-import { setSession } from "./storage";
+import { getSession, setSession } from "./storage";
 import { registerForPushNotifications } from "./notifications";
 
 const WEB_ORIGIN: string =
@@ -40,11 +40,48 @@ const WEB_ORIGIN: string =
 export default function WebShell() {
   const webRef = useRef<WebView>(null);
   const [ready, setReady] = useState(false);
+  // Track the most recently registered push token per native shell so we can
+  // revoke it on sign-out. Survives across re-renders without re-fetching.
+  const lastRegisteredToken = useRef<string | null>(null);
 
   const sendToWeb = useCallback((msg: NativeToWeb) => {
     const js = `window.postMessage(${JSON.stringify(JSON.stringify(msg))}, '*'); true;`;
     webRef.current?.injectJavaScript(js);
   }, []);
+
+  /**
+   * POSTs to a same-origin endpoint from inside the WebView. The native
+   * shell can't carry the Supabase session cookie, so we ask the WebView
+   * (which does) to make the request. Fire-and-forget by design.
+   */
+  const callWebApi = useCallback((path: string, body: unknown) => {
+    const js =
+      "(function(){try{fetch(" +
+      JSON.stringify(path) +
+      ",{method:'POST',headers:{'content-type':'application/json'},body:" +
+      JSON.stringify(JSON.stringify(body)) +
+      ",credentials:'include'}).catch(function(){});}catch(e){}})(); true;";
+    webRef.current?.injectJavaScript(js);
+  }, []);
+
+  const registerPushWithBackend = useCallback(async () => {
+    const token = await registerForPushNotifications();
+    if (!token) return;
+    lastRegisteredToken.current = token;
+    callWebApi("/api/m/push/register", {
+      platform: Platform.OS,
+      token,
+      device_id: Application.getAndroidId?.() ?? null,
+      app_version: Application.nativeApplicationVersion ?? null,
+    });
+  }, [callWebApi]);
+
+  const unregisterPushWithBackend = useCallback(() => {
+    const token = lastRegisteredToken.current;
+    if (!token) return;
+    callWebApi("/api/m/push/unregister", { token });
+    lastRegisteredToken.current = null;
+  }, [callWebApi]);
 
   const onMessage = useCallback(
     async (e: WebViewMessageEvent) => {
@@ -57,7 +94,16 @@ export default function WebShell() {
 
       switch (msg.type) {
         case "auth.session": {
+          const prev = await getSession();
           await setSession(msg.payload);
+          // Sign-in transition (no prior user, now one): register push token.
+          if (msg.payload.userId && !prev.userId) {
+            void registerPushWithBackend();
+          }
+          // Sign-out transition (had a user, now null): revoke device token.
+          if (!msg.payload.userId && prev.userId) {
+            unregisterPushWithBackend();
+          }
           break;
         }
 
@@ -107,6 +153,15 @@ export default function WebShell() {
 
         case "push.requestToken": {
           const token = await registerForPushNotifications();
+          if (token) {
+            lastRegisteredToken.current = token;
+            callWebApi("/api/m/push/register", {
+              platform: Platform.OS,
+              token,
+              device_id: Application.getAndroidId?.() ?? null,
+              app_version: Application.nativeApplicationVersion ?? null,
+            });
+          }
           sendToWeb({ type: "push.token", payload: { token } });
           break;
         }
@@ -124,7 +179,7 @@ export default function WebShell() {
         }
       }
     },
-    [sendToWeb]
+    [sendToWeb, callWebApi, registerPushWithBackend, unregisterPushWithBackend]
   );
 
   // Announce native readiness once the page loads

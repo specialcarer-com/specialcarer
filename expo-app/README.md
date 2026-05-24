@@ -13,6 +13,17 @@ Architecture chosen: **WebView + native location** — fastest path to App Store
 
 The web app detects the native shell via `window.SpecialCarerNative` (see `src/lib/native-bridge.ts` in the web project) and delegates location + push to the native runtime when available; falls back to the existing browser implementation otherwise.
 
+## Push token registration contract
+
+The native shell registers / revokes push tokens with the web backend on auth transitions:
+
+1. The web app posts `{ type: "auth.session", payload: { userId, role, accessToken? } }` whenever the Supabase session changes (sign-in, sign-out, refresh).
+2. On sign-in (transition from `userId: null` → some id) the native shell calls `Notifications.getExpoPushTokenAsync()` and then injects a `fetch('/api/m/push/register', ...)` into the WebView. The fetch piggybacks on the WebView's session cookie — the native side never handles the access token.
+3. On sign-out (transition to `userId: null`) the shell injects `fetch('/api/m/push/unregister', { token })`.
+4. The web app can also explicitly request a token via `window.SpecialCarerNative.requestPushToken()` — same register path is followed when one is issued.
+
+Endpoints accept `{ platform: 'ios'|'android'|'web', token, device_id?, app_version? }` and upsert on `(user_id, token)`. See `src/lib/push/tokens.ts` and `src/app/api/m/push/*` in the web repo.
+
 ## Files
 
 | File | Responsibility |
