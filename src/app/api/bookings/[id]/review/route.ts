@@ -9,6 +9,7 @@ import {
   REVIEW_TAG_KEYS,
   type CategoryKey,
 } from "@/lib/reviews/types";
+import { dispatch as dispatchPush } from "@/lib/push/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -200,6 +201,20 @@ export async function POST(
         { ok: true, warning: "private_feedback_failed" },
         { status: 200 },
       );
+    }
+  }
+
+  // Notify the carer that they've received a new review.
+  if (booking.caregiver_id) {
+    try {
+      await dispatchPush({
+        type: "review.received",
+        user_id: booking.caregiver_id,
+        booking_id: bookingId,
+        stars: rating as number,
+      });
+    } catch (err) {
+      console.error("[review] push dispatch failed", err);
     }
   }
 

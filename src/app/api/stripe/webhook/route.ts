@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { unredeemCreditsForBooking } from "@/lib/referrals/redemption";
+import { dispatch as dispatchPush } from "@/lib/push/notify";
 
 export const runtime = "nodejs";
 
@@ -252,6 +253,17 @@ export async function POST(req: Request) {
       // ---------------------------------------------------------------
       case "payout.paid": {
         const po = event.data.object as Stripe.Payout;
+        // Pull the carer_id off the matching intent so we can push the
+        // "Payout sent" notification to the right user.
+        const { data: intent } = await admin
+          .from("payout_intents")
+          .select("carer_id, amount_cents, currency")
+          .eq("stripe_payout_id", po.id)
+          .maybeSingle<{
+            carer_id: string;
+            amount_cents: number;
+            currency: string;
+          }>();
         await admin
           .from("payout_intents")
           .update({
@@ -259,6 +271,18 @@ export async function POST(req: Request) {
             paid_at: new Date().toISOString(),
           })
           .eq("stripe_payout_id", po.id);
+        if (intent?.carer_id) {
+          try {
+            await dispatchPush({
+              type: "payout.completed",
+              user_id: intent.carer_id,
+              amount_cents: intent.amount_cents,
+              currency: intent.currency,
+            });
+          } catch (err) {
+            console.error("[stripe.webhook] payout push failed", err);
+          }
+        }
         break;
       }
       case "payout.failed": {

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/server";
 import { unredeemCreditsForBooking } from "@/lib/referrals/redemption";
+import { dispatch as dispatchPush } from "@/lib/push/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -117,6 +118,20 @@ export async function POST(
       console.error("[booking.cancel] unredeem failed", err);
     }
 
+    // Push the cancellation to whichever side did NOT trigger it.
+    const recipientId = isSeeker ? booking.caregiver_id : booking.seeker_id;
+    if (recipientId) {
+      try {
+        await dispatchPush({
+          type: "booking.cancelled",
+          user_id: recipientId,
+          booking_id: bookingId,
+        });
+      } catch (err) {
+        console.error("[booking.cancel] push dispatch failed", err);
+      }
+    }
+
     return NextResponse.json({ ok: true, status: "cancelled" });
   }
 
@@ -154,6 +169,16 @@ export async function POST(
     if (updateErr) {
       return NextResponse.json({ error: updateErr.message }, { status: 500 });
     }
+    // Carer just accepted — tell the seeker the booking is confirmed.
+    try {
+      await dispatchPush({
+        type: "booking.confirmed",
+        user_id: booking.seeker_id,
+        booking_id: bookingId,
+      });
+    } catch (err) {
+      console.error("[booking.accept] push dispatch failed", err);
+    }
     return NextResponse.json({ ok: true, status: "accepted" });
   }
 
@@ -184,6 +209,15 @@ export async function POST(
         updated_at: startNow,
       })
       .eq("id", bookingId);
+    try {
+      await dispatchPush({
+        type: "shift.starting",
+        user_id: booking.seeker_id,
+        booking_id: bookingId,
+      });
+    } catch (err) {
+      console.error("[booking.start] push dispatch failed", err);
+    }
     return NextResponse.json({ ok: true, status: "in_progress" });
   }
 
@@ -320,6 +354,16 @@ export async function POST(
       }
     } catch (e) {
       console.error("[action.complete] timesheet generation failed", e);
+    }
+
+    try {
+      await dispatchPush({
+        type: "shift.completed",
+        user_id: booking.seeker_id,
+        booking_id: bookingId,
+      });
+    } catch (err) {
+      console.error("[booking.complete] push dispatch failed", err);
     }
 
     return NextResponse.json({

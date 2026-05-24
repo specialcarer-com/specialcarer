@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordSystemEventOnce } from "@/lib/journal/system-events";
+import { dispatch as dispatchPush } from "@/lib/push/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -114,6 +115,18 @@ export async function POST(
     signedUrl = signed?.signedUrl ?? null;
   } catch {
     signedUrl = null;
+  }
+
+  // Push the seeker — the carer has just checked in on-site.
+  try {
+    await dispatchPush({
+      type: "shift.arrived",
+      user_id: booking.seeker_id,
+      booking_id: bookingId,
+      carer_name: actorName ?? "Your carer",
+    });
+  } catch (err) {
+    console.error("[arrival-selfie] push dispatch failed", err);
   }
 
   return NextResponse.json({

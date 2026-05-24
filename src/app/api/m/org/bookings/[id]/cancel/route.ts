@@ -5,6 +5,7 @@ import { getMyOrgMembership } from "@/lib/org/server";
 import { computeCancellationPreview } from "@/lib/org/booking-types";
 import type { OrgBooking } from "@/lib/org/booking-types";
 import { computeOrgChargeTotalCents } from "@/lib/stripe/invoicing";
+import { dispatch as dispatchPush } from "@/lib/push/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -133,6 +134,19 @@ export async function POST(
   // for the cancellation fee via createShiftInvoice with a cancellation line item.
   // For MVP, the fee is recorded in org_booking_cancellations and ops team
   // can issue the invoice manually from /admin/org-bookings.
+
+  if (booking.caregiver_id) {
+    try {
+      await dispatchPush({
+        type: "booking.cancelled",
+        user_id: booking.caregiver_id,
+        booking_id: id,
+        ...(reason ? { reason } : {}),
+      });
+    } catch (err) {
+      console.error("[org.cancel] push dispatch failed", err);
+    }
+  }
 
   return NextResponse.json({
     ok: true,
