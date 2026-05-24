@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import MarketingShell from "@/components/marketing-shell";
 import CaregiverCard from "@/components/caregiver-card";
+import { BookingTypeTabs } from "@/app/book/_components/booking-type-tabs";
 import { searchCaregivers, listPublishedCities } from "@/lib/care/search";
 import { SERVICES, isServiceKey } from "@/lib/care/services";
 import { CARE_FORMATS, isCareFormatKey } from "@/lib/care/formats";
@@ -163,6 +164,7 @@ export default async function FindCarePage({
     <MarketingShell>
       <div className="bg-brand-50 overflow-x-hidden">
       <section className="px-6 py-10 sm:py-14 max-w-6xl mx-auto">
+        <BookingTypeTabs current="browse" />
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
           <div>
             <span className="inline-block px-3 py-1 rounded-full bg-brand-50 text-brand-700 text-xs font-medium">
