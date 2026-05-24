@@ -184,33 +184,46 @@ export function TopBar({
 }) {
   const onBack = typeof back === "function" ? back : undefined;
   const href = typeof back === "string" ? back : undefined;
+  const hasBack = Boolean(href || onBack);
+  const inner = (
+    <>
+      <IconChevronLeft />
+      {title && (
+        <h1 className="text-[18px] font-bold text-heading truncate">
+          {title}
+        </h1>
+      )}
+    </>
+  );
   return (
     <div className="sc-safe-top sticky top-0 z-30 bg-white">
       <div className="flex items-center justify-between h-14 px-4">
         <div className="flex items-center gap-2 min-w-0">
-          {(href || onBack) && (
+          {hasBack ? (
             href ? (
               <Link
                 href={href}
-                className="-ml-2 p-2 sc-no-select"
-                aria-label="Back"
+                aria-label={title ? `Back to ${title}` : "Back"}
+                className="-ml-2 -my-2 py-2 pl-2 pr-3 flex items-center gap-2 min-w-0 sc-no-select rounded-md active:bg-muted transition-colors"
               >
-                <IconChevronLeft />
+                {inner}
               </Link>
             ) : (
               <button
+                type="button"
                 onClick={onBack}
-                className="-ml-2 p-2 sc-no-select"
-                aria-label="Back"
+                aria-label={title ? `Back to ${title}` : "Back"}
+                className="-ml-2 -my-2 py-2 pl-2 pr-3 flex items-center gap-2 min-w-0 sc-no-select rounded-md active:bg-muted transition-colors"
               >
-                <IconChevronLeft />
+                {inner}
               </button>
             )
-          )}
-          {title && (
-            <h1 className="text-[18px] font-bold text-heading truncate">
-              {title}
-            </h1>
+          ) : (
+            title && (
+              <h1 className="text-[18px] font-bold text-heading truncate">
+                {title}
+              </h1>
+            )
           )}
         </div>
         <div className="flex items-center gap-2">{right}</div>
