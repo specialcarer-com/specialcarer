@@ -37,7 +37,8 @@ export default function SaveBlockMenu({
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    function handler(e: MouseEvent) {
+    if (!open) return;
+    function handler(e: Event) {
       if (
         wrapperRef.current &&
         !wrapperRef.current.contains(e.target as Node)
@@ -45,10 +46,11 @@ export default function SaveBlockMenu({
         setOpen(false);
       }
     }
-    if (open) {
-      window.addEventListener("mousedown", handler);
-      return () => window.removeEventListener("mousedown", handler);
-    }
+    // pointerdown covers both mouse and touch, fires before iOS' synthesized
+    // mousedown delay so a single tap on a sibling element (e.g. the back
+    // link) closes the menu AND triggers the tap, instead of needing two.
+    window.addEventListener("pointerdown", handler);
+    return () => window.removeEventListener("pointerdown", handler);
   }, [open]);
 
   async function toggleSave() {
@@ -110,7 +112,7 @@ export default function SaveBlockMenu({
         </svg>
       </button>
       {open && (
-        <ul className="absolute right-0 top-12 z-30 min-w-[180px] rounded-card bg-white border border-line shadow-card overflow-hidden">
+        <ul className="absolute right-0 top-12 z-40 min-w-[180px] rounded-card bg-white border border-line shadow-card overflow-hidden">
           <li>
             <button
               type="button"
