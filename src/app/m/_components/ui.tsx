@@ -12,6 +12,7 @@ import {
   useState,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useUnreadNotifications } from "@/lib/notifications/useUnreadNotifications";
 
 /* ──────────────────────────────────────────────────────────────────
    Button
@@ -232,15 +233,32 @@ export function TopBar({
   );
 }
 
-export function NotificationBell({ href = "/m/notifications", hasUnread = true }: { href?: string; hasUnread?: boolean }) {
+export function NotificationBell({
+  href = "/m/notifications",
+  hasUnread,
+}: {
+  href?: string;
+  /**
+   * Override the realtime unread state. Default behaviour subscribes to
+   * `useUnreadNotifications()` so the dot updates the instant a new
+   * notification lands.
+   */
+  hasUnread?: boolean;
+}) {
+  const unreadCount = useUnreadNotifications();
+  const showDot = hasUnread ?? unreadCount > 0;
   return (
     <Link
       href={href}
-      aria-label="Notifications"
+      aria-label={
+        showDot
+          ? `Notifications, ${unreadCount} unread`
+          : "Notifications"
+      }
       className="relative grid place-items-center w-10 h-10 rounded-full bg-muted sc-no-select"
     >
       <IconBell />
-      {hasUnread && (
+      {showDot && (
         <span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-[#E33] sc-pulse" />
       )}
     </Link>
