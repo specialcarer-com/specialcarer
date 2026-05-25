@@ -9,6 +9,7 @@ import {
   REVIEW_TAG_KEYS,
   type CategoryKey,
 } from "@/lib/reviews/types";
+import { dispatch } from "@/lib/push/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -177,6 +178,18 @@ export async function POST(
     .upsert(reviewRow, { onConflict: "booking_id,reviewer_id" });
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Only the seeker can post a review (enforced above), so the reviewee
+  // is always the booking's caregiver.
+  if (booking.caregiver_id) {
+    void dispatch({
+      type: "review.received",
+      revieweeId: booking.caregiver_id,
+      reviewerId: user.id,
+      bookingId: bookingId,
+      rating: rating as 1 | 2 | 3 | 4 | 5,
+    });
   }
 
   // Private feedback lives in its own table so it can't leak through
