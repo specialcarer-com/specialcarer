@@ -11,10 +11,13 @@ import {
   buildPayload,
   dispatch,
   formatMoney,
+  sendPush,
   type DispatchDeps,
   type DispatchEvent,
 } from "./notify";
 import type { NotificationInsert } from "@/lib/notifications/server";
+import type { PushToken } from "./tokens";
+import type { ExpoPushMessage, ExpoPushResponse } from "./expo";
 
 const BOOKING_ID = "11111111-1111-1111-1111-111111111111";
 const SEEKER_ID = "22222222-2222-2222-2222-222222222222";
@@ -184,16 +187,34 @@ describe("buildPayload — message.received", () => {
   });
 });
 
+function makeToken(token: string, user_id: string): PushToken {
+  return {
+    id: `id-${token}`,
+    user_id,
+    platform: "ios",
+    token,
+    device_id: null,
+    app_version: null,
+    last_seen_at: "2026-05-25T00:00:00.000Z",
+    revoked_at: null,
+    created_at: "2026-05-25T00:00:00.000Z",
+  };
+}
+
 describe("dispatch", () => {
-  it("calls createNotification exactly once with the built payload", async () => {
+  it("calls createNotification and sendPush once with the built payload", async () => {
     const calls: NotificationInsert[] = [];
+    const sendPushCalls: Array<{ tokens: PushToken[] }> = [];
     const deps: DispatchDeps = {
       async createNotification(input) {
         calls.push(input);
         return { id: "fake" };
       },
-      async sendPush() {
-        /* no-op */
+      async sendPush(tokens) {
+        sendPushCalls.push({ tokens });
+      },
+      async getActiveTokensForUser(user_id) {
+        return [makeToken("ExponentPushToken[abc]", user_id)];
       },
     };
 
@@ -215,6 +236,9 @@ describe("dispatch", () => {
       (calls[0].payload as { bookingId: string }).bookingId,
       BOOKING_ID,
     );
+    assert.equal(sendPushCalls.length, 1);
+    assert.equal(sendPushCalls[0].tokens.length, 1);
+    assert.equal(sendPushCalls[0].tokens[0].token, "ExponentPushToken[abc]");
   });
 
   it("swallows createNotification errors so the caller is not affected", async () => {
@@ -224,6 +248,9 @@ describe("dispatch", () => {
       },
       async sendPush() {
         /* no-op */
+      },
+      async getActiveTokensForUser() {
+        return [];
       },
     };
     // Should not throw.
@@ -237,5 +264,136 @@ describe("dispatch", () => {
       },
       deps,
     );
+  });
+
+  it("swallows sendPush errors so the caller is not affected", async () => {
+    let createdOnce = false;
+    const deps: DispatchDeps = {
+      async createNotification() {
+        createdOnce = true;
+        return { id: "ok" };
+      },
+      async sendPush() {
+        throw new Error("expo down");
+      },
+      async getActiveTokensForUser(user_id) {
+        return [makeToken("ExponentPushToken[x]", user_id)];
+      },
+    };
+    await dispatch(
+      {
+        type: "booking.accepted",
+        bookingId: BOOKING_ID,
+        seekerId: SEEKER_ID,
+        carerId: CARER_ID,
+        startsAt: "2026-06-10T09:00:00.000Z",
+      },
+      deps,
+    );
+    assert.equal(createdOnce, true);
+  });
+});
+
+describe("sendPush", () => {
+  it("is a no-op when there are no tokens", async () => {
+    let expoCalls = 0;
+    let revoked = 0;
+    await sendPush(
+      [],
+      {
+        recipientUserId: SEEKER_ID,
+        title: "t",
+        body: "b",
+        deeplink: "/x",
+        payload: {},
+      },
+      {
+        async sendExpoPush() {
+          expoCalls += 1;
+          return { data: [] };
+        },
+        async revokeToken() {
+          revoked += 1;
+        },
+      },
+    );
+    assert.equal(expoCalls, 0);
+    assert.equal(revoked, 0);
+  });
+
+  it("maps tokens to Expo messages with title/body/deeplink", async () => {
+    const seen: ExpoPushMessage[][] = [];
+    await sendPush(
+      [
+        makeToken("ExponentPushToken[a]", SEEKER_ID),
+        makeToken("ExponentPushToken[b]", SEEKER_ID),
+      ],
+      {
+        recipientUserId: SEEKER_ID,
+        title: "Hello",
+        body: "World",
+        deeplink: "/m/bookings/123",
+        payload: { foo: "bar" },
+      },
+      {
+        async sendExpoPush(messages) {
+          seen.push(messages);
+          return {
+            data: messages.map(() => ({ status: "ok" as const, id: "tk" })),
+          };
+        },
+        async revokeToken() {
+          /* not expected */
+        },
+      },
+    );
+    assert.equal(seen.length, 1);
+    assert.equal(seen[0].length, 2);
+    assert.equal(seen[0][0].to, "ExponentPushToken[a]");
+    assert.equal(seen[0][0].title, "Hello");
+    assert.equal(seen[0][0].body, "World");
+    assert.equal(seen[0][0].priority, "high");
+    assert.equal(seen[0][0].sound, "default");
+    assert.equal(seen[0][0].channelId, "default");
+    assert.deepEqual(seen[0][0].data, {
+      deeplink: "/m/bookings/123",
+      foo: "bar",
+    });
+  });
+
+  it("revokes tokens flagged as DeviceNotRegistered", async () => {
+    const revoked: string[] = [];
+    await sendPush(
+      [
+        makeToken("ExponentPushToken[kept]", SEEKER_ID),
+        makeToken("ExponentPushToken[dead]", SEEKER_ID),
+      ],
+      {
+        recipientUserId: SEEKER_ID,
+        title: "t",
+        body: "b",
+        deeplink: "/x",
+        payload: {},
+      },
+      {
+        async sendExpoPush() {
+          const body: ExpoPushResponse = {
+            data: [
+              { status: "ok", id: "kept" },
+              {
+                status: "error",
+                message: "gone",
+                details: { error: "DeviceNotRegistered" },
+              },
+            ],
+          };
+          return body;
+        },
+        async revokeToken(t) {
+          revoked.push(t);
+        },
+      },
+    );
+    assert.deepEqual(revoked, ["ExponentPushToken[dead]"]);
   });
 });
