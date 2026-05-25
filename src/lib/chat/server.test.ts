@@ -16,6 +16,7 @@ import {
   getOrCreateBookingThreadWith,
   archiveBookingThreadWith,
   isThreadParticipantWith,
+  getUnreadThreadIdsWith,
   MAX_BODY,
   type AdminLike,
 } from "./server";
@@ -353,5 +354,194 @@ describe("isThreadParticipant", () => {
       error: { message: "boom" },
     });
     assert.equal(await isThreadParticipantWith(admin, "t1", "u1"), false);
+  });
+});
+
+/**
+ * Tiny stub matching the structural shape getUnreadThreadIdsWith uses
+ * (.from(table).select(cols).in(col, vals)). Each table maps to a
+ * scripted `Result` — enough surface to drive the unit without a real
+ * Postgrest client.
+ */
+type UnreadHandlers = {
+  chat_threads?: Result;
+  chat_messages?: Result;
+  chat_participants?: Result;
+};
+function makeUnreadAdmin(h: UnreadHandlers) {
+  return {
+    from(table: string) {
+      return {
+        select() {
+          return {
+            async in() {
+              const key = table as keyof UnreadHandlers;
+              return h[key] ?? { data: [], error: null };
+            },
+          };
+        },
+      };
+    },
+  };
+}
+
+describe("getUnreadThreadIds", () => {
+  it("returns empty for empty input", async () => {
+    const admin = makeUnreadAdmin({});
+    const out = await getUnreadThreadIdsWith(admin, "user-a", []);
+    assert.equal(out.size, 0);
+  });
+
+  it("marks a booking as unread when an incoming message is newer than last_read_at", async () => {
+    const admin = makeUnreadAdmin({
+      chat_threads: {
+        data: [{ id: "th-1", booking_id: "bk-1" }],
+        error: null,
+      },
+      chat_messages: {
+        data: [
+          {
+            thread_id: "th-1",
+            sender_id: "other",
+            created_at: "2026-05-25T10:00:00.000Z",
+          },
+        ],
+        error: null,
+      },
+      chat_participants: {
+        data: [
+          {
+            thread_id: "th-1",
+            user_id: "user-a",
+            last_read_at: "2026-05-25T09:00:00.000Z",
+          },
+        ],
+        error: null,
+      },
+    });
+    const out = await getUnreadThreadIdsWith(admin, "user-a", ["bk-1"]);
+    assert.deepEqual([...out], ["bk-1"]);
+  });
+
+  it("does not mark a booking as unread when the only newer message is from the caller themself", async () => {
+    const admin = makeUnreadAdmin({
+      chat_threads: {
+        data: [{ id: "th-2", booking_id: "bk-2" }],
+        error: null,
+      },
+      chat_messages: {
+        data: [
+          {
+            thread_id: "th-2",
+            sender_id: "user-a", // <- self
+            created_at: "2026-05-25T11:00:00.000Z",
+          },
+        ],
+        error: null,
+      },
+      chat_participants: {
+        data: [
+          {
+            thread_id: "th-2",
+            user_id: "user-a",
+            last_read_at: "2026-05-25T09:00:00.000Z",
+          },
+        ],
+        error: null,
+      },
+    });
+    const out = await getUnreadThreadIdsWith(admin, "user-a", ["bk-2"]);
+    assert.equal(out.size, 0);
+  });
+
+  it("treats a never-read thread (last_read_at = null) as unread when there is any incoming", async () => {
+    const admin = makeUnreadAdmin({
+      chat_threads: {
+        data: [{ id: "th-3", booking_id: "bk-3" }],
+        error: null,
+      },
+      chat_messages: {
+        data: [
+          {
+            thread_id: "th-3",
+            sender_id: "other",
+            created_at: "2026-05-25T08:00:00.000Z",
+          },
+        ],
+        error: null,
+      },
+      chat_participants: {
+        data: [
+          { thread_id: "th-3", user_id: "user-a", last_read_at: null },
+        ],
+        error: null,
+      },
+    });
+    const out = await getUnreadThreadIdsWith(admin, "user-a", ["bk-3"]);
+    assert.deepEqual([...out], ["bk-3"]);
+  });
+
+  it("returns a mixed set across read + unread threads in one batch", async () => {
+    const admin = makeUnreadAdmin({
+      chat_threads: {
+        data: [
+          { id: "th-r", booking_id: "bk-read" },
+          { id: "th-u", booking_id: "bk-unread" },
+          { id: "th-q", booking_id: "bk-quiet" }, // no messages
+        ],
+        error: null,
+      },
+      chat_messages: {
+        data: [
+          // read thread — message is older than last_read
+          {
+            thread_id: "th-r",
+            sender_id: "other",
+            created_at: "2026-05-25T07:00:00.000Z",
+          },
+          // unread thread — newer than last_read
+          {
+            thread_id: "th-u",
+            sender_id: "other",
+            created_at: "2026-05-25T12:00:00.000Z",
+          },
+        ],
+        error: null,
+      },
+      chat_participants: {
+        data: [
+          {
+            thread_id: "th-r",
+            user_id: "user-a",
+            last_read_at: "2026-05-25T09:00:00.000Z",
+          },
+          {
+            thread_id: "th-u",
+            user_id: "user-a",
+            last_read_at: "2026-05-25T10:00:00.000Z",
+          },
+          {
+            thread_id: "th-q",
+            user_id: "user-a",
+            last_read_at: null,
+          },
+        ],
+        error: null,
+      },
+    });
+    const out = await getUnreadThreadIdsWith(admin, "user-a", [
+      "bk-read",
+      "bk-unread",
+      "bk-quiet",
+    ]);
+    assert.deepEqual([...out].sort(), ["bk-unread"]);
+  });
+
+  it("returns empty when the threads query errors (defensive)", async () => {
+    const admin = makeUnreadAdmin({
+      chat_threads: { data: null, error: { message: "boom" } },
+    });
+    const out = await getUnreadThreadIdsWith(admin, "user-a", ["bk-x"]);
+    assert.equal(out.size, 0);
   });
 });

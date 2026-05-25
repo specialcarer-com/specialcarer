@@ -246,6 +246,49 @@ function BookingDetailInner() {
       <TopBar back="/m/bookings" title="Booking details" />
 
       <div className="px-4 pt-2 space-y-4">
+        {(() => {
+          const hasCarer = Boolean(data.counterparty.user_id);
+          const inner = (
+            <div className="flex items-center justify-between rounded-card bg-white border border-line px-4 py-3 active:bg-muted/40">
+              <div className="min-w-0">
+                <p className="text-[14px] font-semibold text-heading truncate">
+                  Open chat{hasCarer ? ` with ${name}` : ""}
+                </p>
+                {!hasCarer && (
+                  <p className="text-[12px] text-subheading mt-0.5">
+                    Available once a carer accepts.
+                  </p>
+                )}
+              </div>
+              <span
+                aria-hidden
+                style={{ color: hasCarer ? "#039EA0" : "#A3A3A3" }}
+                className="font-bold ml-3"
+              >
+                →
+              </span>
+            </div>
+          );
+          if (!hasCarer) {
+            return (
+              <div
+                aria-disabled
+                className="opacity-60 cursor-not-allowed"
+              >
+                {inner}
+              </div>
+            );
+          }
+          return (
+            <Link
+              href={`/m/bookings/${data.id}/chat`}
+              aria-label={`Open chat with ${name}`}
+            >
+              {inner}
+            </Link>
+          );
+        })()}
+
         <Card>
           <div className="flex items-start gap-3">
             <Avatar src={avatar} name={name} size={56} />

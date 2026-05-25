@@ -312,3 +312,125 @@ export async function archiveBookingThread(bookingId: string): Promise<void> {
     console.error("[chat.archiveBookingThread] failed", e);
   }
 }
+
+/* ────────────────────────────────────────────────────────────────────
+ * Unread-dot support (A4-bis-2)
+ *
+ * Given a list of bookings the user is viewing, return the subset of
+ * booking_ids whose chat thread has at least one message newer than the
+ * user's `last_read_at` on that thread, and where that message wasn't
+ * sent by the user themself.
+ *
+ * Archived threads ARE included in the check — an archived chat can
+ * still legitimately contain unread history, and hiding the dot would
+ * make the seeker miss the carer's last word. The thread page renders
+ * the archived chat read-only anyway.
+ *
+ * One round-trip per "side" (threads, latest-incoming, last-read),
+ * regardless of list size — no N+1.
+ * ──────────────────────────────────────────────────────────────────── */
+
+// Loose admin client shape — we use enough surface to .from(...).select(...).in(...).
+// Kept inside this file rather than added to AdminLike because the existing
+// AdminLike was sized for single-row ops and bolting `.in()` onto every
+// filter chain would change every test that mocks it.
+type AdminUnreadLike = {
+  from: (table: string) => {
+    select: (cols: string) => {
+      in: (col: string, vals: string[]) => Promise<{
+        data: unknown;
+        error: { message: string } | null;
+      }>;
+    };
+  };
+};
+
+/**
+ * Booking IDs (from `bookingIds`) whose chat thread has unread incoming
+ * messages for `userId`. Returns an empty set when `bookingIds` is
+ * empty. Errors from any of the three batched queries collapse to "no
+ * unread" — the dot is a UX enhancement, never the source of truth.
+ *
+ * Exported with an injectable admin shape for unit testing.
+ */
+export async function getUnreadThreadIdsWith(
+  admin: AdminUnreadLike,
+  userId: string,
+  bookingIds: string[],
+): Promise<Set<string>> {
+  if (bookingIds.length === 0 || !userId) return new Set();
+
+  const threads = await admin
+    .from("chat_threads")
+    .select("id, booking_id")
+    .in("booking_id", bookingIds);
+  if (threads.error) return new Set();
+  const threadRows = (threads.data ?? []) as {
+    id: string;
+    booking_id: string;
+  }[];
+  if (threadRows.length === 0) return new Set();
+
+  const threadIds = threadRows.map((t) => t.id);
+  const bookingByThread = new Map(threadRows.map((t) => [t.id, t.booking_id]));
+
+  // The latest *incoming* message per thread. Filtering out the user's
+  // own messages here is cheaper than post-hoc filtering and matches
+  // the dot semantics ("someone said something I haven't seen").
+  const msgs = await admin
+    .from("chat_messages")
+    .select("thread_id, sender_id, created_at")
+    .in("thread_id", threadIds);
+  if (msgs.error) return new Set();
+  const latestIncomingByThread = new Map<string, string>();
+  for (const m of (msgs.data ?? []) as {
+    thread_id: string;
+    sender_id: string;
+    created_at: string;
+  }[]) {
+    if (m.sender_id === userId) continue;
+    const prev = latestIncomingByThread.get(m.thread_id);
+    if (!prev || m.created_at > prev) {
+      latestIncomingByThread.set(m.thread_id, m.created_at);
+    }
+  }
+
+  // The user's last_read_at per thread.
+  const reads = await admin
+    .from("chat_participants")
+    .select("thread_id, user_id, last_read_at")
+    .in("thread_id", threadIds);
+  if (reads.error) return new Set();
+  const lastReadByThread = new Map<string, string | null>();
+  for (const r of (reads.data ?? []) as {
+    thread_id: string;
+    user_id: string;
+    last_read_at: string | null;
+  }[]) {
+    if (r.user_id !== userId) continue;
+    lastReadByThread.set(r.thread_id, r.last_read_at);
+  }
+
+  const out = new Set<string>();
+  for (const threadId of threadIds) {
+    const latest = latestIncomingByThread.get(threadId);
+    if (!latest) continue; // no incoming → not unread
+    const lastRead = lastReadByThread.get(threadId);
+    if (!lastRead || latest > lastRead) {
+      const bookingId = bookingByThread.get(threadId);
+      if (bookingId) out.add(bookingId);
+    }
+  }
+  return out;
+}
+
+export async function getUnreadThreadIds(
+  userId: string,
+  bookingIds: string[],
+): Promise<Set<string>> {
+  return getUnreadThreadIdsWith(
+    createAdminClient() as unknown as AdminUnreadLike,
+    userId,
+    bookingIds,
+  );
+}
