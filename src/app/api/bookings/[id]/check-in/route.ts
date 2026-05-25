@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { recordSystemEventOnce } from "@/lib/journal/system-events";
+import { dispatch } from "@/lib/push/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -170,12 +171,26 @@ export async function POST(
     update.flagged_for_review = true;
   }
 
+  const wasInProgressBefore = booking.status === "in_progress";
+
   const { error: updErr } = await admin
     .from("bookings")
     .update(update)
     .eq("id", bookingId);
   if (updErr) {
     return NextResponse.json({ error: updErr.message }, { status: 500 });
+  }
+
+  // Only fire the arrival notification on the first transition into
+  // in_progress, so a re-tap after a flaky network doesn't double-notify.
+  if (!wasInProgressBefore) {
+    void dispatch({
+      type: "shift.arrived",
+      seekerId: booking.seeker_id,
+      carerId: user.id,
+      bookingId: bookingId,
+      arrivedAt: now,
+    });
   }
 
   // Best-effort arrival event in the activity feed (dedup'd by helper).

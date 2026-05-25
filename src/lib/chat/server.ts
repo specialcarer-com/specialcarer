@@ -12,6 +12,7 @@
  */
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { dispatch } from "@/lib/push/notify";
 
 export type ChatMessage = {
   id: string;
@@ -187,6 +188,30 @@ export async function sendMessage(
   if (error || !data) {
     throw new Error(`chat_send_failed: ${error?.message ?? "no row"}`);
   }
+
+  // Notify the other participant(s). RLS on chat_participants only
+  // exposes own rows to authenticated callers, so use the admin client
+  // for the lookup. Errors swallowed inside dispatch.
+  try {
+    const admin = createAdminClient();
+    const { data: others } = await admin
+      .from("chat_participants")
+      .select("user_id")
+      .eq("thread_id", threadId)
+      .neq("user_id", userData.user.id);
+    for (const p of (others ?? []) as { user_id: string }[]) {
+      void dispatch({
+        type: "message.received",
+        recipientId: p.user_id,
+        senderId: userData.user.id,
+        threadId,
+        preview: trimmed,
+      });
+    }
+  } catch (e) {
+    console.error("[chat.sendMessage] notify failed", e);
+  }
+
   return data as ChatMessage;
 }
 

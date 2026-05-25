@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { unredeemCreditsForBooking } from "@/lib/referrals/redemption";
+import { dispatch } from "@/lib/push/notify";
 
 export const runtime = "nodejs";
 
@@ -259,6 +260,31 @@ export async function POST(req: Request) {
             paid_at: new Date().toISOString(),
           })
           .eq("stripe_payout_id", po.id);
+
+        // Notify the carer their payout landed. payout_intents aggregates
+        // multiple earnings rows into a single Stripe payout, so there's
+        // no 1:1 booking_id — we pass an empty string and surface the
+        // amount + currency from the Stripe event directly.
+        // TODO(A2-bis-followup): once payout_intents tracks the originating
+        // booking ids, deeplink the notification to the relevant booking.
+        try {
+          const { data: pi } = await admin
+            .from("payout_intents")
+            .select("carer_id")
+            .eq("stripe_payout_id", po.id)
+            .maybeSingle<{ carer_id: string }>();
+          if (pi?.carer_id) {
+            void dispatch({
+              type: "payout.completed",
+              carerId: pi.carer_id,
+              bookingId: "",
+              amountPence: po.amount,
+              currency: (po.currency ?? "gbp").toUpperCase(),
+            });
+          }
+        } catch (e) {
+          console.error("[stripe.webhook] payout dispatch failed", e);
+        }
         break;
       }
       case "payout.failed": {
