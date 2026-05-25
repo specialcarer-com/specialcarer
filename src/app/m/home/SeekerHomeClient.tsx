@@ -21,26 +21,22 @@ import {
   SectionTitle,
   Tag,
 } from "../_components/ui";
-import {
-  BOOKINGS,
-  STATUS_TONE,
-  getCarer,
-} from "../_lib/mock";
 import { serviceLabel, formatMoney } from "@/lib/care/services";
 import { createClient } from "@/lib/supabase/client";
 import type { ApiFeaturedCarer } from "@/app/api/m/carers/featured/route";
+import type {
+  ApiUpcomingBooking,
+  ApiUpcomingBookingsResponse,
+} from "@/app/api/m/bookings/upcoming/route";
 
 /**
  * Home (seeker) — Figma 7:1652.
  * Welcome / search bar / Upcoming Bookings / Care journal / Professionals.
  *
- * The Professionals strip is now backed by the real `caregiver_profiles`
- * table via /api/m/carers/featured. The mock CAREGIVERS array is no
- * longer rendered here — tapping "See Profile" now lands on a real
- * UUID-keyed profile at /m/carer/{user_id}.
- *
- * The upcoming-booking card still uses mock BOOKINGS data; that section
- * is unchanged per the brief.
+ * Both the Professionals strip and the Upcoming Bookings card are now
+ * backed by real database queries (/api/m/carers/featured and
+ * /api/m/bookings/upcoming respectively). The mock CAREGIVERS / BOOKINGS
+ * arrays are no longer referenced from this page.
  */
 
 export default function SeekerHomeClient() {
@@ -130,10 +126,35 @@ export default function SeekerHomeClient() {
     };
   }, []);
 
-  const upcoming = BOOKINGS.find(
-    (b) => b.status === "Requested" || b.status === "Accepted"
-  );
-  const upcomingCarer = upcoming ? getCarer(upcoming.carerId) : undefined;
+  // Upcoming bookings — real data from /api/m/bookings/upcoming. The home
+  // surface only shows the next one; the "View All" link routes to the
+  // full list at /m/bookings.
+  const [upcomingBookings, setUpcomingBookings] = useState<
+    ApiUpcomingBooking[] | null
+  >(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/m/bookings/upcoming?limit=3", {
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (!res.ok) {
+          if (!cancelled) setUpcomingBookings([]);
+          return;
+        }
+        const json = (await res.json()) as ApiUpcomingBookingsResponse;
+        if (!cancelled) setUpcomingBookings(json.bookings ?? []);
+      } catch {
+        if (!cancelled) setUpcomingBookings([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const upcoming = upcomingBookings?.[0] ?? null;
 
   return (
     <main className="min-h-[100dvh] bg-bg-screen sc-with-bottom-nav">
@@ -205,28 +226,39 @@ export default function SeekerHomeClient() {
         </Link>
       </div>
 
-      {/* Upcoming Bookings — still mock-driven; brief said leave alone. */}
-      {upcoming && upcomingCarer && (
-        <>
-          <SectionTitle
-            title="Upcoming Bookings"
-            action={
-              <Link
-                href="/m/bookings"
-                className="text-primary font-bold text-[13px]"
-              >
-                View All
+      {/* Upcoming Bookings — backed by /api/m/bookings/upcoming. */}
+      <SectionTitle
+        title="Upcoming Bookings"
+        action={
+          <Link
+            href="/m/bookings"
+            className="text-primary font-bold text-[13px]"
+          >
+            View All
+          </Link>
+        }
+      />
+      <div className="px-4">
+        {upcomingBookings === null ? (
+          <UpcomingBookingSkeleton />
+        ) : upcoming ? (
+          <BookingPreviewCard booking={upcoming} />
+        ) : (
+          <Card>
+            <p className="text-[14px] font-bold text-heading">
+              No upcoming bookings
+            </p>
+            <p className="mt-1 text-[13px] text-subheading">
+              Book care to see your next visit here.
+            </p>
+            <div className="mt-3">
+              <Link href="/m/book">
+                <Button size="md">Book care</Button>
               </Link>
-            }
-          />
-          <div className="px-4">
-            <BookingPreviewCard
-              carer={upcomingCarer}
-              booking={upcoming}
-            />
-          </div>
-        </>
-      )}
+            </div>
+          </Card>
+        )}
+      </div>
 
       {/* Care journal quick-access. */}
       <SectionTitle title="Care journal" />
@@ -297,47 +329,135 @@ export default function SeekerHomeClient() {
    Sub-components
    ────────────────────────────────────────────────────────────────── */
 
-function BookingPreviewCard({
-  carer,
-  booking,
-}: {
-  carer: ReturnType<typeof getCarer> & object;
-  booking: (typeof BOOKINGS)[number];
-}) {
+function BookingPreviewCard({ booking }: { booking: ApiUpcomingBooking }) {
+  const carer = booking.caregiver;
+  const carerName =
+    carer?.display_name ?? carer?.full_name ?? "Caregiver TBD";
+  const carerPhoto = carer?.photo_url ?? carer?.avatar_url ?? undefined;
+  const statusTone = bookingStatusTone(booking.status);
+  const statusLabel = bookingStatusLabel(booking.status);
+  const locationLine = [booking.location_city, booking.location_country]
+    .filter((s): s is string => Boolean(s))
+    .join(", ");
+  const { dateLabel, timeLabel } = formatStartEnd(
+    booking.starts_at,
+    booking.ends_at,
+  );
+
   return (
     <Card>
       <div className="flex items-start gap-3">
-        <Avatar src={carer.photo} name={carer.name} size={56} />
+        <Avatar src={carerPhoto} name={carerName} size={56} />
         <div className="flex-1 min-w-0">
-          <p className="text-[16px] font-bold text-heading">{carer.name}</p>
+          <p className="text-[16px] font-bold text-heading">{carerName}</p>
           <div className="mt-1.5">
-            <Tag tone="primary">{booking.service}</Tag>
+            <Tag tone="primary">{serviceLabel(booking.service_type)}</Tag>
           </div>
         </div>
-        <Tag tone={STATUS_TONE[booking.status]}>{booking.status}</Tag>
+        <Tag tone={statusTone}>{statusLabel}</Tag>
       </div>
 
       <ul className="mt-4 space-y-2 text-[13px] text-heading">
-        <li className="flex items-center gap-2">
-          <span className="text-subheading"><IconPin /></span>
-          {booking.address}
-        </li>
-        <li className="flex items-center gap-2">
-          <span className="text-subheading"><IconCal /></span>
-          Slot — {booking.slot}
-        </li>
+        {locationLine && (
+          <li className="flex items-center gap-2">
+            <span className="text-subheading"><IconPin /></span>
+            {locationLine}
+          </li>
+        )}
         <li className="flex items-center gap-2">
           <span className="text-subheading"><IconCal /></span>
-          {booking.date} | {booking.time}
+          {dateLabel} | {timeLabel}
         </li>
       </ul>
 
       <div className="border-t border-line mt-4 pt-3 flex items-center justify-end gap-2">
         <ActionIcon ariaLabel="Call"><IconPhone /></ActionIcon>
         <ActionIcon ariaLabel="Email"><IconMail /></ActionIcon>
-        <ActionIcon ariaLabel="Message" href={`/m/chat/${carer.id}`}>
-          <IconChatBubble />
-        </ActionIcon>
+        {carer?.user_id && (
+          <ActionIcon ariaLabel="Message" href={`/m/chat/${carer.user_id}`}>
+            <IconChatBubble />
+          </ActionIcon>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function bookingStatusTone(
+  status: string,
+): "amber" | "green" | "red" | "neutral" | "primary" {
+  switch (status) {
+    case "pending":
+      return "amber";
+    case "accepted":
+    case "paid":
+      return "green";
+    case "in_progress":
+      return "primary";
+    default:
+      return "neutral";
+  }
+}
+
+function bookingStatusLabel(status: string): string {
+  switch (status) {
+    case "pending":
+      return "Requested";
+    case "accepted":
+      return "Accepted";
+    case "paid":
+      return "Confirmed";
+    case "in_progress":
+      return "In progress";
+    default:
+      return status.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+  }
+}
+
+function formatStartEnd(
+  startsAt: string,
+  endsAt: string,
+): { dateLabel: string; timeLabel: string } {
+  const start = startsAt ? new Date(startsAt) : null;
+  const end = endsAt ? new Date(endsAt) : null;
+  if (!start || Number.isNaN(start.getTime())) {
+    return { dateLabel: "TBD", timeLabel: "" };
+  }
+  const dateLabel = start.toLocaleDateString(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+  const timeFmt: Intl.DateTimeFormatOptions = {
+    hour: "numeric",
+    minute: "2-digit",
+  };
+  const startTime = start.toLocaleTimeString(undefined, timeFmt);
+  const endTime =
+    end && !Number.isNaN(end.getTime())
+      ? end.toLocaleTimeString(undefined, timeFmt)
+      : "";
+  const timeLabel = endTime ? `${startTime} – ${endTime}` : startTime;
+  return { dateLabel, timeLabel };
+}
+
+function UpcomingBookingSkeleton() {
+  return (
+    <Card>
+      <div className="flex items-start gap-3">
+        <div
+          className="h-14 w-14 rounded-full bg-muted animate-pulse"
+          aria-hidden
+        />
+        <div className="flex-1 min-w-0 space-y-2">
+          <div className="h-4 w-1/2 rounded bg-muted animate-pulse" />
+          <div className="h-3 w-1/4 rounded bg-muted animate-pulse" />
+        </div>
+        <div className="h-5 w-16 rounded bg-muted animate-pulse" />
+      </div>
+      <div className="mt-4 space-y-2">
+        <div className="h-3 w-2/3 rounded bg-muted animate-pulse" />
+        <div className="h-3 w-1/2 rounded bg-muted animate-pulse" />
       </div>
     </Card>
   );
