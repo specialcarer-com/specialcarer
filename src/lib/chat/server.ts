@@ -52,12 +52,17 @@ export type AdminLike = { from: (table: string) => AdminTable };
 type AdminTable = {
   select: (cols: string) => AdminFilter;
   insert: (payload: unknown) => AdminInsertChain;
+  update?: (payload: unknown) => AdminUpdateChain;
 };
 type AdminFilter = {
   eq: (col: string, val: string) => AdminFilter & AdminTerminal;
 };
 type AdminInsertChain = {
   select: (cols: string) => AdminTerminal;
+} & Promise<AdminResult>;
+type AdminUpdateChain = {
+  eq: (col: string, val: string) => AdminUpdateChain & Promise<AdminResult>;
+  is: (col: string, val: null) => AdminUpdateChain & Promise<AdminResult>;
 } & Promise<AdminResult>;
 type AdminTerminal = {
   single: () => Promise<AdminResult>;
@@ -236,5 +241,74 @@ export async function markRead(threadId: string): Promise<void> {
     .eq("user_id", userData.user.id);
   if (error) {
     throw new Error(`chat_mark_read_failed: ${error.message}`);
+  }
+}
+
+/**
+ * True iff `userId` is a participant of `threadId`. Uses the admin
+ * client because the chat_participants RLS policy only exposes the
+ * caller's own rows, which is unhelpful for "are they a participant?"
+ * defense-in-depth checks in route handlers.
+ *
+ * Exported with an injectable admin shape for unit testing.
+ */
+export async function isThreadParticipantWith(
+  admin: AdminLike,
+  threadId: string,
+  userId: string,
+): Promise<boolean> {
+  const res = await admin
+    .from("chat_participants")
+    .select("user_id")
+    .eq("thread_id", threadId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (res.error) {
+    return false;
+  }
+  return res.data !== null;
+}
+
+export async function isThreadParticipant(
+  threadId: string,
+  userId: string,
+): Promise<boolean> {
+  return isThreadParticipantWith(
+    createAdminClient() as unknown as AdminLike,
+    threadId,
+    userId,
+  );
+}
+
+/**
+ * Stamp `archived_at = now()` on the thread for a booking that just
+ * transitioned to `completed`. Idempotent (only archives if not already
+ * archived). Errors are swallowed — the caller is the booking-complete
+ * flow and must not be broken by a chat archive failure.
+ *
+ * Exported with an injectable admin shape for unit testing.
+ */
+export async function archiveBookingThreadWith(
+  admin: AdminLike,
+  bookingId: string,
+): Promise<void> {
+  try {
+    const table = admin.from("chat_threads");
+    if (!table.update) return;
+    const update = table.update({ archived_at: new Date().toISOString() });
+    await update.eq("booking_id", bookingId).is("archived_at", null);
+  } catch (e) {
+    console.error("[chat.archiveBookingThread] failed", e);
+  }
+}
+
+export async function archiveBookingThread(bookingId: string): Promise<void> {
+  try {
+    return await archiveBookingThreadWith(
+      createAdminClient() as unknown as AdminLike,
+      bookingId,
+    );
+  } catch (e) {
+    console.error("[chat.archiveBookingThread] failed", e);
   }
 }
