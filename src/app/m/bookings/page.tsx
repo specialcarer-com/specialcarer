@@ -119,6 +119,7 @@ export default function BookingsPage() {
   const [filter, setFilter] = useState<TabKey>("all");
   const [bookings, setBookings] = useState<ApiBookingListItem[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [unread, setUnread] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -135,7 +136,26 @@ export default function BookingsPage() {
           return;
         }
         const json = (await res.json()) as ApiBookingsListResponse;
-        if (!cancelled) setBookings(json.bookings ?? []);
+        if (cancelled) return;
+        const list = json.bookings ?? [];
+        setBookings(list);
+        const ids = list.map((b) => b.id);
+        if (ids.length > 0) {
+          try {
+            const r2 = await fetch("/api/m/chat/unread", {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ bookingIds: ids }),
+            });
+            if (!cancelled && r2.ok) {
+              const j2 = (await r2.json()) as { unreadBookingIds: string[] };
+              setUnread(new Set(j2.unreadBookingIds ?? []));
+            }
+          } catch {
+            /* best-effort */
+          }
+        }
       } catch {
         if (!cancelled) {
           setBookings([]);
@@ -240,8 +260,15 @@ export default function BookingsPage() {
                   <div className="flex items-start gap-3">
                     <Avatar src={avatar} name={name} size={56} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[16px] font-bold text-heading truncate">
-                        {name}
+                      <p className="text-[16px] font-bold text-heading truncate flex items-center gap-2">
+                        <span className="truncate">{name}</span>
+                        {unread.has(b.id) && (
+                          <span
+                            aria-label="Unread messages"
+                            className="inline-block h-2 w-2 rounded-full flex-shrink-0"
+                            style={{ background: "#039EA0" }}
+                          />
+                        )}
                       </p>
                       {b.service_type && (
                         <div className="mt-1.5">

@@ -103,10 +103,11 @@ function statusLabel(status: string): string {
 interface BookingCardProps {
   booking: MyWorkBooking;
   tab: WorkTab;
+  unread?: boolean;
   onAction?: (id: string, action: "accept" | "decline") => void;
 }
 
-function BookingCard({ booking, tab, onAction }: BookingCardProps) {
+function BookingCard({ booking, tab, unread, onAction }: BookingCardProps) {
   const expiry = fmtExpiry(booking.offer_expires_at);
   const amount = formatMoney(booking.hourly_rate_cents * booking.hours, (booking.currency?.toUpperCase() as "GBP" | "USD") ?? "GBP");
   const location = booking.location_city ?? booking.location_postcode ?? "Location TBC";
@@ -137,9 +138,18 @@ function BookingCard({ booking, tab, onAction }: BookingCardProps) {
       )}
 
       {/* Title */}
-      <p className="text-[15px] font-bold text-heading leading-tight">
-        {booking.seeker_first_name}
-        {booking.organization_name ? ` · ${booking.organization_name}` : ` · ${serviceLabel(booking.service_type)}`}
+      <p className="text-[15px] font-bold text-heading leading-tight flex items-center gap-2">
+        <span className="truncate">
+          {booking.seeker_first_name}
+          {booking.organization_name ? ` · ${booking.organization_name}` : ` · ${serviceLabel(booking.service_type)}`}
+        </span>
+        {unread && (
+          <span
+            aria-label="Unread messages"
+            className="inline-block h-2 w-2 rounded-full flex-shrink-0"
+            style={{ background: "#039EA0" }}
+          />
+        )}
       </p>
 
       {/* Date */}
@@ -354,6 +364,7 @@ export default function MyWorkClient({ onFindWork }: MyWorkClientProps) {
 
   const [counts, setCounts] = useState<WorkStatusCounts | null>(null);
   const [bookings, setBookings] = useState<MyWorkBooking[]>([]);
+  const [unread, setUnread] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [actionPending, setActionPending] = useState<string | null>(null);
 
@@ -382,11 +393,32 @@ export default function MyWorkClient({ onFindWork }: MyWorkClientProps) {
       if (res.ok) {
         const data = (await res.json()) as { bookings: MyWorkBooking[] };
         setBookings(data.bookings);
+        const ids = data.bookings.map((b) => b.id);
+        if (ids.length > 0) {
+          try {
+            const r2 = await fetch("/api/m/chat/unread", {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ bookingIds: ids }),
+            });
+            if (r2.ok) {
+              const j2 = (await r2.json()) as { unreadBookingIds: string[] };
+              setUnread(new Set(j2.unreadBookingIds ?? []));
+            }
+          } catch {
+            /* best-effort */
+          }
+        } else {
+          setUnread(new Set());
+        }
       } else {
         setBookings([]);
+        setUnread(new Set());
       }
     } catch {
       setBookings([]);
+      setUnread(new Set());
     } finally {
       setLoading(false);
     }
@@ -464,6 +496,7 @@ export default function MyWorkClient({ onFindWork }: MyWorkClientProps) {
               key={b.id}
               booking={b}
               tab={activeTab}
+              unread={unread.has(b.id)}
               onAction={handleAction}
             />
           ))

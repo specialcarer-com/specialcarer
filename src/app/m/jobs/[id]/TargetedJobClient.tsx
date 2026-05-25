@@ -171,6 +171,17 @@ export default function TargetedJobClient({
         </div>
       </Card>
 
+      <Link
+        href={`/m/jobs/${booking.id}/chat`}
+        className="flex items-center justify-between rounded-card bg-white border border-line px-4 py-3 active:bg-muted/40"
+        aria-label={`Open chat with ${clientFirstName}`}
+      >
+        <span className="text-[14px] font-semibold text-heading">
+          Open chat with {clientFirstName}
+        </span>
+        <span aria-hidden style={{ color: "#039EA0" }} className="font-bold">→</span>
+      </Link>
+
       <Card className="p-4 space-y-2">
         <Row icon={<IconClock />} label="When" value={fmtRange(booking.starts_at, booking.ends_at)} />
         <Row
