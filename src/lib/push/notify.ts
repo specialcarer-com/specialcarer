@@ -10,6 +10,8 @@
  * the booking write that fired it.
  */
 import type { NotificationInsert } from "@/lib/notifications/server";
+import { sendExpoPush, type ExpoPushMessage } from "./expo";
+import type { PushToken } from "./tokens";
 
 export type DispatchEvent =
   | {
@@ -169,23 +171,71 @@ export function buildPayload(event: DispatchEvent): BuiltPayload {
   }
 }
 
+export type SendPushDeps = {
+  sendExpoPush: (messages: ExpoPushMessage[]) => Promise<{
+    data: Array<
+      | { status: "ok"; id: string }
+      | {
+          status: "error";
+          message: string;
+          details?: { error?: string };
+        }
+    >;
+  }>;
+  revokeToken: (token: string) => Promise<void>;
+};
+
+const defaultSendPushDeps: SendPushDeps = {
+  sendExpoPush,
+  async revokeToken(token: string) {
+    const { revokeToken } = await import("./tokens");
+    await revokeToken(token);
+  },
+};
+
 /**
- * Fire-and-forget push delivery. Currently a stub that logs in non-prod
- * and no-ops in prod.
+ * Fire-and-forget push delivery via Expo. Tickets marked
+ * `DeviceNotRegistered` cause the matching token to be revoked so we stop
+ * dispatching to dead devices.
  */
-// TODO: A2-bis-push wire Expo push API
-async function sendPush(
-  _tokens: string[],
+export async function sendPush(
+  tokens: PushToken[],
   payload: BuiltPayload,
+  deps: SendPushDeps = defaultSendPushDeps,
 ): Promise<void> {
-  if (process.env.NODE_ENV !== "production") {
-    console.log("[push.stub]", payload.title, "→", payload.recipientUserId);
-  }
+  if (tokens.length === 0) return;
+
+  const messages: ExpoPushMessage[] = tokens.map((t) => ({
+    to: t.token,
+    title: payload.title,
+    body: payload.body,
+    data: { deeplink: payload.deeplink, ...payload.payload },
+    sound: "default",
+    priority: "high",
+    channelId: "default",
+  }));
+
+  const response = await deps.sendExpoPush(messages);
+
+  await Promise.all(
+    response.data.map(async (ticket, idx) => {
+      if (
+        ticket.status === "error" &&
+        ticket.details?.error === "DeviceNotRegistered"
+      ) {
+        const token = tokens[idx]?.token;
+        if (token) {
+          await deps.revokeToken(token).catch(() => {});
+        }
+      }
+    }),
+  );
 }
 
 export type DispatchDeps = {
   createNotification: (input: NotificationInsert) => Promise<unknown>;
-  sendPush: (tokens: string[], payload: BuiltPayload) => Promise<void>;
+  sendPush: (tokens: PushToken[], payload: BuiltPayload) => Promise<void>;
+  getActiveTokensForUser: (user_id: string) => Promise<PushToken[]>;
 };
 
 /**
@@ -194,7 +244,8 @@ export type DispatchDeps = {
  */
 async function loadDefaultDeps(): Promise<DispatchDeps> {
   const { createNotification } = await import("@/lib/notifications/server");
-  return { createNotification, sendPush };
+  const { getActiveTokensForUser } = await import("./tokens");
+  return { createNotification, sendPush, getActiveTokensForUser };
 }
 
 export async function dispatch(
@@ -212,8 +263,8 @@ export async function dispatch(
       deeplink: built.deeplink,
       payload: built.payload,
     });
-    // Push delivery deferred. Stub is called for parity / future wiring.
-    await resolved.sendPush([], built);
+    const tokens = await resolved.getActiveTokensForUser(built.recipientUserId);
+    await resolved.sendPush(tokens, built);
   } catch (err) {
     console.error("[notify.dispatch] failed", event.type, err);
   }
