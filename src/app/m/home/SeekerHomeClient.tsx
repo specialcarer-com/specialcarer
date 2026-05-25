@@ -28,6 +28,8 @@ import type {
   ApiUpcomingBooking,
   ApiUpcomingBookingsResponse,
 } from "@/app/api/m/bookings/upcoming/route";
+import type { ApiRecentCarer } from "@/app/api/m/carers/recent/route";
+import { CarerTile } from "../_components/CarerTile";
 
 /**
  * Home (seeker) — Figma 7:1652.
@@ -94,6 +96,32 @@ export default function SeekerHomeClient() {
         setJournalCount(json.entries?.length ?? 0);
       } catch {
         /* keep null */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Recent carers for the "Book again" quick-rebook strip. `null` while
+  // loading; empty array hides the section entirely.
+  const [recent, setRecent] = useState<ApiRecentCarer[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/m/carers/recent?limit=3", {
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (!res.ok) {
+          if (!cancelled) setRecent([]);
+          return;
+        }
+        const json = (await res.json()) as { carers?: ApiRecentCarer[] };
+        if (!cancelled) setRecent(json.carers ?? []);
+      } catch {
+        if (!cancelled) setRecent([]);
       }
     })();
     return () => {
@@ -259,6 +287,30 @@ export default function SeekerHomeClient() {
           </Card>
         )}
       </div>
+
+      {/* Book again — quick-rebook tiles for recent carers. Hidden when
+          the seeker has no rebookable bookings. */}
+      {recent && recent.length > 0 && (
+        <>
+          <SectionTitle title="Book again" />
+          <div className="px-4">
+            <div
+              className="flex gap-3 overflow-x-auto pb-1"
+              style={{ scrollbarWidth: "none" }}
+            >
+              {recent.map((c) => (
+                <CarerTile
+                  key={c.id}
+                  carerId={c.id}
+                  name={c.name}
+                  avatarUrl={c.avatar_url}
+                  service={c.service}
+                />
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Care journal quick-access. */}
       <SectionTitle title="Care journal" />
