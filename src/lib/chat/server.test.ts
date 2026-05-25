@@ -14,6 +14,8 @@ import assert from "node:assert/strict";
 import {
   validateBody,
   getOrCreateBookingThreadWith,
+  archiveBookingThreadWith,
+  isThreadParticipantWith,
   MAX_BODY,
   type AdminLike,
 } from "./server";
@@ -216,5 +218,140 @@ describe("getOrCreateBookingThread — chat_no_carer_yet branch", () => {
     for (const row of payload) {
       assert.equal(row.thread_id, "thread-new");
     }
+  });
+});
+
+describe("archiveBookingThread", () => {
+  it("issues an UPDATE chat_threads ... where booking_id = ? and archived_at is null", async () => {
+    const calls: {
+      table: string;
+      op: string;
+      payload?: unknown;
+      col?: string;
+      val?: unknown;
+    }[] = [];
+    let archivedRow: { archived_at: string } | null = null;
+
+    const admin: AdminLike = {
+      from(table: string) {
+        if (table === "chat_threads") {
+          return {
+            select() {
+              throw new Error("not used");
+            },
+            insert() {
+              throw new Error("not used");
+            },
+            update(payload: unknown) {
+              calls.push({ table, op: "update", payload });
+              archivedRow = payload as { archived_at: string };
+              const chain = {
+                eq(col: string, val: string) {
+                  calls.push({ table, op: "eq", col, val });
+                  return chain;
+                },
+                is(col: string, val: unknown) {
+                  calls.push({ table, op: "is", col, val });
+                  return Object.assign(
+                    Promise.resolve({ data: null, error: null }),
+                    chain,
+                  );
+                },
+                then(resolve: (r: { data: unknown; error: null }) => void) {
+                  resolve({ data: null, error: null });
+                },
+              };
+              return Object.assign(
+                Promise.resolve({ data: null, error: null }),
+                chain,
+              );
+            },
+          } as unknown as ReturnType<AdminLike["from"]>;
+        }
+        throw new Error(`unexpected table ${table}`);
+      },
+    };
+
+    await archiveBookingThreadWith(admin, "booking-99");
+
+    const updateCall = calls.find((c) => c.op === "update");
+    assert.ok(updateCall, "update should be called");
+    assert.equal(
+      typeof (updateCall!.payload as { archived_at?: unknown }).archived_at,
+      "string",
+    );
+    const eqCall = calls.find((c) => c.op === "eq");
+    assert.ok(eqCall, "eq should be called");
+    assert.equal(eqCall!.col, "booking_id");
+    assert.equal(eqCall!.val, "booking-99");
+    const isCall = calls.find((c) => c.op === "is");
+    assert.ok(isCall, "is should be called");
+    assert.equal(isCall!.col, "archived_at");
+    assert.equal(isCall!.val, null);
+    assert.ok(archivedRow, "archived row payload should be captured");
+  });
+
+  it("swallows errors from the update", async () => {
+    const admin: AdminLike = {
+      from() {
+        throw new Error("boom");
+      },
+    };
+    // Should not throw.
+    await archiveBookingThreadWith(admin, "booking-x");
+  });
+});
+
+describe("isThreadParticipant", () => {
+  function makeMembershipAdmin(opts: {
+    found: boolean;
+    error?: { message: string };
+  }): AdminLike {
+    return {
+      from(table: string) {
+        if (table !== "chat_participants") throw new Error("wrong table");
+        return {
+          select() {
+            return {
+              eq() {
+                return {
+                  eq() {
+                    return {
+                      async maybeSingle() {
+                        return {
+                          data: opts.found ? { user_id: "u" } : null,
+                          error: opts.error ?? null,
+                        };
+                      },
+                    };
+                  },
+                };
+              },
+            };
+          },
+          insert() {
+            throw new Error("not used");
+          },
+        } as unknown as ReturnType<AdminLike["from"]>;
+      },
+    };
+  }
+
+  it("returns true when the membership row exists", async () => {
+    const admin = makeMembershipAdmin({ found: true });
+    assert.equal(await isThreadParticipantWith(admin, "t1", "u1"), true);
+  });
+
+  it("returns false when no row exists", async () => {
+    const admin = makeMembershipAdmin({ found: false });
+    assert.equal(await isThreadParticipantWith(admin, "t1", "u1"), false);
+  });
+
+  it("returns false on error rather than throwing", async () => {
+    const admin = makeMembershipAdmin({
+      found: false,
+      error: { message: "boom" },
+    });
+    assert.equal(await isThreadParticipantWith(admin, "t1", "u1"), false);
   });
 });

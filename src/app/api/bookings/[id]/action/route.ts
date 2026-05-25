@@ -322,6 +322,15 @@ export async function POST(
       console.error("[action.complete] timesheet generation failed", e);
     }
 
+    // Auto-archive the booking's chat thread. Fire-and-forget — failures
+    // must not break the booking-complete flow.
+    try {
+      const { archiveBookingThread } = await import("@/lib/chat/server");
+      void archiveBookingThread(bookingId);
+    } catch (e) {
+      console.error("[action.complete] chat archive dispatch failed", e);
+    }
+
     return NextResponse.json({
       ok: true,
       status: "completed",
