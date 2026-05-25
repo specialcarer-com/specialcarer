@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Avatar,
   BottomNav,
@@ -15,13 +15,122 @@ import {
   Tag,
   TopBar,
 } from "../_components/ui";
-import { CAREGIVERS, SERVICE_LABEL } from "../_lib/mock";
+import { SERVICE_LABEL } from "../_lib/mock";
 import { CERTIFICATIONS, GENDERS } from "@/lib/care/attributes";
 import {
   classifyPostcode,
   inferCountryFromPostcode,
   normalisePostcode,
 } from "@/lib/care/postcode";
+
+/**
+ * Wire-format carer returned by GET /api/m/carers/search. Keep this in
+ * sync with ApiSearchCarer in src/app/api/m/carers/search/search-handler.ts;
+ * we redeclare here so the client component doesn't pull a server module.
+ */
+type ApiSearchCarer = {
+  user_id: string;
+  display_name: string | null;
+  headline: string | null;
+  photo_url: string | null;
+  city: string | null;
+  country: string | null;
+  services: string[];
+  languages: string[];
+  certifications: string[];
+  tags: string[];
+  care_formats: string[];
+  gender: string | null;
+  has_drivers_license: boolean;
+  has_own_vehicle: boolean;
+  years_experience: number | null;
+  rating_avg: number | null;
+  rating_count: number;
+  hourly_rate_cents: number | null;
+  weekly_rate_cents: number | null;
+  currency: "GBP" | "USD";
+};
+
+/** API ↔ page service key translation. The DB stores canonical vertical
+ *  ids (childcare/elderly_care/special_needs/postnatal/complex_care) while
+ *  this page uses the short keys from `_lib/mock` (child/elderly/...). */
+const API_SERVICE: Record<string, string> = {
+  child: "childcare",
+  elderly: "elderly_care",
+  special: "special_needs",
+  postnatal: "postnatal",
+  complex: "complex_care",
+};
+const SHORT_SERVICE: Record<string, "child" | "elderly" | "special" | "postnatal" | "complex"> = {
+  childcare: "child",
+  elderly_care: "elderly",
+  special_needs: "special",
+  postnatal: "postnatal",
+  complex_care: "complex",
+};
+
+type PageCarer = {
+  id: string;
+  name: string;
+  photo: string;
+  city: string;
+  rating: number;
+  reviewCount: number;
+  hourly: { gbp: number; usd: number };
+  services: ("child" | "elderly" | "special" | "postnatal" | "complex")[];
+  languages: string[];
+  isClinical?: boolean;
+  isNurse?: boolean;
+  gender?: string;
+  hasLicense?: boolean;
+  hasVehicle?: boolean;
+  certifications?: string[];
+  tags?: string[];
+};
+
+function adaptCarer(c: ApiSearchCarer): PageCarer {
+  const dollars =
+    c.hourly_rate_cents != null ? Math.round(c.hourly_rate_cents / 100) : 0;
+  // The page renders USD; we surface the same number for both currency
+  // codes since the DB stores a single rate and the design only shows one.
+  const hourly =
+    c.currency === "USD"
+      ? { gbp: dollars, usd: dollars }
+      : { gbp: dollars, usd: dollars };
+  const tagsLower = (c.tags ?? []).map((t) => t.toLowerCase());
+  const certsLower = (c.certifications ?? []).map((t) => t.toLowerCase());
+  return {
+    id: c.user_id,
+    name: c.display_name ?? "Carer",
+    photo: c.photo_url ?? "",
+    city: c.city ?? "",
+    rating: c.rating_avg ?? 0,
+    reviewCount: c.rating_count,
+    hourly,
+    services: c.services
+      .map((s) => SHORT_SERVICE[s])
+      .filter((s): s is PageCarer["services"][number] => Boolean(s)),
+    languages: c.languages,
+    // No explicit clinical/nurse columns yet — infer from tags/certifications
+    // so the existing filter chips and the CarerBadges component still
+    // light up for carers who have advertised those credentials.
+    isNurse:
+      tagsLower.includes("nurse") ||
+      certsLower.some((t) => t.includes("nurse") || t.includes("nmc") || t.includes(" rn")),
+    isClinical:
+      tagsLower.includes("clinical") ||
+      certsLower.some((t) =>
+        ["clinical", "peg", "care certificate", "rcn", "controlled drug"].some((kw) =>
+          t.includes(kw),
+        ),
+      ),
+    gender: c.gender ?? undefined,
+    hasLicense: c.has_drivers_license,
+    hasVehicle: c.has_own_vehicle,
+    certifications: c.certifications,
+    tags: c.tags,
+  };
+}
 
 /**
  * Search / discovery — there's no Figma frame for this exact screen
@@ -116,6 +225,60 @@ export default function SearchPage() {
     setRadiusKm(10);
   }
 
+  // Server-fed carer list. Server applies the cheap filters (service, q,
+  // base sort, paging); the page applies the rich filters (credentials,
+  // languages, free-text tags, postcode-as-city proxy) on top so we stay
+  // compatible with the existing UI without bloating the API surface.
+  const [carers, setCarers] = useState<PageCarer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce free-text input so we don't fire a request per keystroke.
+  const [debouncedQ, setDebouncedQ] = useState("");
+  useEffect(() => {
+    const id = window.setTimeout(() => setDebouncedQ(q), 250);
+    return () => window.clearTimeout(id);
+  }, [q]);
+
+  // Reflect API state in a ref so we can cancel a stale fetch when the
+  // user changes filters mid-flight.
+  const abortRef = useRef<AbortController | null>(null);
+  useEffect(() => {
+    const ac = new AbortController();
+    abortRef.current?.abort();
+    abortRef.current = ac;
+
+    const params = new URLSearchParams();
+    if (debouncedQ.trim()) params.set("q", debouncedQ.trim());
+    if (service !== "all") {
+      const mapped = API_SERVICE[service];
+      if (mapped) params.set("service", mapped);
+    }
+    params.set("limit", "50");
+
+    setLoading(true);
+    setError(null);
+    fetch(`/api/m/carers/search?${params.toString()}`, {
+      signal: ac.signal,
+      credentials: "include",
+    })
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return (await r.json()) as { carers: ApiSearchCarer[] };
+      })
+      .then((data) => {
+        setCarers((data.carers ?? []).map(adaptCarer));
+        setLoading(false);
+      })
+      .catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setError("Couldn't load carers — pull to retry.");
+        setLoading(false);
+      });
+
+    return () => ac.abort();
+  }, [debouncedQ, service]);
+
   const results = useMemo(() => {
     const reqLangs = requiredLangs
       .split(",")
@@ -127,12 +290,12 @@ export default function SearchPage() {
       .filter(Boolean);
 
     const pcTrim = postcode.trim().toUpperCase();
-    return CAREGIVERS.filter((c) => {
+    return carers.filter((c) => {
+      // Server already filtered by service. Belt-and-braces re-check in
+      // case the adaptor mapping dropped an unrecognised vertical.
       if (service !== "all" && !c.services.includes(service as never)) return false;
-      // Mock data lacks postcodes — we use the city as a soft proxy so the
-      // input still narrows results in dev. Real geo search runs on the
-      // server (used by /find-care + /find-care/map) once the user taps
-      // 'View on map'.
+      // Postcode acts as a soft city proxy until the API gains lat/lng
+      // geosearch — same fallback the mock build used.
       if (pcTrim) {
         const country = inferCountryFromPostcode(pcTrim);
         const knownUkCity =
@@ -150,23 +313,13 @@ export default function SearchPage() {
       }
       if (needNurse && !c.isNurse) return false;
       if (needClinical && !(c.isClinical || c.isNurse)) return false;
-      // Booking preference filters — mock data may not have these fields,
-      // so we treat missing fields as "no info" and let them through unless
-      // strict requirements (driver/vehicle/certs) cannot be satisfied.
-      const cAny = c as unknown as {
-        gender?: string;
-        hasLicense?: boolean;
-        hasVehicle?: boolean;
-        certifications?: string[];
-        tags?: string[];
-      };
-      if (genders.length > 0 && cAny.gender && !genders.includes(cAny.gender)) {
+      if (genders.length > 0 && c.gender && !genders.includes(c.gender)) {
         return false;
       }
-      if (needDriver && cAny.hasLicense === false) return false;
-      if (needVehicle && cAny.hasVehicle === false) return false;
+      if (needDriver && c.hasLicense === false) return false;
+      if (needVehicle && c.hasVehicle === false) return false;
       if (requiredCerts.length > 0) {
-        const have = new Set(cAny.certifications ?? []);
+        const have = new Set(c.certifications ?? []);
         if (!requiredCerts.every((k) => have.has(k))) return false;
       }
       if (reqLangs.length > 0) {
@@ -174,19 +327,13 @@ export default function SearchPage() {
         if (!reqLangs.every((l) => have.includes(l))) return false;
       }
       if (reqTags.length > 0) {
-        const have = (cAny.tags ?? []).map((t) => t.toLowerCase());
+        const have = (c.tags ?? []).map((t) => t.toLowerCase());
         if (!reqTags.every((t) => have.includes(t))) return false;
       }
-      if (!q.trim()) return true;
-      const needle = q.trim().toLowerCase();
-      return (
-        c.name.toLowerCase().includes(needle) ||
-        c.city.toLowerCase().includes(needle) ||
-        c.languages.some((l) => l.toLowerCase().includes(needle))
-      );
+      return true;
     });
   }, [
-    q,
+    carers,
     service,
     needClinical,
     needNurse,
@@ -317,7 +464,9 @@ export default function SearchPage() {
 
         <div className="mt-3 flex items-center justify-between">
           <p className="text-[12px] text-subheading">
-            {results.length} {results.length === 1 ? "carer" : "carers"} found
+            {loading
+              ? "Loading carers…"
+              : `${results.length} ${results.length === 1 ? "carer" : "carers"} found`}
           </p>
           <Link
             href={mapHref}
@@ -330,7 +479,30 @@ export default function SearchPage() {
       </div>
 
       <div className="px-4 mt-3 space-y-4">
-        {results.map((c) => (
+        {loading && carers.length === 0 && (
+          <>
+            {[0, 1, 2].map((i) => (
+              <Card key={`sk-${i}`}>
+                <div className="flex items-start gap-3">
+                  <div className="h-14 w-14 rounded-full bg-muted animate-pulse" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-2/3 rounded bg-muted animate-pulse" />
+                    <div className="h-3 w-1/3 rounded bg-muted animate-pulse" />
+                  </div>
+                </div>
+                <div className="mt-4 h-3 w-1/2 rounded bg-muted animate-pulse" />
+              </Card>
+            ))}
+          </>
+        )}
+
+        {error && !loading && (
+          <Card className="text-center py-10">
+            <p className="text-heading font-semibold">{error}</p>
+          </Card>
+        )}
+
+        {!loading && results.map((c) => (
           <Card key={c.id}>
             <div className="flex items-start gap-3">
               <Avatar src={c.photo} name={c.name} size={56} />
@@ -379,7 +551,7 @@ export default function SearchPage() {
           </Card>
         ))}
 
-        {results.length === 0 && (
+        {!loading && !error && results.length === 0 && (
           <Card className="text-center py-10">
             <p className="text-heading font-semibold">No carers found</p>
             <p className="mt-2 text-[13px] text-subheading">
