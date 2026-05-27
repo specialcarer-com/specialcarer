@@ -19,6 +19,7 @@ import { Avatar, IconChevronLeft } from "./ui";
 import { useChat } from "@/lib/chat/useChat";
 import type { ChatMessage } from "@/lib/chat/client";
 import { EmptyChatState } from "./EmptyChatState";
+import { getQuickReplies, type ChatRole } from "@/lib/chat/quick-replies";
 
 const TIME_GROUP_GAP_MS = 10 * 60 * 1000;
 const NEAR_BOTTOM_PX = 80;
@@ -74,12 +75,19 @@ export function ChatRoom({
   otherPartyName,
   otherPartyAvatarUrl,
   backHref,
+  role,
 }: {
   bookingId: string;
   currentUserId: string;
   otherPartyName: string;
   otherPartyAvatarUrl?: string | null;
   backHref?: string;
+  /**
+   * P1-B9.2: which side of the conversation the current user is on.
+   * Drives the quick-reply chip set above the composer. Optional for
+   * back-compat with older call sites; absent = no chips rendered.
+   */
+  role?: ChatRole;
 }) {
   const router = useRouter();
   const chat = useChat(bookingId);
@@ -142,6 +150,29 @@ export function ChatRoom({
       setSending(false);
     }
   }, [composer, sending, chat]);
+
+  /**
+   * Send a quick-reply chip immediately, bypassing the textarea. Mirrors
+   * onSend's try/catch + toast pattern but uses the chip's verbatim text
+   * (no trim/edit/preview — brief: chips send instantly). Composer state
+   * is left untouched so any in-progress draft survives a chip tap.
+   */
+  const onSendChip = useCallback(
+    async (text: string) => {
+      if (text.length === 0 || sending) return;
+      setSending(true);
+      wasNearBottomRef.current = true;
+      try {
+        await chat.send(text);
+      } catch {
+        setToast("Couldn’t send. Try again.");
+        setTimeout(() => setToast(null), 3000);
+      } finally {
+        setSending(false);
+      }
+    },
+    [sending, chat],
+  );
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -285,6 +316,28 @@ export function ChatRoom({
             >
               {toast}
             </p>
+          )}
+          {/* P1-B9.2: quick-reply chips. Hidden while a send is in
+              flight to prevent a double-tap stampeding the API. The row
+              scrolls horizontally on narrow screens with no scrollbar
+              chrome — mobile-first ergonomics. */}
+          {role && !sending && (
+            <div
+              role="group"
+              aria-label="Quick replies"
+              className="-mx-1 mb-2 flex items-center gap-2 overflow-x-auto px-1 pb-1 sc-no-scrollbar"
+            >
+              {getQuickReplies(role).map((reply) => (
+                <button
+                  key={reply.id}
+                  type="button"
+                  onClick={() => void onSendChip(reply.text)}
+                  className="flex-none rounded-pill border border-line bg-white px-3 py-1.5 text-[12.5px] font-semibold text-heading sc-no-select active:bg-primary-50"
+                >
+                  {reply.text}
+                </button>
+              ))}
+            </div>
           )}
           <div className="flex items-end gap-2">
             <textarea
