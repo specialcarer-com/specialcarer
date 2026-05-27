@@ -21,6 +21,8 @@ import {
   type TimesheetRow,
   type PendingAdjustment,
 } from "../../_components/TimesheetReviewCard";
+import { SosButton } from "../_components/SosButton";
+import { isSosButtonVisible } from "../_components/sos-visibility";
 import { serviceLabel, formatMoney } from "@/lib/care/services";
 import type { ApiBookingDetail } from "@/app/api/m/bookings/[id]/route";
 
@@ -441,6 +443,11 @@ function BookingDetailInner() {
 
       {/* Sticky CTA */}
       <div className="fixed inset-x-0 bottom-0 z-30 bg-white border-t border-line px-4 pt-3 sc-safe-bottom space-y-2">
+        {isSosButtonVisible({
+          status: data.status,
+          as_role: data.as_role,
+          starts_at: data.starts_at,
+        }) && <SosButton bookingId={data.id} />}
         {(data.status === "accepted" || data.status === "paid" ||
           data.status === "in_progress") && (
           // Live tracking only makes sense once the carer has accepted.
