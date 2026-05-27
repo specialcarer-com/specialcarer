@@ -12,6 +12,7 @@ import {
   dispatch,
   formatMoney,
   sendPush,
+  type BuiltPayload,
   type DispatchDeps,
   type DispatchEvent,
 } from "./notify";
@@ -395,5 +396,86 @@ describe("sendPush", () => {
       },
     );
     assert.deepEqual(revoked, ["ExponentPushToken[dead]"]);
+  });
+});
+
+describe("buildPayload — booking.sos_triggered", () => {
+  it("targets the recipient (counterpart) and links to the booking", () => {
+    const out = buildPayload({
+      type: "booking.sos_triggered",
+      bookingId: BOOKING_ID,
+      raiserId: SEEKER_ID,
+      recipientId: CARER_ID,
+      raiserName: "Priya Patel",
+    });
+    assert.equal(out.recipientUserId, CARER_ID);
+    assert.equal(out.title, "🚨 SOS on your booking");
+    assert.equal(out.deeplink, `/m/bookings/${BOOKING_ID}`);
+    assert.match(out.body, /Priya Patel/);
+    assert.match(out.body, /check on them/i);
+  });
+
+  it("uses a generic body when raiserName is null", () => {
+    const out = buildPayload({
+      type: "booking.sos_triggered",
+      bookingId: BOOKING_ID,
+      raiserId: SEEKER_ID,
+      recipientId: CARER_ID,
+      raiserName: null,
+    });
+    assert.equal(out.body, "A booking party has triggered an SOS. Please check on them now.");
+  });
+
+  it("trims whitespace-only names down to the generic body", () => {
+    const out = buildPayload({
+      type: "booking.sos_triggered",
+      bookingId: BOOKING_ID,
+      raiserId: SEEKER_ID,
+      recipientId: CARER_ID,
+      raiserName: "   ",
+    });
+    assert.equal(out.body, "A booking party has triggered an SOS. Please check on them now.");
+  });
+});
+
+describe("dispatch — booking.sos_triggered", () => {
+  it("creates an inbox row and pushes to active tokens for the recipient", async () => {
+    const createCalls: NotificationInsert[] = [];
+    const tokenLookups: string[] = [];
+    const pushCalls: Array<{ tokens: PushToken[]; payload: BuiltPayload }> = [];
+    const deps: DispatchDeps = {
+      async createNotification(input) {
+        createCalls.push(input);
+      },
+      async getActiveTokensForUser(user_id) {
+        tokenLookups.push(user_id);
+        return [
+          {
+            token: "ExponentPushToken[carer]",
+            user_id,
+            platform: "ios",
+          } as PushToken,
+        ];
+      },
+      async sendPush(tokens, payload) {
+        pushCalls.push({ tokens, payload });
+      },
+    };
+    const event: DispatchEvent = {
+      type: "booking.sos_triggered",
+      bookingId: BOOKING_ID,
+      raiserId: SEEKER_ID,
+      recipientId: CARER_ID,
+      raiserName: "Priya Patel",
+    };
+    await dispatch(event, deps);
+    assert.equal(createCalls.length, 1);
+    assert.equal(createCalls[0]?.user_id, CARER_ID);
+    assert.equal(createCalls[0]?.type, "booking.sos_triggered");
+    assert.equal(createCalls[0]?.deeplink, `/m/bookings/${BOOKING_ID}`);
+    assert.deepEqual(tokenLookups, [CARER_ID]);
+    assert.equal(pushCalls.length, 1);
+    assert.equal(pushCalls[0]?.tokens.length, 1);
+    assert.equal(pushCalls[0]?.payload.recipientUserId, CARER_ID);
   });
 });
