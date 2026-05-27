@@ -62,6 +62,13 @@ export type DispatchEvent =
       senderId: string;
       threadId: string;
       preview: string;
+    }
+  | {
+      type: "booking.sos_triggered";
+      bookingId: string;
+      raiserId: string;
+      recipientId: string;
+      raiserName: string | null;
     };
 
 export type BuiltPayload = {
@@ -166,6 +173,17 @@ export function buildPayload(event: DispatchEvent): BuiltPayload {
         title: "New message",
         body: truncatePreview(event.preview),
         deeplink: `/m/jobs/${event.threadId}`,
+        payload: { ...event },
+      };
+    case "booking.sos_triggered":
+      return {
+        recipientUserId: event.recipientId,
+        title: "🚨 SOS on your booking",
+        body:
+          event.raiserName && event.raiserName.trim().length > 0
+            ? `${event.raiserName.trim()} has triggered an SOS. Please check on them now.`
+            : "A booking party has triggered an SOS. Please check on them now.",
+        deeplink: `/m/bookings/${event.bookingId}`,
         payload: { ...event },
       };
   }

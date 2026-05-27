@@ -8,6 +8,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/smtp";
+import { dispatch } from "@/lib/push/notify";
 import { SOS_NOTE_MAX, type SosAlert } from "./types";
 
 export type RaiseSosInput = {
@@ -105,10 +106,14 @@ export async function raiseSos(
     };
   }
 
-  // Fire-and-forget notifications. We intentionally don't await this —
+  // Fire-and-forget notifications. We intentionally don't await these —
   // SMTP latency must not delay the SOS API response.
   void notifyAdminsAndCounterpart(inserted, user.email ?? null).catch((e) => {
     console.error("[sos] notify failed", e);
+  });
+  // Counterpart push + in-app notification when booking-linked.
+  void dispatchCounterpartPush(inserted).catch((e) => {
+    console.error("[sos] push dispatch failed", e);
   });
 
   // Lightweight count so the UI can say "Notified X emergency contacts".
@@ -128,6 +133,51 @@ export async function raiseSos(
     alert: inserted,
     emergency_contacts_count: emergencyContactsCount,
   };
+}
+
+/**
+ * Resolve the booking counterpart and fire a `booking.sos_triggered`
+ * notify dispatch so the carer (or seeker, if the carer raised it) gets
+ * a high-priority push + an inbox row. No-op when the alert is not
+ * booking-linked. Errors are swallowed — push failure must never break
+ * the SOS write or the SMTP fan-out.
+ */
+async function dispatchCounterpartPush(alert: SosAlert): Promise<void> {
+  if (!alert.booking_id) return;
+  const admin = createAdminClient();
+
+  const { data: booking } = await admin
+    .from("bookings")
+    .select("seeker_id, caregiver_id")
+    .eq("id", alert.booking_id)
+    .maybeSingle<{ seeker_id: string; caregiver_id: string | null }>();
+  if (!booking) return;
+
+  const counterpartId =
+    booking.seeker_id === alert.user_id
+      ? booking.caregiver_id
+      : booking.seeker_id;
+  if (!counterpartId) return;
+
+  let raiserName: string | null = null;
+  try {
+    const { data: prof } = await admin
+      .from("profiles")
+      .select("full_name")
+      .eq("id", alert.user_id)
+      .maybeSingle<{ full_name: string | null }>();
+    raiserName = prof?.full_name ?? null;
+  } catch {
+    /* ignore */
+  }
+
+  await dispatch({
+    type: "booking.sos_triggered",
+    bookingId: alert.booking_id,
+    raiserId: alert.user_id,
+    recipientId: counterpartId,
+    raiserName,
+  });
 }
 
 async function notifyAdminsAndCounterpart(
