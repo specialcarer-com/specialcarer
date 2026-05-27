@@ -23,6 +23,7 @@ import {
 } from "../../_components/TimesheetReviewCard";
 import { SosButton } from "../_components/SosButton";
 import { isSosButtonVisible } from "../_components/sos-visibility";
+import { TasksSection } from "@/lib/booking-tasks/TasksSection";
 import { serviceLabel, formatMoney } from "@/lib/care/services";
 import type { ApiBookingDetail } from "@/app/api/m/bookings/[id]/route";
 
@@ -311,6 +312,13 @@ function BookingDetailInner() {
             </div>
           )}
         </Card>
+
+        {(data.status === "accepted" ||
+          data.status === "paid" ||
+          data.status === "in_progress" ||
+          data.status === "completed") && (
+          <TasksSection bookingId={data.id} readOnly />
+        )}
 
         {/* Timesheet review surface — visible once the carer has checked out. */}
         {timesheet && (
