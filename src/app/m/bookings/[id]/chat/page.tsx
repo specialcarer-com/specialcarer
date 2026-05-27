@@ -68,6 +68,7 @@ export default async function BookingChatPage({
       otherPartyName={carerName}
       otherPartyAvatarUrl={carerAvatar}
       backHref={`/m/bookings/${booking.id}`}
+      role="seeker"
     />
   );
 }

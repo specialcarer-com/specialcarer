@@ -52,6 +52,7 @@ export default async function JobChatPage({
       otherPartyName={seekerName}
       otherPartyAvatarUrl={seekerAvatar}
       backHref={`/m/jobs/${booking.id}`}
+      role="carer"
     />
   );
 }
