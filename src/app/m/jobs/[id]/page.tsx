@@ -138,6 +138,7 @@ export default async function TargetedJobDetailPage({
         </div>
       )}
       <TargetedJobClient
+        carerId={user.id}
         booking={{
           id: bookingRaw.id,
           status: bookingRaw.status,

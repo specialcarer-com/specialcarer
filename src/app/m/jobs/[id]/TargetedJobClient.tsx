@@ -14,6 +14,7 @@ import {
 } from "../../_components/ui";
 import { serviceLabel } from "@/lib/care/services";
 import JobDetailExtras from "../_components/JobDetailExtras";
+import { TasksSection } from "@/lib/booking-tasks/TasksSection";
 
 type Booking = {
   id: string;
@@ -61,6 +62,7 @@ function fmtRange(startsIso: string, endsIso: string): string {
 export default function TargetedJobClient({
   booking,
   seekerId,
+  carerId,
   clientFirstName,
   initialPreferred,
   servicePoint,
@@ -69,6 +71,7 @@ export default function TargetedJobClient({
 }: {
   booking: Booking;
   seekerId: string;
+  carerId: string;
   clientFirstName: string;
   initialPreferred: boolean;
   servicePoint: { lng: number; lat: number } | null;
@@ -223,6 +226,10 @@ export default function TargetedJobClient({
 
       {/* About this client + sanitised recipients + pay breakdown */}
       <JobDetailExtras jobId={booking.id} kind="targeted" />
+
+      {(status === "accepted" || status === "paid" || status === "in_progress") && (
+        <TasksSection bookingId={booking.id} currentUserId={carerId} />
+      )}
 
       {/* Active-job entry — visible mid-shift OR within 4h of start. */}
       {(() => {
