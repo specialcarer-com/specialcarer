@@ -26,6 +26,8 @@ export type ChatThread = {
   id: string;
   booking_id: string;
   archived_at: string | null;
+  /** P1-B9.4: participant-controlled sticky-to-top flag. */
+  pinned: boolean;
   created_at: string;
 };
 
@@ -61,7 +63,10 @@ type AdminInsertChain = {
   select: (cols: string) => AdminTerminal;
 } & Promise<AdminResult>;
 type AdminUpdateChain = {
-  eq: (col: string, val: string) => AdminUpdateChain & Promise<AdminResult>;
+  eq: (
+    col: string,
+    val: string | boolean,
+  ) => AdminUpdateChain & Promise<AdminResult>;
   is: (col: string, val: null) => AdminUpdateChain & Promise<AdminResult>;
 } & Promise<AdminResult>;
 type AdminTerminal = {
@@ -86,7 +91,7 @@ export async function getOrCreateBookingThreadWith(
 ): Promise<ChatThread> {
   const existing = await admin
     .from("chat_threads")
-    .select("id, booking_id, archived_at, created_at")
+    .select("id, booking_id, archived_at, pinned, created_at")
     .eq("booking_id", bookingId)
     .maybeSingle();
   if (existing.error) {
@@ -117,7 +122,7 @@ export async function getOrCreateBookingThreadWith(
   const inserted = await admin
     .from("chat_threads")
     .insert({ booking_id: bookingId })
-    .select("id, booking_id, archived_at, created_at")
+    .select("id, booking_id, archived_at, pinned, created_at")
     .single();
   if (inserted.error || !inserted.data) {
     throw new Error(
@@ -283,8 +288,16 @@ export async function isThreadParticipant(
 /**
  * Stamp `archived_at = now()` on the thread for a booking that just
  * transitioned to `completed`. Idempotent (only archives if not already
- * archived). Errors are swallowed — the caller is the booking-complete
- * flow and must not be broken by a chat archive failure.
+ * archived). Pinned threads are skipped — participants who pin a
+ * conversation opt out of auto-archive.
+ *
+ * P1-B9.4: also stamps `archived_reason = "booking completed"` so the
+ * admin tooling can tell the system-action archives apart from any
+ * future manual ones (which set `archived_by`). System path leaves
+ * `archived_by` NULL.
+ *
+ * Errors are swallowed — the caller is the booking-complete flow and
+ * must not be broken by a chat archive failure.
  *
  * Exported with an injectable admin shape for unit testing.
  */
@@ -295,8 +308,14 @@ export async function archiveBookingThreadWith(
   try {
     const table = admin.from("chat_threads");
     if (!table.update) return;
-    const update = table.update({ archived_at: new Date().toISOString() });
-    await update.eq("booking_id", bookingId).is("archived_at", null);
+    const update = table.update({
+      archived_at: new Date().toISOString(),
+      archived_reason: "booking completed",
+    });
+    await update
+      .eq("booking_id", bookingId)
+      .eq("pinned", false)
+      .is("archived_at", null);
   } catch (e) {
     console.error("[chat.archiveBookingThread] failed", e);
   }

@@ -20,6 +20,8 @@ export type ChatThreadSummary = {
   id: string;
   booking_id: string;
   archived_at: string | null;
+  /** P1-B9.4: participant-controlled sticky-to-top flag. */
+  pinned?: boolean;
 };
 
 export type FetchThreadResult =
@@ -95,6 +97,31 @@ export async function sendMessage(
   }
   const json = (await res.json()) as { message: ChatMessage };
   return json.message;
+}
+
+/**
+ * P1-B9.4: flip the pinned flag on a thread. Returns the updated
+ * thread summary. Throws on transport / HTTP failure; callers catch
+ * and revert the optimistic UI.
+ */
+export async function pinThread(
+  threadId: string,
+  pinned: boolean,
+): Promise<ChatThreadSummary> {
+  const res = await fetch(
+    `/api/m/chat/threads/${encodeURIComponent(threadId)}/pin`,
+    {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pinned }),
+    },
+  );
+  if (!res.ok) {
+    throw new Error(`chat_pin_failed_${res.status}`);
+  }
+  const json = (await res.json()) as { thread: ChatThreadSummary };
+  return json.thread;
 }
 
 export async function markRead(threadId: string): Promise<void> {
