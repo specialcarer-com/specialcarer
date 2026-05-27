@@ -447,6 +447,37 @@ function BookingDetailInner() {
             </div>
           </div>
         </Card>
+
+        {/* Care plan PDF — fresh-rendered server-side. */}
+        <Card>
+          <div className="flex items-start gap-3">
+            <span
+              className="grid h-10 w-10 flex-none place-items-center rounded-full"
+              style={{ background: "rgba(3,158,160,0.10)", color: "#039EA0" }}
+              aria-hidden
+            >
+              <IconJournal />
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] font-bold text-heading">Care plan</p>
+              <p className="text-[12px] text-subheading mt-0.5">
+                Goals, daily tasks, medications, allergies and contacts in one PDF.
+              </p>
+              <div className="mt-3">
+                <a
+                  href={`/api/m/bookings/${data.id}/care-plan.pdf`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block"
+                >
+                  <Button size="sm" variant="outline" block>
+                    Download care plan
+                  </Button>
+                </a>
+              </div>
+            </div>
+          </div>
+        </Card>
       </div>
 
       {/* Sticky CTA */}

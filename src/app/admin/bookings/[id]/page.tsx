@@ -85,6 +85,16 @@ export default async function AdminBookingDetail({
             {tone.label}
           </span>
         </div>
+        <div className="mt-3">
+          <a
+            href={`/api/m/bookings/${booking.id}/care-plan.pdf`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+          >
+            Download care plan PDF
+          </a>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-4">
