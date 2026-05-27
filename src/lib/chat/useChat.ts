@@ -21,8 +21,10 @@ import {
   fetchRealtimeConfig,
   fetchThreadByBooking,
   markRead as markReadCall,
+  pinThread as pinThreadCall,
   sendMessage as sendMessageCall,
   type ChatMessage,
+  type ChatThreadSummary,
   type FetchThreadResult,
   type RealtimeConfig,
 } from "./client";
@@ -57,8 +59,15 @@ export type UseChatState = {
   messages: ChatMessage[];
   threadId: string | null;
   archivedAt: string | null;
+  /** P1-B9.4: current pinned state of the thread. */
+  pinned: boolean;
   send: (body: string) => Promise<void>;
   markRead: () => Promise<void>;
+  /**
+   * P1-B9.4: optimistic toggle of the pinned flag. On HTTP failure the
+   * optimistic flip reverts.
+   */
+  togglePin: () => Promise<void>;
 };
 
 /**
@@ -86,6 +95,10 @@ export type UseChatDeps = {
   fetchRealtimeConfig?: (threadId: string) => Promise<RealtimeConfig>;
   sendMessage?: (threadId: string, body: string) => Promise<ChatMessage>;
   markRead?: (threadId: string) => Promise<void>;
+  pinThread?: (
+    threadId: string,
+    pinned: boolean,
+  ) => Promise<ChatThreadSummary>;
   /**
    * Build a Supabase-like realtime client from the per-thread config
    * payload. Returning `null` disables realtime (used by tests that
@@ -102,6 +115,7 @@ const DEFAULT_DEPS: Required<Omit<UseChatDeps, "buildRealtimeClient">> & {
   fetchRealtimeConfig,
   sendMessage: sendMessageCall,
   markRead: markReadCall,
+  pinThread: pinThreadCall,
   buildRealtimeClient: (cfg: RealtimeConfig) => {
     if (!cfg.supabaseUrl || !cfg.supabaseAnonKey) return null;
     return createBrowserClient(
@@ -120,6 +134,7 @@ export function useChat(
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [archivedAt, setArchivedAt] = useState<string | null>(null);
+  const [pinned, setPinned] = useState<boolean>(false);
 
   // Keep latest threadId/messages available to the realtime callback
   // without re-subscribing on every state change.
@@ -149,6 +164,7 @@ export function useChat(
       threadIdRef.current = thread.id;
       setThreadId(thread.id);
       setArchivedAt(thread.archived_at);
+      setPinned(thread.pinned === true);
 
       let initialMessages: ChatMessage[];
       try {
@@ -223,5 +239,32 @@ export function useChat(
     await deps.markRead(id);
   }, [deps]);
 
-  return { status, messages, threadId, archivedAt, send, markRead };
+  const togglePin = useCallback(async () => {
+    const id = threadIdRef.current;
+    if (!id) return;
+    // Optimistic: flip locally, then call. Revert on failure so the
+    // affordance never gets stuck in the wrong state.
+    let next: boolean = false;
+    setPinned((prev) => {
+      next = !prev;
+      return next;
+    });
+    try {
+      const updated = await deps.pinThread(id, next);
+      setPinned(updated.pinned === true);
+    } catch {
+      setPinned((prev) => !prev);
+    }
+  }, [deps]);
+
+  return {
+    status,
+    messages,
+    threadId,
+    archivedAt,
+    pinned,
+    send,
+    markRead,
+    togglePin,
+  };
 }

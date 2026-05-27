@@ -161,6 +161,7 @@ describe("getOrCreateBookingThread — chat_no_carer_yet branch", () => {
       id: "thread-1",
       booking_id: "booking-1",
       archived_at: null,
+      pinned: false,
       created_at: "2026-05-24T00:00:00.000Z",
     };
     const admin = makeAdmin({
@@ -187,6 +188,7 @@ describe("getOrCreateBookingThread — chat_no_carer_yet branch", () => {
       id: "thread-new",
       booking_id: "booking-2",
       archived_at: null,
+      pinned: false,
       created_at: "2026-05-24T00:00:01.000Z",
     };
     const admin = makeAdmin({
@@ -223,7 +225,7 @@ describe("getOrCreateBookingThread — chat_no_carer_yet branch", () => {
 });
 
 describe("archiveBookingThread", () => {
-  it("issues an UPDATE chat_threads ... where booking_id = ? and archived_at is null", async () => {
+  it("issues an UPDATE chat_threads ... with reason, skipping pinned + already-archived", async () => {
     const calls: {
       table: string;
       op: string;
@@ -231,7 +233,10 @@ describe("archiveBookingThread", () => {
       col?: string;
       val?: unknown;
     }[] = [];
-    let archivedRow: { archived_at: string } | null = null;
+    let archivedRow: {
+      archived_at: string;
+      archived_reason: string;
+    } | null = null;
 
     const admin: AdminLike = {
       from(table: string) {
@@ -245,9 +250,12 @@ describe("archiveBookingThread", () => {
             },
             update(payload: unknown) {
               calls.push({ table, op: "update", payload });
-              archivedRow = payload as { archived_at: string };
+              archivedRow = payload as {
+                archived_at: string;
+                archived_reason: string;
+              };
               const chain = {
-                eq(col: string, val: string) {
+                eq(col: string, val: unknown) {
                   calls.push({ table, op: "eq", col, val });
                   return chain;
                 },
@@ -281,10 +289,19 @@ describe("archiveBookingThread", () => {
       typeof (updateCall!.payload as { archived_at?: unknown }).archived_at,
       "string",
     );
-    const eqCall = calls.find((c) => c.op === "eq");
-    assert.ok(eqCall, "eq should be called");
-    assert.equal(eqCall!.col, "booking_id");
-    assert.equal(eqCall!.val, "booking-99");
+    assert.equal(
+      (updateCall!.payload as { archived_reason?: unknown }).archived_reason,
+      "booking completed",
+    );
+
+    const eqCalls = calls.filter((c) => c.op === "eq");
+    const bookingEq = eqCalls.find((c) => c.col === "booking_id");
+    assert.ok(bookingEq, "should filter on booking_id");
+    assert.equal(bookingEq!.val, "booking-99");
+    const pinnedEq = eqCalls.find((c) => c.col === "pinned");
+    assert.ok(pinnedEq, "pinned threads must be skipped");
+    assert.equal(pinnedEq!.val, false);
+
     const isCall = calls.find((c) => c.op === "is");
     assert.ok(isCall, "is should be called");
     assert.equal(isCall!.col, "archived_at");

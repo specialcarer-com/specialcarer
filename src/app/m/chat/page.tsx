@@ -13,6 +13,13 @@ export default function ChatListPage() {
     if (!carer) return false;
     return carer.name.toLowerCase().includes(q.toLowerCase());
   });
+  // P1-B9.4: pinned threads float to the top of the list, preserving the
+  // existing date-sort order within each (pinned / unpinned) group.
+  const ordered = [...filtered].sort((a, b) => {
+    const ap = a.pinned ? 1 : 0;
+    const bp = b.pinned ? 1 : 0;
+    return bp - ap;
+  });
 
   return (
     <div className="min-h-screen bg-bg-screen sc-with-bottom-nav">
@@ -30,10 +37,10 @@ export default function ChatListPage() {
       </div>
 
       <ul className="mt-4 divide-y divide-line">
-        {filtered.length === 0 && (
+        {ordered.length === 0 && (
           <li className="px-5 py-10 text-center text-sm text-subheading">No conversations yet.</li>
         )}
-        {filtered.map((c) => {
+        {ordered.map((c) => {
           const carer = getCarer(c.carerId);
           if (!carer) return null;
           return (
@@ -43,9 +50,23 @@ export default function ChatListPage() {
                 className="flex items-center gap-3 px-5 py-3 active:bg-muted/60"
               >
                 <Avatar src={carer.photo} size={48} name={carer.name} />
-                <div className="min-w-0 flex-1">
+                <div
+                  className="min-w-0 flex-1"
+                  style={{
+                    fontFamily:
+                      "var(--font-jakarta), 'Plus Jakarta Sans', sans-serif",
+                  }}
+                >
                   <div className="flex items-center justify-between gap-3">
-                    <p className="truncate text-[15px] font-semibold text-heading">{carer.name}</p>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      {/* P1-B9.4: pinned-thread glyph. Filled teal so it
+                          tracks the brand and matches the in-thread
+                          button's active state. */}
+                      {c.pinned && (
+                        <ChatPinGlyph aria-label="Pinned conversation" />
+                      )}
+                      <p className="truncate text-[15px] font-semibold text-heading">{carer.name}</p>
+                    </div>
                     <span className="shrink-0 text-xs text-subheading">{c.when}</span>
                   </div>
                   <div className="mt-0.5 flex items-center justify-between gap-3">
@@ -65,5 +86,30 @@ export default function ChatListPage() {
 
       <BottomNav active="chat" />
     </div>
+  );
+}
+
+/**
+ * P1-B9.4: small pinned-thread glyph rendered next to the carer name
+ * in the thread list. Filled teal to match the brand and the active
+ * state of the in-thread pin toggle.
+ */
+function ChatPinGlyph(props: { "aria-label"?: string }) {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="#039EA0"
+      stroke="#039EA0"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-label={props["aria-label"]}
+      role={props["aria-label"] ? "img" : undefined}
+    >
+      <path d="M12 17v5" />
+      <path d="M9 10.76V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v5.76l3 4.24H6l3-4.24z" />
+    </svg>
   );
 }

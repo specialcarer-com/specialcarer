@@ -208,8 +208,15 @@ export function ChatRoom({
             <IconChevronLeft />
           </button>
           <Avatar src={otherPartyAvatarUrl ?? undefined} name={otherPartyName} size={24} />
-          <div className="flex items-center gap-2 min-w-0">
-            <p className="text-[15px] font-bold text-heading truncate">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <p
+              className="text-[15px] font-bold truncate"
+              style={{
+                color: "#0F1416",
+                fontFamily:
+                  "var(--font-jakarta), 'Plus Jakarta Sans', sans-serif",
+              }}
+            >
               {otherPartyName}
             </p>
             {chat.archivedAt && (
@@ -218,6 +225,21 @@ export function ChatRoom({
               </span>
             )}
           </div>
+          {/* P1-B9.4: pin toggle. Filled icon when pinned, outline when
+              not. Only rendered once the thread fetch has resolved so a
+              ghost-tap during loading can't fire a PATCH. */}
+          {chat.status === "ready" && chat.threadId && (
+            <button
+              type="button"
+              onClick={() => void chat.togglePin()}
+              aria-label={chat.pinned ? "Unpin conversation" : "Pin conversation"}
+              aria-pressed={chat.pinned}
+              className="grid h-10 w-10 place-items-center rounded-md active:bg-muted sc-no-select"
+              style={{ color: chat.pinned ? "#039EA0" : "#0F1416" }}
+            >
+              <PinIcon filled={chat.pinned} />
+            </button>
+          )}
         </div>
       </header>
 
@@ -367,5 +389,29 @@ export function ChatRoom({
         </div>
       )}
     </main>
+  );
+}
+
+/**
+ * P1-B9.4: pin glyph (filled vs. outline). Inline SVG to avoid pulling
+ * in an icon library when the rest of the chat header already does the
+ * same. Path borrowed from a generic pushpin silhouette.
+ */
+function PinIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 17v5" />
+      <path d="M9 10.76V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v5.76l3 4.24H6l3-4.24z" />
+    </svg>
   );
 }

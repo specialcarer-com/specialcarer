@@ -370,6 +370,8 @@ export type ChatPreview = {
   lastMessage: string;
   when: string;
   unread: number;
+  /** P1-B9.4: pinned threads sort to the top of the thread list. */
+  pinned?: boolean;
 };
 
 export type ChatMessage = {
@@ -380,7 +382,7 @@ export type ChatMessage = {
 };
 
 export const CHATS: ChatPreview[] = [
-  { id: "ch1", carerId: "carer_aisha", lastMessage: "Sure, I'll be there at 10.", when: "10:24", unread: 2 },
+  { id: "ch1", carerId: "carer_aisha", lastMessage: "Sure, I'll be there at 10.", when: "10:24", unread: 2, pinned: true },
   { id: "ch2", carerId: "carer_marcus", lastMessage: "Thanks for booking!", when: "Yesterday", unread: 0 },
   { id: "ch3", carerId: "carer_grace", lastMessage: "Could you share the address?", when: "Mon", unread: 1 },
   { id: "ch4", carerId: "carer_olivia", lastMessage: "See you on Friday.", when: "21 Apr", unread: 0 },
