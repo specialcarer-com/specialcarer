@@ -151,6 +151,8 @@ export const config = {
     //   - API routes (each handler does its own auth via createClient — running
     //     middleware here triggered Supabase auth.getUser() on every API call,
     //     adding 10-30s of cold-start latency and 278 MB of memory per invocation)
-    "/((?!api/|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    //   - /.well-known/* (Apple Pay domain verification, etc — must be served
+    //     byte-exact without auth touching the request)
+    "/((?!api/|_next/static|_next/image|favicon.ico|\\.well-known/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
