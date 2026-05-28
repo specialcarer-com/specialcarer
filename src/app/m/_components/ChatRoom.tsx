@@ -19,6 +19,7 @@ import { Avatar, IconChevronLeft } from "./ui";
 import { useChat } from "@/lib/chat/useChat";
 import type { ChatMessage } from "@/lib/chat/client";
 import { EmptyChatState } from "./EmptyChatState";
+import { ReportMessageSheet } from "./ReportMessageSheet";
 import { getQuickReplies, type ChatRole } from "@/lib/chat/quick-replies";
 
 const TIME_GROUP_GAP_MS = 10 * 60 * 1000;
@@ -96,6 +97,10 @@ export function ChatRoom({
   const [composer, setComposer] = useState("");
   const [sending, setSending] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  // P1-B10: which (non-own) message is currently being reported, if any.
+  const [reportingMessageId, setReportingMessageId] = useState<string | null>(
+    null,
+  );
 
   const showComposer =
     chat.status === "ready" && chat.archivedAt === null;
@@ -299,8 +304,8 @@ export function ChatRoom({
                   <div
                     className={
                       own
-                        ? "flex justify-end"
-                        : "flex justify-start"
+                        ? "flex justify-end items-center gap-1"
+                        : "flex justify-start items-center gap-1"
                     }
                   >
                     <span
@@ -313,6 +318,26 @@ export function ChatRoom({
                     >
                       {m.body}
                     </span>
+                    {!own && (
+                      <button
+                        type="button"
+                        onClick={() => setReportingMessageId(m.id)}
+                        aria-label="Report message"
+                        className="grid h-7 w-7 place-items-center rounded-full text-[#7B6E5A] active:bg-muted sc-no-select"
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          aria-hidden="true"
+                        >
+                          <circle cx="5" cy="12" r="1.8" />
+                          <circle cx="12" cy="12" r="1.8" />
+                          <circle cx="19" cy="12" r="1.8" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -328,6 +353,12 @@ export function ChatRoom({
             This conversation is archived. Read-only.
           </p>
         </div>
+      )}
+      {reportingMessageId && (
+        <ReportMessageSheet
+          messageId={reportingMessageId}
+          onClose={() => setReportingMessageId(null)}
+        />
       )}
       {showComposer && (
         <div className="sticky bottom-0 z-20 bg-white border-t border-line px-3 py-2 sc-safe-bottom">
