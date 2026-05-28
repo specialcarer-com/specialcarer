@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   isThreadParticipant,
   listMessages,
   sendMessage,
 } from "@/lib/chat/server";
+import {
+  checkBanned,
+  recordAutoFlags,
+  type ModerationAdminLike,
+} from "@/lib/chat/moderation-wiring";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +80,15 @@ export async function POST(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // P1-B10: enforce a moderation ban *before* hitting validateBody +
+  // the DB insert. checkBanned defaults to "not banned" on lookup
+  // errors so a transient glitch never silences a legitimate user.
+  const admin = createAdminClient() as unknown as ModerationAdminLike;
+  const banned = await checkBanned(admin, threadId, user.id);
+  if (banned) {
+    return NextResponse.json({ error: "banned" }, { status: 403 });
+  }
+
   let payload: { body?: unknown };
   try {
     payload = (await req.json()) as { body?: unknown };
@@ -83,6 +98,15 @@ export async function POST(
 
   try {
     const message = await sendMessage(threadId, String(payload.body ?? ""));
+    // P1-B10: auto-flag off-platform / off-channel content. Detection
+    // is non-blocking — the message has already been delivered to the
+    // recipient; the flag row drives the admin queue. Errors swallowed
+    // inside recordAutoFlags.
+    void recordAutoFlags(admin, {
+      message_id: message.id,
+      thread_id: threadId,
+      body: message.body,
+    });
     return NextResponse.json({ message });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
