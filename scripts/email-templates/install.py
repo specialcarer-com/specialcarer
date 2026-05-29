@@ -27,13 +27,23 @@ from pathlib import Path
 
 TEMPLATES_DIR = Path(__file__).resolve().parent.parent.parent / "supabase" / "email-templates"
 
-# Map of (file basename, Supabase config field prefix, subject)
+# Map of (file basename, Supabase config field prefix, subject) for the
+# 5 Auth-mailer templates that Supabase actually renders on signup/recovery/etc.
 TEMPLATE_MAP = [
     ("recovery.html",     "recovery",     "Reset your SpecialCarer password"),
     ("confirmation.html", "confirmation", "Confirm your SpecialCarer account"),
     ("magic_link.html",   "magic_link",   "Your SpecialCarer sign-in link"),
     ("email_change.html", "email_change", "Confirm your new SpecialCarer email"),
     ("invite.html",       "invite",       "You're invited to SpecialCarer"),
+]
+
+# Transactional templates that are NOT part of Supabase Auth's built-in
+# mailer (they're sent via Resend by application code). The install
+# script doesn't upload them to Supabase, but it verifies the file
+# exists alongside the auth templates so they ship together. Add new
+# transactional templates here so CI fails fast on a missing file.
+TRANSACTIONAL_TEMPLATES = [
+    ("family_invite.html", "family_invite", "You've been invited to a SpecialCarer chat"),
 ]
 
 
@@ -57,6 +67,17 @@ def main() -> int:
         payload[f"mailer_templates_{prefix}_content"] = html
         payload[f"mailer_subjects_{prefix}"] = subject
         print(f"  prepared {prefix:13s} ({len(html):>5d} bytes) — subject: {subject}")
+
+    # Verify transactional templates ship alongside auth templates.
+    # These are sent by application code (Resend), not Supabase Auth,
+    # so they aren't part of the PATCH payload.
+    for filename, prefix, subject in TRANSACTIONAL_TEMPLATES:
+        path = TEMPLATES_DIR / filename
+        if not path.exists():
+            print(f"ERROR: transactional template missing: {path}", file=sys.stderr)
+            return 1
+        size = path.stat().st_size
+        print(f"  verified  {prefix:13s} ({size:>5d} bytes, transactional) — subject: {subject}")
 
     url = f"https://api.supabase.com/v1/projects/{project_ref}/config/auth"
     req = urllib.request.Request(
