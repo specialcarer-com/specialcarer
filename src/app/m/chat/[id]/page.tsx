@@ -18,6 +18,11 @@ import {
   MAX_PER_MESSAGE,
   uploadAttachment,
 } from "@/lib/chat/attachments-client";
+import {
+  ParticipantsSheet,
+  type Participant,
+} from "../_components/ParticipantsSheet";
+import { InviteFamilySheet } from "../_components/InviteFamilySheet";
 
 type DraftAttachment = RenderableAttachment & { local_url?: string };
 type LocalMessage = ChatMessage & { attachments?: RenderableAttachment[] };
@@ -36,8 +41,36 @@ export default function ChatThreadPage() {
     total: number;
   } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [participantsOpen, setParticipantsOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
   const uploadAbort = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // P1-B11: the mock-data thread page has no live thread_id; for now
+  // we render the participants header purely from the carer record so
+  // the surface area exists. The sheets call the real endpoints when
+  // a real threadId is wired up in a follow-up — until then they're
+  // gated behind the seeker viewer flag (mock viewer = seeker).
+  const threadId = params.id ?? null;
+  const viewerIsSeeker = true;
+  const mockParticipants: Participant[] = data?.carer
+    ? [
+        {
+          user_id: "viewer",
+          role: "seeker",
+          display_name: "You",
+          avatar_url: null,
+          added_at: new Date().toISOString(),
+        },
+        {
+          user_id: "carer-1",
+          role: "carer",
+          display_name: data.carer.name,
+          avatar_url: data.carer.photo ?? null,
+          added_at: new Date().toISOString(),
+        },
+      ]
+    : [];
 
   useEffect(() => {
     if (!toast) return;
@@ -162,11 +195,31 @@ export default function ChatThreadPage() {
           >
             <IconChevronLeft />
           </button>
-          <Avatar src={carer.photo} size={36} name={carer.name} />
+          <button
+            type="button"
+            onClick={() => setParticipantsOpen(true)}
+            className="flex items-center gap-2 -ml-1 rounded-full px-1 py-1"
+            aria-label="View participants"
+          >
+            <div className="flex -space-x-2">
+              <Avatar src={carer.photo} size={36} name={carer.name} />
+            </div>
+          </button>
           <div className="min-w-0 flex-1 leading-tight">
             <p className="truncate text-[15px] font-semibold text-heading">{carer.name}</p>
             <p className="text-[11px] text-primary">Online</p>
           </div>
+          {viewerIsSeeker ? (
+            <button
+              type="button"
+              onClick={() => setInviteOpen(true)}
+              className="rounded-full px-3 py-1.5 text-[12px] font-semibold text-white"
+              style={{ background: "#039EA0" }}
+              aria-label="Invite family"
+            >
+              + Invite family
+            </button>
+          ) : null}
           <button
             className="grid h-10 w-10 place-items-center rounded-full bg-muted text-heading"
             aria-label="Call"
@@ -320,6 +373,28 @@ export default function ChatThreadPage() {
           </div>
         </div>
       ) : null}
+
+      <ParticipantsSheet
+        open={participantsOpen}
+        onClose={() => setParticipantsOpen(false)}
+        threadId={threadId}
+        viewerIsSeeker={viewerIsSeeker}
+        // Mock-mode fetcher returns the synthesized seeker+carer list so
+        // the sheet renders meaningfully on the demo thread.
+        fetchParticipants={async () => mockParticipants}
+        onRemove={async () => ({ ok: true })}
+        onInvite={() => {
+          setParticipantsOpen(false);
+          setInviteOpen(true);
+        }}
+      />
+      <InviteFamilySheet
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        threadId={threadId}
+        onSubmit={async () => ({ ok: true })}
+        onSent={(email) => setToast(`Invite sent to ${email}`)}
+      />
     </div>
   );
 }
