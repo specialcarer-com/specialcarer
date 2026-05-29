@@ -18,7 +18,7 @@
  * stable across that change.
  */
 
-export type ChatRole = "seeker" | "carer";
+export type ChatRole = "seeker" | "carer" | "family";
 
 export type QuickReply = {
   /** Stable id, used as React key. Lowercase snake_case. */
@@ -43,6 +43,13 @@ const SEEKER_REPLIES: readonly QuickReply[] = [
   { id: "need_to_reschedule", text: "Need to reschedule" },
 ] as const;
 
+const FAMILY_REPLIES: readonly QuickReply[] = [
+  { id: "thanks", text: "Thanks" },
+  { id: "on_my_way", text: "On my way" },
+  { id: "please_call_me", text: "Please call me" },
+  { id: "got_it", text: "Got it" },
+] as const;
+
 /**
  * Returns the chip set for a role. Defensive: an unrecognised role
  * yields the seeker set (safer default than throwing in a UI hot path
@@ -50,5 +57,6 @@ const SEEKER_REPLIES: readonly QuickReply[] = [
  */
 export function getQuickReplies(role: ChatRole | string): readonly QuickReply[] {
   if (role === "carer") return CARER_REPLIES;
+  if (role === "family") return FAMILY_REPLIES;
   return SEEKER_REPLIES;
 }

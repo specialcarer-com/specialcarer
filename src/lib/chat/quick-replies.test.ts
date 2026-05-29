@@ -36,8 +36,14 @@ describe("getQuickReplies", () => {
     for (const r of seeker) assertShape(r, "seeker");
   });
 
-  it("carer + seeker arrays contain unique ids within each set", () => {
-    for (const role of ["carer", "seeker"] as const) {
+  it("returns four family replies", () => {
+    const family = getQuickReplies("family");
+    assert.equal(family.length, 4);
+    for (const r of family) assertShape(r, "family");
+  });
+
+  it("carer + seeker + family arrays contain unique ids within each set", () => {
+    for (const role of ["carer", "seeker", "family"] as const) {
       const set = getQuickReplies(role);
       const ids = new Set(set.map((r) => r.id));
       assert.equal(ids.size, set.length, `${role} has duplicate ids`);
@@ -51,7 +57,7 @@ describe("getQuickReplies", () => {
   });
 
   it("each chip text is sensible (no leading/trailing whitespace, no newlines)", () => {
-    for (const role of ["carer", "seeker"] as const) {
+    for (const role of ["carer", "seeker", "family"] as const) {
       for (const r of getQuickReplies(role)) {
         assert.equal(r.text, r.text.trim(), `${role}/${r.id}: trimmed`);
         assert.ok(
@@ -74,5 +80,17 @@ describe("getQuickReplies", () => {
     for (const id of ["thanks", "please_call_me", "need_to_reschedule"]) {
       assert.ok(ids.includes(id), `seeker set missing ${id}`);
     }
+  });
+
+  it("family set is a coordination-only subset of seeker phrasing", () => {
+    const ids = getQuickReplies("family").map((r) => r.id);
+    for (const id of ["thanks", "on_my_way", "please_call_me", "got_it"]) {
+      assert.ok(ids.includes(id), `family set missing ${id}`);
+    }
+    // Family chips should never escalate scheduling — that's the seeker's call.
+    assert.ok(
+      !ids.includes("need_to_reschedule"),
+      "family set must not contain reschedule (account-owner-only action)",
+    );
   });
 });

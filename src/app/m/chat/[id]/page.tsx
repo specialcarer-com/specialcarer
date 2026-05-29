@@ -23,6 +23,8 @@ import {
   type Participant,
 } from "../_components/ParticipantsSheet";
 import { InviteFamilySheet } from "../_components/InviteFamilySheet";
+import { QuickReplyChips } from "../_components/QuickReplyChips";
+import type { ChatRole } from "@/lib/chat/quick-replies";
 
 type DraftAttachment = RenderableAttachment & { local_url?: string };
 type LocalMessage = ChatMessage & { attachments?: RenderableAttachment[] };
@@ -98,8 +100,8 @@ export default function ChatThreadPage() {
 
   const { carer } = data;
 
-  function send() {
-    const text = draft.trim();
+  function send(override?: string) {
+    const text = (override ?? draft).trim();
     if (!text && draftAttachments.length === 0) return;
     setMessages((prev) => [
       ...prev,
@@ -111,9 +113,13 @@ export default function ChatThreadPage() {
         attachments: draftAttachments.length ? [...draftAttachments] : undefined,
       },
     ]);
-    setDraft("");
+    if (override === undefined) setDraft("");
     setDraftAttachments([]);
   }
+
+  // TODO(b9.2-role-detect): replace with real participant-role lookup once
+  // the thread page is wired to the live thread (mock viewer = seeker).
+  const viewerChatRole: ChatRole = viewerIsSeeker ? "seeker" : "carer";
 
   async function handleSelected(file: SelectedFile) {
     // Local placeholder: optimistic preview while the upload runs.
@@ -265,7 +271,13 @@ export default function ChatThreadPage() {
         </ul>
       </div>
 
-      <div className="border-t border-line bg-white px-4 py-3 sc-safe-bottom">
+      <div className="border-t border-line bg-white sc-safe-bottom">
+        <QuickReplyChips
+          role={viewerChatRole}
+          onSelect={(text) => send(text)}
+          disabled={!!uploading}
+        />
+        <div className="px-4 pb-3">
         {uploading ? (
           <div className="mb-2 flex items-center gap-2">
             <div className="flex-1 overflow-hidden rounded-full bg-muted">
@@ -356,13 +368,14 @@ export default function ChatThreadPage() {
             className="max-h-32 flex-1 resize-none rounded-2xl bg-muted px-4 py-2.5 text-[15px] text-heading placeholder:text-subheading focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
           <button
-            onClick={send}
+            onClick={() => send()}
             disabled={!draft.trim() && draftAttachments.length === 0}
             className="grid h-11 w-11 place-items-center rounded-full bg-primary text-white shadow-card transition active:scale-95 disabled:bg-muted disabled:text-subheading"
             aria-label="Send"
           >
             <IconSend />
           </button>
+        </div>
         </div>
       </div>
 
