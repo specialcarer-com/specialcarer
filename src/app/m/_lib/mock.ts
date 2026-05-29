@@ -372,6 +372,8 @@ export type ChatPreview = {
   unread: number;
   /** P1-B9.4: pinned threads sort to the top of the thread list. */
   pinned?: boolean;
+  /** P1-B9.1: render an emoji prefix on the preview when the latest message has attachments. */
+  lastAttachmentKind?: "image" | "pdf";
 };
 
 export type ChatMessage = {
