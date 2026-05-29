@@ -1,11 +1,19 @@
 name: Apply Supabase migrations
 
+# Auto-trigger temporarily disabled while we reconcile pre-existing
+# migration-history drift. The remote supabase_migrations table contains
+# ~120 entries (applied via the management API with 14-digit timestamps),
+# while the repo's older migration files use 8-digit prefixes that the
+# Supabase CLI silently ignores. Until those filenames are reconciled
+# (planned: 29 May 2026 morning session), enabling `on: push` causes the
+# workflow to fail on every merge to main. Manual dispatch only for now.
+#
+# To re-enable auto-apply once the drift is fixed, restore:
+#   push:
+#     branches: [main]
+#     paths: ['supabase/migrations/**']
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'supabase/migrations/**'
+  workflow_dispatch:
 
 # Prevent two pushes from racing each other against prod.
 concurrency:
