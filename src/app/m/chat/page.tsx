@@ -70,7 +70,14 @@ export default function ChatListPage() {
                     <span className="shrink-0 text-xs text-subheading">{c.when}</span>
                   </div>
                   <div className="mt-0.5 flex items-center justify-between gap-3">
-                    <p className="truncate text-sm text-subheading">{c.lastMessage}</p>
+                    <p className="truncate text-sm text-subheading">
+                      {c.lastAttachmentKind === "image"
+                        ? "\u{1F5BC}️ Image · "
+                        : c.lastAttachmentKind === "pdf"
+                          ? "\u{1F4CE} PDF · "
+                          : ""}
+                      {c.lastMessage}
+                    </p>
                     {c.unread > 0 && (
                       <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-white">
                         {c.unread}

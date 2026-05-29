@@ -9,15 +9,41 @@ import {
   IconChevronLeft,
 } from "../../_components/ui";
 import { getChat, type ChatMessage } from "../../_lib/mock";
+import { AttachmentPicker, type SelectedFile } from "../_components/AttachmentPicker";
+import {
+  AttachmentList,
+  type RenderableAttachment,
+} from "../_components/AttachmentRender";
+import {
+  MAX_PER_MESSAGE,
+  uploadAttachment,
+} from "@/lib/chat/attachments-client";
+
+type DraftAttachment = RenderableAttachment & { local_url?: string };
+type LocalMessage = ChatMessage & { attachments?: RenderableAttachment[] };
 
 export default function ChatThreadPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const data = getChat(params.id);
 
-  const [messages, setMessages] = useState<ChatMessage[]>(data?.thread ?? []);
+  const [messages, setMessages] = useState<LocalMessage[]>(data?.thread ?? []);
   const [draft, setDraft] = useState("");
+  const [draftAttachments, setDraftAttachments] = useState<DraftAttachment[]>([]);
+  const [uploading, setUploading] = useState<{
+    filename: string;
+    loaded: number;
+    total: number;
+  } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const uploadAbort = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -41,7 +67,7 @@ export default function ChatThreadPage() {
 
   function send() {
     const text = draft.trim();
-    if (!text) return;
+    if (!text && draftAttachments.length === 0) return;
     setMessages((prev) => [
       ...prev,
       {
@@ -49,9 +75,79 @@ export default function ChatThreadPage() {
         fromMe: true,
         text,
         time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        attachments: draftAttachments.length ? [...draftAttachments] : undefined,
       },
     ]);
     setDraft("");
+    setDraftAttachments([]);
+  }
+
+  async function handleSelected(file: SelectedFile) {
+    // Local placeholder: optimistic preview while the upload runs.
+    const localUrl = URL.createObjectURL(file.blob);
+    setUploading({
+      filename: file.filename,
+      loaded: 0,
+      total: file.size_bytes,
+    });
+    uploadAbort.current = new AbortController();
+    try {
+      // In this mock-driven view there is no real message_id yet — when
+      // wired to the live thread, replace `local-draft` with the persisted
+      // message id returned from POST /messages. For now we attach the
+      // local preview directly so the UX is testable end-to-end.
+      // TODO(b9.1-wiring): replace local-draft with real message id once
+      // the chat thread page is migrated off the mock store.
+      const result = await uploadAttachment({
+        message_id: "local-draft",
+        file: file.blob,
+        filename: file.filename,
+        mime_type: file.mime_type,
+        size_bytes: file.size_bytes,
+        width: file.width,
+        height: file.height,
+        onProgress: (p) =>
+          setUploading({
+            filename: file.filename,
+            loaded: p.loaded,
+            total: p.total,
+          }),
+        signal: uploadAbort.current.signal,
+      }).catch(() => null);
+
+      if (result) {
+        setDraftAttachments((prev) => [
+          ...prev,
+          { ...result.attachment, signed_url: result.signed_url },
+        ]);
+      } else {
+        // Offline / mock fallback: still let the user "send" with a
+        // locally previewed attachment so the UI demo works.
+        setDraftAttachments((prev) => [
+          ...prev,
+          {
+            id: `local-${Date.now()}`,
+            mime_type: file.mime_type,
+            filename: file.filename,
+            size_bytes: file.size_bytes,
+            width: file.width ?? null,
+            height: file.height ?? null,
+            signed_url: localUrl,
+          },
+        ]);
+      }
+    } finally {
+      setUploading(null);
+      uploadAbort.current = null;
+    }
+  }
+
+  function cancelUpload() {
+    uploadAbort.current?.abort();
+  }
+
+  function removeDraftAttachment(id: string) {
+    setDraftAttachments((prev) => prev.filter((a) => a.id !== id));
   }
 
   return (
@@ -97,7 +193,12 @@ export default function ChatThreadPage() {
                     : "rounded-bl-md bg-white text-heading shadow-card"
                 }`}
               >
-                <p className="text-[14.5px] leading-snug">{m.text}</p>
+                {m.text ? (
+                  <p className="text-[14.5px] leading-snug">{m.text}</p>
+                ) : null}
+                {m.attachments && m.attachments.length > 0 ? (
+                  <AttachmentList attachments={m.attachments} fromMe={m.fromMe} />
+                ) : null}
                 <p
                   className={`mt-1 text-[10px] ${
                     m.fromMe ? "text-white/70" : "text-subheading"
@@ -112,7 +213,82 @@ export default function ChatThreadPage() {
       </div>
 
       <div className="border-t border-line bg-white px-4 py-3 sc-safe-bottom">
-        <div className="flex items-end gap-2">
+        {uploading ? (
+          <div className="mb-2 flex items-center gap-2">
+            <div className="flex-1 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-1.5 rounded-full bg-primary transition-[width]"
+                style={{
+                  width: `${
+                    uploading.total
+                      ? Math.min(
+                          100,
+                          Math.round((uploading.loaded / uploading.total) * 100),
+                        )
+                      : 0
+                  }%`,
+                }}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={cancelUpload}
+              className="font-display text-[12px] font-medium text-primary"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : null}
+
+        {draftAttachments.length > 0 ? (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {draftAttachments.map((a) => (
+              <div
+                key={a.id}
+                className="relative overflow-hidden rounded-lg border border-line"
+              >
+                {a.mime_type.startsWith("image/") ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={a.signed_url ?? ""}
+                    alt={a.filename}
+                    className="h-16 w-16 object-cover"
+                  />
+                ) : (
+                  <div
+                    className="grid h-16 w-16 place-items-center"
+                    style={{ backgroundColor: "#F4EFE6" }}
+                  >
+                    <span
+                      className="font-display text-[10px] font-semibold"
+                      style={{ color: "#0F1416" }}
+                    >
+                      PDF
+                    </span>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => removeDraftAttachment(a.id)}
+                  aria-label={`Remove ${a.filename}`}
+                  className="absolute right-0 top-0 grid h-5 w-5 place-items-center rounded-bl-md bg-black/60 text-[11px] leading-none text-white"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        <div className="flex items-end gap-1">
+          <AttachmentPicker
+            existingCount={draftAttachments.length}
+            onSelected={handleSelected}
+            onError={(m) => setToast(m)}
+            disabled={
+              !!uploading || draftAttachments.length >= MAX_PER_MESSAGE
+            }
+          />
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -128,7 +304,7 @@ export default function ChatThreadPage() {
           />
           <button
             onClick={send}
-            disabled={!draft.trim()}
+            disabled={!draft.trim() && draftAttachments.length === 0}
             className="grid h-11 w-11 place-items-center rounded-full bg-primary text-white shadow-card transition active:scale-95 disabled:bg-muted disabled:text-subheading"
             aria-label="Send"
           >
@@ -136,6 +312,14 @@ export default function ChatThreadPage() {
           </button>
         </div>
       </div>
+
+      {toast ? (
+        <div className="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-4">
+          <div className="pointer-events-auto rounded-full bg-heading px-4 py-2 font-display text-[13px] text-white shadow-card">
+            {toast}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
