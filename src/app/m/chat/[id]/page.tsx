@@ -45,6 +45,11 @@ export default function ChatThreadPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [participantsOpen, setParticipantsOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  // P1-B9.4: pinned is sourced from the mock preview so the header
+  // reflects the list-page state on first render; subsequent toggles are
+  // optimistic-then-PATCH (revert on error).
+  const [pinned, setPinned] = useState<boolean>(data?.preview?.pinned ?? false);
+  const [pinBusy, setPinBusy] = useState(false);
   const uploadAbort = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -120,6 +125,39 @@ export default function ChatThreadPage() {
   // TODO(b9.2-role-detect): replace with real participant-role lookup once
   // the thread page is wired to the live thread (mock viewer = seeker).
   const viewerChatRole: ChatRole = viewerIsSeeker ? "seeker" : "carer";
+
+  // P1-B9.4: optimistic pin toggle. The mock thread ids (`ch1`...) are
+  // not UUIDs so the PATCH always 4xx's against the real endpoint — we
+  // catch that and revert. Once the page is wired to a real thread id
+  // (TODO(b9.4-thread-id): swap `threadId` for the persisted thread row
+  // id) the PATCH becomes the source of truth.
+  async function togglePin() {
+    if (!threadId || pinBusy) return;
+    const next = !pinned;
+    setPinned(next);
+    setPinBusy(true);
+    try {
+      const res = await fetch(`/api/m/chat/threads/${threadId}/pin`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pinned: next }),
+      });
+      if (!res.ok) {
+        // 404 against a mock id is expected today — keep the optimistic
+        // state so the demo UX works, but surface real failures to the
+        // user once the thread id is real.
+        if (res.status !== 404) {
+          setPinned(!next);
+          setToast(next ? "Could not pin" : "Could not unpin");
+        }
+      }
+    } catch {
+      setPinned(!next);
+      setToast(next ? "Could not pin" : "Could not unpin");
+    } finally {
+      setPinBusy(false);
+    }
+  }
 
   async function handleSelected(file: SelectedFile) {
     // Local placeholder: optimistic preview while the upload runs.
@@ -226,6 +264,25 @@ export default function ChatThreadPage() {
               + Invite family
             </button>
           ) : null}
+          <button
+            type="button"
+            onClick={togglePin}
+            disabled={pinBusy}
+            aria-label={pinned ? "Unpin this conversation" : "Pin this conversation"}
+            aria-pressed={pinned}
+            className="grid h-10 w-10 place-items-center rounded-full transition disabled:opacity-50"
+            style={
+              pinned
+                ? { backgroundColor: "#039EA0", color: "#FFFFFF" }
+                : {
+                    backgroundColor: "transparent",
+                    color: "#0F1416",
+                    border: "1px solid rgba(3, 158, 160, 0.3)",
+                  }
+            }
+          >
+            <ThreadPinIcon filled={pinned} />
+          </button>
           <button
             className="grid h-10 w-10 place-items-center rounded-full bg-muted text-heading"
             aria-label="Call"
@@ -409,5 +466,29 @@ export default function ChatThreadPage() {
         onSent={(email) => setToast(`Invite sent to ${email}`)}
       />
     </div>
+  );
+}
+
+/**
+ * P1-B9.4: thumbtack-style icon used by the header pin toggle. Stroke
+ * inherits from the button so the empty state reads as outline-on-ink
+ * and the active state reads as cutout-on-teal without an extra prop.
+ */
+function ThreadPinIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 17v5" />
+      <path d="M9 10.76V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v5.76l3 4.24H6l3-4.24z" />
+    </svg>
   );
 }

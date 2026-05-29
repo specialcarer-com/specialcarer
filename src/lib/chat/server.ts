@@ -299,6 +299,16 @@ export async function isThreadParticipant(
  * Errors are swallowed — the caller is the booking-complete flow and
  * must not be broken by a chat archive failure.
  *
+ * TODO(b9.4-cron): the cluster-2 plan also calls for a periodic sweep
+ * that archives idle threads with `archived_reason = 'idle_30d'` and
+ * stale booking-completed threads with `'booking_completed_14d_ago'`.
+ * That cron does not exist in this repo yet — every chat-thread archive
+ * today goes through this immediate-on-complete path with the literal
+ * reason `'booking completed'`. When the cron ships, the reason
+ * vocabulary becomes the enum `('idle_30d' | 'booking_completed_14d_ago'
+ * | 'booking completed')` and the cron must filter `.eq('pinned',
+ * false)` exactly as this function does.
+ *
  * Exported with an injectable admin shape for unit testing.
  */
 export async function archiveBookingThreadWith(
