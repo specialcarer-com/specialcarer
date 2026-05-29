@@ -12,7 +12,7 @@ export default function Page() {
     <ServicePage
       bannerKey="services.childcare"
       eyebrow="Childcare"
-      title="RSW, HCA, Babysitters &amp; nannies, vetted by us."
+      title="RSW/HCA, Babysitters &amp; nannies, vetted by us."
       lede="From a one-off date night to ongoing after-school care, find caregivers who are DBS- or Checkr-verified, paediatric first-aid trained, and rated by other parents in your area."
       bullets={[
         "Date-night babysitting (3 hours and up)",
