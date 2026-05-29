@@ -5,6 +5,7 @@ import { useState } from "react";
 import { TopBar, BottomNav, Avatar, IconSearch } from "../_components/ui";
 import { CHATS } from "../_lib/mock";
 import { getCarer } from "../_lib/mock";
+import { sortPinnedFirst } from "./sort";
 
 export default function ChatListPage() {
   const [q, setQ] = useState("");
@@ -15,11 +16,7 @@ export default function ChatListPage() {
   });
   // P1-B9.4: pinned threads float to the top of the list, preserving the
   // existing date-sort order within each (pinned / unpinned) group.
-  const ordered = [...filtered].sort((a, b) => {
-    const ap = a.pinned ? 1 : 0;
-    const bp = b.pinned ? 1 : 0;
-    return bp - ap;
-  });
+  const ordered = sortPinnedFirst(filtered);
 
   return (
     <div className="min-h-screen bg-bg-screen sc-with-bottom-nav">
