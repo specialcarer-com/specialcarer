@@ -36,7 +36,7 @@
             <table role="presentation" cellpadding="0" cellspacing="0" border="0">
               <tr>
                 <td align="center" bgcolor="#039EA0" style="border-radius:9999px;mso-padding-alt:14px 28px;">
-                  <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 28px;font-family:'Plus Jakarta Sans','Inter',Arial,sans-serif;font-size:16px;font-weight:700;color:#FFFFFF;text-decoration:none;border-radius:9999px;background:#039EA0;line-height:20px;">
+                  <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery" style="display:inline-block;padding:14px 28px;font-family:'Plus Jakarta Sans','Inter',Arial,sans-serif;font-size:16px;font-weight:700;color:#FFFFFF;text-decoration:none;border-radius:9999px;background:#039EA0;line-height:20px;">
                     Reset password
                   </a>
                 </td>
@@ -50,7 +50,7 @@
               If the button doesn't work, copy and paste this link into your browser:
             </p>
             <p style="margin:0;font-size:13px;line-height:20px;word-break:break-all;">
-              <a href="{{ .ConfirmationURL }}" style="color:#039EA0;text-decoration:underline;">{{ .ConfirmationURL }}</a>
+              <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery" style="color:#039EA0;text-decoration:underline;">{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery</a>
             </p>
           </td>
         </tr>
