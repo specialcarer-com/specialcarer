@@ -22,7 +22,7 @@ truth** for what is configured in the live Supabase project.
 
 ## Supabase template variables used
 
-- `{{ .ConfirmationURL }}` — full action URL with embedded token (primary CTA)
+- `{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=<flow>` — server-side action URL routed through our Next.js callback (primary CTA). The `type` parameter must match the flow: `recovery` for password reset, `signup` for confirmation, `magiclink` for magic links, `email_change` for email change, `invite` for invites. NEVER use `{{ .ConfirmationURL }}` directly — that points to Supabase's own /verify endpoint and bypasses our callback's branching logic (e.g. routing recovery flows to /auth/reset-password).
 - `{{ .Token }}` — 6-digit OTP fallback (recovery template only)
 - `{{ .Email }}` — recipient email
 - `{{ .NewEmail }}` — new email (email_change template only)
