@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Reset your SpecialCarer password</title>
+<!--[if mso]>
+<style>* { font-family: Arial, sans-serif !important; }</style>
+<![endif]-->
+</head>
+<body style="margin:0;padding:0;background:#F4EFE6;font-family:'Plus Jakarta Sans','Inter',Arial,sans-serif;color:#0F1416;-webkit-font-smoothing:antialiased;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0">Reset the password for your SpecialCarer account. This link expires in 1 hour.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F4EFE6;padding:32px 16px;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background:#FFFFFF;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(15,20,22,0.06);">
+        <tr>
+          <td align="center" style="padding:32px 24px 16px 24px;">
+            <img src="https://specialcarer.com/brand/logo-wordmark-email.png" alt="SpecialCarer" width="200" height="150" style="display:block;border:0;outline:none;width:200px;height:150px;max-width:200px;">
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:8px 40px 0 40px;">
+            <h1 style="margin:0 0 12px 0;font-size:24px;line-height:32px;font-weight:700;color:#0F1416;letter-spacing:-0.01em;">Reset your password</h1>
+            <p style="margin:0 0 16px 0;font-size:16px;line-height:24px;color:#0F1416;">
+              We received a request to reset the password for the SpecialCarer account linked to <strong style="color:#039EA0;">{{ .Email }}</strong>.
+            </p>
+            <p style="margin:0 0 28px 0;font-size:16px;line-height:24px;color:#0F1416;">
+              Tap the button below to choose a new password. This link expires in 1 hour and can only be used once.
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding:0 40px 8px 40px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td align="center" bgcolor="#039EA0" style="border-radius:9999px;mso-padding-alt:14px 28px;">
+                  <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 28px;font-family:'Plus Jakarta Sans','Inter',Arial,sans-serif;font-size:16px;font-weight:700;color:#FFFFFF;text-decoration:none;border-radius:9999px;background:#039EA0;line-height:20px;">
+                    Reset password
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px 40px 8px 40px;">
+            <p style="margin:0 0 8px 0;font-size:13px;line-height:20px;color:#6B7280;">
+              If the button doesn't work, copy and paste this link into your browser:
+            </p>
+            <p style="margin:0;font-size:13px;line-height:20px;word-break:break-all;">
+              <a href="{{ .ConfirmationURL }}" style="color:#039EA0;text-decoration:underline;">{{ .ConfirmationURL }}</a>
+            </p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px 40px 0 40px;">
+            <div style="border-top:1px solid #F4EFE6;padding-top:20px;">
+              <p style="margin:0 0 12px 0;font-size:13px;line-height:20px;color:#6B7280;">
+                <strong style="color:#0F1416;">Resetting on a different device?</strong><br>
+                Enter this code on the password-reset page instead:
+              </p>
+              <p style="margin:0 0 6px 0;font-family:'SFMono-Regular','Menlo','Consolas',monospace;font-size:28px;line-height:36px;letter-spacing:6px;font-weight:700;color:#039EA0;text-align:center;background:#F4EFE6;border-radius:8px;padding:14px 0;">
+                {{ .Token }}
+              </p>
+              <p style="margin:0;font-size:12px;line-height:18px;color:#6B7280;text-align:center;">
+                Code expires in 1 hour
+              </p>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px 40px 0 40px;">
+            <div style="border-top:1px solid #F4EFE6;padding-top:20px;">
+              <p style="margin:0 0 8px 0;font-size:13px;line-height:20px;color:#6B7280;">
+                <strong style="color:#0F1416;">Didn't request this?</strong> You can safely ignore this email — your password won't change unless you click the link or enter the code above.
+              </p>
+              <p style="margin:0;font-size:13px;line-height:20px;color:#6B7280;">
+                Need help? Email <a href="mailto:support@specialcarer.com" style="color:#039EA0;text-decoration:none;">support@specialcarer.com</a>.
+              </p>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding:28px 40px 32px 40px;">
+            <p style="margin:0;font-size:12px;line-height:18px;color:#6B7280;">
+              SpecialCarer · A product of <a href="https://specialcarer.com" style="color:#6B7280;text-decoration:underline;">All Care 4 U Group Ltd</a><br>
+              Registered in England &amp; Wales · Company no. 09428739
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
