@@ -37,6 +37,14 @@ export async function GET(req: NextRequest) {
   const fallbackNext = wantsMobile ? "/m/home" : "/dashboard";
   const next = explicitNext || fallbackNext;
 
+  // Password-recovery flows must always land on the set-new-password screen,
+  // never the dashboard. verifyOtp() with type="recovery" creates a real
+  // session (this is how Supabase Auth works), so without this short-circuit
+  // the recovery link would silently sign the user in without forcing them
+  // to set a new password.
+  const isRecovery = type === "recovery";
+  const resetPasswordPath = wantsMobile ? "/m/reset-password" : "/auth/reset-password";
+
   const supabase = await createClient();
 
   try {
@@ -53,6 +61,10 @@ export async function GET(req: NextRequest) {
   } catch {
     const errorTarget = wantsMobile ? "/m/login?error=callback" : "/login?error=callback";
     return NextResponse.redirect(new URL(errorTarget, req.url));
+  }
+
+  if (isRecovery) {
+    return NextResponse.redirect(new URL(resetPasswordPath, req.url));
   }
 
   // Decide where to send the user. If profile is incomplete, push to onboarding.
