@@ -1,14 +1,14 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Avatar,
   IconSend,
   IconPhone,
   IconChevronLeft,
 } from "../../_components/ui";
-import { getChat, type ChatMessage } from "../../_lib/mock";
+import { createClient } from "@/lib/supabase/client";
 import { AttachmentPicker, type SelectedFile } from "../_components/AttachmentPicker";
 import {
   AttachmentList,
@@ -18,23 +18,76 @@ import {
   MAX_PER_MESSAGE,
   uploadAttachment,
 } from "@/lib/chat/attachments-client";
-import {
-  ParticipantsSheet,
-  type Participant,
-} from "../_components/ParticipantsSheet";
+import { ParticipantsSheet } from "../_components/ParticipantsSheet";
 import { InviteFamilySheet } from "../_components/InviteFamilySheet";
 import { QuickReplyChips } from "../_components/QuickReplyChips";
 import type { ChatRole } from "@/lib/chat/quick-replies";
 
 type DraftAttachment = RenderableAttachment & { local_url?: string };
-type LocalMessage = ChatMessage & { attachments?: RenderableAttachment[] };
+
+/** Server message shape (GET .../messages). */
+type ApiMessage = {
+  id: string;
+  thread_id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
+};
+
+/** Local render shape, derived from the server message + viewer id. */
+type LocalMessage = {
+  id: string;
+  fromMe: boolean;
+  text: string;
+  time: string;
+  attachments?: RenderableAttachment[];
+};
+
+type ThreadDetail = {
+  id: string;
+  booking_id: string;
+  pinned: boolean;
+  archived_at: string | null;
+  archived_reason: string | null;
+  viewer_role: ChatRole | "admin";
+  counterpart_name: string | null;
+  counterpart_avatar_url: string | null;
+};
+
+const PAGE_SIZE = 50;
+
+function fmtTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+/** Map a server message to the bubble render shape. Oldest-first. */
+function toLocal(m: ApiMessage, meId: string | null): LocalMessage {
+  return {
+    id: m.id,
+    fromMe: meId !== null && m.sender_id === meId,
+    text: m.body,
+    time: fmtTime(m.created_at),
+  };
+}
 
 export default function ChatThreadPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const data = getChat(params.id);
+  const threadId = params.id ?? null;
 
-  const [messages, setMessages] = useState<LocalMessage[]>(data?.thread ?? []);
+  const [meId, setMeId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<ThreadDetail | null>(null);
+  const [detailError, setDetailError] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const [messages, setMessages] = useState<LocalMessage[]>([]);
+  // Oldest loaded message's created_at — the cursor for "load older".
+  const [oldestCursor, setOldestCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
   const [draft, setDraft] = useState("");
   const [draftAttachments, setDraftAttachments] = useState<DraftAttachment[]>([]);
   const [uploading, setUploading] = useState<{
@@ -45,39 +98,109 @@ export default function ChatThreadPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [participantsOpen, setParticipantsOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
-  // P1-B9.4: pinned is sourced from the mock preview so the header
-  // reflects the list-page state on first render; subsequent toggles are
-  // optimistic-then-PATCH (revert on error).
-  const [pinned, setPinned] = useState<boolean>(data?.preview?.pinned ?? false);
+  const [pinned, setPinned] = useState(false);
   const [pinBusy, setPinBusy] = useState(false);
   const uploadAbort = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // P1-B11: the mock-data thread page has no live thread_id; for now
-  // we render the participants header purely from the carer record so
-  // the surface area exists. The sheets call the real endpoints when
-  // a real threadId is wired up in a follow-up — until then they're
-  // gated behind the seeker viewer flag (mock viewer = seeker).
-  const threadId = params.id ?? null;
-  const viewerIsSeeker = true;
-  const mockParticipants: Participant[] = data?.carer
-    ? [
-        {
-          user_id: "viewer",
-          role: "seeker",
-          display_name: "You",
-          avatar_url: null,
-          added_at: new Date().toISOString(),
-        },
-        {
-          user_id: "carer-1",
-          role: "carer",
-          display_name: data.carer.name,
-          avatar_url: data.carer.photo ?? null,
-          added_at: new Date().toISOString(),
-        },
-      ]
-    : [];
+  // P1-B9.2/B11: the viewer's role drives both the quick-reply chip set
+  // and the "Invite family" affordance (seeker-only). Sourced from the
+  // detail endpoint's participant-role lookup, no longer hardcoded.
+  const viewerRole = detail?.viewer_role ?? "seeker";
+  const viewerIsSeeker = viewerRole === "seeker";
+  const viewerChatRole: ChatRole =
+    viewerRole === "admin" ? "seeker" : viewerRole;
+  const archived = detail?.archived_at != null;
+
+  // Resolve the signed-in user once so `fromMe` can be computed.
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      setMeId(data.user?.id ?? null);
+    });
+  }, []);
+
+  // Load thread detail (role, counterpart, pinned state).
+  useEffect(() => {
+    if (!threadId) return;
+    let cancelled = false;
+    fetch(`/api/m/chat/threads/${encodeURIComponent(threadId)}`, {
+      cache: "no-store",
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(String(res.status));
+        return res.json() as Promise<{ thread: ThreadDetail }>;
+      })
+      .then((json) => {
+        if (cancelled) return;
+        setDetail(json.thread);
+        setPinned(json.thread.pinned);
+      })
+      .catch(() => {
+        if (!cancelled) setDetailError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [threadId]);
+
+  // Initial message page. Re-run once `meId` is known so `fromMe` is
+  // correct without a second mapping pass.
+  useEffect(() => {
+    if (!threadId) return;
+    let cancelled = false;
+    setLoading(true);
+    fetch(
+      `/api/m/chat/threads/${encodeURIComponent(threadId)}/messages?limit=${PAGE_SIZE}`,
+      { cache: "no-store" },
+    )
+      .then((res) => {
+        if (!res.ok) throw new Error(String(res.status));
+        return res.json() as Promise<{ messages: ApiMessage[] }>;
+      })
+      .then((json) => {
+        if (cancelled) return;
+        // Endpoint returns newest-first; render oldest-first.
+        const asc = [...(json.messages ?? [])].reverse();
+        setMessages(asc.map((m) => toLocal(m, meId)));
+        setOldestCursor(asc.length ? asc[0].created_at : null);
+        setHasMore((json.messages ?? []).length === PAGE_SIZE);
+      })
+      .catch(() => {
+        if (!cancelled) setMessages([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [threadId, meId]);
+
+  const loadOlder = useCallback(async () => {
+    if (!threadId || !oldestCursor || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const res = await fetch(
+        `/api/m/chat/threads/${encodeURIComponent(
+          threadId,
+        )}/messages?limit=${PAGE_SIZE}&before=${encodeURIComponent(oldestCursor)}`,
+        { cache: "no-store" },
+      );
+      if (!res.ok) return;
+      const json = (await res.json()) as { messages: ApiMessage[] };
+      const older = [...(json.messages ?? [])].reverse();
+      if (older.length === 0) {
+        setHasMore(false);
+        return;
+      }
+      setMessages((prev) => [...older.map((m) => toLocal(m, meId)), ...prev]);
+      setOldestCursor(older[0].created_at);
+      setHasMore((json.messages ?? []).length === PAGE_SIZE);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [threadId, oldestCursor, loadingMore, hasMore, meId]);
 
   useEffect(() => {
     if (!toast) return;
@@ -87,9 +210,9 @@ export default function ChatThreadPage() {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [messages]);
+  }, [messages.length]);
 
-  if (!data || !data.carer) {
+  if (detailError) {
     return (
       <div className="min-h-screen bg-bg-screen p-6">
         <p className="text-sm text-subheading">Conversation not found.</p>
@@ -103,53 +226,75 @@ export default function ChatThreadPage() {
     );
   }
 
-  const { carer } = data;
+  const title = detail?.counterpart_name ?? "Conversation";
 
-  function send(override?: string) {
+  async function send(override?: string) {
     const text = (override ?? draft).trim();
-    if (!text && draftAttachments.length === 0) return;
+    if ((!text && draftAttachments.length === 0) || !threadId) return;
+
+    const optimisticId = `local-${Date.now()}`;
     setMessages((prev) => [
       ...prev,
       {
-        id: `local-${prev.length + 1}`,
+        id: optimisticId,
         fromMe: true,
         text,
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        time: fmtTime(new Date().toISOString()),
         attachments: draftAttachments.length ? [...draftAttachments] : undefined,
       },
     ]);
     if (override === undefined) setDraft("");
+    const sentAttachments = draftAttachments;
     setDraftAttachments([]);
+
+    // Attachments in this view are previewed locally; the text body is
+    // what the messages endpoint persists. Skip the POST when there's no
+    // text (attachment-only sends remain local until message-linked
+    // uploads are wired — tracked by attachments-client).
+    if (!text) return;
+    try {
+      const res = await fetch(
+        `/api/m/chat/threads/${encodeURIComponent(threadId)}/messages`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ body: text }),
+        },
+      );
+      if (!res.ok) throw new Error(String(res.status));
+      const json = (await res.json()) as { message: ApiMessage };
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === optimisticId
+            ? { ...toLocal(json.message, meId), attachments: m.attachments }
+            : m,
+        ),
+      );
+    } catch {
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
+      setDraftAttachments(sentAttachments);
+      if (override === undefined) setDraft(text);
+      setToast("Message failed to send");
+    }
   }
 
-  // TODO(b9.2-role-detect): replace with real participant-role lookup once
-  // the thread page is wired to the live thread (mock viewer = seeker).
-  const viewerChatRole: ChatRole = viewerIsSeeker ? "seeker" : "carer";
-
-  // P1-B9.4: optimistic pin toggle. The mock thread ids (`ch1`...) are
-  // not UUIDs so the PATCH always 4xx's against the real endpoint — we
-  // catch that and revert. Once the page is wired to a real thread id
-  // (TODO(b9.4-thread-id): swap `threadId` for the persisted thread row
-  // id) the PATCH becomes the source of truth.
   async function togglePin() {
     if (!threadId || pinBusy) return;
     const next = !pinned;
     setPinned(next);
     setPinBusy(true);
     try {
-      const res = await fetch(`/api/m/chat/threads/${threadId}/pin`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pinned: next }),
-      });
+      const res = await fetch(
+        `/api/m/chat/threads/${encodeURIComponent(threadId)}/pin`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pinned: next }),
+        },
+      );
       if (!res.ok) {
-        // 404 against a mock id is expected today — keep the optimistic
-        // state so the demo UX works, but surface real failures to the
-        // user once the thread id is real.
-        if (res.status !== 404) {
-          setPinned(!next);
-          setToast(next ? "Could not pin" : "Could not unpin");
-        }
+        setPinned(!next);
+        setToast(next ? "Could not pin" : "Could not unpin");
       }
     } catch {
       setPinned(!next);
@@ -160,7 +305,6 @@ export default function ChatThreadPage() {
   }
 
   async function handleSelected(file: SelectedFile) {
-    // Local placeholder: optimistic preview while the upload runs.
     const localUrl = URL.createObjectURL(file.blob);
     setUploading({
       filename: file.filename,
@@ -169,12 +313,6 @@ export default function ChatThreadPage() {
     });
     uploadAbort.current = new AbortController();
     try {
-      // In this mock-driven view there is no real message_id yet — when
-      // wired to the live thread, replace `local-draft` with the persisted
-      // message id returned from POST /messages. For now we attach the
-      // local preview directly so the UX is testable end-to-end.
-      // TODO(b9.1-wiring): replace local-draft with real message id once
-      // the chat thread page is migrated off the mock store.
       const result = await uploadAttachment({
         message_id: "local-draft",
         file: file.blob,
@@ -198,8 +336,6 @@ export default function ChatThreadPage() {
           { ...result.attachment, signed_url: result.signed_url },
         ]);
       } else {
-        // Offline / mock fallback: still let the user "send" with a
-        // locally previewed attachment so the UI demo works.
         setDraftAttachments((prev) => [
           ...prev,
           {
@@ -246,12 +382,20 @@ export default function ChatThreadPage() {
             aria-label="View participants"
           >
             <div className="flex -space-x-2">
-              <Avatar src={carer.photo} size={36} name={carer.name} />
+              <Avatar
+                src={detail?.counterpart_avatar_url ?? undefined}
+                size={36}
+                name={title}
+              />
             </div>
           </button>
           <div className="min-w-0 flex-1 leading-tight">
-            <p className="truncate text-[15px] font-semibold text-heading">{carer.name}</p>
-            <p className="text-[11px] text-primary">Online</p>
+            <p className="truncate text-[15px] font-semibold text-heading">
+              {title}
+            </p>
+            <p className="text-[11px] text-primary">
+              {archived ? "Archived" : "Online"}
+            </p>
           </div>
           {viewerIsSeeker ? (
             <button
@@ -293,8 +437,20 @@ export default function ChatThreadPage() {
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4">
+        {hasMore ? (
+          <div className="mb-3 flex justify-center">
+            <button
+              type="button"
+              onClick={loadOlder}
+              disabled={loadingMore}
+              className="rounded-full bg-muted px-4 py-1.5 text-[12px] font-medium text-heading disabled:opacity-50"
+            >
+              {loadingMore ? "Loading…" : "Load earlier messages"}
+            </button>
+          </div>
+        ) : null}
         <div className="mx-auto mb-4 w-fit rounded-full bg-muted px-3 py-1 text-[11px] text-subheading">
-          Today
+          {loading ? "Loading…" : "Today"}
         </div>
         <ul className="flex flex-col gap-2">
           {messages.map((m) => (
@@ -332,7 +488,7 @@ export default function ChatThreadPage() {
         <QuickReplyChips
           role={viewerChatRole}
           onSelect={(text) => send(text)}
-          disabled={!!uploading}
+          disabled={!!uploading || archived}
         />
         <div className="px-4 pb-3">
         {uploading ? (
@@ -408,7 +564,7 @@ export default function ChatThreadPage() {
             onSelected={handleSelected}
             onError={(m) => setToast(m)}
             disabled={
-              !!uploading || draftAttachments.length >= MAX_PER_MESSAGE
+              !!uploading || archived || draftAttachments.length >= MAX_PER_MESSAGE
             }
           />
           <textarea
@@ -421,12 +577,13 @@ export default function ChatThreadPage() {
               }
             }}
             rows={1}
-            placeholder="Type a message"
-            className="max-h-32 flex-1 resize-none rounded-2xl bg-muted px-4 py-2.5 text-[15px] text-heading placeholder:text-subheading focus:outline-none focus:ring-2 focus:ring-primary/30"
+            placeholder={archived ? "This conversation is archived" : "Type a message"}
+            disabled={archived}
+            className="max-h-32 flex-1 resize-none rounded-2xl bg-muted px-4 py-2.5 text-[15px] text-heading placeholder:text-subheading focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
           />
           <button
             onClick={() => send()}
-            disabled={!draft.trim() && draftAttachments.length === 0}
+            disabled={archived || (!draft.trim() && draftAttachments.length === 0)}
             className="grid h-11 w-11 place-items-center rounded-full bg-primary text-white shadow-card transition active:scale-95 disabled:bg-muted disabled:text-subheading"
             aria-label="Send"
           >
@@ -449,10 +606,6 @@ export default function ChatThreadPage() {
         onClose={() => setParticipantsOpen(false)}
         threadId={threadId}
         viewerIsSeeker={viewerIsSeeker}
-        // Mock-mode fetcher returns the synthesized seeker+carer list so
-        // the sheet renders meaningfully on the demo thread.
-        fetchParticipants={async () => mockParticipants}
-        onRemove={async () => ({ ok: true })}
         onInvite={() => {
           setParticipantsOpen(false);
           setInviteOpen(true);
@@ -462,7 +615,6 @@ export default function ChatThreadPage() {
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
         threadId={threadId}
-        onSubmit={async () => ({ ok: true })}
         onSent={(email) => setToast(`Invite sent to ${email}`)}
       />
     </div>

@@ -363,7 +363,14 @@ export const STATUS_TONE: Record<
 };
 
 // ---- Chat ----------------------------------------------------------------
+//
+// @deprecated The /m/chat surface now reads live Supabase data via
+// `GET /api/m/chat/threads` (list), `GET /api/m/chat/threads/[id]`
+// (detail) and `.../messages` (history). These mock chat exports are no
+// longer wired to any page — kept for one release cycle as a rollback
+// safety net, then to be deleted. Do not add new consumers.
 
+/** @deprecated see the chat section note above. */
 export type ChatPreview = {
   id: string;
   carerId: string;
@@ -376,6 +383,7 @@ export type ChatPreview = {
   lastAttachmentKind?: "image" | "pdf";
 };
 
+/** @deprecated see the chat section note above. */
 export type ChatMessage = {
   id: string;
   fromMe: boolean;
@@ -383,6 +391,7 @@ export type ChatMessage = {
   time: string;
 };
 
+/** @deprecated see the chat section note above. */
 export const CHATS: ChatPreview[] = [
   { id: "ch1", carerId: "carer_aisha", lastMessage: "Sure, I'll be there at 10.", when: "10:24", unread: 2, pinned: true },
   { id: "ch2", carerId: "carer_marcus", lastMessage: "Thanks for booking!", when: "Yesterday", unread: 0 },
@@ -390,6 +399,7 @@ export const CHATS: ChatPreview[] = [
   { id: "ch4", carerId: "carer_olivia", lastMessage: "See you on Friday.", when: "21 Apr", unread: 0 },
 ];
 
+/** @deprecated see the chat section note above. */
 export const CHAT_THREAD: Record<string, ChatMessage[]> = {
   ch1: [
     { id: "m1", fromMe: false, text: "Hi! Looking forward to meeting you tomorrow.", time: "09:42" },
@@ -400,6 +410,7 @@ export const CHAT_THREAD: Record<string, ChatMessage[]> = {
   ],
 };
 
+/** @deprecated see the chat section note above. */
 export function getChat(id: string) {
   const preview = CHATS.find((c) => c.id === id);
   if (!preview) return undefined;
