@@ -81,8 +81,9 @@ export const PLANS: ReadonlyArray<{
  * Plan-aware platform fee (in percent). Returned at booking time so the
  * seeker sees their member discount applied.
  *
- * Default fee = 30% (set via STRIPE_PLATFORM_FEE_PERCENT). These overrides
- * apply to bookings where the seeker has an active membership.
+ * Carer-side platform fee, read from `STRIPE_CARER_FEE_PERCENT` env var
+ * (currently 30%, see src/lib/fees/config.ts). These overrides apply to
+ * bookings where the seeker has an active membership.
  */
 export const PLAN_PLATFORM_FEE_PERCENT: Record<MembershipPlan, number> = {
   lite: 30,    // standard

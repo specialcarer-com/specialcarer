@@ -1,4 +1,9 @@
 /**
+ * Canonical platform fee source. Carer-side fee is 30% (set via
+ * STRIPE_CARER_FEE_PERCENT env var). Client-side fee is 0%
+ * (STRIPE_CLIENT_FEE_PERCENT). Defaults of 25%/0% only apply when env
+ * vars are unset.
+ *
  * Fee model constants — isomorphic (safe to import from client components).
  *
  * The Stripe-aware helpers in `@/lib/stripe/server` are server-only because
