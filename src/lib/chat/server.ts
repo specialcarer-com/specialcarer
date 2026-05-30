@@ -153,18 +153,27 @@ export async function getOrCreateBookingThread(
 /**
  * Most recent `limit` messages in a thread, newest first. RLS on the
  * user-scoped client ensures only participants can read.
+ *
+ * Pass `before` (an ISO `created_at`) to page backwards into history:
+ * the query then returns the newest `limit` messages strictly older than
+ * that timestamp. Cursor-based rather than offset-based so concurrent
+ * inserts can't skip or duplicate a row across pages.
  */
 export async function listMessages(
   threadId: string,
   limit = 50,
+  before?: string,
 ): Promise<ChatMessage[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("chat_messages")
     .select("id, thread_id, sender_id, body, created_at")
     .eq("thread_id", threadId)
-    .order("created_at", { ascending: false })
-    .limit(limit);
+    .order("created_at", { ascending: false });
+  if (before) {
+    query = query.lt("created_at", before);
+  }
+  const { data, error } = await query.limit(limit);
   if (error) {
     throw new Error(`chat_list_failed: ${error.message}`);
   }

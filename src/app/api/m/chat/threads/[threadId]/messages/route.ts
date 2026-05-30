@@ -25,8 +25,9 @@ function parseLimit(raw: string | null): number {
 }
 
 /**
- * GET /api/m/chat/threads/[threadId]/messages?limit=50
+ * GET /api/m/chat/threads/[threadId]/messages?limit=50&before=<iso>
  * Returns {messages: ChatMessage[]} newest-first. RLS gates results.
+ * `before` pages backwards into history (cursor on created_at).
  */
 export async function GET(
   req: Request,
@@ -48,8 +49,9 @@ export async function GET(
 
   const url = new URL(req.url);
   const limit = parseLimit(url.searchParams.get("limit"));
+  const before = url.searchParams.get("before") ?? undefined;
   try {
-    const messages = await listMessages(threadId, limit);
+    const messages = await listMessages(threadId, limit, before);
     return NextResponse.json({ messages });
   } catch (e) {
     console.error("[chat.messages.GET] failed", e);
