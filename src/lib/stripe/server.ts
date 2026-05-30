@@ -25,22 +25,22 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 });
 
 /**
- * SpecialCarer fee model: single-sided 25% deduction from the carer.
+ * SpecialCarer fee model: single-sided 30% deduction from the carer.
  *
  *   Client uplift:    0%   (the client pays exactly the listed rate)
- *   Carer deduction:  25%  (deducted from the carer's listed rate)
+ *   Carer deduction:  30%  (deducted from the carer's listed rate)
  *
  * The carer's listed hourly rate is what the client pays — no surprise
- * uplift at checkout. The platform deducts 25% from the carer's payout
+ * uplift at checkout. The platform deducts 30% from the carer's payout
  * via Stripe's application_fee_amount.
  *
  * Worked example for 10h × £18/hr in the UK:
  *   listed_rate × hours    = 18000   (subtotalCents — what the carer set)
  *   client uplift (0%)     =     0
  *   client pays (total)    = 18000   (== subtotal)               ← charged to card
- *   carer deduction (25%)  =  4500
- *   carer payout           = 13500   (subtotal × 0.75)           ← lands in carer's bank
- *   platform keeps         =  4500   (deduction = 25% of subtotal)
+ *   carer deduction (30%)  =  5400
+ *   carer payout           = 12600   (subtotal × 0.70)           ← lands in carer's bank
+ *   platform keeps         =  5400   (deduction = 30% of subtotal)
  *
  * Database semantics:
  *   subtotal_cents     = listed_rate × hours          (== client paid; == carer gross)
@@ -55,7 +55,7 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
  *   amount                 = total_cents              (charged to the seeker's card)
  *   application_fee_amount = platform_fee_cents       (kept by SpecialCarer)
  *   transfer destination   = carer's connected account
- *   carer ultimately receives total − application_fee = subtotal × 0.75
+ *   carer ultimately receives total − application_fee = subtotal × 0.70
  *
  * Constants live in `@/lib/fees/config` so client components (e.g. the
  * profile editor) can import them without pulling Stripe into the bundle.
