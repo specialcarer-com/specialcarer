@@ -1,5 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { US_REGION_ENABLED } from "@/lib/region";
 import type { CoverageCity } from "@/lib/coverage-types";
 
 /**
@@ -18,11 +19,18 @@ export async function listCoverageCities(): Promise<CoverageCity[]> {
   } catch {
     return [];
   }
-  const { data, error } = await admin
+  let query = admin
     .from("coverage_cities")
     .select(
       "id, slug, name, country, region, lat, lng, status, carer_count, avg_response_min, verticals, timezone, launched_at",
-    )
+    );
+  // US region UI is hidden until the US launch; only surface GB cities so
+  // that /coverage and /coverage/[slug] (which both flow through here) never
+  // render US rows, counters, or addressCountry: "US" JSON-LD.
+  if (!US_REGION_ENABLED) {
+    query = query.eq("country", "GB");
+  }
+  const { data, error } = await query
     .order("country", { ascending: true })
     .order("status", { ascending: true })
     .order("name", { ascending: true });
