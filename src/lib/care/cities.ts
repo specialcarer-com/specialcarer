@@ -1,3 +1,5 @@
+import { US_REGION_ENABLED } from "@/lib/region";
+
 export type CityEntry = {
   slug: string;
   countrySlug: "uk" | "us";
@@ -8,7 +10,7 @@ export type CityEntry = {
   neighbourhoods: string[]; // marketing copy only
 };
 
-export const CITIES: CityEntry[] = [
+const UK_CITIES: CityEntry[] = [
   {
     slug: "london",
     countrySlug: "uk",
@@ -26,6 +28,126 @@ export const CITIES: CityEntry[] = [
       "Wandsworth",
       "Kensington & Chelsea",
       "Richmond",
+    ],
+  },
+  {
+    slug: "birmingham",
+    countrySlug: "uk",
+    country: "GB",
+    city: "Birmingham",
+    region: "England",
+    blurb:
+      "Birmingham&rsquo;s growing community of vetted caregivers — from Edgbaston to Solihull — supports families with childcare, special-needs, and elder care.",
+    neighbourhoods: [
+      "City Centre",
+      "Edgbaston",
+      "Moseley",
+      "Selly Oak",
+      "Sutton Coldfield",
+      "Solihull",
+      "Harborne",
+    ],
+  },
+  {
+    slug: "bristol",
+    countrySlug: "uk",
+    country: "GB",
+    city: "Bristol",
+    region: "England",
+    blurb:
+      "Vetted Bristol caregivers across Clifton, Bedminster, Redland, and the wider city — supporting families with childcare, elder care, and special-needs support.",
+    neighbourhoods: [
+      "Clifton",
+      "Bedminster",
+      "Redland",
+      "Bishopston",
+      "Southville",
+      "Stokes Croft",
+    ],
+  },
+  {
+    slug: "cardiff",
+    countrySlug: "uk",
+    country: "GB",
+    city: "Cardiff",
+    region: "Wales",
+    blurb:
+      "Cardiff caregivers covering Cathays, Roath, Pontcanna, and the bay — DBS-checked and ready for one-off bookings or recurring schedules.",
+    neighbourhoods: [
+      "Cathays",
+      "Roath",
+      "Pontcanna",
+      "Canton",
+      "Cardiff Bay",
+      "Llanishen",
+    ],
+  },
+  {
+    slug: "edinburgh",
+    countrySlug: "uk",
+    country: "GB",
+    city: "Edinburgh",
+    region: "Scotland",
+    blurb:
+      "Edinburgh caregivers from Leith to Morningside — vetted, background-checked, and ready to support families across the city.",
+    neighbourhoods: [
+      "Leith",
+      "Morningside",
+      "Stockbridge",
+      "Newington",
+      "Portobello",
+      "Corstorphine",
+    ],
+  },
+  {
+    slug: "glasgow",
+    countrySlug: "uk",
+    country: "GB",
+    city: "Glasgow",
+    region: "Scotland",
+    blurb:
+      "Glasgow caregivers covering the West End, Southside, and city centre — supporting families with childcare, elder care, and complex care.",
+    neighbourhoods: [
+      "West End",
+      "Southside",
+      "City Centre",
+      "Dennistoun",
+      "Shawlands",
+      "Partick",
+    ],
+  },
+  {
+    slug: "leeds",
+    countrySlug: "uk",
+    country: "GB",
+    city: "Leeds",
+    region: "England",
+    blurb:
+      "Leeds caregivers across Headingley, Chapel Allerton, and the wider city — DBS-checked and ready for one-off or recurring care.",
+    neighbourhoods: [
+      "Headingley",
+      "Chapel Allerton",
+      "Roundhay",
+      "Horsforth",
+      "City Centre",
+      "Meanwood",
+    ],
+  },
+  {
+    slug: "liverpool",
+    countrySlug: "uk",
+    country: "GB",
+    city: "Liverpool",
+    region: "England",
+    blurb:
+      "Liverpool caregivers from the city centre to Allerton and Woolton — vetted, background-checked, and ready to support local families.",
+    neighbourhoods: [
+      "City Centre",
+      "Allerton",
+      "Woolton",
+      "Aigburth",
+      "Wavertree",
+      "Crosby",
     ],
   },
   {
@@ -48,23 +170,27 @@ export const CITIES: CityEntry[] = [
     ],
   },
   {
-    slug: "birmingham",
+    slug: "newcastle",
     countrySlug: "uk",
     country: "GB",
-    city: "Birmingham",
+    city: "Newcastle",
     region: "England",
     blurb:
-      "Birmingham&rsquo;s growing community of vetted caregivers — from Edgbaston to Solihull — supports families with childcare, special-needs, and elder care.",
+      "Newcastle caregivers across Jesmond, Gosforth, Heaton, and the city centre — supporting families with childcare, elder care, and special-needs support.",
     neighbourhoods: [
+      "Jesmond",
+      "Gosforth",
+      "Heaton",
       "City Centre",
-      "Edgbaston",
-      "Moseley",
-      "Selly Oak",
-      "Sutton Coldfield",
-      "Solihull",
-      "Harborne",
+      "Gateshead",
+      "Tynemouth",
     ],
   },
+];
+
+// US cities are kept here behind the NEXT_PUBLIC_REGION_US_ENABLED flag.
+// They are hidden from production until the US launch (expected 2027).
+const US_CITIES: CityEntry[] = [
   {
     slug: "new-york",
     countrySlug: "us",
@@ -104,6 +230,10 @@ export const CITIES: CityEntry[] = [
     ],
   },
 ];
+
+export const CITIES: CityEntry[] = US_REGION_ENABLED
+  ? [...UK_CITIES, ...US_CITIES]
+  : UK_CITIES;
 
 export function getCity(countrySlug: string, citySlug: string): CityEntry | undefined {
   return CITIES.find(

@@ -6,12 +6,12 @@ import PageHeroBanner from "@/components/page-hero-banner";
 export const metadata: Metadata = {
   title: "For employers — backup care benefits | SpecialCarer",
   description:
-    "Reduce parental absenteeism and improve retention with employer-sponsored backup childcare, elder care, and special-needs support. UK + US single contract.",
+    "Reduce parental absenteeism and improve retention with employer-sponsored backup childcare, elder care, and special-needs support. A single UK-wide contract.",
 };
 
 const stats = [
   { v: "1 in 4", l: "working parents reduce hours due to care gaps" },
-  { v: "$22B", l: "annual lost productivity from US care breakdowns" },
+  { v: "£8B", l: "annual lost productivity from UK care breakdowns" },
   { v: "62%", l: "of carers say backup care would change retention" },
 ];
 
@@ -29,8 +29,8 @@ const features = [
     c: "Per-employee plans for transparency, pooled-credit plans for predictable spend.",
   },
   {
-    t: "UK + US single contract",
-    c: "One vendor, one invoice, one privacy framework — no managing separate providers across markets.",
+    t: "Single UK-wide contract",
+    c: "One vendor, one invoice, one privacy framework — no managing separate providers across regions.",
   },
   {
     t: "Real reporting",

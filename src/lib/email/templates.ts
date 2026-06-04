@@ -522,7 +522,7 @@ export function renderOrgApprovedEmail(args: {
     `<p>Hi ${escOrgHtml(args.bookerName)},</p>
     <p>Welcome aboard. <strong>${escOrgHtml(args.legalName)}</strong> is now verified on SpecialCarer.</p>
     <p>Your countersigned MSA and DPA are now available on your dashboard — open the Documents tab to download.</p>
-    <p>You can book any of our DBS / Checkr-cleared carers directly from your dashboard. Pricing stays at the same UK / US standard rates — no setup fees.</p>
+    <p>You can book any of our DBS-checked carers directly from your dashboard. Pricing stays at our standard UK rates — no setup fees.</p>
     <p style="margin:24px 0">
       <a href="https://specialcarer.com/m/org/carers" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
         Browse carers

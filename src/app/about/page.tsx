@@ -5,7 +5,7 @@ import MarketingShell from "@/components/marketing-shell";
 export const metadata: Metadata = {
   title: "About SpecialCarer — All Care 4 U Group Limited",
   description:
-    "SpecialCarer is a product of All Care 4 U Group Limited — building a marketplace for trusted, vetted caregivers across the UK and US.",
+    "SpecialCarer is a product of All Care 4 U Group Limited — building a marketplace for trusted, vetted caregivers across the UK.",
 };
 
 export default function Page() {

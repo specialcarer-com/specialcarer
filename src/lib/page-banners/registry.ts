@@ -135,7 +135,7 @@ export const PAGE_BANNER_SLOTS: PageBannerSlot[] = [
     group: "Marketing",
     path: "/care-in",
     fallbackGradient: teal,
-    defaultAlt: "Care available across the UK and US",
+    defaultAlt: "Care available across the UK",
   },
   // ── Audiences ──
   {

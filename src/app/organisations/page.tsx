@@ -52,7 +52,7 @@ const PROOF = [
   {
     title: "Vetted supply",
     body:
-      "Every carer has Enhanced DBS / Checkr equivalent, Right to Work, references, and identity verification.",
+      "Every carer has an Enhanced DBS check, Right to Work, references, and identity verification.",
     href: "/trust",
     cta: "How we vet carers →",
   },
@@ -123,7 +123,7 @@ const FAQS: { q: string; a: string }[] = [
   {
     q: "What pre-employment checks do your carers undergo?",
     a:
-      "Identity + selfie verification; Enhanced DBS (UK) or Checkr equivalent (US); Right to Work; certifications upload with admin verification; references; signed code of conduct.",
+      "Identity + selfie verification; Enhanced DBS check via the UK Disclosure and Barring Service; Right to Work; certifications upload with admin verification; references; signed code of conduct.",
   },
   {
     q: "Do you have a DPA we can review?",
@@ -314,8 +314,8 @@ export default function OrganisationsPage() {
             We only work with verified organisations.
           </h2>
           <p className="mt-4 max-w-3xl mx-auto text-center text-slate-700 leading-relaxed">
-            We cross-check Companies House, CQC, Ofsted, Charity Commission, and
-            equivalent US registries before a single booking is permitted. We
+            We cross-check Companies House, CQC, Ofsted, and the Charity
+            Commission before a single booking is permitted. We
             require proof of address, public liability insurance, and an
             authorised signatory. Your service users are protected from fraud
             and unsuitable buyers.

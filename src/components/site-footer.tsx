@@ -120,11 +120,11 @@ export default function SiteFooter() {
             />
           </Link>
           <p className="mt-4 text-[#0f3a3a]">
-            On-demand, vetted caregivers for families across the UK and US. A
+            On-demand, vetted caregivers for families across the UK. A
             product of All Care 4 U Group Limited.
           </p>
           <p className="mt-4 text-xs text-[#1f4e4d]">
-            For care emergencies dial 999 (UK) or 911 (US). Use the in-app SOS
+            For care emergencies dial 999. Use the in-app SOS
             button for active-shift incidents.
           </p>
 

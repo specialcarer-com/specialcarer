@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import MarketingShell from "@/components/marketing-shell";
 import PageHeroBanner from "@/components/page-hero-banner";
+import { US_REGION_ENABLED } from "@/lib/region";
 
 export const metadata: Metadata = {
   title: "Trust & Safety — SpecialCarer",
@@ -18,7 +19,7 @@ const pillars = [
   {
     title: "Background checks",
     body:
-      "UK caregivers complete an Enhanced DBS through uCheck (with Children's and/or Adults' Barred List as appropriate). US caregivers complete a Checkr screening covering national criminal database, county records (7+ years), and SSN trace. Specific check level depends on the role.",
+      "Caregivers complete an Enhanced DBS check via the UK Disclosure and Barring Service (with Children's and/or Adults' Barred List as appropriate), refreshed annually. Specific check level depends on the role.",
   },
   {
     title: "Live shift tracking",
@@ -48,11 +49,15 @@ const insurance = [
     detail:
       "Caregivers are independent contractors and required to confirm they hold or are exempt from public liability cover. SpecialCarer Limited holds marketplace operator insurance covering platform-level negligence and a backstop for loss-of-property and bodily-injury claims up to limits set out in our T&Cs.",
   },
-  {
-    geo: "US",
-    detail:
-      "Caregivers operate as independent contractors on a state-by-state basis. We carry commercial general liability cover for marketplace operations. Caregivers are responsible for any state-specific licensing and cover for their work category (e.g. CNA / HHA).",
-  },
+  ...(US_REGION_ENABLED
+    ? [
+        {
+          geo: "US",
+          detail:
+            "Caregivers operate as independent contractors on a state-by-state basis. We carry commercial general liability cover for marketplace operations. Caregivers are responsible for any state-specific licensing and cover for their work category (e.g. CNA / HHA).",
+        },
+      ]
+    : []),
 ];
 
 export default function Page() {
@@ -143,16 +148,16 @@ export default function Page() {
                 We are not a regulated care agency.
               </strong>{" "}
               SpecialCarer is a marketplace that introduces families to
-              independent caregivers. We are not registered with CQC (UK) or
-              equivalent state regulators (US). For CQC-regulated personal
-              care, choose a registered provider.
+              independent caregivers. We are not registered with the Care
+              Quality Commission (CQC). For CQC-regulated personal care, choose
+              a registered provider.
             </li>
             <li className="bg-white p-4 rounded-xl border border-slate-100">
               <strong className="text-slate-900">
                 We are not an emergency service.
               </strong>{" "}
-              Dial 999 (UK) or 911 (US) for medical, fire, or police
-              emergencies. Use in-app SOS for active-shift incidents.
+              Dial 999 for medical, fire, or police emergencies. Use in-app
+              SOS for active-shift incidents.
             </li>
             <li className="bg-white p-4 rounded-xl border border-slate-100">
               <strong className="text-slate-900">
@@ -236,7 +241,7 @@ export default function Page() {
               >
                 <p className="font-semibold text-slate-900">Insurance summary</p>
                 <p className="mt-1 text-xs text-slate-600">
-                  UK and US cover, plus what carers are recommended to carry.
+                  UK cover, plus what carers are recommended to carry.
                 </p>
               </Link>
             </li>

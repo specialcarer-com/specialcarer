@@ -4,7 +4,7 @@ import ServicePage from "@/components/service-page";
 export const metadata: Metadata = {
   title: "Visiting care — SpecialCarer",
   description:
-    "Scheduled visiting care across the UK and US — daily, weekly, one-off, or waking-night visits with vetted, background-checked caregivers. From £18/hour (UK), $25/hour (US).",
+    "Scheduled visiting care across the UK — daily, weekly, one-off, or waking-night visits with vetted, DBS-checked caregivers. From £18/hour.",
 };
 
 export default function Page() {
@@ -28,9 +28,8 @@ export default function Page() {
         "Real-time check-in and check-out so families know they've arrived",
       ]}
       certifications={[
-        "Enhanced DBS (UK)",
-        "Checkr criminal-record (US)",
-        "Right-to-work / I-9 verified",
+        "Enhanced DBS",
+        "Right-to-work verified",
         "Manual handling training",
         "First aid certified",
         "Safeguarding Level 1+",
@@ -39,7 +38,7 @@ export default function Page() {
       faqs={[
         {
           q: "How are visiting carers paid?",
-          a: "Visits are billed by the hour at the rate set by the caregiver — typically from £18/hour in the UK and $25/hour in the US. SpecialCarer's 30% service fee is added on top. Final price is shown clearly before you confirm a booking.",
+          a: "Visits are billed by the hour at the rate set by the caregiver — typically from £18/hour across the UK. SpecialCarer's 30% service fee is added on top. Final price is shown clearly before you confirm a booking.",
         },
         {
           q: "What's the minimum visit length?",

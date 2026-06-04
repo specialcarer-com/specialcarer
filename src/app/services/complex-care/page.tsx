@@ -4,7 +4,7 @@ import ServicePage from "@/components/service-page";
 export const metadata: Metadata = {
   title: "Complex care — SpecialCarer",
   description:
-    "Clinically trained caregivers for complex needs — PEG/tracheostomy care, ventilator support, seizure management, palliative and end-of-life care. UK and US, fully vetted and matched to your medical brief.",
+    "Clinically trained caregivers for complex needs — PEG/tracheostomy care, ventilator support, seizure management, palliative and end-of-life care. Across the UK, fully vetted and matched to your medical brief.",
 };
 
 export default function Page() {
@@ -27,10 +27,9 @@ export default function Page() {
         "Continuing Healthcare (CHC) package support — UK",
       ]}
       certifications={[
-        "Registered Nurse (NMC, UK) or RN/LPN (US) — verified",
-        "Healthcare Assistant with clinical competencies (UK) / CNA (US)",
-        "Enhanced DBS with Children's & Adults' Barred List (UK)",
-        "Checkr enhanced healthcare-sanctions screening (US)",
+        "Registered Nurse (NMC) — verified",
+        "Healthcare Assistant with clinical competencies",
+        "Enhanced DBS with Children's & Adults' Barred List",
         "Tracheostomy care competency",
         "Tube-feed competency (PEG/NG/JEJ)",
         "Basic life support (BLS) within last 12 months",

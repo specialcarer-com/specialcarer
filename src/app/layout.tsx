@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 export const metadata: Metadata = {
   title: "SpecialCarer — Trusted care, on your schedule",
   description:
-    "On-demand and scheduled childcare, elder care, and home support from vetted, background-checked caregivers. UK & US.",
+    "On-demand and scheduled childcare, elder care, and home support from vetted, DBS-checked caregivers across the UK.",
   metadataBase: new URL("https://specialcarer.com"),
   manifest: "/site.webmanifest",
   icons: {

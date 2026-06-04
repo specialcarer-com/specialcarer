@@ -6,7 +6,7 @@ import PageHeroBanner from "@/components/page-hero-banner";
 export const metadata: Metadata = {
   title: "Become a caregiver — SpecialCarer",
   description:
-    "Apply to caregive on SpecialCarer. Keep 70% of every shift. Free background check. Same-day payouts. UK + US.",
+    "Apply to caregive on SpecialCarer. Keep 70% of every shift. Free DBS background check. Same-day payouts. Across the UK.",
 };
 
 const reasons = [
@@ -16,7 +16,7 @@ const reasons = [
   },
   {
     t: "Free background check",
-    c: "We pay for your Enhanced DBS (UK) or Checkr screening (US). Renewals are on us too.",
+    c: "We pay for your Enhanced DBS check via the UK Disclosure and Barring Service. Renewals are on us too.",
   },
   {
     t: "Same-day payouts",
@@ -37,9 +37,9 @@ const reasons = [
 ];
 
 const requirements = [
-  "Right to work in the UK or US",
+  "Right to work in the UK",
   "18 years or older",
-  "Pass an Enhanced DBS (UK) or Checkr (US) background check",
+  "Pass an Enhanced DBS background check",
   "Provide ID + selfie verification",
   "At least one verifiable reference",
   "Smartphone (iOS or Android)",
@@ -152,7 +152,7 @@ export default function Page() {
           </ul>
           <p className="mt-4 text-xs text-slate-500">
             Independent contractor model — you&rsquo;re responsible for your
-            own taxes (UK self-assessment / US 1099). We provide annual earnings
+            own taxes (UK self-assessment). We provide annual earnings
             statements to help.
           </p>
         </div>

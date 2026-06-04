@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Insurance — SpecialCarer",
   description:
-    "Insurance summary for SpecialCarer / All Care 4 U Group Ltd. UK and US cover, with recommendations for independent carers.",
+    "Insurance summary for SpecialCarer / All Care 4 U Group Ltd. UK cover, with recommendations for independent carers.",
 };
 
 export default async function InsurancePage() {

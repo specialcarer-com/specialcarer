@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import MarketingShell from "@/components/marketing-shell";
 import CaregiverCard from "@/components/caregiver-card";
 import HeroSearch from "@/components/hero-search";
@@ -16,14 +15,15 @@ import CoverageMap from "@/components/coverage-map-lazy";
 
 export const metadata: Metadata = {
   title:
-    "SpecialCarer — Vetted, on-demand caregivers for families in the UK & US",
+    "Special Carers — Vetted UK Carers, Babysitters & Nannies | specialcarers.com",
   description:
-    "Book trusted, background-checked caregivers for elderly care, childcare, special-needs, postnatal and complex clinical care. Live shift tracking, escrow payments, transparent pricing. Available across the UK and US.",
+    "Find a Special Carer — DBS-checked RSWs, HCAs, babysitters and nannies in London and across the UK. Book vetted care in minutes.",
   alternates: { canonical: "https://specialcarer.com/" },
   openGraph: {
-    title: "SpecialCarer — Vetted, on-demand caregivers for families",
+    title:
+      "Special Carers — Vetted UK Carers, Babysitters & Nannies | specialcarers.com",
     description:
-      "Background-checked, on-demand carers for elderly care, childcare, special-needs, postnatal and complex care. UK + US.",
+      "Find a Special Carer — DBS-checked RSWs, HCAs, babysitters and nannies in London and across the UK. Book vetted care in minutes.",
     url: "https://specialcarer.com/",
     siteName: "SpecialCarer",
     type: "website",
@@ -42,15 +42,6 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  // Detect visitor country via Vercel's edge header (falls back to GB)
-  const reqHeaders = await headers();
-  const ipCountry = (
-    reqHeaders.get("x-vercel-ip-country") ||
-    reqHeaders.get("cf-ipcountry") ||
-    ""
-  ).toUpperCase();
-  const isUS = ipCountry === "US";
-
   const [featured, publishedCities, coverageCities] = await Promise.all([
     searchCaregivers({ limit: 6 }).then((r) => r.slice(0, 6)),
     listPublishedCities(),
@@ -129,19 +120,17 @@ export default async function Home() {
       <HomeBanner placement="home_top" />
 
       {/* Hero banner video */}
-      <HeroBanner isUS={isUS} />
+      <HeroBanner />
 
       {/* Hero */}
       <section className="px-6 pt-12 pb-20 sm:pt-16 sm:pb-28 max-w-5xl mx-auto text-center">
         <h1 className="text-4xl sm:text-6xl font-semibold tracking-tight text-slate-900">
-          {isUS
-            ? "Background-checked carers, on your schedule."
-            : "Trusted care, on your schedule."}
+          Trusted care, on your schedule.
         </h1>
         <p className="mt-6 text-lg sm:text-xl text-slate-600 max-w-2xl mx-auto">
-          {isUS
-            ? "On-demand and scheduled childcare, elder care, and special-needs support from Checkr-verified caregivers. Book in minutes. Track, message, and pay in one place."
-            : "On-demand and scheduled childcare, elder care, and special-needs support from vetted, background-checked caregivers. Book in minutes. Track, message, and pay in one place."}
+          On-demand and scheduled childcare, elder care, and special-needs
+          support from vetted, DBS-checked caregivers. Book in minutes. Track,
+          message, and pay in one place.
         </p>
 
         <HeroSearch cities={heroCities} />
@@ -181,8 +170,8 @@ export default async function Home() {
           </Link>
         </div>
         <p className="mt-4 text-xs text-slate-500">
-          Background checks via uCheck (UK) and Checkr (US). Payments held in
-          escrow until shifts complete.
+          DBS-checked carers via the UK Disclosure and Barring Service. Payments
+          held in escrow until shifts complete.
         </p>
       </section>
 
@@ -193,13 +182,7 @@ export default async function Home() {
             <span className="font-semibold text-brand-700">
               Honest pricing.
             </span>
-            <span className={isUS ? "order-2" : "order-1"}>
-              From £18/hr in the UK
-            </span>
-            <span className="text-slate-300">•</span>
-            <span className={isUS ? "order-1" : "order-2"}>
-              From $25/hr in the US
-            </span>
+            <span>From £18/hr across the UK</span>
             <span className="text-slate-300">•</span>
             <span>No subscription</span>
             <span className="text-slate-300">•</span>
@@ -235,10 +218,10 @@ export default async function Home() {
       <section className="px-6 pb-4 pt-4">
         <div className="max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
           {[
-            { k: "100%", v: "Background-checked" },
+            { k: "100%", v: "DBS-checked" },
             { k: "24h", v: "Average match time" },
             { k: "30%", v: "Flat platform fee" },
-            { k: "UK + US", v: "Day-one coverage" },
+            { k: "UK-wide", v: "Day-one coverage" },
           ].map((s) => (
             <div
               key={s.v}
@@ -403,8 +386,8 @@ export default async function Home() {
           </div>
           <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { k: "Enhanced DBS", v: "UK background checks via uCheck" },
-              { k: "Checkr-verified", v: "US national + county records" },
+              { k: "Enhanced DBS", v: "UK Disclosure and Barring Service checks" },
+              { k: "Annual refresh", v: "DBS status re-checked every year" },
               { k: "ID + selfie match", v: "Verified at signup, re-checked yearly" },
               { k: "Live shift tracking", v: "Real-time location for active bookings" },
             ].map((t) => (
@@ -489,7 +472,7 @@ export default async function Home() {
               What families say
             </h2>
             <p className="mt-3 text-slate-600">
-              Stories from early users across the UK and US.
+              Stories from early users across the UK.
             </p>
           </div>
           <div className="mt-10 grid lg:grid-cols-3 gap-6">
@@ -507,7 +490,7 @@ export default async function Home() {
               {
                 q: "I\u2019ve worked through agencies for ten years. SpecialCarer is the first platform where I keep most of what I earn — and I pick my own shifts.",
                 n: "Aisha R.",
-                d: "Caregiver · Los Angeles",
+                d: "Caregiver · Birmingham",
               },
             ].map((t) => (
               <figure
@@ -591,7 +574,7 @@ export default async function Home() {
                   {
                     label: "Background checks",
                     sc: {
-                      v: "Enhanced DBS (uCheck, UK) or Checkr (US) — we pay",
+                      v: "Enhanced DBS via the UK Disclosure and Barring Service — we pay",
                       good: true,
                     },
                     ag: { v: "Included — cost baked into agency fee" },
@@ -694,7 +677,7 @@ export default async function Home() {
             >
               FTC Consumer Alert, August 2024
             </a>
-            . Agency markup ranges based on UK CQC and US senior-care
+            . Agency markup ranges based on UK CQC and home-care
             industry averages; your local agency may differ.
           </p>
 
@@ -718,8 +701,7 @@ export default async function Home() {
           <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 items-center justify-center">
             {[
               { name: "Stripe", note: "Payments + escrow" },
-              { name: "uCheck", note: "UK background checks" },
-              { name: "Checkr", note: "US background checks" },
+              { name: "DBS", note: "UK background checks" },
               { name: "Mapbox", note: "Live shift tracking" },
             ].map((p) => (
               <div
@@ -762,7 +744,7 @@ export default async function Home() {
             <div className="lg:justify-self-end">
               <ul className="space-y-3 text-sm text-slate-200">
                 <li>• Per-employee or pooled-credit plans</li>
-                <li>• UK + US single contract</li>
+                <li>• Single UK-wide contract</li>
                 <li>• SOC2-aligned data handling, full RLS</li>
                 <li>• Usage dashboards &amp; quarterly reporting</li>
               </ul>
@@ -820,23 +802,17 @@ export default async function Home() {
               Where we cover
             </h2>
             <p className="mt-3 text-slate-600">
-              Live in cities across the UK and US, with new ones every month.
+              Live in cities across the UK, with new ones every month.
             </p>
           </div>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            {[
-              { slug: "london", country: "uk", label: "London" },
-              { slug: "manchester", country: "uk", label: "Manchester" },
-              { slug: "birmingham", country: "uk", label: "Birmingham" },
-              { slug: "new-york", country: "us", label: "New York" },
-              { slug: "los-angeles", country: "us", label: "Los Angeles" },
-            ].map((c) => (
+            {CITIES.slice(0, 6).map((c) => (
               <Link
                 key={c.slug}
-                href={`/care-in/${c.country}/${c.slug}`}
+                href={`/care-in/${c.countrySlug}/${c.slug}`}
                 className="px-4 py-2 rounded-full bg-white border border-slate-200 text-sm text-slate-700 hover:bg-slate-100 transition"
               >
-                {c.label}
+                {c.city}
               </Link>
             ))}
             <Link
@@ -858,7 +834,7 @@ export default async function Home() {
                 We are in {coverageLiveCount} cities and counting
               </h2>
               <p className="mt-3 text-slate-600">
-                {coverageLiveCount} live across the UK and US, with{" "}
+                {coverageLiveCount} live across the UK, with{" "}
                 {coverageCities.filter((c) => c.status === "waitlist").length}{" "}
                 more on the waitlist. Hover any pin for details.
               </p>
@@ -1371,7 +1347,7 @@ export default async function Home() {
                               <div className="text-[5px] text-slate-500">6+ years</div>
                               <div className="mt-0.5 flex items-center justify-between">
                                 <div className="text-[7px] font-semibold text-slate-900">
-                                  $25
+                                  £18
                                 </div>
                                 <button className="rounded-md bg-brand-500 px-1.5 py-0.5 text-[6px] font-semibold text-white">
                                   Book Slot
@@ -1433,7 +1409,7 @@ function Tick() {
 const HOMEPAGE_FAQ = [
   {
     q: "How does SpecialCarer vet caregivers?",
-    a: "Every caregiver completes identity verification with a selfie match, plus full background checks — Enhanced DBS via uCheck for the UK and Checkr (national + county) for the US. We also verify right-to-work status. Profiles only go live once all checks have cleared.",
+    a: "Every caregiver completes identity verification with a selfie match, plus an Enhanced DBS check via the UK Disclosure and Barring Service, refreshed annually. We also verify right-to-work status. Profiles only go live once all checks have cleared.",
   },
   {
     q: "How does payment work?",
@@ -1452,7 +1428,7 @@ const HOMEPAGE_FAQ = [
     a: "Yes. Save caregivers you like to your favourites and rebook them in one click. Many of our families build long-term relationships with the same one or two caregivers.",
   },
   {
-    q: "Do you cover the UK and US?",
-    a: "Yes — both markets from day one. We\u2019re actively live in major UK and US metros, with new cities going live every month. Background checks, payments, and tax handling are localised to each region.",
+    q: "Where do you operate?",
+    a: "We currently operate across the UK, with the broadest carer supply in London. New cities are being added monthly. International expansion is on our roadmap but not available at launch.",
   },
 ];

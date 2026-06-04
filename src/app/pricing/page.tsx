@@ -145,8 +145,8 @@ export default function Page() {
           </div>
           <p className="mt-4 text-xs text-slate-500">
             Caregivers on SpecialCarer are independent contractors responsible
-            for their own taxes (UK self-assessment / US 1099). Service fee may
-            be adjusted by 1–2% to cover Stripe processing in some regions —
+            for their own taxes (UK self-assessment). Service fee may
+            be adjusted by 1–2% to cover Stripe processing —
             always shown clearly at checkout.
           </p>
         </div>

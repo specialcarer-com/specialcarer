@@ -1,14 +1,10 @@
-type HeroBannerProps = {
-  isUS?: boolean;
-};
-
 /**
  * Silent looping hero banner that sits directly under the top nav.
  * Mobile: shows poster + plays inline (silent autoplay is allowed when muted).
  * Desktop: full-bleed cinematic loop with a soft gradient overlay so any
  *   text placed above it (e.g. eyebrow chip / H1) stays legible.
  */
-export function HeroBanner({ isUS }: HeroBannerProps) {
+export function HeroBanner() {
   return (
     <div className="relative w-full overflow-hidden bg-slate-900">
       <video
@@ -36,9 +32,7 @@ export function HeroBanner({ isUS }: HeroBannerProps) {
       <div className="absolute inset-x-0 bottom-0 px-6 pb-6 sm:pb-10">
         <div className="max-w-5xl mx-auto text-center">
           <span className="inline-block px-3 py-1 rounded-full bg-white/95 text-brand-700 text-xs font-medium shadow-sm">
-            {isUS
-              ? "Background-checked carers · UK + US"
-              : "Vetted carers · UK + US"}
+            Vetted carers across the UK
           </span>
           <p className="mt-3 text-white text-lg sm:text-xl font-medium drop-shadow-sm max-w-2xl mx-auto">
             Childcare · Elderly care · Special-needs · Postnatal support
