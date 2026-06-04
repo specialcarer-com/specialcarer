@@ -189,7 +189,7 @@ export default async function CityPage({
           <p className="mt-3 text-slate-600 leading-relaxed">
             Every caregiver completes ID verification, an{" "}
             {entry.country === "GB"
-              ? "Enhanced DBS check via uCheck (with the relevant Barred List)"
+              ? "Enhanced DBS check via the UK Disclosure and Barring Service (with the relevant Barred List)"
               : "Checkr screening covering national criminal records, county records, and the Sex Offender Registry"}
             , and is monitored throughout each shift via live location. See our
             full{" "}

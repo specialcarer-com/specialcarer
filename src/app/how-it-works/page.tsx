@@ -57,7 +57,7 @@ const caregiver = [
   {
     n: "3",
     t: "Pass your background check",
-    c: "Enhanced DBS in the UK (via uCheck) or Checkr in the US. We pay for the first check; subsequent re-checks are at our cost too.",
+    c: "Enhanced DBS check via the UK Disclosure and Barring Service, refreshed annually. We pay for the first check; subsequent re-checks are at our cost too.",
   },
   {
     n: "4",

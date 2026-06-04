@@ -4,7 +4,7 @@ import ServicePage from "@/components/service-page";
 export const metadata: Metadata = {
   title: "Childcare & babysitters — SpecialCarer",
   description:
-    "Background-checked babysitters, nannies, and after-school caregivers across the UK and US. Book by the hour, evening, or recurring schedule.",
+    "DBS-checked babysitters, nannies, and after-school caregivers across the UK. Book by the hour, evening, or recurring schedule.",
 };
 
 export default function Page() {
@@ -13,7 +13,7 @@ export default function Page() {
       bannerKey="services.childcare"
       eyebrow="Childcare"
       title="RSW/HCA, Babysitters &amp; nannies, vetted by us."
-      lede="From a one-off date night to ongoing after-school care, find caregivers who are DBS- or Checkr-verified, paediatric first-aid trained, and rated by other parents in your area."
+      lede="From a one-off date night to ongoing after-school care, find caregivers who are DBS-checked, paediatric first-aid trained, and rated by other parents in your area."
       bullets={[
         "Date-night babysitting (3 hours and up)",
         "After-school pickup and homework help",
@@ -27,11 +27,9 @@ export default function Page() {
         "Pre-screened for your specific age range",
       ]}
       certifications={[
-        "Enhanced DBS (UK)",
-        "Checkr criminal-record (US)",
-        "Paediatric first aid (UK)",
-        "Infant/Child CPR (US)",
-        "Ofsted-registered (UK, where applicable)",
+        "Enhanced DBS",
+        "Paediatric first aid",
+        "Ofsted-registered (where applicable)",
         "Safeguarding Level 1+",
         "Early Years Educator (Level 3)",
       ]}
@@ -46,7 +44,7 @@ export default function Page() {
         },
         {
           q: "How much do caregivers cost?",
-          a: "Caregivers set their own rates, typically £14–£22/hour in the UK and $20–$35/hour in the US. SpecialCarer adds a 30% service fee that covers verification, insurance, support, and payment processing. See our Pricing page for full transparency.",
+          a: "Caregivers set their own rates, typically £14–£22/hour across the UK. SpecialCarer adds a 30% service fee that covers verification, insurance, support, and payment processing. See our Pricing page for full transparency.",
         },
         {
           q: "Can caregivers drive my children?",

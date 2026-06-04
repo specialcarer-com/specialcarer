@@ -20,11 +20,12 @@ import {
 } from "@/lib/care/postcode";
 import { geocodePostcode } from "@/lib/mapbox/server";
 import { createClient } from "@/lib/supabase/server";
+import { US_REGION_ENABLED } from "@/lib/region";
 
 export const metadata: Metadata = {
   title: "Find vetted caregivers — SpecialCarer",
   description:
-    "Search background-checked, payouts-enabled caregivers across the UK and US. Filter by service, city, and budget.",
+    "Search DBS-checked, payouts-enabled caregivers across the UK. Filter by service, city, and budget.",
 };
 
 export const dynamic = "force-dynamic";
@@ -215,12 +216,14 @@ export default async function FindCarePage({
             />
           </label>
           <label className="text-sm sm:col-span-1 lg:col-span-2">
-            <span className="text-slate-700 font-medium">Postcode / ZIP</span>
+            <span className="text-slate-700 font-medium">
+              {US_REGION_ENABLED ? "Postcode / ZIP" : "Postcode"}
+            </span>
             <input
               type="text"
               name="postcode"
               defaultValue={sp.postcode ?? ""}
-              placeholder="e.g. SW1A 1AA or 10001"
+              placeholder={US_REGION_ENABLED ? "e.g. SW1A 1AA or 10001" : "e.g. SW1A 1AA"}
               autoComplete="postal-code"
               className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand"
             />
@@ -284,18 +287,20 @@ export default async function FindCarePage({
               ))}
             </select>
           </label>
-          <label className="text-sm">
-            <span className="text-slate-700 font-medium">Country</span>
-            <select
-              name="country"
-              defaultValue={country ?? ""}
-              className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
-            >
-              <option value="">UK + US</option>
-              <option value="GB">UK</option>
-              <option value="US">US</option>
-            </select>
-          </label>
+          {US_REGION_ENABLED && (
+            <label className="text-sm">
+              <span className="text-slate-700 font-medium">Country</span>
+              <select
+                name="country"
+                defaultValue={country ?? ""}
+                className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
+              >
+                <option value="">UK + US</option>
+                <option value="GB">UK</option>
+                <option value="US">US</option>
+              </select>
+            </label>
+          )}
           <div className="text-sm grid grid-cols-2 gap-2">
             <label>
               <span className="text-slate-700 font-medium">Min /hr</span>

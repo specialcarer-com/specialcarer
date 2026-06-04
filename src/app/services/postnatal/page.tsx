@@ -4,7 +4,7 @@ import ServicePage from "@/components/service-page";
 export const metadata: Metadata = {
   title: "Postnatal & newborn care — SpecialCarer",
   description:
-    "Maternity nurses, night nannies, and breastfeeding peer support. Newborn-trained, background-checked caregivers across the UK and US.",
+    "Maternity nurses, night nannies, and breastfeeding peer support. Newborn-trained, DBS-checked caregivers across the UK.",
 };
 
 export default function Page() {
@@ -27,13 +27,11 @@ export default function Page() {
         "Postnatal recovery and C-section support",
       ]}
       certifications={[
-        "Enhanced DBS (UK)",
-        "Checkr criminal-record (US)",
-        "Maternity Nurse training (UK)",
-        "Newborn Care Specialist (US)",
+        "Enhanced DBS",
+        "Maternity Nurse training",
         "Lactation peer-supporter (BFI / IBCLC pathway)",
         "Paediatric first aid",
-        "Safer sleep training (Lullaby Trust / Safe to Sleep)",
+        "Safer sleep training (Lullaby Trust)",
       ]}
       faqs={[
         {

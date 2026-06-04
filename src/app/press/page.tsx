@@ -30,9 +30,9 @@ const FACTS: { k: string; v: string }[] = [
   { k: "Operating company", v: "All Care 4 U Group Limited" },
   { k: "Companies House", v: "09428739 (England & Wales, incorporated 9 February 2015)" },
   { k: "Registered office", v: "85 Great Portland Street, London, England, W1W 7LT" },
-  { k: "Markets", v: "United Kingdom and United States" },
+  { k: "Markets", v: "United Kingdom" },
   { k: "Care verticals", v: "Elderly care, childcare, special-needs, postnatal" },
-  { k: "Background checks", v: "uCheck (UK Enhanced DBS, right-to-work, digital ID), Checkr (US national + county criminal, healthcare sanctions)" },
+  { k: "Background checks", v: "Enhanced DBS via the UK Disclosure and Barring Service (right-to-work, digital ID), refreshed annually" },
   { k: "Payments", v: "Stripe Connect — manual capture, 24-hour escrow hold post-shift" },
   { k: "Live tracking", v: "Mapbox — real-time location during active bookings" },
   { k: "Take rate", v: "Flat 30% platform fee. Caregivers keep 70%." },
@@ -53,11 +53,6 @@ const STORIES: { angle: string; pitch: string }[] = [
     angle: "Backup care as employee benefit",
     pitch:
       "We work with HR teams running absenteeism and retention programmes. Subsidised on-demand care for elder, child, and special-needs cover keeps parents and family carers in the workforce. Available data on what drives uptake.",
-  },
-  {
-    angle: "Single-contract UK + US care benefit",
-    pitch:
-      "Most cross-border employers struggle to roll out a single care-benefit programme across their UK and US workforce. SpecialCarer ships day-one in both markets with localised checks, payouts and tax handling.",
   },
 ];
 
@@ -125,8 +120,8 @@ export default function Page() {
         </h1>
         <p className="mt-6 text-lg text-slate-600 leading-relaxed">
           Resources for journalists, analysts, and partners covering
-          SpecialCarer and the broader vetted-caregiver market in the UK and
-          US. For interview requests or quick comment, the press contact is
+          SpecialCarer and the broader vetted-caregiver market across the UK.
+          For interview requests or quick comment, the press contact is
           below.
         </p>
         <div className="mt-8 flex flex-col sm:flex-row gap-3">
@@ -193,12 +188,11 @@ export default function Page() {
             About SpecialCarer (50-word boilerplate)
           </h2>
           <p className="mt-4 text-slate-600 leading-relaxed">
-            SpecialCarer is an on-demand marketplace for vetted, background-checked
-            caregivers across the United Kingdom and United States. Families
-            book elderly care, childcare, special-needs and postnatal support
-            in minutes, with live shift tracking, escrow payments, and a flat
-            30% platform fee. SpecialCarer is a product of All Care 4 U Group
-            Limited.
+            SpecialCarer is an on-demand marketplace for vetted, DBS-checked
+            caregivers across the United Kingdom. Families book elderly care,
+            childcare, special-needs and postnatal support in minutes, with
+            live shift tracking, escrow payments, and a flat 30% platform fee.
+            SpecialCarer is a product of All Care 4 U Group Limited.
           </p>
           <h2 className="mt-10 text-2xl font-semibold text-slate-900">
             About SpecialCarer (long version)
@@ -209,10 +203,9 @@ export default function Page() {
               caregivers — across childcare, elderly care, special-needs
               support, and postnatal care. Every caregiver completes
               identity verification, full background checks, and right-to-work
-              verification before their profile goes live. UK checks run
-              through uCheck (Enhanced DBS, digital ID) and US checks run
-              through Checkr (national + county criminal records, healthcare
-              sanctions screening).
+              verification before their profile goes live. Checks run through
+              an Enhanced DBS check via the UK Disclosure and Barring Service
+              (with digital ID), refreshed annually.
             </p>
             <p>
               Bookings are paid through Stripe in escrow: payments are
@@ -224,12 +217,12 @@ export default function Page() {
               button for active-shift emergencies.
             </p>
             <p>
-              SpecialCarer launched simultaneously in the United Kingdom and
-              United States, with localised background checks, payments and
-              tax handling for each region. The platform is also offered to
-              employers as a backup-care benefit, with per-employee or
-              pooled-credit plans designed to reduce absenteeism and improve
-              retention of working parents and family carers.
+              SpecialCarer operates across the United Kingdom, with the
+              broadest carer supply in London and new cities added monthly.
+              The platform is also offered to employers as a backup-care
+              benefit, with per-employee or pooled-credit plans designed to
+              reduce absenteeism and improve retention of working parents and
+              family carers.
             </p>
           </div>
         </div>

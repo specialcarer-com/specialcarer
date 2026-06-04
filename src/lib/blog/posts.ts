@@ -125,9 +125,7 @@ Before a caregiver can do anything else, they upload a photo of a government-iss
 
 ## Step 2: Background check
 
-UK caregivers complete an Enhanced DBS through our partner uCheck. Depending on the type of work declared, the check includes the Children&rsquo;s and/or Adults&rsquo; Barred List. Results typically come back in 24–72 hours.
-
-US caregivers complete a Checkr screening including SSN trace, national criminal database, county records (typically 7+ years), and the National Sex Offender Registry. Results typically come back in 1–5 business days.
+Caregivers complete an Enhanced DBS check via the UK Disclosure and Barring Service, refreshed annually. Depending on the type of work declared, the check includes the Children&rsquo;s and/or Adults&rsquo; Barred List. Results typically come back in 24–72 hours.
 
 We don&rsquo;t accept self-uploaded background checks. Every check is run through our verified vendor pipeline.
 

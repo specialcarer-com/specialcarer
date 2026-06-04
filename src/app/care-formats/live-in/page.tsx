@@ -4,7 +4,7 @@ import ServicePage from "@/components/service-page";
 export const metadata: Metadata = {
   title: "Live-in care — SpecialCarer",
   description:
-    "Live-in caregivers across the UK and US. A vetted, background-checked caregiver moves in for a placement of several days at a time. Paid as a weekly rate.",
+    "Live-in caregivers across the UK. A vetted, DBS-checked caregiver moves in for a placement of several days at a time. Paid as a weekly rate.",
 };
 
 export default function Page() {
@@ -27,9 +27,8 @@ export default function Page() {
         "Caregivers receive their own private room and daily breaks",
       ]}
       certifications={[
-        "Enhanced DBS (UK)",
-        "Checkr criminal-record (US)",
-        "Right-to-work / I-9 verified",
+        "Enhanced DBS",
+        "Right-to-work verified",
         "Manual handling training",
         "Medication awareness",
         "First aid certified",
@@ -38,7 +37,7 @@ export default function Page() {
       faqs={[
         {
           q: "How are live-in carers paid?",
-          a: "Live-in placements are billed as a weekly rate set by the caregiver, not by the hour. Indicative ranges are £700–£900/week in the UK and $1,000–$1,400/week in the US, depending on complexity of care and whether nights are sleeping or waking. SpecialCarer's 30% service fee is added on top.",
+          a: "Live-in placements are billed as a weekly rate set by the caregiver, not by the hour. Indicative ranges are £700–£900/week across the UK, depending on complexity of care and whether nights are sleeping or waking. SpecialCarer's 30% service fee is added on top.",
         },
         {
           q: "How long does a live-in caregiver stay?",

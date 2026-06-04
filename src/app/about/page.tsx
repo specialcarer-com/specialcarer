@@ -5,7 +5,7 @@ import MarketingShell from "@/components/marketing-shell";
 export const metadata: Metadata = {
   title: "About SpecialCarer — All Care 4 U Group Limited",
   description:
-    "SpecialCarer is a product of All Care 4 U Group Limited — building a marketplace for trusted, vetted caregivers across the UK and US.",
+    "SpecialCarer is a product of All Care 4 U Group Limited — building a marketplace for trusted, vetted caregivers across the UK.",
 };
 
 export default function Page() {
@@ -62,11 +62,11 @@ export default function Page() {
             </li>
             <li>
               <strong className="text-slate-900">
-                The UK and the US are not the same.
+                Built for the UK.
               </strong>{" "}
-              We&rsquo;ve built for both from day one — different
-              background-check vendors, different payment rails, different
-              regulatory frameworks.
+              Every carer is DBS-checked, and we&rsquo;ve built around the UK
+              care sector&rsquo;s regulatory framework and payment rails from
+              day one.
             </li>
           </ul>
         </div>
@@ -89,8 +89,7 @@ export default function Page() {
           <p className="mt-3 text-slate-600 leading-relaxed">
             All Care 4 U Group has been operating in the UK care sector for
             over a decade. SpecialCarer is the technology platform we&rsquo;re
-            building to scale that experience to more families across the UK
-            and US.
+            building to scale that experience to more families across the UK.
           </p>
         </div>
       </section>

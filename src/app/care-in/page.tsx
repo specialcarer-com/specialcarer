@@ -7,12 +7,13 @@ import { CITIES } from "@/lib/care/cities";
 export const metadata: Metadata = {
   title: "Care by city — SpecialCarer",
   description:
-    "SpecialCarer covers cities across the UK and US. Find vetted caregivers near you.",
+    "SpecialCarer covers cities across the UK. Find vetted caregivers near you.",
 };
 
 export default function Page() {
   const uk = CITIES.filter((c) => c.country === "GB");
   const us = CITIES.filter((c) => c.country === "US");
+  const showUs = us.length > 0;
 
   return (
     <MarketingShell>
@@ -25,13 +26,15 @@ export default function Page() {
           Care, city by city.
         </h1>
         <p className="mt-4 text-lg text-slate-600 max-w-2xl">
-          We&rsquo;re live in cities across the UK and US, with new ones added
+          We&rsquo;re live in cities across the UK, with new ones added
           monthly. Browse caregivers near you.
         </p>
       </section>
 
       <section className="px-6 py-10 bg-slate-50">
-        <div className="max-w-5xl mx-auto grid lg:grid-cols-2 gap-10">
+        <div
+          className={`max-w-5xl mx-auto grid gap-10 ${showUs ? "lg:grid-cols-2" : "lg:grid-cols-1"}`}
+        >
           <div>
             <h2 className="text-2xl font-semibold text-slate-900">
               United Kingdom
@@ -60,6 +63,7 @@ export default function Page() {
               ))}
             </ul>
           </div>
+          {showUs && (
           <div>
             <h2 className="text-2xl font-semibold text-slate-900">
               United States
@@ -88,6 +92,7 @@ export default function Page() {
               ))}
             </ul>
           </div>
+          )}
         </div>
       </section>
 

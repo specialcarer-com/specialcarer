@@ -27,8 +27,7 @@ export default function Page() {
         "School holiday and PA-style support",
       ]}
       certifications={[
-        "Enhanced DBS with Children's & Adults' Barred List (UK)",
-        "Checkr enhanced screening (US)",
+        "Enhanced DBS with Children's & Adults' Barred List",
         "PECS Level 1",
         "Team Teach / MAPA (positive behaviour support)",
         "Makaton",

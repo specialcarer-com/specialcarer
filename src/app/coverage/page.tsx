@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Where SpecialCarer is available — Coverage map",
   description:
-    "Care, in 25+ cities across the UK and US. See where SpecialCarer is live, on the waitlist, and coming soon. Search by postcode or ZIP.",
+    "Care, in cities across the UK. See where SpecialCarer is live, on the waitlist, and coming soon. Search by postcode.",
   alternates: { canonical: "https://specialcarer.com/coverage" },
 };
 
@@ -60,7 +60,7 @@ export default async function CoveragePage() {
               Coverage
             </p>
             <h1 className="mt-3 text-4xl sm:text-5xl font-semibold tracking-tight text-slate-900">
-              Care, in {cities.length}+ cities across the UK and US
+              Care, in {cities.length}+ cities across the UK
             </h1>
             <p className="mt-4 text-base sm:text-lg text-slate-600">
               {liveCount} cities live. {waitlistCount} more on the waitlist.

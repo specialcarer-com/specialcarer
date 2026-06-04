@@ -6,7 +6,7 @@ import { BookingTypeTabs } from "../_components/booking-type-tabs";
 export const metadata: Metadata = {
   title: "Visiting care · SpecialCarer",
   description:
-    "By the hour, available now or scheduled. Live ETAs and transparent hourly pricing in the UK and US.",
+    "By the hour, available now or scheduled. Live ETAs and transparent hourly pricing across the UK.",
 };
 
 type Tab = "now" | "schedule" | "recurring";

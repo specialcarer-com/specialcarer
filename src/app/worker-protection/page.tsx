@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import MarketingShell from "@/components/marketing-shell";
 import { getSupportConfig } from "@/lib/support/config";
+import { US_REGION_ENABLED } from "@/lib/region";
 
 export const dynamic = "force-dynamic";
 
@@ -35,8 +36,8 @@ export default async function WorkerProtectionPage() {
           Worker protections
         </h1>
         <p className="mt-2 text-sm text-slate-600">
-          Hotline: UK {cfg.hotline_phone_uk} · US {cfg.hotline_phone_us} ·
-          Email{" "}
+          Hotline: UK {cfg.hotline_phone_uk}
+          {US_REGION_ENABLED ? ` · US ${cfg.hotline_phone_us}` : ""} · Email{" "}
           <a
             href={`mailto:${cfg.support_email}`}
             className="text-brand-700 hover:underline"
@@ -59,7 +60,7 @@ export default async function WorkerProtectionPage() {
           >
             <p className="font-semibold text-slate-900">Insurance summary</p>
             <p className="mt-1 text-xs text-slate-600">
-              UK and US cover, and what we recommend independent carers carry.
+              UK cover, and what we recommend independent carers carry.
             </p>
           </Link>
           <Link

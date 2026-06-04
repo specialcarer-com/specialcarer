@@ -4,7 +4,7 @@ import ServicePage from "@/components/service-page";
 export const metadata: Metadata = {
   title: "Elderly care at home — SpecialCarer",
   description:
-    "Vetted elderly carers for companionship, mobility, dementia-friendly support, medication reminders, and respite. Available across the UK and US.",
+    "Vetted elderly carers for companionship, mobility, dementia-friendly support, medication reminders, and respite. Available across the UK.",
 };
 
 export default function Page() {
@@ -27,10 +27,8 @@ export default function Page() {
         "Hospital discharge and post-surgery recovery",
       ]}
       certifications={[
-        "Enhanced DBS (UK)",
-        "Checkr criminal-record (US)",
-        "Care Certificate (UK)",
-        "CNA / Home Health Aide (US)",
+        "Enhanced DBS",
+        "Care Certificate",
         "Manual handling training",
         "Dementia Friends",
         "First aid certified",
