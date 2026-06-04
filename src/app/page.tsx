@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   },
 };
 
-// Geo-personalisation reads request headers, so each render must be dynamic
+// Reads Supabase auth/session state per request, so each render must be dynamic
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
