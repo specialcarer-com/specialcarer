@@ -698,7 +698,7 @@ export default async function Home() {
           <p className="text-center text-xs uppercase tracking-wider text-slate-500">
             Backed by, partnered with &amp; built on
           </p>
-          <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 items-center justify-center">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             {[
               { name: "Stripe", note: "Payments + escrow" },
               { name: "DBS", note: "UK background checks" },
@@ -706,7 +706,7 @@ export default async function Home() {
             ].map((p) => (
               <div
                 key={p.name}
-                className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-center"
+                className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-center w-[calc(50%-0.375rem)] sm:w-40"
               >
                 <div className="font-semibold text-slate-700 text-sm">
                   {p.name}
