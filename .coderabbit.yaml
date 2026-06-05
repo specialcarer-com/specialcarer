@@ -1,0 +1,120 @@
+# CodeRabbit configuration for specialcarer-com/specialcarer
+# Docs: https://docs.coderabbit.ai/guides/configure-coderabbit
+
+language: en-GB
+early_access: false
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+  changed_files_summary: true
+  sequence_diagrams: false
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  suggested_labels: false
+  auto_apply_labels: false
+  suggested_reviewers: false
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+    base_branches:
+      - main
+  path_filters:
+    - "!**/*.lock"
+    - "!**/node_modules/**"
+    - "!**/.next/**"
+    - "!**/dist/**"
+    - "!**/build/**"
+    - "!**/coverage/**"
+    - "!**/*.snap"
+    - "!public/**/*.svg"
+    - "!**/migrations/**"
+
+  path_instructions:
+    - path: "src/**/*.{ts,tsx}"
+      instructions: |
+        IMPORTANT REGIONAL FLAG — this project is UK-only until Q1-Q2 2027.
+        Every Supabase query that touches caregivers, cities, or coverage MUST
+        either (a) filter by country = "GB", or (b) be gated on US_REGION_ENABLED
+        from "@/lib/region".
+
+        Specifically flag as BLOCKING:
+        - searchCaregivers(...) called WITHOUT a country filter
+        - listCoverageCities() / getCoverageCity() bypass of country filter
+        - listPublishedCities() called without the (US_REGION_ENABLED ? undefined : "GB") guard
+        - Hard-coded US city strings ("New York", "Los Angeles", "Chicago", "Houston", "Phoenix") in any user-visible JSX/copy
+        - "$" currency symbols in user-visible copy
+        - "Checkr" or "uCheck" referenced as a vendor (use "DBS" instead)
+        - "addressCountry: \"US\"" in schema.org JSON-LD
+        - "across the UK and US" or "UK and the US" body copy
+
+        Brand constants — flag DEVIATIONS:
+        - Teal #039EA0, Accent #F4A261, Cream #F4EFE6, Ink #0F1416
+        - Font: Plus Jakarta Sans ONLY (no other typefaces)
+        - Pricing model: 30% deduction from carer's side (gross-to-carer rate cards must reflect this)
+
+        Scope discipline — flag SCOPE CREEP:
+        - PRs touching legal pages (/terms, /privacy) when not in title
+        - PRs touching /m (mobile flow) unless explicitly mentioned
+        - PRs renaming "Special Carer" to plural — that's a separate Sprint 6 task
+        - PRs modifying .github/workflows/supabase-migrations.yml — that trigger is deliberately frozen
+
+    - path: "src/app/**/*.tsx"
+      instructions: |
+        Server components. Flag any client-only code (useState, useEffect, onClick) that lacks a "use client" directive.
+
+    - path: "src/lib/region.ts"
+      instructions: |
+        This is the regional feature flag. Changes here have site-wide impact. Require an explicit "OK to flip" in the PR description before approving.
+
+    - path: "supabase/migrations/**"
+      instructions: |
+        Migration filenames MUST be 14-digit YYYYMMDDHHMMSS prefix. Reject any 6-digit or 8-digit timestamps. Flag any DROP TABLE or DROP COLUMN without an explicit "destructive: confirmed" line in the PR description.
+
+    - path: ".github/workflows/**"
+      instructions: |
+        DO NOT touch supabase-migrations.yml trigger config. Flag any modification to its `on:` block as BLOCKING.
+
+  tools:
+    github-checks:
+      enabled: true
+      timeout_ms: 90000
+    languagetool:
+      enabled: true
+      language: en-GB
+      level: default
+      disabled_rules:
+        - EN_UNPAIRED_BRACKETS
+        - EN_GB_SIMPLE_REPLACE
+    markdownlint:
+      enabled: true
+    biome:
+      enabled: true
+    eslint:
+      enabled: true
+    yamllint:
+      enabled: true
+    checkov:
+      enabled: false
+    gitleaks:
+      enabled: true
+    actionlint:
+      enabled: true
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  opt_out: false
+  learnings:
+    scope: auto
+  issues:
+    scope: auto
+  pull_requests:
+    scope: auto
