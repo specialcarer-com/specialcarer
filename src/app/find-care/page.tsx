@@ -58,8 +58,10 @@ export default async function FindCarePage({
   searchParams: Promise<SearchParams>;
 }) {
   const sp = await searchParams;
-  const country =
+  const rawCountry =
     sp.country === "US" || sp.country === "GB" ? sp.country : undefined;
+  // When US region is hidden, force GB so ?country=US in old URLs cannot leak US carers.
+  const country = US_REGION_ENABLED ? rawCountry : "GB";
   const service = isServiceKey(sp.service) ? sp.service : undefined;
   const format = isCareFormatKey(sp.format) ? sp.format : undefined;
   const city = sp.city?.trim() || undefined;
