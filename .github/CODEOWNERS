@@ -1,0 +1,91 @@
+# SpecialCarer CODEOWNERS
+# https://docs.github.com/en/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Rules:
+#   - Last matching pattern wins.
+#   - Patterns follow gitignore syntax.
+#   - Owners must have write access to the repo.
+#
+# When you hire your first engineer, add them as a second owner on the relevant
+# scopes (don't replace BYHomeOwner — pair them). Example pattern in comments below.
+
+# ---------------------------------------------------------------------------
+# Default owner — everything not matched below falls through to here
+# ---------------------------------------------------------------------------
+*                                       @BYHomeOwner
+
+# ---------------------------------------------------------------------------
+# CI / infra / repo governance — high blast radius
+# ---------------------------------------------------------------------------
+/.github/                               @BYHomeOwner
+/.github/workflows/                     @BYHomeOwner
+/.github/CODEOWNERS                     @BYHomeOwner
+/.coderabbit.yaml                       @BYHomeOwner
+
+# ---------------------------------------------------------------------------
+# Money — Stripe, payouts, fees, escrow
+# ---------------------------------------------------------------------------
+/src/lib/stripe/                        @BYHomeOwner
+/src/lib/fees/                          @BYHomeOwner
+/src/lib/earnings/                      @BYHomeOwner
+/src/lib/payroll/                       @BYHomeOwner
+/src/app/api/stripe/                    @BYHomeOwner
+
+# ---------------------------------------------------------------------------
+# Auth, identity, sessions — security boundary
+# ---------------------------------------------------------------------------
+/src/app/auth/                          @BYHomeOwner
+/src/middleware.ts                      @BYHomeOwner
+
+# ---------------------------------------------------------------------------
+# Webhooks — external systems calling us; signature verification lives here
+# ---------------------------------------------------------------------------
+/src/app/api/stripe/webhook/            @BYHomeOwner
+/src/app/api/stripe/org-invoice/webhook/ @BYHomeOwner
+/src/app/api/checkr/webhook/            @BYHomeOwner
+/src/app/api/uchecks/webhook/           @BYHomeOwner
+/src/app/api/admin/webhooks/            @BYHomeOwner
+
+# ---------------------------------------------------------------------------
+# Background checks — regulated data (DBS / Checkr / uCheck)
+# ---------------------------------------------------------------------------
+/src/lib/dbs/                           @BYHomeOwner
+/src/lib/checkr/                        @BYHomeOwner
+/src/app/api/background-checks/         @BYHomeOwner
+/src/app/api/checkr/                    @BYHomeOwner
+
+# ---------------------------------------------------------------------------
+# Database — schema and data shape
+# ---------------------------------------------------------------------------
+/supabase/migrations/                   @BYHomeOwner
+/supabase/seed.sql                      @BYHomeOwner
+/supabase/config.toml                   @BYHomeOwner
+
+# ---------------------------------------------------------------------------
+# Admin surfaces — operational tooling, can take prod down
+# ---------------------------------------------------------------------------
+/src/app/admin/                         @BYHomeOwner
+/src/app/api/admin/                     @BYHomeOwner
+/src/lib/admin/                         @BYHomeOwner
+/src/lib/admin-ops/                     @BYHomeOwner
+
+# ---------------------------------------------------------------------------
+# Region gating — US is hidden until Phase 2 (Q1-Q2 2027). Don't accidentally re-enable.
+# ---------------------------------------------------------------------------
+/src/lib/region.ts                      @BYHomeOwner
+/src/lib/coverage-server.ts             @BYHomeOwner
+/src/app/coverage/                      @BYHomeOwner
+
+# ---------------------------------------------------------------------------
+# iOS / mobile release — signing, entitlements, store submission
+# ---------------------------------------------------------------------------
+/ios/                                   @BYHomeOwner
+/docs/ios-release-runbook.md            @BYHomeOwner
+/.github/workflows/ios-tag-guard.yml    @BYHomeOwner
+
+# ---------------------------------------------------------------------------
+# When you hire — uncomment and pair owners (don't replace)
+# ---------------------------------------------------------------------------
+# /src/app/(marketing)/                 @BYHomeOwner @marketing-lead
+# /src/lib/care/                        @BYHomeOwner @lead-engineer
+# /src/components/                      @BYHomeOwner @lead-engineer
