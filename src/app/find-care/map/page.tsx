@@ -15,6 +15,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import MarketingShell from "@/components/marketing-shell";
 import { searchCaregivers } from "@/lib/care/search";
+import { US_REGION_ENABLED } from "@/lib/region";
 import { isServiceKey } from "@/lib/care/services";
 import { isCareFormatKey } from "@/lib/care/formats";
 import {
@@ -60,8 +61,9 @@ export default async function FindCareMapPage({
   searchParams: Promise<SearchParams>;
 }) {
   const sp = await searchParams;
-  const country =
+  const rawCountry =
     sp.country === "US" || sp.country === "GB" ? sp.country : undefined;
+  const country = US_REGION_ENABLED ? rawCountry : "GB";
   const service = isServiceKey(sp.service) ? sp.service : undefined;
   const format = isCareFormatKey(sp.format) ? sp.format : undefined;
   const city = sp.city?.trim() || undefined;

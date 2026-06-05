@@ -11,6 +11,7 @@ import { searchCaregivers, listPublishedCities } from "@/lib/care/search";
 import { CITIES } from "@/lib/care/cities";
 import { getAllPosts } from "@/lib/blog/posts";
 import { listCoverageCities } from "@/lib/coverage-server";
+import { US_REGION_ENABLED } from "@/lib/region";
 import CoverageMap from "@/components/coverage-map-lazy";
 
 export const metadata: Metadata = {
@@ -43,7 +44,10 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const [featured, publishedCities, coverageCities] = await Promise.all([
-    searchCaregivers({ limit: 6 }).then((r) => r.slice(0, 6)),
+    searchCaregivers({
+      limit: 6,
+      ...(US_REGION_ENABLED ? {} : { country: "GB" as const }),
+    }).then((r) => r.slice(0, 6)),
     listPublishedCities(),
     listCoverageCities(),
   ]);
