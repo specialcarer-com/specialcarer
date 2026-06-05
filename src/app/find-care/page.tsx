@@ -147,7 +147,10 @@ export default async function FindCarePage({
       near,
     }),
     createClient(),
-    listPublishedCities(),
+    // When US region is hidden, only list GB cities so US locations from any
+    // stray published US profile cannot leak into the City dropdown. Mirrors
+    // the country gate applied to searchCaregivers above (PRs #58/#60).
+    listPublishedCities(US_REGION_ENABLED ? undefined : "GB"),
   ]);
   const {
     data: { user },
