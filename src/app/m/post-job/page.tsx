@@ -135,7 +135,7 @@ function PostJobInner() {
     else void publish();
   }
 
-  // Mock-vertical → canonical SpecialCarer service vertical.
+  // Mock-vertical → canonical SpecialCarers service vertical.
   // Keep aligned with the 5 canonical verticals (child=childcare,
   // elderly=elderly_care, special=special_needs, postnatal, complex=complex_care).
   const SERVICE_TO_CANONICAL: Record<string, string> = {

@@ -5,7 +5,7 @@ import { isVerifiedCarer } from "@/lib/community/auth";
 import NewThreadForm from "./NewThreadForm";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "New thread — SpecialCarer" };
+export const metadata = { title: "New thread — SpecialCarers" };
 
 export default async function NewThreadPage() {
   const supabase = await createClient();

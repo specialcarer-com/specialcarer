@@ -3,7 +3,7 @@ import InstantBookClient from "./instant-client";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Instant booking · SpecialCarer",
+  title: "Instant booking · SpecialCarers",
   description:
     "Book the nearest available carer right now. Confirmed in minutes.",
 };

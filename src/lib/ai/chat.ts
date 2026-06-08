@@ -104,7 +104,7 @@ export const INTENTS: Record<ChatIntentId, ChatIntent> = {
   },
   how_to_use: {
     id: "how_to_use",
-    label: "How to use SpecialCarer",
+    label: "How to use SpecialCarers",
     keywords: [
       "how do i book",
       "how to book",

@@ -7,7 +7,7 @@ import AgencyOptInClient from "./AgencyOptInClient";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
-  title: "Agency opt-in — SpecialCarer",
+  title: "Agency opt-in — SpecialCarers",
 };
 
 export default async function AgencyOptInPage() {

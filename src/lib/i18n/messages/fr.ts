@@ -26,7 +26,7 @@ const fr: Messages = {
   },
   login: {
     welcomeBack: "Bon retour",
-    subtitle: "Connectez-vous pour continuer avec SpecialCarer",
+    subtitle: "Connectez-vous pour continuer avec SpecialCarers",
     emailLabel: "Adresse e-mail",
     passwordLabel: "Mot de passe",
     forgot: "Mot de passe oublié ?",

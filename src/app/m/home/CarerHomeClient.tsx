@@ -678,7 +678,7 @@ const TIPS: Tip[] = [
   {
     icon: "award",
     title: "Open your weekend availability",
-    body: "Saturday and Sunday shifts pay up to 30% more on SpecialCarer.",
+    body: "Saturday and Sunday shifts pay up to 30% more on SpecialCarers.",
     cta: "Set availability",
     href: "/m/schedule",
   },

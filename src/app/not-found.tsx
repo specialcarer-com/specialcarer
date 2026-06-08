@@ -10,7 +10,7 @@ import MarketingShell from "@/components/marketing-shell";
  * instead of the unstyled Next.js default.
  */
 export const metadata = {
-  title: "Page not found · SpecialCarer",
+  title: "Page not found · SpecialCarers",
   robots: { index: false, follow: false },
 };
 

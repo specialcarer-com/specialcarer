@@ -97,7 +97,7 @@ export async function startBackgroundUpdates(bookingId: string, trackingWindowEn
     distanceInterval: 10, // metres
     showsBackgroundLocationIndicator: true,
     foregroundService: {
-      notificationTitle: "SpecialCarer is sharing your location",
+      notificationTitle: "SpecialCarers is sharing your location",
       notificationBody: "Active during your shift only — closes 15 min after the scheduled end.",
       notificationColor: "#0ea5e9",
     },

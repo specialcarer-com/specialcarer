@@ -103,7 +103,7 @@ export function ReportMessageSheet({
           <>
             <h2 className="text-[16px] font-bold">Report message</h2>
             <p className="mt-1 text-[12.5px] text-[#52606D]">
-              Tell us what’s wrong. Reports are sent to SpecialCarer’s
+              Tell us what’s wrong. Reports are sent to SpecialCarers’
               moderation team — only admins can see them.
             </p>
 

@@ -1,5 +1,5 @@
 /**
- * Plain HTML email templates for SpecialCarer transactional emails.
+ * Plain HTML email templates for SpecialCarers transactional emails.
  *
  * Templates are inlined-CSS so they render in major mail clients.
  * Brand: primary #039EA0, navy heading #171E54.
@@ -15,12 +15,12 @@ const BRAND_HEADING = "#171E54";
 const BRAND_SUBHEAD = "#575757";
 const BG_PALE = "#F7FAFA";
 const BRAND_LOGO_URL = "https://specialcarer.com/brand/logo-wordmark-email.png";
-// Full SpecialCarer wordmark logo (icon + "Special Carer" text, all teal,
+// Full SpecialCarers wordmark logo (icon + "Special Carers" text, all teal,
 // transparent background). Source 960x721, rendered at 240x180 in email
 // (@4x retina). Aspect ratio 161:121.
 
 /**
- * Branded email header with the SpecialCarer logo mark + wordmark.
+ * Branded email header with the SpecialCarers logo mark + wordmark.
  * Uses absolute https URL for the logo (required by all major mail
  * clients). The wordmark text is always rendered next to the image so
  * the brand still reads even when the recipient's client blocks remote
@@ -37,13 +37,13 @@ function renderBrandHeader(eyebrow?: string): string {
             </td>
           </tr>`
     : "";
-  // Full SpecialCarer wordmark logo (icon + "Special Carer" text). Image is
+  // Full SpecialCarers wordmark logo (icon + "Special Carers" text). Image is
   // 960×721 served as @4x retina; rendered at 240×180 in client. The wordmark
   // is part of the image so we no longer render a separate text wordmark below.
   // Aspect ratio 161:121 → height = round(width * 121/161).
   return `<tr>
             <td align="center" valign="top" class="sc-pad-x sc-logo-cell" style="padding:36px 28px 0 28px;background:#ffffff;line-height:0;">
-              <img src="${BRAND_LOGO_URL}" width="240" height="180" alt="SpecialCarer" border="0" style="display:block;border:0;outline:none;text-decoration:none;width:240px;height:180px;max-width:240px;-ms-interpolation-mode:bicubic;">
+              <img src="${BRAND_LOGO_URL}" width="240" height="180" alt="SpecialCarers" border="0" style="display:block;border:0;outline:none;text-decoration:none;width:240px;height:180px;max-width:240px;-ms-interpolation-mode:bicubic;">
             </td>
           </tr>
           ${eyebrowMarkup}
@@ -94,8 +94,8 @@ export function renderFamilyInviteEmail(args: {
   });
 
   const subject = safeFamily
-    ? `${safeInviter} invited you to ${safeFamily} on SpecialCarer`
-    : `${safeInviter} invited you to their family on SpecialCarer`;
+    ? `${safeInviter} invited you to ${safeFamily} on SpecialCarers`
+    : `${safeInviter} invited you to their family on SpecialCarers`;
 
   const greeting = safeRecipient ? `Hi ${safeRecipient},` : "Hi,";
 
@@ -114,13 +114,13 @@ export function renderFamilyInviteEmail(args: {
           ${renderBrandHeader()}
           <tr>
             <td style="padding:0 32px 8px 32px;">
-              <h1 style="margin:0;font-size:24px;line-height:1.25;color:${BRAND_HEADING};font-weight:700;">You've been invited to a family on SpecialCarer</h1>
+              <h1 style="margin:0;font-size:24px;line-height:1.25;color:${BRAND_HEADING};font-weight:700;">You've been invited to a family on SpecialCarers</h1>
             </td>
           </tr>
           <tr>
             <td style="padding:16px 32px 8px 32px;color:${BRAND_SUBHEAD};font-size:15px;line-height:1.55;">
               <p style="margin:0 0 12px 0;">${greeting}</p>
-              <p style="margin:0 0 12px 0;"><strong style="color:${BRAND_HEADING};">${safeInviter}</strong> has invited you${safeFamily ? ` to <strong style="color:${BRAND_HEADING};">${safeFamily}</strong>` : ""} on SpecialCarer.</p>
+              <p style="margin:0 0 12px 0;"><strong style="color:${BRAND_HEADING};">${safeInviter}</strong> has invited you${safeFamily ? ` to <strong style="color:${BRAND_HEADING};">${safeFamily}</strong>` : ""} on SpecialCarers.</p>
               <p style="margin:0 0 12px 0;">As a family member you'll be able to see care journal updates, upcoming visits, and chats — so the whole family stays in the loop. You won't be charged or share account access.</p>
             </td>
           </tr>
@@ -137,7 +137,7 @@ export function renderFamilyInviteEmail(args: {
           </tr>
           <tr>
             <td style="padding:18px 32px;background:#C2E5E4;color:#2F2E31;font-size:12px;line-height:1.5;text-align:center;">
-              SpecialCarer · A product of All Care 4 U Group Ltd<br>
+              SpecialCarers · A product of All Care 4 U Group Ltd<br>
               <a href="https://specialcarer.com" style="color:#2F2E31;">specialcarer.com</a>
             </td>
           </tr>
@@ -150,7 +150,7 @@ export function renderFamilyInviteEmail(args: {
 
   const text = `${greeting}
 
-${inviterName} has invited you${familyName ? ` to ${familyName}` : ""} on SpecialCarer.
+${inviterName} has invited you${familyName ? ` to ${familyName}` : ""} on SpecialCarers.
 
 As a family member you'll be able to see care journal updates, upcoming visits, and chats. You won't be charged or share account access.
 
@@ -159,7 +159,7 @@ ${acceptUrl}
 
 This link expires on ${expires}. If you weren't expecting this email you can safely ignore it.
 
-— SpecialCarer
+— SpecialCarers
 A product of All Care 4 U Group Ltd
 https://specialcarer.com
 `;
@@ -312,7 +312,7 @@ export function renderLiveInAdminEmail(args: {
           </tr>
           <tr>
             <td class="sc-pad-x" style="padding:16px 28px;background:#C2E5E4;color:#2F2E31;font-size:12px;line-height:1.5;text-align:center;">
-              SpecialCarer · A product of All Care 4 U Group Ltd<br>
+              SpecialCarers · A product of All Care 4 U Group Ltd<br>
               <a href="https://specialcarer.com" style="color:#2F2E31;">specialcarer.com</a>
             </td>
           </tr>
@@ -343,7 +343,7 @@ Open admin dashboard: ${adminUrl}
 
 Privacy: the family’s full address, phone, and email are masked until a carer accepts. Reply directly to this email to reach the family — the reply-to header is set to their address.
 
-— SpecialCarer
+— SpecialCarers
 A product of All Care 4 U Group Ltd
 https://specialcarer.com
 `;
@@ -379,7 +379,7 @@ export function renderReferenceInviteEmail(args: ReferenceInviteEmail): {
   html: string;
   text: string;
 } {
-  const subject = `${args.carerName} has listed you as a reference on SpecialCarer`;
+  const subject = `${args.carerName} has listed you as a reference on SpecialCarers`;
   const expires = new Date(args.expiresAtIso).toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
@@ -390,7 +390,7 @@ export function renderReferenceInviteEmail(args: ReferenceInviteEmail): {
 <div style="max-width:560px;margin:0 auto;background:#FFFFFF;border-radius:16px;padding:32px">
   <h2 style="color:#0E7C7B;margin:0 0 8px">Reference request</h2>
   <p>Hi ${escapeRefHtml(args.refereeName)},</p>
-  <p>${escapeRefHtml(args.carerName)} has applied to provide care on SpecialCarer and has listed you as one of their references.</p>
+  <p>${escapeRefHtml(args.carerName)} has applied to provide care on SpecialCarers and has listed you as one of their references.</p>
   <p>Could you take 2 minutes to vouch for them? It really helps families know who they're inviting into their homes.</p>
   <p style="margin:24px 0">
     <a href="${args.link}" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
@@ -402,10 +402,10 @@ export function renderReferenceInviteEmail(args: ReferenceInviteEmail): {
   </p>
   <hr style="border:none;border-top:1px solid #E9ECEC;margin:24px 0">
   <p style="font-size:12px;color:#575757">
-    Why you're seeing this: ${escapeRefHtml(args.carerName)} entered your email address as a reference on SpecialCarer's vetting form. We never share your email and only use it for this single message.
+    Why you're seeing this: ${escapeRefHtml(args.carerName)} entered your email address as a reference on SpecialCarers' vetting form. We never share your email and only use it for this single message.
   </p>
   <p style="font-size:11px;color:#575757;margin-top:24px">
-    SpecialCarer · A product of All Care 4 U Group Ltd<br>
+    SpecialCarers · A product of All Care 4 U Group Ltd<br>
     <a href="https://specialcarer.com" style="color:#0E7C7B">specialcarer.com</a>
   </p>
 </div></body></html>`;
@@ -413,7 +413,7 @@ export function renderReferenceInviteEmail(args: ReferenceInviteEmail): {
   const text = [
     `Hi ${args.refereeName},`,
     "",
-    `${args.carerName} has applied to provide care on SpecialCarer and has listed you as a reference.`,
+    `${args.carerName} has applied to provide care on SpecialCarers and has listed you as a reference.`,
     "",
     "Open the reference form:",
     args.link,
@@ -422,7 +422,7 @@ export function renderReferenceInviteEmail(args: ReferenceInviteEmail): {
     "",
     "If you don't recognise this carer, please ignore this email.",
     "",
-    "— SpecialCarer",
+    "— SpecialCarers",
   ].join("\n");
 
   return { subject, html, text };
@@ -453,7 +453,7 @@ function orgShell(title: string, bodyHtml: string): string {
   <h2 style="color:#0E7C7B;margin:0 0 8px">${escOrgHtml(title)}</h2>
   ${bodyHtml}
   <p style="font-size:11px;color:#575757;margin-top:24px">
-    SpecialCarer · A product of All Care 4 U Group Ltd<br>
+    SpecialCarers · A product of All Care 4 U Group Ltd<br>
     <a href="https://specialcarer.com" style="color:#0E7C7B">specialcarer.com</a>
   </p>
 </div></body></html>`;
@@ -464,7 +464,7 @@ export function renderOrgSubmittedEmail(args: {
   legalName: string;
   contractsSignedAtIso?: string | null;
 }): { subject: string; html: string; text: string } {
-  const subject = `We've received your SpecialCarer organisation application`;
+  const subject = `We've received your SpecialCarers organisation application`;
   const signedAt = args.contractsSignedAtIso
     ? new Date(args.contractsSignedAtIso).toLocaleDateString("en-GB", {
         day: "numeric",
@@ -504,7 +504,7 @@ export function renderOrgSubmittedEmail(args: {
     "",
     "Dashboard: https://specialcarer.com/m/org",
     "",
-    "— SpecialCarer",
+    "— SpecialCarers",
   );
   return { subject, html, text: textLines.join("\n") };
 }
@@ -514,13 +514,13 @@ export function renderOrgApprovedEmail(args: {
   legalName: string;
   contractDownloadsUrl?: string;
 }): { subject: string; html: string; text: string } {
-  const subject = `Your SpecialCarer organisation account is verified`;
+  const subject = `Your SpecialCarers organisation account is verified`;
   const downloads =
     args.contractDownloadsUrl ?? "https://specialcarer.com/m/org/documents";
   const html = orgShell(
     "You're verified — start booking",
     `<p>Hi ${escOrgHtml(args.bookerName)},</p>
-    <p>Welcome aboard. <strong>${escOrgHtml(args.legalName)}</strong> is now verified on SpecialCarer.</p>
+    <p>Welcome aboard. <strong>${escOrgHtml(args.legalName)}</strong> is now verified on SpecialCarers.</p>
     <p>Your countersigned MSA and DPA are now available on your dashboard — open the Documents tab to download.</p>
     <p>You can book any of our DBS-checked carers directly from your dashboard. Pricing stays at our standard UK rates — no setup fees.</p>
     <p style="margin:24px 0">
@@ -536,13 +536,13 @@ export function renderOrgApprovedEmail(args: {
   const text = [
     `Hi ${args.bookerName},`,
     "",
-    `${args.legalName} is now verified on SpecialCarer. You can book carers directly from your dashboard.`,
+    `${args.legalName} is now verified on SpecialCarers. You can book carers directly from your dashboard.`,
     "",
     `Your countersigned MSA and DPA: ${downloads}`,
     "",
     "Browse carers: https://specialcarer.com/m/org/carers",
     "",
-    "— SpecialCarer",
+    "— SpecialCarers",
   ].join("\n");
   return { subject, html, text };
 }
@@ -558,7 +558,7 @@ export function renderOrgContractAmendmentEmail(args: {
   contractType: "msa" | "dpa";
   newVersion: string;
 }): { subject: string; html: string; text: string } {
-  const subject = `Action needed — updated SpecialCarer ${args.contractType.toUpperCase()}`;
+  const subject = `Action needed — updated SpecialCarers ${args.contractType.toUpperCase()}`;
   const html = orgShell(
     "We've updated our agreement",
     `<p>Hi ${escOrgHtml(args.bookerName)},</p>
@@ -568,11 +568,11 @@ export function renderOrgContractAmendmentEmail(args: {
   const text = [
     `Hi ${args.bookerName},`,
     "",
-    `We've updated the SpecialCarer ${args.contractType.toUpperCase()} (${args.newVersion}) and would like you to re-sign for ${args.legalName}.`,
+    `We've updated the SpecialCarers ${args.contractType.toUpperCase()} (${args.newVersion}) and would like you to re-sign for ${args.legalName}.`,
     "",
     "Dashboard: https://specialcarer.com/m/org/documents",
     "",
-    "— SpecialCarer",
+    "— SpecialCarers",
   ].join("\n");
   return { subject, html, text };
 }
@@ -582,7 +582,7 @@ export function renderOrgRejectedEmail(args: {
   legalName: string;
   reason: string;
 }): { subject: string; html: string; text: string } {
-  const subject = `We need a few changes to your SpecialCarer organisation account`;
+  const subject = `We need a few changes to your SpecialCarers organisation account`;
   const html = orgShell(
     "We can't approve yet",
     `<p>Hi ${escOrgHtml(args.bookerName)},</p>
@@ -604,7 +604,7 @@ export function renderOrgRejectedEmail(args: {
     "",
     "Re-upload: https://specialcarer.com/m/org/documents",
     "",
-    "— SpecialCarer",
+    "— SpecialCarers",
   ].join("\n");
   return { subject, html, text };
 }
@@ -614,7 +614,7 @@ export function renderOrgRequestInfoEmail(args: {
   legalName: string;
   message: string;
 }): { subject: string; html: string; text: string } {
-  const subject = `We need additional information for your SpecialCarer organisation account`;
+  const subject = `We need additional information for your SpecialCarers organisation account`;
   const html = orgShell(
     "Quick follow-up",
     `<p>Hi ${escOrgHtml(args.bookerName)},</p>
@@ -631,7 +631,7 @@ export function renderOrgRequestInfoEmail(args: {
     "",
     "Dashboard: https://specialcarer.com/m/org/documents",
     "",
-    "— SpecialCarer",
+    "— SpecialCarers",
   ].join("\n");
   return { subject, html, text };
 }

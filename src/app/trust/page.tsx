@@ -5,9 +5,9 @@ import PageHeroBanner from "@/components/page-hero-banner";
 import { US_REGION_ENABLED } from "@/lib/region";
 
 export const metadata: Metadata = {
-  title: "Trust & Safety — SpecialCarer",
+  title: "Trust & Safety — SpecialCarers",
   description:
-    "How SpecialCarer vets caregivers, protects payments, monitors live shifts, and resolves disputes. Background checks, insurance, and accountability.",
+    "How SpecialCarers vets caregivers, protects payments, monitors live shifts, and resolves disputes. Background checks, insurance, and accountability.",
 };
 
 const pillars = [
@@ -47,7 +47,7 @@ const insurance = [
   {
     geo: "UK",
     detail:
-      "Caregivers are independent contractors and required to confirm they hold or are exempt from public liability cover. SpecialCarer Limited holds marketplace operator insurance covering platform-level negligence and a backstop for loss-of-property and bodily-injury claims up to limits set out in our T&Cs.",
+      "Caregivers are independent contractors and required to confirm they hold or are exempt from public liability cover. SpecialCarers Limited holds marketplace operator insurance covering platform-level negligence and a backstop for loss-of-property and bodily-injury claims up to limits set out in our T&Cs.",
   },
   ...(US_REGION_ENABLED
     ? [
@@ -104,8 +104,8 @@ export default function Page() {
             Insurance — the honest version
           </h2>
           <p className="mt-3 text-slate-600">
-            Caregivers on SpecialCarer are independent contractors, not
-            SpecialCarer employees. That keeps the platform open and rates
+            Caregivers on SpecialCarers are independent contractors, not
+            SpecialCarers employees. That keeps the platform open and rates
             competitive, but it means insurance works differently than with a
             traditional agency.
           </p>
@@ -147,7 +147,7 @@ export default function Page() {
               <strong className="text-slate-900">
                 We are not a regulated care agency.
               </strong>{" "}
-              SpecialCarer is a marketplace that introduces families to
+              SpecialCarers is a marketplace that introduces families to
               independent caregivers. We are not registered with the Care
               Quality Commission (CQC). For CQC-regulated personal care, choose
               a registered provider.

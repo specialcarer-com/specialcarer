@@ -5,9 +5,9 @@ import PageHeroBanner from "@/components/page-hero-banner";
 import { getAllPosts } from "@/lib/blog/posts";
 
 export const metadata: Metadata = {
-  title: "Blog — SpecialCarer",
+  title: "Blog — SpecialCarers",
   description:
-    "Practical writing on care, family, and the people behind it. From SpecialCarer.",
+    "Practical writing on care, family, and the people behind it. From SpecialCarers.",
 };
 
 const dateFmt = new Intl.DateTimeFormat("en-GB", {

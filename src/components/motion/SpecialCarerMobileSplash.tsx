@@ -157,7 +157,7 @@ export function SpecialCarerMobileSplash({
         fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
         ...style,
       }}
-      aria-label="SpecialCarer splash"
+      aria-label="SpecialCarers splash"
       role="img"
     >
       {/* Stage gradient */}
@@ -384,7 +384,7 @@ export function SpecialCarerMobileSplash({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/brand/specialcarer-icon.svg"
-              alt="SpecialCarer"
+              alt="SpecialCarers"
               style={{
                 position: "absolute",
                 inset: 0,

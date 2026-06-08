@@ -1,9 +1,9 @@
 /**
- * Transactional email transport for SpecialCarer.
+ * Transactional email transport for SpecialCarers.
  *
  * PRIMARY: Resend HTTP API (deliverability + dedicated transactional infra).
  *   - RESEND_API_KEY      (required for Resend path)
- *   - EMAIL_FROM          (default: "SpecialCarer Ops <ops@specialcarer.com>")
+ *   - EMAIL_FROM          (default: "SpecialCarers Ops <ops@specialcarer.com>")
  *
  * FALLBACK: IONOS SMTP (used only if RESEND_API_KEY is missing).
  *   - IONOS_SMTP_HOST  (default: smtp.ionos.co.uk)
@@ -36,7 +36,7 @@ export type SendEmailResult =
   | { ok: true; messageId: string }
   | { ok: false; error: string };
 
-const DEFAULT_FROM = "SpecialCarer Ops <ops@specialcarer.com>";
+const DEFAULT_FROM = "SpecialCarers Ops <ops@specialcarer.com>";
 
 let cachedResend: Resend | null = null;
 let cachedSmtp: Transporter | null = null;

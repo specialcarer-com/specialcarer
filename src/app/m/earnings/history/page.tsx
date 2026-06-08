@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { TopBar } from "../../_components/ui";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Payout history — SpecialCarer" };
+export const metadata = { title: "Payout history — SpecialCarers" };
 
 type PayoutRow = {
   id: string;

@@ -1,9 +1,9 @@
 import AudienceSignIn from "../audience-sign-in";
 
 export const metadata = {
-  title: "Family sign in — SpecialCarer",
+  title: "Family sign in — SpecialCarers",
   description:
-    "Sign in to your SpecialCarer family account to book trusted carers, manage your care plan, and view invoices.",
+    "Sign in to your SpecialCarers family account to book trusted carers, manage your care plan, and view invoices.",
 };
 
 export default async function FamilyLoginPage({

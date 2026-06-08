@@ -4,7 +4,7 @@ import SeekerHomeClient from "./SeekerHomeClient";
 import CarerHomeClient from "./CarerHomeClient";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Home — SpecialCarer" };
+export const metadata = { title: "Home — SpecialCarers" };
 
 /**
  * /m/home — Mobile home tab.

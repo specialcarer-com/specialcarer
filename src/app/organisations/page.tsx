@@ -5,7 +5,7 @@ import PageHeroBanner from "@/components/page-hero-banner";
 import ContactForm from "./_components/ContactForm";
 
 export const metadata: Metadata = {
-  title: "For organisations — SpecialCarer",
+  title: "For organisations — SpecialCarers",
   description:
     "Vetted carers for councils, NHS trusts, fostering agencies, residential homes, schools, and charities. Master Services Agreement and DPA in place. Strict verification of every buyer.",
   alternates: { canonical: "https://specialcarer.com/organisations" },
@@ -16,24 +16,24 @@ export const metadata: Metadata = {
     "on-demand care staff for councils",
   ],
   openGraph: {
-    title: "SpecialCarer for organisations",
+    title: "SpecialCarers for organisations",
     description:
       "Vetted carers for councils, NHS, fostering agencies, residential homes, schools and charities. MSA + DPA in place.",
     url: "https://specialcarer.com/organisations",
-    siteName: "SpecialCarer",
+    siteName: "SpecialCarers",
     type: "website",
     images: [
       {
         url: "/brand/og-image.png",
         width: 1200,
         height: 630,
-        alt: "SpecialCarer — trusted care, on your schedule",
+        alt: "SpecialCarers — trusted care, on your schedule",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "SpecialCarer for organisations",
+    title: "SpecialCarers for organisations",
     description:
       "Vetted carers for councils, NHS, fostering agencies, residential homes, schools and charities.",
   },
@@ -118,7 +118,7 @@ const FAQS: { q: string; a: string }[] = [
   {
     q: "Are you registered with CQC?",
     a:
-      "SpecialCarer is a staffing platform, not a registered care provider. The carers we connect you with operate as independent professionals and are vetted to CQC-equivalent standards. Where you operate a CQC-registered service, the carers fold into your existing regulatory framework.",
+      "SpecialCarers is a staffing platform, not a registered care provider. The carers we connect you with operate as independent professionals and are vetted to CQC-equivalent standards. Where you operate a CQC-registered service, the carers fold into your existing regulatory framework.",
   },
   {
     q: "What pre-employment checks do your carers undergo?",

@@ -16,7 +16,7 @@ const posts: BlogPost[] = [
     excerpt:
       "A short checklist of questions worth asking before you hand over the keys for the first time — and what good answers actually sound like.",
     publishedAt: "2026-04-28",
-    author: "SpecialCarer Team",
+    author: "SpecialCarers Team",
     category: "Families",
     readingTimeMin: 4,
     bodyMd: `Booking a sitter you&rsquo;ve never met is always a leap. A short pre-shift conversation — by message or phone — closes most of the gap.
@@ -57,7 +57,7 @@ A 5-minute message exchange before a first booking is one of the highest-leverag
     excerpt:
       "A practical structure for thinking through your care arrangements before, during, and after the return-to-work transition.",
     publishedAt: "2026-04-22",
-    author: "SpecialCarer Team",
+    author: "SpecialCarers Team",
     category: "Families",
     readingTimeMin: 6,
     bodyMd: `The hardest part of returning to work isn&rsquo;t usually the work. It&rsquo;s the choreography around it — pickup times, sick days, school holidays, and the constant sense that any plan is one cough away from collapsing.
@@ -94,7 +94,7 @@ Your backup layer is what catches you when the primary fails. Common backups:
 - Backup-care benefit through an employer
 - A nearby family member on standby
 
-This is exactly what SpecialCarer is built for — fast, vetted, ad-hoc cover when your primary arrangement falls through.
+This is exactly what SpecialCarers is built for — fast, vetted, ad-hoc cover when your primary arrangement falls through.
 
 ## 4. Plan for the first two weeks
 
@@ -114,7 +114,7 @@ If you&rsquo;d like a vetted, background-checked backup caregiver ready before y
     excerpt:
       "A walk-through of every step in our caregiver verification process — what we check, how we check it, and what we don&rsquo;t.",
     publishedAt: "2026-04-15",
-    author: "SpecialCarer Trust & Safety",
+    author: "SpecialCarers Trust & Safety",
     category: "Trust & Safety",
     readingTimeMin: 5,
     bodyMd: `Our short answer is on the [Trust & Safety page](/trust). This is the long version, for anyone who wants to see exactly what happens.

@@ -281,7 +281,7 @@ function CheckInPhase({
         const pos = await getCurrentPosition();
         if (!pos) {
           setErr(
-            "Location permission required to check in. Open Settings → enable location for SpecialCarer.",
+            "Location permission required to check in. Open Settings → enable location for SpecialCarers.",
           );
           setBusy(null);
           return;

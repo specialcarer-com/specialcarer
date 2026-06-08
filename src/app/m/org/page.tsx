@@ -6,7 +6,7 @@ import { getMyOrgMembership, getOrg } from "@/lib/org/server";
 import OrgShell from "./_components/OrgShell";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Organisation — SpecialCarer" };
+export const metadata = { title: "Organisation — SpecialCarers" };
 
 const NAV: { href: string; label: string; emoji: string; sub: string }[] = [
   {

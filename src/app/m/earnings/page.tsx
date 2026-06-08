@@ -5,7 +5,7 @@ import { TopBar, BottomNav } from "../_components/ui";
 import EarningsClient from "./EarningsClient";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Earnings — SpecialCarer" };
+export const metadata = { title: "Earnings — SpecialCarers" };
 
 export default async function EarningsPage() {
   const supabase = await createClient();

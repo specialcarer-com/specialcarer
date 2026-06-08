@@ -27,7 +27,7 @@
  *
  * ── Contracting entity ───────────────────────────────────────────────────────
  * All Care 4 U Group Ltd (Companies House 09428739) — legal entity for all
- * B2B invoices/contracts. SpecialCarer is the consumer brand only.
+ * B2B invoices/contracts. SpecialCarers is the consumer brand only.
  */
 
 // ── Canonical care verticals ──────────────────────────────────────────────────

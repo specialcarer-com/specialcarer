@@ -96,7 +96,7 @@ function ActiveMembershipCard({ membership }: { membership: ActiveMembership }) 
 
         {isComp ? (
           <p className="mt-4 rounded-card bg-primary-50 px-3 py-2 text-[12px] text-primary">
-            This membership was given to you by SpecialCarer. Thank you for
+            This membership was given to you by SpecialCarers. Thank you for
             being part of our early community.
           </p>
         ) : null}

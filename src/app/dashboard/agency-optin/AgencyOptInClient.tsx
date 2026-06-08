@@ -139,7 +139,7 @@ export default function AgencyOptInClient({
           <div>
             <h1 className="text-2xl font-bold text-slate-900 mb-1">Agency opt-in</h1>
             <p className="text-slate-600">
-              Take Channel B shifts dispatched by SpecialCarer's organisational clients —
+              Take Channel B shifts dispatched by SpecialCarers' organisational clients —
               with guaranteed PAYE pay, holiday pay, and the same vetting you already have.
             </p>
           </div>

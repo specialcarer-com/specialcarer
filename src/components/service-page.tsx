@@ -148,7 +148,7 @@ export default function ServicePage({
       {notForEmergencies && (
         <section className="px-6 py-8">
           <div className="max-w-4xl mx-auto bg-amber-50 border border-amber-200 rounded-xl p-5 text-sm text-amber-900">
-            <strong>SpecialCarer is not a medical or emergency service.</strong>{" "}
+            <strong>SpecialCarers is not a medical or emergency service.</strong>{" "}
             For medical emergencies dial 999 (UK) or 911 (US). Caregivers do not
             administer prescription medication or provide skilled clinical care
             unless explicitly licensed and engaged for that purpose.

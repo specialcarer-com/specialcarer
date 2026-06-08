@@ -510,7 +510,7 @@ export default function CarerDetailPage() {
                   <polyline points="9 12 11 14 15 10" />
                 </svg>
                 <p className="text-[12px] text-subheading">
-                  Background-checked by SpecialCarer
+                  Background-checked by SpecialCarers
                 </p>
               </div>
             </PanelCard>

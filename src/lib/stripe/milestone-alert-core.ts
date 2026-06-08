@@ -54,7 +54,7 @@ export function buildAlertEmail(pi: Stripe.PaymentIntent): SendEmailInput {
   const amount = fmtMoney(pi.amount_received ?? pi.amount, pi.currency ?? "gbp");
   const link = `https://dashboard.stripe.com/payments/${pi.id}`;
 
-  const subject = "SpecialCarer: First live Stripe payment processed";
+  const subject = "SpecialCarers: First live Stripe payment processed";
   const text = [
     "The first livemode payment_intent.succeeded event has been processed.",
     "",
@@ -70,7 +70,7 @@ export function buildAlertEmail(pi: Stripe.PaymentIntent): SendEmailInput {
     "either a test event leaked into the live secret slot, or a live event landed",
     "without the expected guard.",
     "",
-    "— SpecialCarer (automated milestone alert, fires once per platform lifetime)",
+    "— SpecialCarers (automated milestone alert, fires once per platform lifetime)",
   ]
     .filter((s): s is string => s !== null)
     .join("\n");

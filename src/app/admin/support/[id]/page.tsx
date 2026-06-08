@@ -137,7 +137,7 @@ export default async function TicketDetail({
                   {m.internal_note
                     ? "Internal note"
                     : m.author_role === "admin"
-                      ? "SpecialCarer support"
+                      ? "SpecialCarers support"
                       : m.author_role === "system"
                         ? "System"
                         : "User"}

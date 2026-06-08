@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import RequestLeaveButton from "./_components/RequestLeaveButton";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Holiday pot — SpecialCarer" };
+export const metadata = { title: "Holiday pot — SpecialCarers" };
 
 type LedgerRow = {
   id: string;

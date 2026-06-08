@@ -1,5 +1,5 @@
 /**
- * Centralised pricing config for SpecialCarer booking products.
+ * Centralised pricing config for SpecialCarers booking products.
  *
  * Visiting (hourly) rates already live in caregiver_profiles.hourly_rate_cents
  * — those come from the carer side and are surfaced through

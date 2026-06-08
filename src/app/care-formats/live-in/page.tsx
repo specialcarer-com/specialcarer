@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import ServicePage from "@/components/service-page";
 
 export const metadata: Metadata = {
-  title: "Live-in care — SpecialCarer",
+  title: "Live-in care — SpecialCarers",
   description:
     "Live-in caregivers across the UK. A vetted, DBS-checked caregiver moves in for a placement of several days at a time. Paid as a weekly rate.",
 };
@@ -37,7 +37,7 @@ export default function Page() {
       faqs={[
         {
           q: "How are live-in carers paid?",
-          a: "Live-in placements are billed as a weekly rate set by the caregiver, not by the hour. Indicative ranges are £700–£900/week across the UK, depending on complexity of care and whether nights are sleeping or waking. SpecialCarer's 30% service fee is added on top.",
+          a: "Live-in placements are billed as a weekly rate set by the caregiver, not by the hour. Indicative ranges are £700–£900/week across the UK, depending on complexity of care and whether nights are sleeping or waking. SpecialCarers' 30% service fee is added on top.",
         },
         {
           q: "How long does a live-in caregiver stay?",

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import ServicePage from "@/components/service-page";
 
 export const metadata: Metadata = {
-  title: "Visiting care — SpecialCarer",
+  title: "Visiting care — SpecialCarers",
   description:
     "Scheduled visiting care across the UK — daily, weekly, one-off, or waking-night visits with vetted, DBS-checked caregivers. From £18/hour.",
 };
@@ -38,7 +38,7 @@ export default function Page() {
       faqs={[
         {
           q: "How are visiting carers paid?",
-          a: "Visits are billed by the hour at the rate set by the caregiver — typically from £18/hour across the UK. SpecialCarer's 30% service fee is added on top. Final price is shown clearly before you confirm a booking.",
+          a: "Visits are billed by the hour at the rate set by the caregiver — typically from £18/hour across the UK. SpecialCarers' 30% service fee is added on top. Final price is shown clearly before you confirm a booking.",
         },
         {
           q: "What's the minimum visit length?",

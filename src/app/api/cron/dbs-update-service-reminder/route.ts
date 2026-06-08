@@ -81,7 +81,7 @@ export async function GET(req: Request) {
         Open my dashboard
       </a>
     </p>
-    <p style="font-size:11px;color:#575757;margin-top:24px">SpecialCarer · A product of All Care 4 U Group Ltd</p>
+    <p style="font-size:11px;color:#575757;margin-top:24px">SpecialCarers · A product of All Care 4 U Group Ltd</p>
   </div>
 </body></html>`;
       const text = [
@@ -91,7 +91,7 @@ export async function GET(req: Request) {
         "Please make sure your £16/year DBS Update Service subscription is still active.",
         "Check: https://www.gov.uk/dbs-update-service",
         "",
-        "— SpecialCarer",
+        "— SpecialCarers",
       ].join("\n");
       const res = await sendEmail({ to: email, subject, html, text });
       if (res.ok) {
