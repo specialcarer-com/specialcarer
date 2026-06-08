@@ -70,7 +70,7 @@ export const CERT_TYPE_LABEL: Record<string, string> = Object.fromEntries(
 );
 
 export const INTERVIEW_PROMPTS: readonly string[] = [
-  "Tell us about yourself and why you want to care for others on SpecialCarer.",
+  "Tell us about yourself and why you want to care for others on SpecialCarers.",
   "Describe a difficult care situation you've handled and what you learned.",
   "How do you maintain confidentiality and dignity for people in your care?",
 ];

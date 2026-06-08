@@ -26,7 +26,7 @@ const zh: Messages = {
   },
   login: {
     welcomeBack: "欢迎回来",
-    subtitle: "登录以继续使用 SpecialCarer",
+    subtitle: "登录以继续使用 SpecialCarers",
     emailLabel: "电子邮件地址",
     passwordLabel: "密码",
     forgot: "忘记密码？",

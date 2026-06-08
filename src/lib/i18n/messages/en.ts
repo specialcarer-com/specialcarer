@@ -26,7 +26,7 @@ const en: Messages = {
   },
   login: {
     welcomeBack: "Welcome back",
-    subtitle: "Sign in to continue with SpecialCarer",
+    subtitle: "Sign in to continue with SpecialCarers",
     emailLabel: "Email address",
     passwordLabel: "Password",
     forgot: "Forgot password?",

@@ -26,7 +26,7 @@ const es: Messages = {
   },
   login: {
     welcomeBack: "Bienvenido de nuevo",
-    subtitle: "Inicia sesión para continuar con SpecialCarer",
+    subtitle: "Inicia sesión para continuar con SpecialCarers",
     emailLabel: "Correo electrónico",
     passwordLabel: "Contraseña",
     forgot: "¿Olvidaste tu contraseña?",

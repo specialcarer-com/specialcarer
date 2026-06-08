@@ -26,7 +26,7 @@ const ar: Messages = {
   },
   login: {
     welcomeBack: "مرحباً بعودتك",
-    subtitle: "سجّل دخولك للمتابعة مع SpecialCarer",
+    subtitle: "سجّل دخولك للمتابعة مع SpecialCarers",
     emailLabel: "البريد الإلكتروني",
     passwordLabel: "كلمة المرور",
     forgot: "هل نسيت كلمة المرور؟",

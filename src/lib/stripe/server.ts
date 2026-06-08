@@ -18,14 +18,14 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2026-04-22.dahlia",
   typescript: true,
   appInfo: {
-    name: "SpecialCarer",
+    name: "SpecialCarers",
     version: "0.1.0",
     url: "https://specialcarer.com",
   },
 });
 
 /**
- * SpecialCarer fee model: single-sided 30% deduction from the carer.
+ * SpecialCarers fee model: single-sided 30% deduction from the carer.
  *
  *   Client uplift:    0%   (the client pays exactly the listed rate)
  *   Carer deduction:  30%  (deducted from the carer's listed rate)
@@ -53,7 +53,7 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
  *
  * Stripe wiring:
  *   amount                 = total_cents              (charged to the seeker's card)
- *   application_fee_amount = platform_fee_cents       (kept by SpecialCarer)
+ *   application_fee_amount = platform_fee_cents       (kept by SpecialCarers)
  *   transfer destination   = carer's connected account
  *   carer ultimately receives total − application_fee = subtotal × 0.70
  *

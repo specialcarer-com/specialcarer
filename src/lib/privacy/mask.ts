@@ -1,5 +1,5 @@
 /**
- * SpecialCarer privacy masking utilities.
+ * SpecialCarers privacy masking utilities.
  *
  * Family contact PII (full address, phone, email) is sensitive and must
  * NOT be exposed to carers — or visible in admin notification email

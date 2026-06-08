@@ -356,7 +356,7 @@ export type AcceptInviteResult =
  * Accept a magic-link invite. Caller must be authenticated. The invite's
  * email and the caller's email do NOT need to match — we simply require
  * a valid logged-in user (matching simplifies the UX for relatives who
- * already have a SpecialCarer account on a different email).
+ * already have a SpecialCarers account on a different email).
  */
 export async function acceptFamilyInvite(
   token: string

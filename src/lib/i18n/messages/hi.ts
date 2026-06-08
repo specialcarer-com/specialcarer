@@ -26,7 +26,7 @@ const hi: Messages = {
   },
   login: {
     welcomeBack: "वापस स्वागत है",
-    subtitle: "SpecialCarer जारी रखने के लिए साइन इन करें",
+    subtitle: "SpecialCarers जारी रखने के लिए साइन इन करें",
     emailLabel: "ईमेल पता",
     passwordLabel: "पासवर्ड",
     forgot: "पासवर्ड भूल गए?",

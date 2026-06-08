@@ -18,9 +18,9 @@
  * ║  overdue invoices — do NOT block carer payouts.                          ║
  * ╚══════════════════════════════════════════════════════════════════════════╝
  *
- * Invoicing entity: All Care 4 U Group Ltd (NOT "SpecialCarer").
- *   SpecialCarer is the consumer brand. All B2B invoices are issued under
- *   the legal entity name. Visual branding (logo) stays SpecialCarer.
+ * Invoicing entity: All Care 4 U Group Ltd (NOT "SpecialCarers").
+ *   SpecialCarers is the consumer brand. All B2B invoices are issued under
+ *   the legal entity name. Visual branding (logo) stays SpecialCarers.
  *   Companies House: 09428739
  *   Address: 85 Great Portland Street, London, England, W1W 7LT
  *   Email: office@allcare4u.co.uk
@@ -47,10 +47,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 type AnySupabase = SupabaseClient<any, any, any>;
 
 // ── Legal entity constants ────────────────────────────────────────────────────
-// IMPORTANT: use these on all B2B invoices. Never use "SpecialCarer" as issuer.
+// IMPORTANT: use these on all B2B invoices. Never use "SpecialCarers" as issuer.
 export const LEGAL_ENTITY_NAME = "All Care 4 U Group Ltd";
 export const LEGAL_ENTITY_TRADING_AS =
-  "All Care 4 U Group Ltd (operating SpecialCarer)";
+  "All Care 4 U Group Ltd (operating SpecialCarers)";
 export const LEGAL_ENTITY_COMPANIES_HOUSE = "09428739";
 export const LEGAL_ENTITY_ADDRESS =
   "85 Great Portland Street, London, England, W1W 7LT";
@@ -301,9 +301,9 @@ export async function createShiftInvoice(
     // When delaying finalisation, leave auto_advance off so Stripe doesn't
     // race the cron with its own scheduled finalisation.
     auto_advance: finaliseImmediately,
-    description: `SpecialCarer shift — ${dateStr}`,
+    description: `SpecialCarers shift — ${dateStr}`,
     // ── Issuer identification ──────────────────────────────────────────────
-    // All B2B invoices are issued by All Care 4 U Group Ltd, NOT SpecialCarer.
+    // All B2B invoices are issued by All Care 4 U Group Ltd, NOT SpecialCarers.
     custom_fields: [
       { name: "Issued by", value: LEGAL_ENTITY_TRADING_AS },
       { name: "Booking ref", value: booking.id.slice(0, 8).toUpperCase() },

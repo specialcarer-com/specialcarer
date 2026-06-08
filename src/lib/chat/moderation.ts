@@ -2,7 +2,7 @@
  * P1-B10: off-platform contact / payment detection.
  *
  * Scans a chat message body for patterns that suggest the participants
- * are trying to take the conversation (or the payment) off SpecialCarer.
+ * are trying to take the conversation (or the payment) off SpecialCarers.
  * Pure: no I/O. The caller decides what to do with matches — current
  * usage records auto-flags on every match so the admin queue can decide
  * the human action.

@@ -109,7 +109,7 @@ const elderly_care: QuizQuestion[] = [
       "You notice unexplained bruising on the upper arms of a frail older client and they flinch when you approach. The right next step is:",
     options: [
       "Ask the family directly if they hit the client.",
-      "Gently document the marks (size, location, colour) in the journal, ask the client only open questions, ensure they're safe, and report to your local Adult Safeguarding hub (UK) or APS (US) and SpecialCarer trust & safety.",
+      "Gently document the marks (size, location, colour) in the journal, ask the client only open questions, ensure they're safe, and report to your local Adult Safeguarding hub (UK) or APS (US) and SpecialCarers trust & safety.",
       "Take a photo and post it to your private Instagram for advice.",
       "Wait and see if it happens again.",
     ],
@@ -206,7 +206,7 @@ const childcare: QuizQuestion[] = [
       "A child confides they're being hit at home. The right first response is:",
     options: [
       "Tell them you'll keep it secret so they trust you.",
-      "Listen without leading questions, write down their exact words as soon as practical, ensure they're safe right now, and report to your local Children's Services / MASH (UK) or CPS (US) plus SpecialCarer trust & safety.",
+      "Listen without leading questions, write down their exact words as soon as practical, ensure they're safe right now, and report to your local Children's Services / MASH (UK) or CPS (US) plus SpecialCarers trust & safety.",
       "Confront the parent at pickup.",
       "Wait until you have proof before doing anything.",
     ],
@@ -461,7 +461,7 @@ const postnatal: QuizQuestion[] = [
       "If a partner or family member appears controlling or aggressive towards the new mother, you should:",
     options: [
       "Stay out of it — family business.",
-      "Note the facts in the journal, ensure mum and baby are safe right now, and report to local Adult Safeguarding hub (UK) or APS / domestic abuse hotline (US) and SpecialCarer trust & safety. Postnatal women are at increased risk of domestic abuse.",
+      "Note the facts in the journal, ensure mum and baby are safe right now, and report to local Adult Safeguarding hub (UK) or APS / domestic abuse hotline (US) and SpecialCarers trust & safety. Postnatal women are at increased risk of domestic abuse.",
       "Confront the relative directly.",
       "Tell mum she should leave him.",
     ],
