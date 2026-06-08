@@ -1,9 +1,9 @@
 import LegalLayout, { type LegalSection } from "@/components/legal-layout";
 
 export const metadata = {
-  title: "Cookie Notice — SpecialCarer",
+  title: "Cookie Notice — SpecialCarers",
   description:
-    "What cookies SpecialCarer sets on your device and how to control them.",
+    "What cookies SpecialCarers sets on your device and how to control them.",
 };
 
 const sections: LegalSection[] = [
@@ -24,7 +24,7 @@ export default function CookiesPage() {
     >
       <h2 id="summary">Summary</h2>
       <p>
-        SpecialCarer uses a small number of cookies to keep you signed in
+        SpecialCarers uses a small number of cookies to keep you signed in
         and to keep the service working safely. We do not run advertising
         cookies and we do not share cookie data with third-party advertisers.
       </p>
@@ -135,7 +135,7 @@ export default function CookiesPage() {
           On iOS and Android the app uses platform identifiers (the
           system advertising ID is <strong>not</strong> read). You can
           revoke notification or location permissions in OS Settings →
-          SpecialCarer.
+          SpecialCarers.
         </li>
       </ul>
 

@@ -6,7 +6,7 @@ import { getVettingSummary } from "@/lib/vetting/server";
 import type { VettingSummary } from "@/lib/vetting/types";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Get vetted — SpecialCarer" };
+export const metadata = { title: "Get vetted — SpecialCarers" };
 
 type Step = {
   key: string;

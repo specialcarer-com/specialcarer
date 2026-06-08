@@ -11,7 +11,7 @@ import {
 import { isVerifiedCarer } from "@/lib/community/auth";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Community — SpecialCarer" };
+export const metadata = { title: "Community — SpecialCarers" };
 
 function fmtRelative(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();

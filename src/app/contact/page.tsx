@@ -3,9 +3,9 @@ import SiteFooter from "@/components/site-footer";
 import Image from "next/image";
 
 export const metadata = {
-  title: "Contact — SpecialCarer",
+  title: "Contact — SpecialCarers",
   description:
-    "Reach the SpecialCarer team — general support, privacy queries, disputes, press, and legal.",
+    "Reach the SpecialCarers team — general support, privacy queries, disputes, press, and legal.",
 };
 
 export default function ContactPage() {
@@ -62,7 +62,7 @@ export default function ContactPage() {
       <header className="px-6 py-5 border-b border-slate-100">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <Image src="/brand/logo.svg" alt="SpecialCarer" width={161} height={121} className="h-9 w-auto" priority />
+            <Image src="/brand/logo.svg" alt="SpecialCarers" width={161} height={121} className="h-9 w-auto" priority />
           </Link>
           <nav className="flex items-center gap-5 text-sm text-slate-600">
             <Link href="/privacy" className="hover:text-slate-900">
@@ -135,7 +135,7 @@ export default function ContactPage() {
             <p className="mt-2 text-sm text-slate-700">
               If you or someone you care for is in immediate danger, call{" "}
               <span className="font-medium">999 (UK)</span> or{" "}
-              <span className="font-medium">911 (US)</span>. SpecialCarer
+              <span className="font-medium">911 (US)</span>. SpecialCarers
               support is not staffed for emergencies.
             </p>
           </div>

@@ -23,15 +23,15 @@ export async function generateMetadata({
   const { id } = await params;
   const profile = await getCaregiverProfile(id);
   if (!profile || !profile.is_published) {
-    return { title: "Caregiver — SpecialCarer" };
+    return { title: "Caregiver — SpecialCarers" };
   }
   const country = profile.country === "GB" ? "UK" : "US";
   return {
-    title: `${profile.display_name ?? "Caregiver"} — ${profile.city ?? country} caregiver | SpecialCarer`,
+    title: `${profile.display_name ?? "Caregiver"} — ${profile.city ?? country} caregiver | SpecialCarers`,
     description:
       profile.headline ||
       profile.bio?.slice(0, 160) ||
-      "Verified, background-checked caregiver on SpecialCarer.",
+      "Verified, background-checked caregiver on SpecialCarers.",
     alternates: { canonical: `/m/carer/${id}` },
   };
 }

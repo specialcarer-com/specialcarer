@@ -559,7 +559,7 @@ export function Tabs({
    ────────────────────────────────────────────────────────────────── */
 /**
  * Brand mark — the hands + heart + family illustration cradling a home,
- * paired with the SpecialCarer wordmark.
+ * paired with the SpecialCarers wordmark.
  *
  * Pass `withText={false}` for tight headers / nav usage. Pass `tone="plain"`
  * to drop the soft teal tile (e.g. when placing on a coloured hero band).
@@ -582,7 +582,7 @@ export function AppLogo({
     >
       <Image
         src="/m/brand/logo-mark.png"
-        alt="SpecialCarer"
+        alt="SpecialCarers"
         width={Math.round(size * 0.86)}
         height={Math.round(size * 0.86 * 0.535)}
         priority
@@ -595,7 +595,7 @@ export function AppLogo({
   return (
     <div className="flex flex-col items-center gap-2">
       {mark}
-      <p className="text-primary font-bold text-[18px] tracking-tight">SpecialCarer</p>
+      <p className="text-primary font-bold text-[18px] tracking-tight">SpecialCarers</p>
     </div>
   );
 }

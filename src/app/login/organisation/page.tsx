@@ -1,9 +1,9 @@
 import AudienceSignIn from "../audience-sign-in";
 
 export const metadata = {
-  title: "Organisation sign in — SpecialCarer",
+  title: "Organisation sign in — SpecialCarers",
   description:
-    "Sign in to your SpecialCarer organisation account — care homes, councils, NHS trusts, fostering agencies, and charities.",
+    "Sign in to your SpecialCarers organisation account — care homes, councils, NHS trusts, fostering agencies, and charities.",
 };
 
 export default async function OrganisationLoginPage({
@@ -20,7 +20,7 @@ export default async function OrganisationLoginPage({
       headline="Sign in to your organisation account"
       intro="Care homes, councils, NHS trusts, fostering agencies, schools, and charities — manage bookings, contracts, and your team."
       signupCta={{
-        lead: "Not partnered with SpecialCarer yet?",
+        lead: "Not partnered with SpecialCarers yet?",
         label: "Talk to our partnerships team",
         href: "/organisations#apply",
       }}

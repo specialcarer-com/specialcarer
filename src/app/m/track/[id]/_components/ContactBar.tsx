@@ -53,7 +53,7 @@ export default function ContactBar({
       // Best-effort native share sheet — falls back to clipboard.
       if (typeof navigator !== "undefined" && navigator.share) {
         try {
-          await navigator.share({ title: "SpecialCarer trip", url });
+          await navigator.share({ title: "SpecialCarers trip", url });
         } catch {
           /* user cancelled — that's fine */
         }

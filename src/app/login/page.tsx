@@ -4,9 +4,9 @@ import MarketingShell from "@/components/marketing-shell";
 import PageHeroBanner from "@/components/page-hero-banner";
 
 export const metadata = {
-  title: "Sign in — SpecialCarer",
+  title: "Sign in — SpecialCarers",
   description:
-    "Sign in to SpecialCarer — for caregivers, families, and organisations.",
+    "Sign in to SpecialCarers — for caregivers, families, and organisations.",
 };
 
 const AUDIENCES = [
@@ -51,7 +51,7 @@ export default async function LoginPage({
           {showFormFallback ? (
             <div className="max-w-md mx-auto">
               <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-                Sign in to SpecialCarer
+                Sign in to SpecialCarers
               </h1>
               <p className="mt-2 text-slate-600">
                 Use your email or your Google account. New here? We&rsquo;ll
@@ -92,7 +92,7 @@ export default async function LoginPage({
             <>
               <div className="text-center max-w-2xl mx-auto">
                 <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">
-                  Sign in to SpecialCarer
+                  Sign in to SpecialCarers
                 </h1>
                 <p className="mt-3 text-slate-600">
                   Pick the account type you&rsquo;re signing in with. Each

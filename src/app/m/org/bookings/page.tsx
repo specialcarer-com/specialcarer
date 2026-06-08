@@ -14,7 +14,7 @@ import {
 } from "@/lib/org/booking-types";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Bookings — SpecialCarer" };
+export const metadata = { title: "Bookings — SpecialCarers" };
 
 type SearchParams = {
   status?: string;

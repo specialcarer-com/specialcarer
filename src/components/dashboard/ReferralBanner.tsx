@@ -50,7 +50,7 @@ export default function ReferralBanner({ data, role }: Props) {
     if (typeof navigator !== "undefined" && "share" in navigator) {
       try {
         await navigator.share({
-          title: "Join me on SpecialCarer",
+          title: "Join me on SpecialCarers",
           text: "Use my code to get £20 off your first booking.",
           url: data.shareUrl,
         });

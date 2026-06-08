@@ -51,7 +51,7 @@ export default function ForgotPasswordPage() {
         {!sent ? (
           <>
             <p className="text-subheading text-[14px] leading-relaxed">
-              Enter the email address linked to your SpecialCarer account.
+              Enter the email address linked to your SpecialCarers account.
               We&apos;ll send you a link to reset your password.
             </p>
 

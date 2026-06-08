@@ -41,7 +41,7 @@ export default async function AcceptInvitePage({ params }: PageProps) {
     <main className="min-h-[100dvh] bg-bg-screen flex items-center justify-center px-6">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-sm p-8 text-center">
         <div className="text-xs uppercase tracking-widest text-primary font-semibold mb-2">
-          SpecialCarer
+          SpecialCarers
         </div>
         <h1 className="text-2xl font-bold text-heading mb-3">
           We couldn&apos;t accept this invite

@@ -4,7 +4,7 @@ import { getPublicToken, getStyle } from "@/lib/mapbox/server";
 import JobsShellClient from "./JobsShellClient";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Jobs — SpecialCarer" };
+export const metadata = { title: "Jobs — SpecialCarers" };
 
 /**
  * Carer-side jobs shell. Server component requires auth and caregiver role.

@@ -102,7 +102,7 @@ export function SpecialCarerLogoStatic({
         overflow: "hidden",
         ...style,
       }}
-      aria-label="SpecialCarer logo"
+      aria-label="SpecialCarers logo"
       role="img"
     >
       <div

@@ -1,9 +1,9 @@
 import AudienceSignIn from "../audience-sign-in";
 
 export const metadata = {
-  title: "Caregiver sign in — SpecialCarer",
+  title: "Caregiver sign in — SpecialCarers",
   description:
-    "Sign in to your SpecialCarer caregiver account to pick up shifts, manage bookings, and get paid.",
+    "Sign in to your SpecialCarers caregiver account to pick up shifts, manage bookings, and get paid.",
 };
 
 export default async function CaregiverLoginPage({
@@ -20,7 +20,7 @@ export default async function CaregiverLoginPage({
       headline="Sign in to your caregiver account"
       intro="Pick up shifts, manage bookings, see your payouts, and grow your reputation."
       signupCta={{
-        lead: "New to SpecialCarer?",
+        lead: "New to SpecialCarers?",
         label: "Apply to be a caregiver",
         href: "/become-a-caregiver",
       }}

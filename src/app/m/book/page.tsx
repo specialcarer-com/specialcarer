@@ -6,7 +6,7 @@ import CareFormatChooser from "../../book/care-format-chooser";
 import type { Country } from "@/lib/pricing";
 
 export const metadata: Metadata = {
-  title: "Book care · SpecialCarer",
+  title: "Book care · SpecialCarers",
 };
 
 export const dynamic = "force-dynamic";

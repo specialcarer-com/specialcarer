@@ -32,7 +32,7 @@ import { geocodePostcode, getPublicToken, getStyle } from "@/lib/mapbox/server";
 import FindCareMapClient from "./MapClient";
 
 export const metadata: Metadata = {
-  title: "Carers near you · Map view — SpecialCarer",
+  title: "Carers near you · Map view — SpecialCarers",
   description:
     "See vetted caregivers near your postcode on a live map. Click a pin to view their profile and book.",
 };

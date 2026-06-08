@@ -109,11 +109,11 @@ export default function SiteFooter() {
           <Link
             href="/"
             className="inline-flex items-center"
-            aria-label="SpecialCarer — home"
+            aria-label="SpecialCarers — home"
           >
             <Image
               src="/brand/logo.svg"
-              alt="SpecialCarer"
+              alt="SpecialCarers"
               width={161}
               height={121}
               className="h-12 w-auto"

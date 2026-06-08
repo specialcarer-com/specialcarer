@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "My certificates — SpecialCarer" };
+export const metadata = { title: "My certificates — SpecialCarers" };
 
 type Row = {
   id: string;

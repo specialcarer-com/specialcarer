@@ -2,8 +2,8 @@ import Image from "next/image";
 import { ResetPasswordForm } from "./reset-password-form";
 
 export const metadata = {
-  title: "Set new password — SpecialCarer",
-  description: "Set a new password for your SpecialCarer account.",
+  title: "Set new password — SpecialCarers",
+  description: "Set a new password for your SpecialCarers account.",
 };
 
 // Force a minimal layout for this page: no marketing header (and therefore
@@ -18,7 +18,7 @@ export default function ResetPasswordPage() {
         <div className="mx-auto max-w-6xl">
           <Image
             src="/brand/logo.svg"
-            alt="SpecialCarer"
+            alt="SpecialCarers"
             width={140}
             height={40}
             priority

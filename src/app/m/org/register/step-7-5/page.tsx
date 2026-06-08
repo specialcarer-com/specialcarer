@@ -10,7 +10,7 @@ import {
 import ContractsClient from "./ContractsClient";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Sign agreements — SpecialCarer" };
+export const metadata = { title: "Sign agreements — SpecialCarers" };
 
 export default async function Step7p5Page() {
   const supabase = await createClient();

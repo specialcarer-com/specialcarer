@@ -16,7 +16,7 @@ export function HeroBanner() {
         playsInline
         preload="metadata"
         poster="/video/specialcarer-hero-banner-poster.jpg"
-        aria-label="Vetted SpecialCarer caregivers welcoming families and supporting elderly clients in everyday moments"
+        aria-label="Vetted SpecialCarers caregivers welcoming families and supporting elderly clients in everyday moments"
       >
         <source src="/video/specialcarer-hero-banner.webm" type="video/webm" />
         <source src="/video/specialcarer-hero-banner.mp4" type="video/mp4" />

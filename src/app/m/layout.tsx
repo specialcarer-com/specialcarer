@@ -27,7 +27,7 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "SpecialCarer",
+  title: "SpecialCarers",
   description: "Trusted care, on your schedule.",
 };
 

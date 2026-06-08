@@ -4,9 +4,9 @@ import MarketingShell from "@/components/marketing-shell";
 import PageHeroBanner from "@/components/page-hero-banner";
 
 export const metadata: Metadata = {
-  title: "Pricing — SpecialCarer",
+  title: "Pricing — SpecialCarers",
   description:
-    "Transparent pricing. Caregivers set their own rates and keep 70%. SpecialCarer adds a 30% service fee covering verification, insurance, support, and payments.",
+    "Transparent pricing. Caregivers set their own rates and keep 70%. SpecialCarers adds a 30% service fee covering verification, insurance, support, and payments.",
 };
 
 const tiers = [
@@ -33,7 +33,7 @@ const tiers = [
       "No subscription, no listing fees. We deduct 30% from each shift to fund verification, insurance, payments, and support.",
     bullets: [
       "Keep 70% of every shift",
-      "Background check paid by SpecialCarer",
+      "Background check paid by SpecialCarers",
       "Same-day payouts via Stripe (when bank supports)",
       "Free training resources",
       "Top-rated programme for higher visibility",
@@ -131,7 +131,7 @@ export default function Page() {
             <div className="mt-6 grid sm:grid-cols-2 gap-x-12 gap-y-3 text-sm">
               <div className="text-slate-600">Caregiver rate (4 × £18)</div>
               <div className="text-slate-900 sm:text-right">£72.00</div>
-              <div className="text-slate-600">SpecialCarer service fee (30%)</div>
+              <div className="text-slate-600">SpecialCarers service fee (30%)</div>
               <div className="text-slate-900 sm:text-right">£21.60</div>
               <div className="text-slate-900 font-semibold border-t border-slate-200 pt-3">
                 Sarah pays
@@ -144,7 +144,7 @@ export default function Page() {
             </div>
           </div>
           <p className="mt-4 text-xs text-slate-500">
-            Caregivers on SpecialCarer are independent contractors responsible
+            Caregivers on SpecialCarers are independent contractors responsible
             for their own taxes (UK self-assessment). Service fee may
             be adjusted by 1–2% to cover Stripe processing —
             always shown clearly at checkout.

@@ -5,7 +5,7 @@ import LiveInForm from "../../../book/live-in/live-in-form";
 import type { Country } from "@/lib/pricing";
 
 export const metadata: Metadata = {
-  title: "Live-in care · SpecialCarer",
+  title: "Live-in care · SpecialCarers",
 };
 
 export const dynamic = "force-dynamic";

@@ -3,30 +3,30 @@ import Link from "next/link";
 import MarketingShell from "@/components/marketing-shell";
 
 export const metadata: Metadata = {
-  title: "Press & media — SpecialCarer",
+  title: "Press & media — SpecialCarers",
   description:
-    "Newsroom, brand assets, key facts and press contact for SpecialCarer — the on-demand, vetted-caregiver marketplace from All Care 4 U Group Limited.",
+    "Newsroom, brand assets, key facts and press contact for SpecialCarers — the on-demand, vetted-caregiver marketplace from All Care 4 U Group Limited.",
   alternates: { canonical: "https://specialcarer.com/press" },
   openGraph: {
-    title: "Press & media — SpecialCarer",
+    title: "Press & media — SpecialCarers",
     description:
-      "Newsroom, brand assets, key facts and press contact for SpecialCarer.",
+      "Newsroom, brand assets, key facts and press contact for SpecialCarers.",
     url: "https://specialcarer.com/press",
-    siteName: "SpecialCarer",
+    siteName: "SpecialCarers",
     type: "website",
     images: [
       {
         url: "/brand/og-image.png",
         width: 1200,
         height: 630,
-        alt: "SpecialCarer — trusted care, on your schedule",
+        alt: "SpecialCarers — trusted care, on your schedule",
       },
     ],
   },
 };
 
 const FACTS: { k: string; v: string }[] = [
-  { k: "Product", v: "SpecialCarer — on-demand caregiver marketplace" },
+  { k: "Product", v: "SpecialCarers — on-demand caregiver marketplace" },
   { k: "Operating company", v: "All Care 4 U Group Limited" },
   { k: "Companies House", v: "09428739 (England & Wales, incorporated 9 February 2015)" },
   { k: "Registered office", v: "85 Great Portland Street, London, England, W1W 7LT" },
@@ -42,7 +42,7 @@ const STORIES: { angle: string; pitch: string }[] = [
   {
     angle: "The vetting gap in informal care",
     pitch:
-      "Most family hires of carers happen via word-of-mouth or social media, with little formal vetting. SpecialCarer publishes the ID-verification, background-check, and right-to-work evidence inside every caregiver profile.",
+      "Most family hires of carers happen via word-of-mouth or social media, with little formal vetting. SpecialCarers publishes the ID-verification, background-check, and right-to-work evidence inside every caregiver profile.",
   },
   {
     angle: "What a 30% platform fee actually buys",
@@ -78,11 +78,11 @@ export default function Page() {
   const ld = {
     "@context": "https://schema.org",
     "@type": "AboutPage",
-    name: "Press & media — SpecialCarer",
+    name: "Press & media — SpecialCarers",
     url: "https://specialcarer.com/press",
     mainEntity: {
       "@type": "Organization",
-      name: "SpecialCarer",
+      name: "SpecialCarers",
       legalName: "All Care 4 U Group Limited",
       taxID: "09428739",
       url: "https://specialcarer.com",
@@ -120,7 +120,7 @@ export default function Page() {
         </h1>
         <p className="mt-6 text-lg text-slate-600 leading-relaxed">
           Resources for journalists, analysts, and partners covering
-          SpecialCarer and the broader vetted-caregiver market across the UK.
+          SpecialCarers and the broader vetted-caregiver market across the UK.
           For interview requests or quick comment, the press contact is
           below.
         </p>
@@ -148,7 +148,7 @@ export default function Page() {
               Press contact
             </h2>
             <p className="mt-2 font-semibold text-slate-900">
-              SpecialCarer Communications
+              SpecialCarers Communications
             </p>
             <p className="text-slate-600 text-sm mt-1">
               <a
@@ -185,21 +185,21 @@ export default function Page() {
       <section className="px-6 py-16">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-2xl font-semibold text-slate-900">
-            About SpecialCarer (50-word boilerplate)
+            About SpecialCarers (50-word boilerplate)
           </h2>
           <p className="mt-4 text-slate-600 leading-relaxed">
-            SpecialCarer is an on-demand marketplace for vetted, DBS-checked
+            SpecialCarers is an on-demand marketplace for vetted, DBS-checked
             caregivers across the United Kingdom. Families book elderly care,
             childcare, special-needs and postnatal support in minutes, with
             live shift tracking, escrow payments, and a flat 30% platform fee.
-            SpecialCarer is a product of All Care 4 U Group Limited.
+            SpecialCarers is a product of All Care 4 U Group Limited.
           </p>
           <h2 className="mt-10 text-2xl font-semibold text-slate-900">
-            About SpecialCarer (long version)
+            About SpecialCarers (long version)
           </h2>
           <div className="mt-4 space-y-4 text-slate-600 leading-relaxed">
             <p>
-              SpecialCarer is building a trusted way to find, book and pay
+              SpecialCarers is building a trusted way to find, book and pay
               caregivers — across childcare, elderly care, special-needs
               support, and postnatal care. Every caregiver completes
               identity verification, full background checks, and right-to-work
@@ -217,7 +217,7 @@ export default function Page() {
               button for active-shift emergencies.
             </p>
             <p>
-              SpecialCarer operates across the United Kingdom, with the
+              SpecialCarers operates across the United Kingdom, with the
               broadest carer supply in London and new cities added monthly.
               The platform is also offered to employers as a backup-care
               benefit, with per-employee or pooled-credit plans designed to
@@ -287,7 +287,7 @@ export default function Page() {
             Brand assets
           </h2>
           <p className="mt-3 text-slate-600">
-            Permitted for editorial use covering SpecialCarer. Please don&rsquo;t
+            Permitted for editorial use covering SpecialCarers. Please don&rsquo;t
             modify the wordmark, recolour the logo, or imply endorsement.
           </p>
           <div className="mt-8 grid sm:grid-cols-3 gap-5">
@@ -341,7 +341,7 @@ export default function Page() {
           </h2>
           <ul className="mt-6 space-y-3 text-sm text-slate-700 leading-relaxed">
             <li>
-              <strong>Capitalisation:</strong> &ldquo;SpecialCarer&rdquo; — one
+              <strong>Capitalisation:</strong> &ldquo;SpecialCarers&rdquo; — one
               word, one capital S, one capital C.
             </li>
             <li>
@@ -351,7 +351,7 @@ export default function Page() {
             </li>
             <li>
               <strong>What we are:</strong> a marketplace, not an agency.
-              Caregivers are independent professionals; SpecialCarer
+              Caregivers are independent professionals; SpecialCarers
               connects them with families and handles vetting, payments and
               dispute resolution.
             </li>

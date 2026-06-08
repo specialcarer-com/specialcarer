@@ -3,9 +3,9 @@ import Link from "next/link";
 import MarketingShell from "@/components/marketing-shell";
 
 export const metadata: Metadata = {
-  title: "About SpecialCarer — All Care 4 U Group Limited",
+  title: "About SpecialCarers — All Care 4 U Group Limited",
   description:
-    "SpecialCarer is a product of All Care 4 U Group Limited — building a marketplace for trusted, vetted caregivers across the UK.",
+    "SpecialCarers is a product of All Care 4 U Group Limited — building a marketplace for trusted, vetted caregivers across the UK.",
 };
 
 export default function Page() {
@@ -19,7 +19,7 @@ export default function Page() {
           Care should be findable, fair, and safe.
         </h1>
         <p className="mt-6 text-lg text-slate-600 leading-relaxed">
-          SpecialCarer is being built by people who&rsquo;ve been on both sides
+          SpecialCarers is being built by people who&rsquo;ve been on both sides
           of the care relationship — as families looking for help, and as
           carers who&rsquo;ve worked through agencies that took too much and
           gave too little. We think there&rsquo;s a better way.
@@ -75,10 +75,10 @@ export default function Page() {
       <section className="px-6 py-12">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-2xl font-semibold text-slate-900">
-            The company behind SpecialCarer
+            The company behind SpecialCarers
           </h2>
           <p className="mt-3 text-slate-600 leading-relaxed">
-            SpecialCarer is a product of{" "}
+            SpecialCarers is a product of{" "}
             <strong className="text-slate-900">
               All Care 4 U Group Limited
             </strong>
@@ -88,7 +88,7 @@ export default function Page() {
           </p>
           <p className="mt-3 text-slate-600 leading-relaxed">
             All Care 4 U Group has been operating in the UK care sector for
-            over a decade. SpecialCarer is the technology platform we&rsquo;re
+            over a decade. SpecialCarers is the technology platform we&rsquo;re
             building to scale that experience to more families across the UK.
           </p>
         </div>

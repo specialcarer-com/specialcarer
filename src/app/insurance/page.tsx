@@ -6,9 +6,9 @@ import { getSupportConfig } from "@/lib/support/config";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Insurance — SpecialCarer",
+  title: "Insurance — SpecialCarers",
   description:
-    "Insurance summary for SpecialCarer / All Care 4 U Group Ltd. UK cover, with recommendations for independent carers.",
+    "Insurance summary for SpecialCarers / All Care 4 U Group Ltd. UK cover, with recommendations for independent carers.",
 };
 
 export default async function InsurancePage() {

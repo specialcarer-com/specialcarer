@@ -1,9 +1,9 @@
 import LegalLayout, { type LegalSection } from "@/components/legal-layout";
 
 export const metadata = {
-  title: "Privacy Policy — SpecialCarer",
+  title: "Privacy Policy — SpecialCarers",
   description:
-    "How SpecialCarer (All Care 4 U Group Limited) collects, uses, and protects your personal data.",
+    "How SpecialCarers (All Care 4 U Group Limited) collects, uses, and protects your personal data.",
 };
 
 const sections: LegalSection[] = [
@@ -32,11 +32,11 @@ export default function PrivacyPage() {
       title="Privacy Policy"
       updated="3 May 2026"
       sections={sections}
-      jurisdictionNote="This policy applies to users of SpecialCarer in the United Kingdom, the European Economic Area, and the United States. California residents should also read the dedicated CCPA/CPRA section below."
+      jurisdictionNote="This policy applies to users of SpecialCarers in the United Kingdom, the European Economic Area, and the United States. California residents should also read the dedicated CCPA/CPRA section below."
     >
       <h2 id="summary">At a glance</h2>
       <p>
-        SpecialCarer is a marketplace that connects families with vetted
+        SpecialCarers is a marketplace that connects families with vetted
         caregivers. To make that work safely we have to collect and process
         personal data. The short version:
       </p>
@@ -70,7 +70,7 @@ export default function PrivacyPage() {
 
       <h2 id="controller">Who we are</h2>
       <p>
-        SpecialCarer is operated by <strong>All Care 4 U Group Limited</strong>
+        SpecialCarers is operated by <strong>All Care 4 U Group Limited</strong>
         , a company registered in England and Wales (company number{" "}
         <strong>09428739</strong>) with its registered office at 85 Great
         Portland Street, London, England, W1W 7LT. We are the{" "}
@@ -392,7 +392,7 @@ export default function PrivacyPage() {
         To exercise CCPA rights email{" "}
         <a href="mailto:privacy@allcare4u.co.uk">privacy@allcare4u.co.uk</a>{" "}
         with the subject &quot;CCPA request&quot;. We will verify your
-        identity by matching the email address on your SpecialCarer account
+        identity by matching the email address on your SpecialCarers account
         and respond within 45 days.
       </p>
 
@@ -420,7 +420,7 @@ export default function PrivacyPage() {
 
       <h2 id="children">Children</h2>
       <p>
-        SpecialCarer is for adults aged 18 and over. We do not knowingly
+        SpecialCarers is for adults aged 18 and over. We do not knowingly
         collect personal information from anyone under 18. Care recipients
         in a household may be minors, but the booking is always made by an
         adult account-holder. If we discover an account has been created by
@@ -445,7 +445,7 @@ export default function PrivacyPage() {
         </li>
       </ul>
       <p>
-        SpecialCarer pays the vendor fee directly. Caregivers consent to
+        SpecialCarers pays the vendor fee directly. Caregivers consent to
         the check before submission. Vendors retain the underlying
         certificate copies under their own data policies; we receive only
         the result code, certificate number, and a clearance status.

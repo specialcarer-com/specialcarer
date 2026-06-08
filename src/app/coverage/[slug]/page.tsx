@@ -30,7 +30,7 @@ export async function generateMetadata({
   const { slug } = await params;
   const city = await getCoverageCity(slug);
   if (!city) {
-    return { title: "City not found — SpecialCarer" };
+    return { title: "City not found — SpecialCarers" };
   }
   const verbForStatus =
     city.status === "live"
@@ -39,11 +39,11 @@ export async function generateMetadata({
         ? `Join the ${city.name} waitlist`
         : `${city.name} is coming soon`;
   return {
-    title: `${verbForStatus} — SpecialCarer`,
+    title: `${verbForStatus} — SpecialCarers`,
     description:
       city.status === "live"
         ? `${city.carer_count} background-checked carers in ${city.name}, ${city.region ?? city.country}. Average response ${city.avg_response_min ?? "—"} min. Book online.`
-        : `Be among the first to hear when SpecialCarer launches in ${city.name}, ${city.region ?? city.country}.`,
+        : `Be among the first to hear when SpecialCarers launches in ${city.name}, ${city.region ?? city.country}.`,
     alternates: {
       canonical: `https://specialcarer.com/coverage/${city.slug}`,
     },
@@ -65,7 +65,7 @@ export default async function CoverageCityPage({
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     "@id": `https://specialcarer.com/coverage/${city.slug}`,
-    name: `SpecialCarer — ${city.name}`,
+    name: `SpecialCarers — ${city.name}`,
     url: `https://specialcarer.com/coverage/${city.slug}`,
     address: {
       "@type": "PostalAddress",

@@ -1,9 +1,9 @@
 import LegalLayout, { type LegalSection } from "@/components/legal-layout";
 
 export const metadata = {
-  title: "Terms of Service — SpecialCarer",
+  title: "Terms of Service — SpecialCarers",
   description:
-    "The agreement between you and All Care 4 U Group Limited governing your use of SpecialCarer.",
+    "The agreement between you and All Care 4 U Group Limited governing your use of SpecialCarers.",
 };
 
 const sections: LegalSection[] = [
@@ -40,7 +40,7 @@ export default function TermsPage() {
     >
       <h2 id="summary">Summary</h2>
       <p>
-        SpecialCarer is a marketplace operated by All Care 4 U Group
+        SpecialCarers is a marketplace operated by All Care 4 U Group
         Limited that connects families needing care with self-employed
         caregivers. We are not the employer of caregivers and we are not a
         party to the care agreement between a family and a caregiver — the
@@ -58,7 +58,7 @@ export default function TermsPage() {
         These Terms of Service form a legally binding agreement between
         you and <strong>All Care 4 U Group Limited</strong> (company number
         09428739, registered at 85 Great Portland Street, London, England,
-        W1W 7LT). &quot;SpecialCarer&quot;, &quot;we&quot;, &quot;us&quot;
+        W1W 7LT). &quot;SpecialCarers&quot;, &quot;we&quot;, &quot;us&quot;
         and &quot;our&quot; refer to that company.
       </p>
 
@@ -84,7 +84,7 @@ export default function TermsPage() {
       <h2 id="marketplace">Our role as a marketplace</h2>
       <ul>
         <li>
-          Caregivers on SpecialCarer are <strong>self-employed
+          Caregivers on SpecialCarers are <strong>self-employed
           independent contractors</strong>, not our employees, agents, or
           partners.
         </li>
@@ -114,7 +114,7 @@ export default function TermsPage() {
         <li>
           You are responsible for your own taxes. In the UK that includes
           self-assessment tax returns and National Insurance contributions.
-          In the US, SpecialCarer will issue a Form 1099-NEC where annual
+          In the US, SpecialCarers will issue a Form 1099-NEC where annual
           earnings exceed the IRS threshold; you remain responsible for
           income and self-employment tax filings.
         </li>
@@ -127,7 +127,7 @@ export default function TermsPage() {
           .
         </li>
         <li>
-          Funds are held by SpecialCarer (via Stripe) until the shift is
+          Funds are held by SpecialCarers (via Stripe) until the shift is
           complete and a 24-hour review window has passed, at which point
           your share (the booking total minus the platform commission) is
           released to your Stripe Connect account for payout.
@@ -147,7 +147,7 @@ export default function TermsPage() {
         </li>
         <li>
           You agree to pay the booking total when you book. Payments are
-          captured by SpecialCarer (via Stripe) and held until the shift
+          captured by SpecialCarers (via Stripe) and held until the shift
           is complete.
         </li>
         <li>
@@ -157,7 +157,7 @@ export default function TermsPage() {
         <li>
           You agree not to circumvent the platform — you must not
           arrange or pay for off-platform shifts with a caregiver you met
-          on SpecialCarer for at least 12 months after first contact.
+          on SpecialCarers for at least 12 months after first contact.
         </li>
       </ul>
 
@@ -169,7 +169,7 @@ export default function TermsPage() {
         </li>
         <li>
           Payment is captured at the time of booking via Stripe.
-          SpecialCarer holds the funds until the shift completes plus a
+          SpecialCarers holds the funds until the shift completes plus a
           24-hour review window before releasing the caregiver&apos;s
           share.
         </li>
@@ -243,7 +243,7 @@ export default function TermsPage() {
       <h2 id="tracking">Live tracking during shifts</h2>
       <p>
         While a shift is in its scheduled window the caregiver may share
-        live location with the booking family via the SpecialCarer app.
+        live location with the booking family via the SpecialCarers app.
         This is opt-in for each booking. Tracking is automatically clamped
         to the period from 15 minutes before the scheduled start to 15
         minutes after the scheduled end. See the{" "}
@@ -254,7 +254,7 @@ export default function TermsPage() {
       <p>You agree not to:</p>
       <ul>
         <li>
-          Use SpecialCarer for any unlawful purpose, including human
+          Use SpecialCarers for any unlawful purpose, including human
           trafficking, exploitation, harassment, or discrimination.
         </li>
         <li>
@@ -264,7 +264,7 @@ export default function TermsPage() {
         <li>Bypass safety, payment, or vetting controls.</li>
         <li>
           Solicit payments off-platform from users you met through
-          SpecialCarer (see family obligations).
+          SpecialCarers (see family obligations).
         </li>
         <li>Scrape, copy, or resell platform data.</li>
         <li>
@@ -276,14 +276,14 @@ export default function TermsPage() {
       <h2 id="content">Your content</h2>
       <p>
         You retain all rights to the content you upload (profile photos,
-        bio, messages, reviews). You grant SpecialCarer a worldwide,
+        bio, messages, reviews). You grant SpecialCarers a worldwide,
         royalty-free, non-exclusive licence to host, display, and
         transmit that content as needed to operate the service.
       </p>
 
       <h2 id="ip">Intellectual property</h2>
       <p>
-        The SpecialCarer name, logo, brand, software, and underlying
+        The SpecialCarers name, logo, brand, software, and underlying
         technology are owned by All Care 4 U Group Limited or its
         licensors. Nothing in these Terms grants you ownership of them.
       </p>
@@ -296,7 +296,7 @@ export default function TermsPage() {
         particular purpose, and non-infringement.
       </p>
       <p>
-        Care provided by caregivers is not medical care. SpecialCarer is
+        Care provided by caregivers is not medical care. SpecialCarers is
         not a healthcare provider, a regulated care agency, an
         employment agency, or an introductory agency under the Conduct
         of Employment Agencies and Employment Businesses Regulations.
@@ -363,7 +363,7 @@ export default function TermsPage() {
           arbitration clause.
         </li>
         <li>
-          You and SpecialCarer agree to resolve disputes arising under
+          You and SpecialCarers agree to resolve disputes arising under
           these Terms by binding arbitration administered by the
           American Arbitration Association under its Consumer Rules,
           except that either party may bring an individual claim in
@@ -372,7 +372,7 @@ export default function TermsPage() {
         </li>
         <li>
           Arbitration takes place in the venue closest to your residence
-          or remotely. SpecialCarer covers AAA filing fees for claims
+          or remotely. SpecialCarers covers AAA filing fees for claims
           under US$10,000.
         </li>
         <li>
