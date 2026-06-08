@@ -46,7 +46,7 @@ export async function generateCertificatePdf(
   });
 
   // Brand
-  page.drawText("SpecialCarer", {
+  page.drawText("SpecialCarers", {
     x: 48,
     y: height - 60,
     size: 18,

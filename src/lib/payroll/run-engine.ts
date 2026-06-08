@@ -685,7 +685,7 @@ function previewEmailHtml(name: string, run: PayrollRun, netCents: number): stri
   <p>Please log in and check the details. Payroll runs on <strong>${run.scheduled_run_date}</strong>.</p>
   <p>If anything looks wrong — a missing shift, an incorrect rate — please flag a dispute now so we can investigate before the money moves.</p>
   <p><a href="https://specialcarer.com/dashboard/payslips" style="background:#0E7C7B;color:white;padding:10px 16px;border-radius:8px;text-decoration:none;">View draft payslip</a></p>
-  <p style="color:#6b7280;font-size:12px;">SpecialCarer · All Care 4 U Group Ltd</p>
+  <p style="color:#6b7280;font-size:12px;">SpecialCarers · All Care 4 U Group Ltd</p>
   </body></html>`;
 }
 
@@ -698,7 +698,7 @@ function payslipReadyEmailHtml(name: string, netCents: number): string {
   <h2 style="color:#0E7C7B;">Hi ${name},</h2>
   <p>Your payslip is ready and net pay of <strong>${gbp(netCents)}</strong> will be transferred to your bank shortly.</p>
   <p><a href="https://specialcarer.com/dashboard/payslips" style="background:#0E7C7B;color:white;padding:10px 16px;border-radius:8px;text-decoration:none;">View payslip</a></p>
-  <p style="color:#6b7280;font-size:12px;">SpecialCarer · All Care 4 U Group Ltd</p>
+  <p style="color:#6b7280;font-size:12px;">SpecialCarers · All Care 4 U Group Ltd</p>
   </body></html>`;
 }
 

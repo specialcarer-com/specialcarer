@@ -21,7 +21,7 @@ function shell(title: string, bodyHtml: string): string {
   <h2 style="color:#0E7C7B;margin:0 0 8px">${esc(title)}</h2>
   ${bodyHtml}
   <p style="font-size:11px;color:#575757;margin-top:24px">
-    SpecialCarer · A product of All Care 4 U Group Ltd<br>
+    SpecialCarers · A product of All Care 4 U Group Ltd<br>
     <a href="https://specialcarer.com" style="color:#0E7C7B">specialcarer.com</a>
   </p>
 </div></body></html>`;
@@ -36,7 +36,7 @@ export function renderOptInStartedEmail(args: { name: string }): EmailContent {
   const html = shell(
     "You're on your way",
     `<p>Hi ${esc(args.name)},</p>
-    <p>You've started your application to take <strong>Channel B agency shifts</strong> — bookings that come directly from organisations who use SpecialCarer.</p>
+    <p>You've started your application to take <strong>Channel B agency shifts</strong> — bookings that come directly from organisations who use SpecialCarers.</p>
     <p>You'll need to clear four gates: a worker agreement, an Enhanced DBS, a Right to Work check, and three mandatory training courses.</p>
     <p style="margin:24px 0">
       <a href="${DASHBOARD_URL}" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
@@ -47,12 +47,12 @@ export function renderOptInStartedEmail(args: { name: string }): EmailContent {
   const text = [
     `Hi ${args.name},`,
     "",
-    "You've started your application to take Channel B agency shifts on SpecialCarer.",
+    "You've started your application to take Channel B agency shifts on SpecialCarers.",
     "Four gates to clear: worker agreement, Enhanced DBS, Right to Work, training.",
     "",
     `Continue: ${DASHBOARD_URL}`,
     "",
-    "— SpecialCarer",
+    "— SpecialCarers",
   ].join("\n");
   return { subject, html, text };
 }
@@ -95,7 +95,7 @@ export function renderGateCompleteEmail(args: {
     "",
     DASHBOARD_URL,
     "",
-    "— SpecialCarer",
+    "— SpecialCarers",
   ].join("\n");
   return { subject, html, text };
 }
@@ -113,7 +113,7 @@ export function renderOptInSubmittedEmail(args: { name: string }): EmailContent 
     "",
     "All four gates are green — your application is now with the admin team. We review within 24 hours.",
     "",
-    "— SpecialCarer",
+    "— SpecialCarers",
   ].join("\n");
   return { subject, html, text };
 }
@@ -138,7 +138,7 @@ export function renderOptInApprovedEmail(args: { name: string }): EmailContent {
     "",
     "https://specialcarer.com/m/jobs",
     "",
-    "— SpecialCarer",
+    "— SpecialCarers",
   ].join("\n");
   return { subject, html, text };
 }
@@ -169,7 +169,7 @@ export function renderOptInRejectedEmail(args: {
     "",
     `You can re-apply at ${DASHBOARD_URL}`,
     "",
-    "— SpecialCarer",
+    "— SpecialCarers",
   ].join("\n");
   return { subject, html, text };
 }
@@ -193,7 +193,7 @@ export function renderOptInPausedEmail(args: {
     `Reason: ${args.reason}`,
     "Marketplace bookings are unaffected.",
     "",
-    "— SpecialCarer",
+    "— SpecialCarers",
   ].join("\n");
   return { subject, html, text };
 }
@@ -228,7 +228,7 @@ export function renderComplianceUpdateGraceEmail(args: {
     "",
     `Open training: ${DASHBOARD_URL}`,
     "",
-    "— SpecialCarer",
+    "— SpecialCarers",
   ].join("\n");
   return { subject, html, text };
 }
@@ -256,7 +256,7 @@ export function renderOptInGraceExpiredEmail(args: {
     "",
     `Open application: ${DASHBOARD_URL}`,
     "",
-    "— SpecialCarer",
+    "— SpecialCarers",
   ].join("\n");
   return { subject, html, text };
 }
@@ -278,7 +278,7 @@ export function renderOptInResumedEmail(args: { name: string }): EmailContent {
     "",
     "Your agency status has been resumed. Channel B offers will appear in your jobs feed again.",
     "",
-    "— SpecialCarer",
+    "— SpecialCarers",
   ].join("\n");
   return { subject, html, text };
 }
