@@ -14,7 +14,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
  */
 const config: CapacitorConfig = {
   appId: "com.allcare4ugroup.specialcarer",
-  appName: "Special Carer",
+  appName: "Special Carers",
   // Required by the CLI even when using a remote server URL.
   // We ship a tiny offline fallback bundle from `mobile/web` so the app
   // shows brand chrome if the device is offline at first launch.
