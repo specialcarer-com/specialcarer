@@ -166,8 +166,9 @@ export function AnimatedBrowsePhone() {
             className="absolute top-1 left-1/2 -translate-x-1/2 w-12 h-3 rounded-full bg-slate-950 z-30"
           />
 
-          {/* Header */}
-          <div className="absolute inset-x-0 top-5 z-20 px-3">
+          {/* Content column — header + cards flow naturally so no fixed gap exists */}
+          <div className="absolute inset-x-0 top-5 bottom-7 z-20 flex flex-col px-3">
+            {/* Header */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <div className="relative h-4 w-4">
@@ -250,10 +251,9 @@ export function AnimatedBrowsePhone() {
             <div className="mt-1.5 text-[8px] font-bold text-slate-900">
               Professionals
             </div>
-          </div>
 
-          {/* Cards — positioned right under the Professionals heading, compact to fit 5 cards */}
-          <div className="absolute inset-x-0 top-[44%] bottom-[7%] z-10 overflow-hidden px-2 space-y-1">
+            {/* Cards — flow directly under the heading; no fixed gap */}
+            <div className="mt-1 flex-1 min-h-0 overflow-hidden space-y-1">
             {caregivers.map((c, i) => (
               <motion.div
                 key={`${cycle}-${c.name}`}
@@ -349,6 +349,7 @@ export function AnimatedBrowsePhone() {
                 )}
               </motion.div>
             ))}
+            </div>
           </div>
 
           {/* Bottom tab bar */}
