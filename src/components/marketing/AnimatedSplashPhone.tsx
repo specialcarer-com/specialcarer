@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion, type Variants } from "framer-motion";
+// AnimatePresence still used for the caption text below.
 import { useEffect, useState } from "react";
 import Image from "next/image";
 
@@ -70,13 +71,7 @@ const slides = [
 ] as const;
 
 const SLIDE_HOLD = 4.5; // seconds per slide
-const CROSSFADE = 1.0;
-
-const slideVariants: Variants = {
-  initial: { opacity: 0, scale: 1.04 },
-  animate: { opacity: 1, scale: 1 },
-  exit: { opacity: 0, scale: 1.01 },
-};
+const CROSSFADE = 1.4; // overlap duration — longer is smoother, never blank
 
 const captionTextVariants: Variants = {
   initial: { opacity: 0, y: 8 },
@@ -107,32 +102,28 @@ export function AnimatedSplashPhone() {
     >
       <div className="relative h-full w-full rounded-[2.4rem] bg-slate-900 p-[3px] ring-1 ring-slate-800">
         <div className="relative h-full w-full rounded-[2.2rem] overflow-hidden bg-slate-900">
-          {/* Hero photo carousel — fills the entire phone */}
+          {/* Hero photo carousel — all slides preloaded and stacked, opacity-driven cross-fade so there is never a blank frame */}
           <div className="absolute inset-0 z-0">
-            <AnimatePresence initial={false} mode="sync">
+            {slides.map((s, i) => (
               <motion.div
-                key={slide.src}
-                variants={slideVariants}
-                initial={reducedMotion ? false : "initial"}
-                animate="animate"
-                exit="exit"
-                transition={{
-                  opacity: { duration: CROSSFADE },
-                  scale: { duration: SLIDE_HOLD + CROSSFADE, ease: "easeOut" },
-                }}
+                key={s.src}
                 className="absolute inset-0"
+                initial={false}
+                animate={{ opacity: i === idx ? 1 : 0 }}
+                transition={{ duration: reducedMotion ? 0 : CROSSFADE, ease: "easeInOut" }}
+                aria-hidden={i === idx ? "false" : "true"}
               >
                 <Image
-                  src={slide.src}
-                  alt={slide.alt}
+                  src={s.src}
+                  alt={i === idx ? s.alt : ""}
                   fill
-                  priority={idx === 0}
+                  priority={i === 0}
                   className="object-cover"
-                  style={{ objectPosition: slide.objectPosition }}
+                  style={{ objectPosition: s.objectPosition }}
                   sizes="(max-width: 768px) 50vw, 240px"
                 />
               </motion.div>
-            </AnimatePresence>
+            ))}
 
             {/* Bottom gradient — keeps the caption strip readable without covering faces */}
             <div
