@@ -22,6 +22,9 @@ import {
   inferCountryFromPostcode,
   normalisePostcode,
 } from "@/lib/care/postcode";
+import { rankCarers, type RerankCarer, type RerankSort } from "@/lib/match/rerank";
+
+const TEAL = "#039EA0";
 
 /**
  * Wire-format carer returned by GET /api/m/carers/search. Keep this in
@@ -49,6 +52,8 @@ type ApiSearchCarer = {
   hourly_rate_cents: number | null;
   weekly_rate_cents: number | null;
   currency: "GBP" | "USD";
+  is_online?: boolean | null;
+  last_online_at?: string | null;
 };
 
 /** API ↔ page service key translation. The DB stores canonical vertical
@@ -86,6 +91,8 @@ type PageCarer = {
   hasVehicle?: boolean;
   certifications?: string[];
   tags?: string[];
+  isOnline: boolean;
+  lastOnlineAt: string | null;
 };
 
 function adaptCarer(c: ApiSearchCarer): PageCarer {
@@ -129,6 +136,8 @@ function adaptCarer(c: ApiSearchCarer): PageCarer {
     hasVehicle: c.has_own_vehicle,
     certifications: c.certifications,
     tags: c.tags,
+    isOnline: c.is_online === true,
+    lastOnlineAt: c.last_online_at ?? null,
   };
 }
 
@@ -157,6 +166,12 @@ export default function SearchPage() {
   // matcher level (a nurse always satisfies the clinical filter).
   const [needClinical, setNeedClinical] = useState(false);
   const [needNurse, setNeedNurse] = useState(false);
+
+  // Smart rerank (gap 19): sort key + an "Online now" hard filter. The list
+  // is reordered client-side with the shared match scorer; fresh-online carers
+  // float to the top of every sort unless the user explicitly sorts elsewhere.
+  const [sort, setSort] = useState<RerankSort>("best_match");
+  const [onlineOnly, setOnlineOnly] = useState(false);
 
   // Postcode + radius filter (additive). Mobile uses mock data, so the
   // postcode acts as a textual prefix match against carer city/postcode
@@ -346,6 +361,26 @@ export default function SearchPage() {
     postcode,
   ]);
 
+  // Apply the "Online now" hard filter, then rerank with the shared scorer.
+  // Search has no per-carer distance/created_at wired in, so the reranker
+  // orders on rating + online recency; fresh-online carers float to the top.
+  const ranked = useMemo(() => {
+    const pool = onlineOnly ? results.filter((c) => c.isOnline) : results;
+    const ordered = rankCarers<RerankCarer & PageCarer>(
+      pool.map((c) => ({
+        ...c,
+        rating: c.rating,
+        rating_count: c.reviewCount,
+        distance_km: null,
+        is_online: c.isOnline,
+        last_online_at: c.lastOnlineAt,
+        created_at: null,
+      })),
+      { sort, maxDistanceKm: radiusKm },
+    );
+    return ordered;
+  }, [results, onlineOnly, sort, radiusKm]);
+
   return (
     <main className="min-h-[100dvh] bg-bg-screen sc-with-bottom-nav">
       <TopBar back="/m/home" title="Find a Carer" />
@@ -427,6 +462,42 @@ export default function SearchPage() {
           </button>
         </div>
 
+        {/* Online-now filter + sort (gap 19 smart rerank) */}
+        <div className="-mx-4 px-4 flex items-center gap-2 overflow-x-auto pb-2 sc-no-select">
+          <button
+            onClick={() => setOnlineOnly((v) => !v)}
+            aria-pressed={onlineOnly}
+            className={`shrink-0 h-9 px-3 rounded-pill text-[13px] font-semibold transition inline-flex items-center gap-1.5 ${
+              onlineOnly ? "text-white" : "bg-white text-subheading border border-line"
+            }`}
+            style={onlineOnly ? { background: TEAL } : undefined}
+          >
+            <span
+              aria-hidden
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ background: onlineOnly ? "#fff" : TEAL }}
+            />
+            Online now
+          </button>
+          <div className="shrink-0 ml-auto flex items-center gap-1.5">
+            <label htmlFor="carer-sort" className="text-[12px] text-subheading">
+              Sort
+            </label>
+            <select
+              id="carer-sort"
+              value={sort}
+              onChange={(e) => setSort(e.target.value as RerankSort)}
+              aria-label="Sort carers"
+              className="h-9 px-2 rounded-btn border border-line bg-white text-[13px] font-semibold text-heading"
+            >
+              <option value="best_match">Best match</option>
+              <option value="rating_desc">Highest rated</option>
+              <option value="nearest">Nearest</option>
+              <option value="newest">Newest</option>
+            </select>
+          </div>
+        </div>
+
         {/* Postcode + radius (additive) */}
         <div className="mt-2 flex items-center gap-2">
           <div className="flex-1 h-11 rounded-btn border border-line bg-white px-3 flex items-center gap-2">
@@ -466,7 +537,7 @@ export default function SearchPage() {
           <p className="text-[12px] text-subheading">
             {loading
               ? "Loading carers…"
-              : `${results.length} ${results.length === 1 ? "carer" : "carers"} found`}
+              : `${ranked.length} ${ranked.length === 1 ? "carer" : "carers"} found`}
           </p>
           <Link
             href={mapHref}
@@ -502,14 +573,22 @@ export default function SearchPage() {
           </Card>
         )}
 
-        {!loading && results.map((c) => (
+        {!loading && ranked.map((c) => (
           <Card key={c.id}>
             <div className="flex items-start gap-3">
               <Avatar src={c.photo} name={c.name} size={56} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-[16px] font-bold text-heading truncate">
-                    {c.name}
+                  <p className="text-[16px] font-bold text-heading truncate inline-flex items-center gap-1.5">
+                    {c.isOnline && (
+                      <span
+                        aria-label="Online now"
+                        title="Online now"
+                        className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
+                        style={{ background: TEAL }}
+                      />
+                    )}
+                    <span className="truncate">{c.name}</span>
                   </p>
                   <span className="flex items-center gap-1 text-[13px] font-bold text-heading shrink-0">
                     {c.rating.toFixed(1)} <IconStar />
@@ -551,7 +630,7 @@ export default function SearchPage() {
           </Card>
         ))}
 
-        {!loading && !error && results.length === 0 && (
+        {!loading && !error && ranked.length === 0 && (
           <Card className="text-center py-10">
             <p className="text-heading font-semibold">No carers found</p>
             <p className="mt-2 text-[13px] text-subheading">
@@ -686,7 +765,7 @@ export default function SearchPage() {
                 Clear
               </Button>
               <Button block onClick={() => setFilterOpen(false)}>
-                Show {results.length} {results.length === 1 ? "carer" : "carers"}
+                Show {ranked.length} {ranked.length === 1 ? "carer" : "carers"}
               </Button>
             </div>
           </div>

@@ -43,6 +43,8 @@ export type SearchRow = {
   weekly_rate_cents: number | null;
   currency: string | null;
   created_at: string | null;
+  is_online?: boolean | null;
+  last_online_at?: string | null;
 };
 
 export type ApiSearchCarer = {
@@ -66,6 +68,8 @@ export type ApiSearchCarer = {
   hourly_rate_cents: number | null;
   weekly_rate_cents: number | null;
   currency: "GBP" | "USD";
+  is_online: boolean;
+  last_online_at: string | null;
 };
 
 export type ApiSearchResponse = {
@@ -251,25 +255,38 @@ function toCarer(r: SearchRow): ApiSearchCarer {
     hourly_rate_cents: r.hourly_rate_cents,
     weekly_rate_cents: r.weekly_rate_cents,
     currency: normaliseCurrency(r.currency),
+    is_online: r.is_online === true,
+    last_online_at: r.last_online_at ?? null,
   };
 }
 
-const SELECT_COLS =
+const BASE_COLS =
   "user_id, display_name, headline, photo_url, city, country, services, languages, certifications, tags, care_formats, gender, has_drivers_license, has_own_vehicle, years_experience, rating_avg, rating_count, hourly_rate_cents, weekly_rate_cents, currency, created_at";
+// Presence columns come from the gap-18 go-online migration. If that
+// migration hasn't run yet, selecting them errors; we detect that and retry
+// with BASE_COLS so search keeps working (carers just render as offline).
+const PRESENCE_COLS = "is_online, last_online_at";
+const SELECT_COLS = `${BASE_COLS}, ${PRESENCE_COLS}`;
 
-export async function handleSearch(args: {
-  client: SearchQueryClient;
-  params: SearchQueryParams;
-}): Promise<
-  | { status: 200; body: ApiSearchResponse }
-  | { status: 500; body: { error: string } }
-> {
-  const { client, params } = args;
-  const p = parseSearchParams(params);
+/** Returns true when a Postgres error looks like an unknown-column error. */
+function isMissingColumnError(msg: string): boolean {
+  const m = msg.toLowerCase();
+  return (
+    m.includes("is_online") ||
+    m.includes("last_online_at") ||
+    m.includes("column") ||
+    m.includes("does not exist")
+  );
+}
 
+function runQuery(
+  client: SearchQueryClient,
+  cols: string,
+  p: ParsedSearchParams,
+) {
   let q = client
     .from("caregiver_profiles")
-    .select(SELECT_COLS, { count: "exact" })
+    .select(cols, { count: "exact" })
     .eq("is_published", true);
 
   if (p.service) q = q.contains("services", [p.service]);
@@ -310,7 +327,23 @@ export async function handleSearch(args: {
 
   const from = p.offset;
   const to = p.offset + p.limit - 1;
-  const { data, error, count } = await q.range(from, to);
+  return q.range(from, to);
+}
+
+export async function handleSearch(args: {
+  client: SearchQueryClient;
+  params: SearchQueryParams;
+}): Promise<
+  | { status: 200; body: ApiSearchResponse }
+  | { status: 500; body: { error: string } }
+> {
+  const { client, params } = args;
+  const p = parseSearchParams(params);
+
+  let { data, error, count } = await runQuery(client, SELECT_COLS, p);
+  if (error && isMissingColumnError(error.message)) {
+    ({ data, error, count } = await runQuery(client, BASE_COLS, p));
+  }
   if (error) {
     return { status: 500, body: { error: error.message } };
   }

@@ -8,6 +8,12 @@ import assert from "node:assert/strict";
 import { scoreCarer, SCORING_WEIGHTS, type ScoreSignals } from "./scoring";
 
 const NOW = Date.parse("2026-06-09T12:00:00Z");
+const MIN = 60 * 1000;
+const DAY = 24 * 60 * MIN;
+
+function iso(msAgo: number): string {
+  return new Date(NOW - msAgo).toISOString();
+}
 
 function signals(over: Partial<ScoreSignals> = {}): ScoreSignals {
   return {
@@ -134,5 +140,35 @@ describe("scoreCarer", () => {
       NOW,
     );
     assert.equal(Math.round(score * 100) / 100, score);
+  });
+});
+
+// Additional cases contributed by gap 19 (smart rerank). Kept in their own
+// block so both suites run without name collisions; these exercise a non-zero
+// blended score at a wider radius and the null-recency edge directly.
+describe("scoreCarer (smart rerank / gap 19)", () => {
+  it("distance is linear over a wider radius", () => {
+    const half = scoreCarer(
+      signals({ distance_km: 10, max_distance_km: 20 }),
+      NOW,
+    );
+    // halfway distance → distance signal 0.5 (weight 0.4 → loses 0.2 → 80)
+    assert.equal(half.breakdown.distance, 0.5);
+    assert.equal(half.score, 80);
+  });
+
+  it("recency: full within 30 minutes, zero after 7 days or when null", () => {
+    assert.equal(
+      scoreCarer(signals({ last_active_at: iso(10 * MIN) }), NOW).breakdown.recency,
+      1,
+    );
+    assert.equal(
+      scoreCarer(signals({ last_active_at: iso(8 * DAY) }), NOW).breakdown.recency,
+      0,
+    );
+    assert.equal(
+      scoreCarer(signals({ last_active_at: null }), NOW).breakdown.recency,
+      0,
+    );
   });
 });
