@@ -161,6 +161,19 @@ export function AnimatedSplashPhone() {
 
           {/* Caption strip — fixed at the bottom, content changes with the slide */}
           <div className="absolute inset-x-0 bottom-0 z-20 px-4 pb-5 pt-4 text-white">
+            {/* SPECIAL CARERS brand tag — prominent above the rotating caption */}
+            <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2 py-0.5 backdrop-blur-sm ring-1 ring-white/30">
+              <Image
+                src="/brand/specialcarer-icon.svg"
+                alt=""
+                width={10}
+                height={10}
+                className="opacity-95"
+              />
+              <span className="text-[8px] font-bold uppercase tracking-[0.18em] text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]">
+                Special Carers
+              </span>
+            </div>
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
                 key={`caption-${slide.src}`}

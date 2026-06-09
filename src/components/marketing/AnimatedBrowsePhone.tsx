@@ -35,6 +35,18 @@ const caregivers = [
     badge: "DBS",
   },
   {
+    avatar: "/brand/avatars/sarah.webp",
+    name: "Sarah Whitfield",
+    specialty: "Live-in companion",
+    distance: "1.1 mi",
+    experience: "9 yrs",
+    rate: "£20",
+    rating: "4.9",
+    reviews: "96",
+    verified: true,
+    badge: "DBS",
+  },
+  {
     avatar: "/brand/avatars/david.webp",
     name: "David Okafor",
     specialty: "Mobility & complex care",
@@ -45,6 +57,18 @@ const caregivers = [
     reviews: "84",
     verified: true,
     badge: "NVQ 3",
+  },
+  {
+    avatar: "/brand/avatars/james.webp",
+    name: "James Aldridge",
+    specialty: "Visiting · Day support",
+    distance: "1.8 mi",
+    experience: "6 yrs",
+    rate: "£16",
+    rating: "4.8",
+    reviews: "71",
+    verified: true,
+    badge: "NVQ 2",
   },
   {
     avatar: "/brand/avatars/emma.webp",
@@ -65,7 +89,7 @@ const cardVariants: Variants = {
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: 2.2 + i * 0.18, duration: 0.45, ease: "easeOut" },
+    transition: { delay: 2.2 + i * 0.14, duration: 0.4, ease: "easeOut" },
   }),
 };
 
@@ -228,8 +252,8 @@ export function AnimatedBrowsePhone() {
             </div>
           </div>
 
-          {/* Cards — positioned right under the Professionals heading */}
-          <div className="absolute inset-x-0 top-[52%] z-10 px-2 space-y-1.5">
+          {/* Cards — positioned right under the Professionals heading, compact to fit 5 cards */}
+          <div className="absolute inset-x-0 top-[49%] bottom-[7%] z-10 overflow-hidden px-2 space-y-1">
             {caregivers.map((c, i) => (
               <motion.div
                 key={`${cycle}-${c.name}`}
@@ -237,16 +261,16 @@ export function AnimatedBrowsePhone() {
                 variants={cardVariants}
                 initial={reducedMotion ? "visible" : "hidden"}
                 animate={phase === "a" ? "hidden" : "visible"}
-                className="relative rounded-lg bg-white px-1.5 py-1.5 shadow-sm ring-1 ring-slate-100"
+                className="relative rounded-lg bg-white px-1.5 py-1 shadow-sm ring-1 ring-slate-100"
               >
                 <div className="flex items-center gap-1.5">
-                  <div className="relative h-7 w-7 flex-shrink-0">
+                  <div className="relative h-6 w-6 flex-shrink-0">
                     <Image
                       src={c.avatar}
                       alt=""
                       fill
                       className="rounded-full object-cover ring-2 ring-white shadow-sm"
-                      sizes="28px"
+                      sizes="24px"
                     />
                     {c.verified && (
                       <div
@@ -286,19 +310,19 @@ export function AnimatedBrowsePhone() {
                     <div className="text-[4.5px] text-slate-400 uppercase tracking-wider">/hr</div>
                   </div>
                 </div>
-                <div className="mt-1 flex items-center justify-end">
+                <div className="mt-0.5 flex items-center justify-end">
                   {i === 0 ? (
                     <motion.button
                       type="button"
                       variants={bookPulseVariants}
                       animate={phase === "c" ? "pulse" : "idle"}
-                      className="rounded-full bg-[#039EA0] px-2 py-0.5 text-[5.5px] font-semibold uppercase tracking-wider text-white shadow-sm"
+                      className="rounded-full bg-[#039EA0] px-1.5 py-0.5 text-[5px] font-semibold uppercase tracking-wider text-white shadow-sm"
                       tabIndex={-1}
                     >
                       Book Slot
                     </motion.button>
                   ) : (
-                    <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[5.5px] font-semibold uppercase tracking-wider text-slate-600">
+                    <span className="rounded-full border border-slate-200 px-1.5 py-0.5 text-[5px] font-semibold uppercase tracking-wider text-slate-600">
                       View profile
                     </span>
                   )}
