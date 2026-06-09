@@ -23,34 +23,40 @@ const BADGE_REVEAL = 6000;
 
 const caregivers = [
   {
-    initials: "PS",
+    avatar: "/brand/avatars/priya.webp",
     name: "Priya Sharma",
-    role: "Elderly care · Dementia specialist",
-    location: "Manchester, M20",
-    experience: "8+ yrs",
-    rate: "£22/hr",
-    rating: "4.7",
-    color: "bg-[#039EA0]",
+    specialty: "Dementia specialist",
+    distance: "0.8 mi",
+    experience: "8 yrs",
+    rate: "£22",
+    rating: "4.9",
+    reviews: "127",
+    verified: true,
+    badge: "DBS",
   },
   {
-    initials: "DO",
+    avatar: "/brand/avatars/david.webp",
     name: "David Okafor",
-    role: "Eldercare · Dementia-aware",
-    location: "Manchester",
+    specialty: "Mobility & complex care",
+    distance: "1.4 mi",
     experience: "11 yrs",
-    rate: "£17/hr",
-    rating: "New",
-    color: "bg-violet-500",
+    rate: "£17",
+    rating: "4.8",
+    reviews: "84",
+    verified: true,
+    badge: "NVQ 3",
   },
   {
-    initials: "ET",
+    avatar: "/brand/avatars/emma.webp",
     name: "Emma Thompson",
-    role: "Maternity nurse · Newborn",
-    location: "London",
+    specialty: "Postnatal · Newborn",
+    distance: "2.1 mi",
     experience: "7 yrs",
-    rate: "£18/hr",
-    rating: "New",
-    color: "bg-[#F4A261]",
+    rate: "£18",
+    rating: "4.9",
+    reviews: "62",
+    verified: true,
+    badge: "RMN",
   },
 ];
 
@@ -190,48 +196,74 @@ export function AnimatedBrowsePhone() {
           <div className="absolute inset-x-0 top-[44%] z-10 px-2 space-y-1.5">
             {caregivers.map((c, i) => (
               <motion.div
-                key={`${cycle}-${c.initials}`}
+                key={`${cycle}-${c.name}`}
                 custom={i}
                 variants={cardVariants}
                 initial={reducedMotion ? "visible" : "hidden"}
                 animate={phase === "a" ? "hidden" : "visible"}
-                className="relative rounded-lg bg-white px-1.5 py-1 shadow-sm ring-1 ring-slate-100"
+                className="relative rounded-lg bg-white px-1.5 py-1.5 shadow-sm ring-1 ring-slate-100"
               >
                 <div className="flex items-center gap-1.5">
-                  <div
-                    className={`h-5 w-5 rounded-full ${c.color} flex items-center justify-center text-[7px] font-semibold text-white ring-2 ring-white shadow-sm`}
-                    aria-hidden="true"
-                  >
-                    {c.initials}
+                  <div className="relative h-7 w-7 flex-shrink-0">
+                    <Image
+                      src={c.avatar}
+                      alt=""
+                      fill
+                      className="rounded-full object-cover ring-2 ring-white shadow-sm"
+                      sizes="28px"
+                    />
+                    {c.verified && (
+                      <div
+                        className="absolute -bottom-0.5 -right-0.5 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-[#039EA0] ring-1 ring-white"
+                        aria-label="Verified"
+                      >
+                        <svg viewBox="0 0 12 12" className="h-1.5 w-1.5 fill-white" aria-hidden="true">
+                          <path d="M10 3.5L5 8.5 2.5 6 1.5 7 5 10.5l5.5-6z" />
+                        </svg>
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[7px] font-bold text-slate-900 truncate">
-                      {c.name}
+                    <div className="flex items-center gap-1">
+                      <div className="text-[7px] font-bold text-slate-900 truncate">
+                        {c.name}
+                      </div>
+                      <span className="rounded-sm bg-[#039EA0]/10 px-0.5 text-[4.5px] font-bold uppercase tracking-wider text-[#039EA0]">
+                        {c.badge}
+                      </span>
                     </div>
-                    <div className="text-[5px] text-slate-500 truncate">{c.role}</div>
+                    <div className="text-[5px] text-slate-500 truncate">{c.specialty}</div>
+                    <div className="mt-0.5 flex items-center gap-0.5">
+                      <svg viewBox="0 0 12 12" className="h-1.5 w-1.5 fill-amber-400" aria-hidden="true">
+                        <path d="M6 1l1.5 3.5L11 5l-2.5 2.5L9 11 6 9l-3 2 .5-3.5L1 5l3.5-.5z" />
+                      </svg>
+                      <span className="text-[5px] font-semibold text-slate-700">{c.rating}</span>
+                      <span className="text-[5px] text-slate-400">({c.reviews})</span>
+                      <span className="text-[5px] text-slate-300">·</span>
+                      <span className="text-[5px] text-slate-500">{c.distance}</span>
+                      <span className="text-[5px] text-slate-300">·</span>
+                      <span className="text-[5px] text-slate-500">{c.experience}</span>
+                    </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-[7px] font-bold text-[#039EA0]">{c.rate}</div>
-                    <div className="text-[5px] text-amber-500">★ {c.rating}</div>
+                    <div className="text-[8px] font-bold text-slate-900">{c.rate}</div>
+                    <div className="text-[4.5px] text-slate-400 uppercase tracking-wider">/hr</div>
                   </div>
                 </div>
-                <div className="mt-0.5 flex items-center justify-between">
-                  <div className="text-[5px] text-slate-400">
-                    {c.location} · {c.experience}
-                  </div>
+                <div className="mt-1 flex items-center justify-end">
                   {i === 0 ? (
                     <motion.button
                       type="button"
                       variants={bookPulseVariants}
                       animate={phase === "c" ? "pulse" : "idle"}
-                      className="rounded-full bg-[#039EA0] px-1.5 py-0.5 text-[5px] font-semibold uppercase tracking-wider text-white"
+                      className="rounded-full bg-[#039EA0] px-2 py-0.5 text-[5.5px] font-semibold uppercase tracking-wider text-white shadow-sm"
                       tabIndex={-1}
                     >
                       Book Slot
                     </motion.button>
                   ) : (
-                    <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[5px] font-semibold uppercase tracking-wider text-slate-500">
-                      View
+                    <span className="rounded-full border border-slate-200 px-2 py-0.5 text-[5.5px] font-semibold uppercase tracking-wider text-slate-600">
+                      View profile
                     </span>
                   )}
                 </div>

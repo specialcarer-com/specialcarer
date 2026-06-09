@@ -37,7 +37,7 @@ function useClock() {
   return time || "—:—";
 }
 
-// Two portraits paired with the audience message they communicate.
+// Portraits paired with the audience message they communicate.
 const slides = [
   {
     src: "/brand/people/team-splash.png",
@@ -52,6 +52,20 @@ const slides = [
     eyebrow: "Childcare you can trust",
     headline: "Loving, qualified nannies",
     objectPosition: "50% 35%",
+  },
+  {
+    src: "/brand/people/wheelchair-care.png",
+    alt: "A caregiver and an elderly man in a wheelchair smiling together in a garden",
+    eyebrow: "Mobility & complex care",
+    headline: "Compassion, dignity, independence",
+    objectPosition: "55% 35%",
+  },
+  {
+    src: "/brand/people/teen-support.png",
+    alt: "A support worker helping two teenagers with homework at a kitchen table",
+    eyebrow: "Teen & SEN support",
+    headline: "Patient mentors for growing minds",
+    objectPosition: "55% 40%",
   },
 ] as const;
 

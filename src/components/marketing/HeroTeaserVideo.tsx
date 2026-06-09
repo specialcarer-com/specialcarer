@@ -19,6 +19,7 @@ export function HeroTeaserVideo() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
 
   // Detect prefers-reduced-motion (only on the client).
   useEffect(() => {
@@ -65,6 +66,14 @@ export function HeroTeaserVideo() {
     }
   };
 
+  const toggleMute = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    const next = !video.muted;
+    video.muted = next;
+    setIsMuted(next);
+  };
+
   return (
     <div
       ref={containerRef}
@@ -101,29 +110,53 @@ export function HeroTeaserVideo() {
               <source src={WEBM} type="video/webm" />
               <source src={MP4} type="video/mp4" />
             </video>
-            <button
-              type="button"
-              onClick={togglePlayback}
-              className="absolute bottom-3 right-3 inline-flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-sm ring-1 ring-white/30 hover:bg-black/70 transition-colors"
-              aria-label={isPaused ? "Play teaser video" : "Pause teaser video"}
-            >
-              {isPaused ? (
-                <>
-                  <svg viewBox="0 0 12 12" className="h-3 w-3 fill-current" aria-hidden="true">
-                    <path d="M3 2v8l7-4z" />
-                  </svg>
-                  Play
-                </>
-              ) : (
-                <>
-                  <svg viewBox="0 0 12 12" className="h-3 w-3 fill-current" aria-hidden="true">
-                    <rect x="3" y="2" width="2" height="8" />
-                    <rect x="7" y="2" width="2" height="8" />
-                  </svg>
-                  Pause
-                </>
-              )}
-            </button>
+            <div className="absolute bottom-3 right-3 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleMute}
+                className="inline-flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-sm ring-1 ring-white/30 hover:bg-black/70 transition-colors"
+                aria-label={isMuted ? "Unmute teaser video" : "Mute teaser video"}
+              >
+                {isMuted ? (
+                  <>
+                    <svg viewBox="0 0 16 16" className="h-3 w-3 fill-current" aria-hidden="true">
+                      <path d="M7 3L4 6H1.5v4H4l3 3V3zm3.6 3.4l1.7 1.7-1.7 1.7L11.7 11l1.7-1.7 1.7 1.7 1.1-1.1-1.7-1.7 1.7-1.7-1.1-1.1-1.7 1.7-1.7-1.7z" />
+                    </svg>
+                    Unmute
+                  </>
+                ) : (
+                  <>
+                    <svg viewBox="0 0 16 16" className="h-3 w-3 fill-current" aria-hidden="true">
+                      <path d="M7 3L4 6H1.5v4H4l3 3V3zm3 1.5a3.5 3.5 0 010 7v-1.5a2 2 0 000-4V4.5zm0 2a1.5 1.5 0 010 3V6.5z" />
+                    </svg>
+                    Mute
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={togglePlayback}
+                className="inline-flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-sm ring-1 ring-white/30 hover:bg-black/70 transition-colors"
+                aria-label={isPaused ? "Play teaser video" : "Pause teaser video"}
+              >
+                {isPaused ? (
+                  <>
+                    <svg viewBox="0 0 12 12" className="h-3 w-3 fill-current" aria-hidden="true">
+                      <path d="M3 2v8l7-4z" />
+                    </svg>
+                    Play
+                  </>
+                ) : (
+                  <>
+                    <svg viewBox="0 0 12 12" className="h-3 w-3 fill-current" aria-hidden="true">
+                      <rect x="3" y="2" width="2" height="8" />
+                      <rect x="7" y="2" width="2" height="8" />
+                    </svg>
+                    Pause
+                  </>
+                )}
+              </button>
+            </div>
           </>
         )}
       </div>
