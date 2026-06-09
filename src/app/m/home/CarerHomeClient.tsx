@@ -36,6 +36,7 @@ import {
 } from "../_components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { serviceLabel } from "@/lib/care/services";
+import GoOnlineCard from "./GoOnlineCard";
 
 type EarningsSummary = {
   today_cents: number;
@@ -331,6 +332,9 @@ export default function CarerHomeClient() {
           </Link>
         )}
       </header>
+
+      {/* Go online toggle (gap 18) — availability presence for seekers */}
+      <GoOnlineCard />
 
       {/* Next shift card */}
       {activeJob && (
