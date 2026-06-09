@@ -17,6 +17,7 @@ import {
 } from "../_components/ui";
 import { serviceLabel } from "@/lib/care/services";
 import { formatMoney } from "@/lib/care/services";
+import JobOffersSection from "./JobOffersSection";
 import type { MyWorkBooking, WorkTab } from "@/app/api/m/my-work/route";
 import type { WorkStatusCounts } from "@/app/api/m/work-status/route";
 
@@ -486,6 +487,8 @@ export default function MyWorkClient({ onFindWork }: MyWorkClientProps) {
 
       {/* Content */}
       <div className="px-4 py-4 space-y-3">
+        {/* Auto-match offers (gap 17) — only on the inbox tab. */}
+        {activeTab === "inbox" && <JobOffersSection />}
         {loading ? (
           <SkeletonList />
         ) : bookings.length === 0 ? (

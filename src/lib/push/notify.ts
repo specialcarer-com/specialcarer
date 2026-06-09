@@ -69,6 +69,12 @@ export type DispatchEvent =
       raiserId: string;
       recipientId: string;
       raiserName: string | null;
+    }
+  | {
+      type: "job.offered";
+      bookingId: string;
+      carerId: string;
+      startsAt: string;
     };
 
 export type BuiltPayload = {
@@ -184,6 +190,14 @@ export function buildPayload(event: DispatchEvent): BuiltPayload {
             ? `${event.raiserName.trim()} has triggered an SOS. Please check on them now.`
             : "A booking party has triggered an SOS. Please check on them now.",
         deeplink: `/m/bookings/${event.bookingId}`,
+        payload: { ...event },
+      };
+    case "job.offered":
+      return {
+        recipientUserId: event.carerId,
+        title: "New job offer",
+        body: `A family is looking for a carer — shift starts ${shortDate(event.startsAt)}. Respond before it expires.`,
+        deeplink: `/m/jobs?offer=${event.bookingId}`,
         payload: { ...event },
       };
   }

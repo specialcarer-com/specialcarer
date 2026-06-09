@@ -24,6 +24,7 @@ import {
 import { SosButton } from "../_components/SosButton";
 import { isSosButtonVisible } from "../_components/sos-visibility";
 import { TasksSection } from "@/lib/booking-tasks/TasksSection";
+import FindCarersCard from "./FindCarersCard";
 import { serviceLabel, formatMoney } from "@/lib/care/services";
 import type { ApiBookingDetail } from "@/app/api/m/bookings/[id]/route";
 
@@ -312,6 +313,11 @@ function BookingDetailInner() {
             </div>
           )}
         </Card>
+
+        {/* Auto-match (gap 17): seeker can find carers while still pending. */}
+        {data.as_role === "seeker" && data.status === "pending" && (
+          <FindCarersCard bookingId={data.id} />
+        )}
 
         {(data.status === "accepted" ||
           data.status === "paid" ||
