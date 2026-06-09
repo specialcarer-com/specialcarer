@@ -21,6 +21,7 @@ import {
 import { ParticipantsSheet } from "../_components/ParticipantsSheet";
 import { InviteFamilySheet } from "../_components/InviteFamilySheet";
 import { QuickReplyChips } from "../_components/QuickReplyChips";
+import { TranslateToggle } from "../_components/TranslateToggle";
 import type { ChatRole } from "@/lib/chat/quick-replies";
 
 type DraftAttachment = RenderableAttachment & { local_url?: string };
@@ -100,6 +101,9 @@ export default function ChatThreadPage() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [pinned, setPinned] = useState(false);
   const [pinBusy, setPinBusy] = useState(false);
+  // Gap 4: viewer's translation language (profiles.chat_translate_to),
+  // null = off. Drives the header toggle and the per-message affordance.
+  const [translateTo, setTranslateTo] = useState<string | null>(null);
   const uploadAbort = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -112,11 +116,20 @@ export default function ChatThreadPage() {
     viewerRole === "admin" ? "seeker" : viewerRole;
   const archived = detail?.archived_at != null;
 
-  // Resolve the signed-in user once so `fromMe` can be computed.
+  // Resolve the signed-in user once so `fromMe` can be computed, and load
+  // their saved translation preference.
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      setMeId(data.user?.id ?? null);
+    supabase.auth.getUser().then(async ({ data }) => {
+      const uid = data.user?.id ?? null;
+      setMeId(uid);
+      if (!uid) return;
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("chat_translate_to")
+        .eq("id", uid)
+        .maybeSingle<{ chat_translate_to: string | null }>();
+      setTranslateTo(prof?.chat_translate_to ?? null);
     });
   }, []);
 
@@ -408,6 +421,7 @@ export default function ChatThreadPage() {
               + Invite family
             </button>
           ) : null}
+          <TranslateToggle value={translateTo} onChange={setTranslateTo} />
           <button
             type="button"
             onClick={togglePin}
@@ -454,32 +468,7 @@ export default function ChatThreadPage() {
         </div>
         <ul className="flex flex-col gap-2">
           {messages.map((m) => (
-            <li
-              key={m.id}
-              className={`flex ${m.fromMe ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-[78%] rounded-2xl px-4 py-2.5 ${
-                  m.fromMe
-                    ? "rounded-br-md bg-primary text-white"
-                    : "rounded-bl-md bg-white text-heading shadow-card"
-                }`}
-              >
-                {m.text ? (
-                  <p className="text-[14.5px] leading-snug">{m.text}</p>
-                ) : null}
-                {m.attachments && m.attachments.length > 0 ? (
-                  <AttachmentList attachments={m.attachments} fromMe={m.fromMe} />
-                ) : null}
-                <p
-                  className={`mt-1 text-[10px] ${
-                    m.fromMe ? "text-white/70" : "text-subheading"
-                  }`}
-                >
-                  {m.time}
-                </p>
-              </div>
-            </li>
+            <MessageBubble key={m.id} m={m} translateTo={translateTo} />
           ))}
         </ul>
       </div>
@@ -618,6 +607,142 @@ export default function ChatThreadPage() {
         onSent={(email) => setToast(`Invite sent to ${email}`)}
       />
     </div>
+  );
+}
+
+/**
+ * Gap 4: a single chat bubble with optional translation.
+ *
+ * When the viewer has a translation language set AND the message is an
+ * incoming text message, we offer a "Translate" affordance. On first tap
+ * we POST to the translate endpoint (cache miss → LLM call + cache row);
+ * the bubble then shows the translation with a "Show original" toggle.
+ *
+ * If the viewer's language is set, on mount we do a cache-only probe
+ * (cache_only: true) so already-translated messages render translated
+ * immediately on load — without ever triggering a fresh LLM call. The
+ * first explicit tap is what pays for (and caches) a new translation.
+ */
+function MessageBubble({
+  m,
+  translateTo,
+}: {
+  m: LocalMessage;
+  translateTo: string | null;
+}) {
+  const [translated, setTranslated] = useState<string | null>(null);
+  const [showingOriginal, setShowingOriginal] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const canTranslate =
+    !m.fromMe &&
+    !!m.text &&
+    !m.id.startsWith("local-") &&
+    !!translateTo;
+
+  // Cache-only probe on mount / when the target language changes: render
+  // an existing translation without calling the provider.
+  useEffect(() => {
+    if (!canTranslate) {
+      setTranslated(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/m/chat/messages/${encodeURIComponent(m.id)}/translate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_lang: translateTo, cache_only: true }),
+    })
+      .then((res) => (res.status === 200 ? res.json() : null))
+      .then((json: { translated_body?: string } | null) => {
+        if (cancelled || !json?.translated_body) return;
+        setTranslated(json.translated_body);
+        setShowingOriginal(false);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [m.id, translateTo, canTranslate]);
+
+  async function doTranslate() {
+    if (!translateTo || busy) return;
+    setBusy(true);
+    setFailed(false);
+    try {
+      const res = await fetch(
+        `/api/m/chat/messages/${encodeURIComponent(m.id)}/translate`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ target_lang: translateTo }),
+        },
+      );
+      if (!res.ok) throw new Error(String(res.status));
+      const json = (await res.json()) as { translated_body: string };
+      setTranslated(json.translated_body);
+      setShowingOriginal(false);
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const bodyText =
+    translated && !showingOriginal ? translated : m.text;
+
+  return (
+    <li className={`flex ${m.fromMe ? "justify-end" : "justify-start"}`}>
+      <div
+        className={`max-w-[78%] rounded-2xl px-4 py-2.5 ${
+          m.fromMe
+            ? "rounded-br-md bg-primary text-white"
+            : "rounded-bl-md bg-white text-heading shadow-card"
+        }`}
+      >
+        {m.text ? (
+          <p className="text-[14.5px] leading-snug">{bodyText}</p>
+        ) : null}
+        {m.attachments && m.attachments.length > 0 ? (
+          <AttachmentList attachments={m.attachments} fromMe={m.fromMe} />
+        ) : null}
+
+        {canTranslate ? (
+          <div className="mt-1">
+            {translated ? (
+              <button
+                type="button"
+                onClick={() => setShowingOriginal((v) => !v)}
+                className="font-display text-[11px] font-medium"
+                style={{ color: "#039EA0" }}
+              >
+                {showingOriginal ? "Show translation" : "Show original"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={doTranslate}
+                disabled={busy}
+                className="font-display text-[11px] font-medium disabled:opacity-60"
+                style={{ color: "#039EA0" }}
+              >
+                {busy ? "Translating…" : failed ? "Retry translation" : "Translate"}
+              </button>
+            )}
+          </div>
+        ) : null}
+
+        <p
+          className={`mt-1 text-[10px] ${
+            m.fromMe ? "text-white/70" : "text-subheading"
+          }`}
+        >
+          {m.time}
+        </p>
+      </div>
+    </li>
   );
 }
 
