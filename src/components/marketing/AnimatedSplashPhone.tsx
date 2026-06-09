@@ -5,20 +5,21 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 
 /**
- * Animated splash-screen mockup for the Coming Soon section (left phone).
+ * Animated splash mockup for the Coming Soon section (left phone).
  *
- * Replaces the previous flat teal background with a cross-fading photo
- * carousel between two SpecialCarers brand banners (caregivers group +
- * mother & toddler childcare scene). A dark gradient overlay keeps the
- * logo, wordmark, and copy legible across both photos. The headline +
- * sub-copy still animate in sequenced; the photos cross-fade behind.
+ * Hero photo cross-fade between two brand portraits — the team group shot
+ * (carers + family) and the carer-with-child childcare scene. The photo is
+ * the dominant content; brand chrome (logo + wordmark + caption) sits in a
+ * compact strip at the bottom and a tiny logomark at the top so the people
+ * in the photo are never covered by overlays.
  *
- * Each photo is on screen for ~5s, with a 1s cross-fade. The text-overlay
- * loop is independent and runs for the full ~10s cycle, so the photo
- * transition does not interrupt the headline sequence.
+ * Two independent loops:
+ *   - Photo: cross-fade every 4.5s
+ *   - Caption: matches the active photo (the caption is part of the photo
+ *     transition, so the bottom strip text changes with the image)
  *
- * Respects prefers-reduced-motion: shows the first photo + final text
- * composition, no animation timers.
+ * Respects prefers-reduced-motion: shows the first photo + caption, no
+ * timers.
  */
 function useClock() {
   const [time, setTime] = useState<string>("");
@@ -36,167 +37,105 @@ function useClock() {
   return time || "—:—";
 }
 
-const headlineWords = ["Let's", "Bring", "Compassion", "to", "Life."];
-const subLines = [
-  "Trusted, vetted caregivers for every",
-  "stage of life — from childcare to",
-  "live-in support.",
-  "This is more than an app, it's a lifeline.",
-];
-
-// Photo carousel: each slide pairs a brand banner with the audience it represents.
-// Pictures are cropped via object-position to keep the focal subject in the
-// portrait phone frame.
-const photos = [
+// Two portraits paired with the audience message they communicate.
+const slides = [
   {
-    src: "/banners/caregivers/v3/caregivers_v3_1280x480.webp",
-    alt: "Three SpecialCarers caregivers chatting on a London street",
-    caption: "For families",
-    // The subjects in this image are centred horizontally and in the top 60%.
-    objectPosition: "50% 35%",
+    src: "/brand/people/team-splash.png",
+    alt: "A SpecialCarers team standing with an elderly couple at home",
+    eyebrow: "Care for the whole family",
+    headline: "Trusted, vetted carers",
+    objectPosition: "50% 30%",
   },
   {
-    src: "/banners/childcare/v1/childcare_v1_1280x480.webp",
-    alt: "A caregiver and toddler playing with wooden blocks in a sunlit living room",
-    caption: "Trusted childcare",
-    objectPosition: "55% 40%",
+    src: "/brand/people/carer-with-child.png",
+    alt: "A caregiver smiling with a young child colouring at a kitchen table",
+    eyebrow: "Childcare you can trust",
+    headline: "Loving, qualified nannies",
+    objectPosition: "50% 35%",
   },
 ] as const;
 
-const PHOTO_HOLD = 5; // seconds per slide
-const LOOP_DURATION = photos.length * PHOTO_HOLD; // 10s full carousel
+const SLIDE_HOLD = 4.5; // seconds per slide
+const CROSSFADE = 1.0;
 
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { duration: 0.4, when: "beforeChildren" },
-  },
-  exit: { opacity: 0, transition: { duration: 0.7, delay: LOOP_DURATION - 1 } },
+const slideVariants: Variants = {
+  initial: { opacity: 0, scale: 1.04 },
+  animate: { opacity: 1, scale: 1 },
+  exit: { opacity: 0, scale: 1.01 },
 };
 
-const handsVariants: Variants = {
-  hidden: { opacity: 0, scale: 0.85 },
-  visible: { opacity: 1, scale: 1, transition: { duration: 0.6, ease: "easeOut" } },
-};
-
-const rippleVariants: Variants = {
-  hidden: { opacity: 0, scale: 1 },
-  visible: (i: number) => ({
-    opacity: [0, 0.4, 0],
-    scale: [1, 1.6, 1.8],
-    transition: { duration: 1.6, delay: 0.4 + i * 0.2, ease: "easeOut" },
-  }),
-};
-
-const wordmarkVariants: Variants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: { opacity: 1, y: 0, transition: { delay: 0.8, duration: 0.5, ease: "easeOut" } },
-};
-
-const headlineWordVariants: Variants = {
-  hidden: { opacity: 0, y: 14 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: 1.6 + i * 0.18, duration: 0.5, ease: "easeOut" },
-  }),
-};
-
-const subLineVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: (i: number) => ({
-    opacity: 1,
-    transition: { delay: 3.2 + i * 0.2, duration: 0.5 },
-  }),
-};
-
-const captionVariants: Variants = {
-  initial: { opacity: 0, y: 6 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.6, delay: 0.4 } },
-  exit: { opacity: 0, y: -6, transition: { duration: 0.4 } },
+const captionTextVariants: Variants = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.5, delay: 0.3 } },
+  exit: { opacity: 0, y: -6, transition: { duration: 0.3 } },
 };
 
 export function AnimatedSplashPhone() {
   const reducedMotion = useReducedMotion();
   const clock = useClock();
-  const [cycle, setCycle] = useState(0);
-  const [photoIdx, setPhotoIdx] = useState(0);
+  const [idx, setIdx] = useState(0);
 
-  // Photo carousel timer (independent of text loop)
   useEffect(() => {
     if (reducedMotion) return;
     const id = window.setInterval(() => {
-      setPhotoIdx((i) => (i + 1) % photos.length);
-    }, PHOTO_HOLD * 1000);
+      setIdx((i) => (i + 1) % slides.length);
+    }, SLIDE_HOLD * 1000);
     return () => window.clearInterval(id);
   }, [reducedMotion]);
 
-  // Text-sequence loop
-  useEffect(() => {
-    if (reducedMotion) return;
-    const id = window.setInterval(() => setCycle((c) => c + 1), LOOP_DURATION * 1000);
-    return () => window.clearInterval(id);
-  }, [reducedMotion]);
-
-  const currentPhoto = photos[photoIdx];
+  const slide = slides[idx];
 
   return (
     <div
       className="sc-phone-tilt-left relative w-full aspect-[9/19] rotate-[-14deg] drop-shadow-2xl"
       role="img"
-      aria-label="SpecialCarers splash screen showcasing caregivers and childcare scenes with the tagline Let's Bring Compassion to Life."
+      aria-label="SpecialCarers app preview: trusted carers for families and childcare."
     >
       <div className="relative h-full w-full rounded-[2.4rem] bg-slate-900 p-[3px] ring-1 ring-slate-800">
         <div className="relative h-full w-full rounded-[2.2rem] overflow-hidden bg-slate-900">
-          {/* Photo carousel (z-0) */}
+          {/* Hero photo carousel — fills the entire phone */}
           <div className="absolute inset-0 z-0">
             <AnimatePresence initial={false} mode="sync">
               <motion.div
-                key={currentPhoto.src}
-                initial={reducedMotion ? false : { opacity: 0, scale: 1.06 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.02 }}
-                transition={{ opacity: { duration: 1.0 }, scale: { duration: 5.5, ease: "easeOut" } }}
+                key={slide.src}
+                variants={slideVariants}
+                initial={reducedMotion ? false : "initial"}
+                animate="animate"
+                exit="exit"
+                transition={{
+                  opacity: { duration: CROSSFADE },
+                  scale: { duration: SLIDE_HOLD + CROSSFADE, ease: "easeOut" },
+                }}
                 className="absolute inset-0"
               >
                 <Image
-                  src={currentPhoto.src}
-                  alt={currentPhoto.alt}
+                  src={slide.src}
+                  alt={slide.alt}
                   fill
-                  priority={photoIdx === 0}
+                  priority={idx === 0}
                   className="object-cover"
-                  style={{ objectPosition: currentPhoto.objectPosition }}
+                  style={{ objectPosition: slide.objectPosition }}
                   sizes="(max-width: 768px) 50vw, 240px"
                 />
-                {/* Slide caption pill */}
-                <motion.div
-                  key={`caption-${currentPhoto.src}`}
-                  variants={captionVariants}
-                  initial={reducedMotion ? false : "initial"}
-                  animate="animate"
-                  exit="exit"
-                  className="absolute bottom-12 left-1/2 -translate-x-1/2 rounded-full bg-black/40 px-2.5 py-1 text-[8px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm ring-1 ring-white/20"
-                >
-                  {currentPhoto.caption}
-                </motion.div>
               </motion.div>
             </AnimatePresence>
-            {/* Readability scrim — darker at top + bottom, lighter in the middle so faces stay clear */}
+
+            {/* Bottom gradient — keeps the caption strip readable without covering faces */}
             <div
               aria-hidden="true"
-              className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/15 to-black/65"
+              className="absolute inset-x-0 bottom-0 h-[42%] bg-gradient-to-t from-black/80 via-black/30 to-transparent"
             />
-            {/* Brand tint to keep things cohesive */}
+            {/* Top gradient — just enough for the status bar */}
             <div
               aria-hidden="true"
-              className="absolute inset-0 bg-[#039EA0] mix-blend-multiply opacity-25"
+              className="absolute inset-x-0 top-0 h-[14%] bg-gradient-to-b from-black/55 to-transparent"
             />
           </div>
 
-          {/* Status bar */}
-          <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 pt-1.5 text-[8px] font-semibold text-white drop-shadow">
+          {/* Status bar (top) */}
+          <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 pt-1.5 text-[8px] font-semibold text-white">
             <span>{clock}</span>
+            <span className="opacity-90">SpecialCarers</span>
           </div>
           {/* Notch */}
           <div
@@ -204,85 +143,50 @@ export function AnimatedSplashPhone() {
             className="absolute top-1 left-1/2 -translate-x-1/2 w-12 h-3 rounded-full bg-slate-950 z-30"
           />
 
-          {/* Animated text content (z-10, over the photo) */}
-          <motion.div
-            key={cycle}
-            initial={reducedMotion ? false : "hidden"}
-            animate="visible"
-            variants={containerVariants}
-            className="absolute inset-0 z-10 flex flex-col items-center justify-center px-4 pt-8 pb-10 text-white"
-          >
-            {/* Hands graphic with ripples */}
-            <div className="relative mb-3 flex h-[34%] w-full items-center justify-center">
-              {!reducedMotion &&
-                [0, 1, 2].map((i) => (
-                  <motion.span
-                    key={i}
-                    custom={i}
-                    variants={rippleVariants}
-                    className="absolute h-16 w-16 rounded-full border-2 border-white/70"
-                    aria-hidden="true"
-                  />
-                ))}
+          {/* Tiny logomark — top-left corner under the notch, does not cover the photo subject */}
+          <div className="absolute top-5 left-3 z-20 flex h-6 w-6 items-center justify-center rounded-md bg-white/15 backdrop-blur-sm ring-1 ring-white/30">
+            <Image
+              src="/brand/specialcarer-icon.svg"
+              alt=""
+              width={16}
+              height={16}
+              className="opacity-95"
+            />
+          </div>
+
+          {/* Caption strip — fixed at the bottom, content changes with the slide */}
+          <div className="absolute inset-x-0 bottom-0 z-20 px-4 pb-5 pt-4 text-white">
+            <AnimatePresence mode="wait" initial={false}>
               <motion.div
-                variants={handsVariants}
-                className="relative h-full w-full"
+                key={`caption-${slide.src}`}
+                variants={captionTextVariants}
+                initial={reducedMotion ? false : "initial"}
+                animate="animate"
+                exit="exit"
               >
-                <Image
-                  src="/brand/specialcarer-icon.svg"
-                  alt=""
-                  fill
-                  className="object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]"
-                  sizes="(max-width: 768px) 25vw, 120px"
-                />
+                <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-white/85">
+                  {slide.eyebrow}
+                </div>
+                <h3 className="mt-1 text-[13px] font-bold leading-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]">
+                  {slide.headline}
+                </h3>
               </motion.div>
-            </div>
+            </AnimatePresence>
 
-            {/* Wordmark */}
-            <motion.div
-              variants={wordmarkVariants}
-              className="mb-3 text-center text-[11px] font-semibold uppercase tracking-[0.18em] drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)]"
-            >
-              Special Carers
-            </motion.div>
-
-            {/* Headline */}
-            <h3 className="text-center text-[14px] font-bold leading-tight drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)]">
-              {headlineWords.map((word, i) => (
-                <motion.span
-                  key={`${cycle}-${i}-${word}`}
-                  custom={i}
-                  variants={headlineWordVariants}
-                  className="inline-block mr-1"
-                >
-                  {word}
-                </motion.span>
-              ))}
-            </h3>
-
-            {/* Sub-copy */}
-            <div className="mt-2 text-center text-[8px] leading-snug text-white/95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
-              {subLines.map((line, i) => (
-                <motion.p
-                  key={`${cycle}-sub-${i}`}
-                  custom={i}
-                  variants={subLineVariants}
-                >
-                  {line}
-                </motion.p>
+            {/* Pagination dots */}
+            <div className="mt-3 flex items-center gap-1.5">
+              {slides.map((_, i) => (
+                <span
+                  key={i}
+                  className={
+                    i === idx
+                      ? "h-1 w-4 rounded-full bg-white"
+                      : "h-1 w-1 rounded-full bg-white/50"
+                  }
+                />
               ))}
             </div>
-          </motion.div>
-
-          {/* Skip button */}
-          <button
-            type="button"
-            className="absolute bottom-3 right-3 z-20 rounded-full bg-white/15 px-2.5 py-1 text-[7px] font-semibold uppercase tracking-wider text-white backdrop-blur-sm ring-1 ring-white/30"
-            aria-label="Skip splash"
-            tabIndex={-1}
-          >
-            Skip
-          </button>
+          </div>
         </div>
       </div>
     </div>
