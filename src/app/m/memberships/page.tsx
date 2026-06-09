@@ -7,14 +7,18 @@ import MembershipsClient from "./MembershipsClient";
  *
  * Two states:
  *   1. Active member  → show "Your membership" detail card + perks
- *   2. Non-member     → show Coming Soon teaser with plan strip
+ *   2. Non-member     → show plan cards with an active Subscribe CTA
  *
  * Backed by a real subscriptions table + Stripe products + webhook.
  * Admin-granted comps render the same as paid Stripe subs (with a "Comp"
  * badge so the user understands it's complimentary).
  *
- * App Review note: nothing on this screen charges a card. Sign-up is not
- * yet available in-app — checkout will be added in a follow-up sprint.
+ * App Review note: in-app checkout is live. A plan's Subscribe button opens a
+ * Stripe-hosted Checkout Session (subscription mode) via
+ * POST /api/memberships/checkout; the Stripe webhook reconciles entitlement
+ * once payment confirms. On native iOS the checkout url is opened in the
+ * system browser by the Capacitor/Expo shell rather than the in-app WebView
+ * (see MembershipsClient.startCheckout).
  */
 
 export const dynamic = "force-dynamic";

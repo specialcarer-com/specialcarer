@@ -302,6 +302,24 @@ export async function POST(req: Request) {
       // ---------------------------------------------------------------
       // Memberships (consumer subscriptions, NOT Connect)
       // ---------------------------------------------------------------
+      case "checkout.session.completed": {
+        // Fires the moment the user completes hosted Checkout, often a beat
+        // before customer.subscription.created. We only act on subscription
+        // sessions (memberships); one-off payment sessions are handled by the
+        // PaymentIntent branches above. Retrieve the freshly-created
+        // subscription and reconcile via the same idempotent upsert — if the
+        // subscription.created event also lands, it upserts the same row.
+        const session = event.data.object as Stripe.Checkout.Session;
+        if (session.mode === "subscription" && session.subscription) {
+          const subId =
+            typeof session.subscription === "string"
+              ? session.subscription
+              : session.subscription.id;
+          const sub = await stripe.subscriptions.retrieve(subId);
+          await upsertMembershipFromStripeSubscription(admin, sub);
+        }
+        break;
+      }
       case "customer.subscription.created":
       case "customer.subscription.updated":
       case "customer.subscription.deleted":
