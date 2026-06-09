@@ -28,6 +28,7 @@ import {
   IconAward,
 } from "../_components/ui";
 import { createClient } from "@/lib/supabase/client";
+import { MEMBERSHIPS_ENABLED } from "@/lib/memberships/flag";
 import { useAccessibility } from "@/lib/i18n/LocaleContext";
 
 type Row = {
@@ -178,7 +179,16 @@ const SEEKER_SECTION: Section = {
       icon: <IconPhone />,
       label: "Emergency contacts",
     },
-    { href: "/m/memberships", icon: <IconCrown />, label: "Memberships" },
+    // Memberships UI is hidden for the soft launch (see lib/memberships/flag).
+    ...(MEMBERSHIPS_ENABLED
+      ? [
+          {
+            href: "/m/memberships",
+            icon: <IconCrown />,
+            label: "Memberships",
+          },
+        ]
+      : []),
   ],
 };
 

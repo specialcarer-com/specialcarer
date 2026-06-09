@@ -1,5 +1,7 @@
+import { notFound } from "next/navigation";
 import { TopBar, BottomNav } from "../_components/ui";
 import { getMyMembership } from "@/lib/memberships/server";
+import { MEMBERSHIPS_ENABLED } from "@/lib/memberships/flag";
 import MembershipsClient from "./MembershipsClient";
 
 /**
@@ -24,6 +26,12 @@ import MembershipsClient from "./MembershipsClient";
 export const dynamic = "force-dynamic";
 
 export default async function MembershipsPage() {
+  // Hidden for the soft launch — 404 so the surface doesn't leak. The checkout
+  // API + Stripe webhook stay live (defence in depth: gate UI, not plumbing).
+  if (!MEMBERSHIPS_ENABLED) {
+    notFound();
+  }
+
   const membership = await getMyMembership();
 
   return (
