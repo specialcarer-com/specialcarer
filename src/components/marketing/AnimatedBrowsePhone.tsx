@@ -131,7 +131,7 @@ export function AnimatedBrowsePhone() {
       aria-label="SpecialCarers browse screen: search results showing vetted caregivers across the UK."
     >
       <div className="relative h-full w-full rounded-[2.4rem] bg-slate-900 p-[3px] ring-1 ring-slate-800">
-        <div className="relative h-full w-full rounded-[2.2rem] overflow-hidden bg-white">
+        <div className="relative h-full w-full rounded-[2.2rem] overflow-hidden bg-[#F4EFE6]">
           {/* Status bar */}
           <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 pt-1.5 text-[8px] font-semibold text-slate-900">
             <span>09:41</span>
@@ -169,31 +169,67 @@ export function AnimatedBrowsePhone() {
               </div>
             </div>
 
-            {/* Search bar */}
-            <div className="mt-2 flex items-center gap-1.5 rounded-full bg-slate-100 px-2 py-1 ring-1 ring-slate-200">
-              <svg viewBox="0 0 16 16" className="h-2.5 w-2.5 text-slate-400 flex-shrink-0" fill="currentColor">
-                <path d="M7 2a5 5 0 013.9 8.12l3 3a.7.7 0 11-1 1l-3-3A5 5 0 117 2zm0 1.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7z" />
-              </svg>
-              <span className="text-[7px] text-slate-700 truncate">
-                {typed}
-                <span aria-hidden="true" className="inline-block animate-pulse">▎</span>
-              </span>
+            {/* Search bar + filter button */}
+            <div className="mt-2 flex items-center gap-1.5">
+              <div className="flex flex-1 items-center gap-1.5 rounded-full bg-white px-2 py-1 ring-1 ring-slate-200 shadow-sm">
+                <svg viewBox="0 0 16 16" className="h-2.5 w-2.5 text-slate-400 flex-shrink-0" fill="currentColor" aria-hidden="true">
+                  <path d="M7 2a5 5 0 013.9 8.12l3 3a.7.7 0 11-1 1l-3-3A5 5 0 117 2zm0 1.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7z" />
+                </svg>
+                <span className="text-[7px] text-slate-700 truncate">
+                  {typed}
+                  <span aria-hidden="true" className="inline-block animate-pulse">▎</span>
+                </span>
+              </div>
+              <button
+                type="button"
+                className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md bg-[#039EA0] text-white shadow-sm"
+                aria-label="Filter"
+                tabIndex={-1}
+              >
+                <svg viewBox="0 0 16 16" className="h-2.5 w-2.5 fill-current" aria-hidden="true">
+                  <path d="M2 3h12v1.5l-4.5 4.5v4l-3 1.5v-5.5L2 4.5z" />
+                </svg>
+              </button>
             </div>
 
-            <h4 className="mt-2 text-[10px] font-bold leading-tight text-slate-900">
-              Get high rated
-              <br />
-              Caregivers at
-              <br />
-              your fingertips
-            </h4>
-            <p className="mt-0.5 text-[6px] uppercase tracking-wider text-slate-500">
+            {/* Featured promo banner — teal half + carer-with-child photo half */}
+            <div className="mt-2 flex h-12 overflow-hidden rounded-lg shadow-sm">
+              <div className="flex flex-1 flex-col justify-center bg-[#039EA0] p-1.5 text-white">
+                <h5 className="text-[7px] font-semibold leading-tight">
+                  Get high rated
+                  <br />
+                  Caregivers at
+                  <br />
+                  your Fingertip
+                </h5>
+                <button
+                  type="button"
+                  className="mt-0.5 inline-flex w-fit items-center rounded-full bg-white px-1.5 py-0.5 text-[5.5px] font-bold uppercase tracking-wider text-[#039EA0]"
+                  tabIndex={-1}
+                >
+                  Get Started
+                </button>
+              </div>
+              <div className="relative w-[55%] flex-shrink-0">
+                <Image
+                  src="/brand/people/carer-with-child.png"
+                  alt=""
+                  fill
+                  sizes="120px"
+                  className="object-cover"
+                  style={{ objectPosition: "50% 30%" }}
+                />
+              </div>
+            </div>
+
+            {/* Section heading — bold + dark */}
+            <div className="mt-1.5 text-[8px] font-bold text-slate-900">
               Professionals
-            </p>
+            </div>
           </div>
 
-          {/* Cards */}
-          <div className="absolute inset-x-0 top-[44%] z-10 px-2 space-y-1.5">
+          {/* Cards — positioned right under the Professionals heading */}
+          <div className="absolute inset-x-0 top-[52%] z-10 px-2 space-y-1.5">
             {caregivers.map((c, i) => (
               <motion.div
                 key={`${cycle}-${c.name}`}
