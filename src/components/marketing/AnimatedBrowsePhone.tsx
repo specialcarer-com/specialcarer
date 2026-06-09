@@ -253,7 +253,7 @@ export function AnimatedBrowsePhone() {
           </div>
 
           {/* Cards — positioned right under the Professionals heading, compact to fit 5 cards */}
-          <div className="absolute inset-x-0 top-[49%] bottom-[7%] z-10 overflow-hidden px-2 space-y-1">
+          <div className="absolute inset-x-0 top-[44%] bottom-[7%] z-10 overflow-hidden px-2 space-y-1">
             {caregivers.map((c, i) => (
               <motion.div
                 key={`${cycle}-${c.name}`}
