@@ -13,6 +13,9 @@ import { getAllPosts } from "@/lib/blog/posts";
 import { listCoverageCities } from "@/lib/coverage-server";
 import { US_REGION_ENABLED } from "@/lib/region";
 import CoverageMap from "@/components/coverage-map-lazy";
+import { HeroTeaserVideo } from "@/components/marketing/HeroTeaserVideo";
+import { AnimatedSplashPhone } from "@/components/marketing/AnimatedSplashPhone";
+import { AnimatedBrowsePhone } from "@/components/marketing/AnimatedBrowsePhone";
 
 export const metadata: Metadata = {
   title:
@@ -1009,6 +1012,11 @@ export default async function Home() {
         <div aria-hidden="true" className="sc-blob-drift-a pointer-events-none absolute -top-24 -left-16 w-72 h-72 rounded-full bg-white/5 blur-3xl" />
         <div aria-hidden="true" className="sc-blob-drift-b pointer-events-none absolute -bottom-24 -right-16 w-80 h-80 rounded-full bg-white/5 blur-3xl" />
 
+        {/* Hero teaser video — gives the section a strong emotional opener before the supporting phone mockups */}
+        <div className="relative max-w-6xl mx-auto mb-12 lg:mb-16">
+          <HeroTeaserVideo />
+        </div>
+
         <div className="relative max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Copy + store badges */}
           <div className="order-2 lg:order-1">
@@ -1157,10 +1165,10 @@ export default async function Home() {
             )}
           </div>
 
-          {/* Phone mockups — two angled iPhones inside a teal blob */}
+          {/* Phone mockups — animated splash + browse screens */}
           <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
             <div className="relative w-full max-w-[520px] aspect-[5/4]">
-              {/* Soft teal blob */}
+              {/* Soft teal blob backdrop */}
               <div
                 aria-hidden="true"
                 className="absolute inset-[8%] rounded-[40%] bg-white/15 blur-2xl"
@@ -1170,219 +1178,14 @@ export default async function Home() {
                 className="absolute inset-[12%] rounded-[40%] bg-white/10"
               />
 
-              {/* Phone 1 — back, tilted left, splash screen */}
-              <div className="sc-phone-tilt-left absolute left-[2%] top-[6%] w-[44%] aspect-[9/19] rotate-[-14deg] z-10 drop-shadow-2xl">
-                <div className="relative h-full w-full rounded-[2.4rem] bg-slate-900 p-[3px] ring-1 ring-slate-800">
-                  <div className="relative h-full w-full rounded-[2.2rem] overflow-hidden bg-slate-900">
-                    {/* Status bar */}
-                    <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 pt-1.5 text-[8px] font-semibold text-white">
-                      <span>13:36</span>
-                    </div>
-                    {/* Notch */}
-                    <div
-                      aria-hidden="true"
-                      className="absolute top-1 left-1/2 -translate-x-1/2 w-12 h-3 rounded-full bg-slate-950 z-30"
-                    />
-                    {/* Group photo */}
-                    <Image
-                      src="/brand/people/team-splash.png"
-                      alt="Special Carers team"
-                      fill
-                      sizes="(max-width: 768px) 50vw, 250px"
-                      className="object-cover"
-                      priority
-                    />
-                    {/* Bottom dark gradient with copy */}
-                    <div className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-slate-900 via-slate-900/90 to-transparent" />
-                    <div className="absolute inset-x-0 bottom-0 px-4 pb-6 z-20 text-white">
-                      <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white/15 backdrop-blur px-2 py-1 ring-1 ring-white/30">
-                        <Image
-                          src="/brand/logo.svg"
-                          alt="Special Carers"
-                          width={28}
-                          height={21}
-                          className="h-3.5 w-auto"
-                        />
-                        <span className="text-[7px] font-semibold uppercase tracking-wider">Special Carers</span>
-                      </div>
-                      <h4 className="text-[13px] font-semibold leading-tight">
-                        Let&apos;s Bring
-                        <br />
-                        Compassion to Life.
-                      </h4>
-                      <p className="mt-2 text-[8px] leading-snug text-white/85">
-                        Together, we can create a world where
-                        <br />
-                        no one feels forgotten, and everyone
-                        <br />
-                        feels valued.
-                        <br />
-                        <span className="italic">This is more than an app, it&apos;s a lifeline.</span>
-                      </p>
-                      <div className="mt-3 flex items-center gap-1" aria-hidden="true">
-                        <span className="h-1 w-1 rounded-full bg-white" />
-                        <span className="h-1 w-1 rounded-full bg-white/40" />
-                        <span className="h-1 w-1 rounded-full bg-white/40" />
-                      </div>
-                      <button className="mt-4 rounded-full bg-white/15 backdrop-blur px-3 py-1 text-[9px] font-semibold text-white ring-1 ring-white/30">
-                        Skip
-                      </button>
-                    </div>
-                  </div>
-                </div>
+              {/* Splash phone (back, tilted left) */}
+              <div className="absolute left-[2%] top-[6%] w-[44%] z-10">
+                <AnimatedSplashPhone />
               </div>
 
-              {/* Phone 2 — front, tilted right, carer list screen */}
-              <div className="sc-phone-tilt-right absolute right-[2%] top-[2%] w-[50%] aspect-[9/19] rotate-[8deg] z-20 drop-shadow-2xl">
-                <div className="relative h-full w-full rounded-[2.6rem] bg-slate-900 p-[4px] ring-1 ring-slate-800">
-                  <div className="relative h-full w-full rounded-[2.4rem] overflow-hidden bg-slate-50">
-                    {/* Notch */}
-                    <div
-                      aria-hidden="true"
-                      className="absolute top-1.5 left-1/2 -translate-x-1/2 w-14 h-3.5 rounded-full bg-slate-900 z-30"
-                    />
-                    {/* App content */}
-                    <div className="px-3 pt-6 pb-2">
-                      {/* Top bar: avatar + name + cart */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <div className="h-6 w-6 rounded-md bg-white ring-1 ring-brand-100 shadow-sm flex items-center justify-center">
-                            <Image
-                              src="/brand/logo.svg"
-                              alt="Special Carers"
-                              width={28}
-                              height={21}
-                              className="h-4 w-auto"
-                            />
-                          </div>
-                          <div className="leading-tight">
-                            <div className="text-[6px] uppercase tracking-wider text-slate-500">Special Carers</div>
-                            <div className="text-[9px] font-semibold text-slate-900">Rachel Green</div>
-                          </div>
-                        </div>
-                        <div className="h-5 w-5 rounded-full bg-slate-100 flex items-center justify-center" aria-hidden="true">
-                          <svg viewBox="0 0 24 24" className="h-3 w-3 text-slate-700" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <circle cx="9" cy="20" r="1.5" />
-                            <circle cx="18" cy="20" r="1.5" />
-                            <path d="M3 4h2l3 11h11l2-7H6" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </div>
-                      </div>
-
-                      {/* Search */}
-                      <div className="mt-2.5 flex items-center gap-1.5">
-                        <div className="flex-1 flex items-center gap-1.5 rounded-md bg-white border border-slate-200 px-2 py-1.5">
-                          <svg viewBox="0 0 24 24" className="h-2.5 w-2.5 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <circle cx="11" cy="11" r="7" />
-                            <path d="M20 20l-3-3" strokeLinecap="round" />
-                          </svg>
-                          <span className="text-[7px] text-slate-400">Search Here...</span>
-                        </div>
-                        <div className="h-6 w-6 rounded-md bg-brand-500 flex items-center justify-center" aria-hidden="true">
-                          <svg viewBox="0 0 24 24" className="h-3 w-3 text-white" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <path d="M3 6h18M6 12h12M10 18h4" strokeLinecap="round" />
-                          </svg>
-                        </div>
-                      </div>
-
-                      {/* Hero card */}
-                      <div className="mt-2.5 relative rounded-xl bg-brand-500 overflow-hidden h-[68px]">
-                        <div className="absolute inset-0 flex">
-                          <div className="flex-1 p-2 text-white">
-                            <h5 className="text-[8px] font-semibold leading-tight">
-                              Get high rated
-                              <br />
-                              Caregivers at
-                              <br />
-                              your Fingertip
-                            </h5>
-                            <button className="mt-1 rounded-full bg-white px-2 py-0.5 text-[6px] font-semibold text-brand-700">
-                              Get Started
-                            </button>
-                          </div>
-                          <div className="relative w-[55%]">
-                            <Image
-                              src="/brand/people/carer-with-child.png"
-                              alt=""
-                              fill
-                              sizes="120px"
-                              className="object-cover"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Section heading */}
-                      <div className="mt-2.5 text-[7px] font-semibold text-slate-900">
-                        Professionals
-                      </div>
-
-                      {/* Carer cards */}
-                      <div className="mt-1 space-y-1.5">
-                        {[0, 1, 2].map((i) => (
-                          <div
-                            key={i}
-                            className="flex items-center gap-1.5 rounded-md bg-white border border-slate-100 p-1.5"
-                          >
-                            <div className="h-7 w-7 rounded-md overflow-hidden bg-brand-100 shrink-0">
-                              <Image
-                                src="/brand/people/carer-portrait.png"
-                                alt=""
-                                width={56}
-                                height={56}
-                                className="h-full w-full object-cover"
-                              />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between">
-                                <div className="text-[7px] font-semibold text-slate-900 truncate">
-                                  Rachel Green
-                                </div>
-                                <div className="flex items-center gap-0.5 text-[6px] text-slate-700">
-                                  4.6
-                                  <svg viewBox="0 0 24 24" className="h-1.5 w-1.5 text-amber-400" fill="currentColor">
-                                    <path d="M12 2l2.9 6.9L22 10l-5.5 4.8L18 22l-6-3.5L6 22l1.5-7.2L2 10l7.1-1.1z" />
-                                  </svg>
-                                </div>
-                              </div>
-                              <div className="text-[5px] text-slate-500 truncate">
-                                ⌂ 6391 Elgin St, Celina
-                              </div>
-                              <div className="text-[5px] text-slate-500">6+ years</div>
-                              <div className="mt-0.5 flex items-center justify-between">
-                                <div className="text-[7px] font-semibold text-slate-900">
-                                  £18
-                                </div>
-                                <button className="rounded-md bg-brand-500 px-1.5 py-0.5 text-[6px] font-semibold text-white">
-                                  Book Slot
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Bottom tab bar */}
-                    <div className="absolute bottom-0 inset-x-0 bg-white border-t border-slate-200 flex items-center justify-around py-1.5 z-20">
-                      {[
-                        { label: "Home", active: true },
-                        { label: "Bookings" },
-                        { label: "Chat" },
-                        { label: "Review" },
-                        { label: "Profile" },
-                      ].map((t) => (
-                        <div
-                          key={t.label}
-                          className={`flex flex-col items-center gap-0.5 ${t.active ? "text-brand-600" : "text-slate-400"}`}
-                        >
-                          <div className="h-2 w-2 rounded-sm bg-current opacity-80" aria-hidden="true" />
-                          <span className="text-[5px] font-medium">{t.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+              {/* Browse phone (front, tilted right) */}
+              <div className="absolute right-[2%] top-[2%] w-[50%] z-20">
+                <AnimatedBrowsePhone />
               </div>
             </div>
           </div>
