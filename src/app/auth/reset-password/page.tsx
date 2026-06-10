@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { getTranslations } from "next-intl/server";
 import { ResetPasswordForm } from "./reset-password-form";
 
 export const metadata = {
@@ -11,7 +12,8 @@ export const metadata = {
 // reset they were just sent here to complete), no footer nav. Just the
 // logo and the form. This matches the standard pattern for forced-state
 // auth screens (Stripe, Linear, Vercel all do this).
-export default function ResetPasswordPage() {
+export default async function ResetPasswordPage() {
+  const t = await getTranslations("auth");
   return (
     <main className="min-h-screen flex flex-col bg-bg-screen">
       <header className="w-full px-6 py-6">
@@ -29,11 +31,9 @@ export default function ResetPasswordPage() {
       <section className="flex-1 flex items-center justify-center px-6 pb-16">
         <div className="w-full max-w-md">
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-            Set a new password
+            {t("resetTitle")}
           </h1>
-          <p className="mt-2 text-slate-600">
-            Choose a new password to finish resetting your account.
-          </p>
+          <p className="mt-2 text-slate-600">{t("resetSubtitle")}</p>
           <div className="mt-8">
             <ResetPasswordForm redirectTo="/dashboard" />
           </div>

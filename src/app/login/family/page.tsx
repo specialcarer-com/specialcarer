@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import AudienceSignIn from "../audience-sign-in";
 
 export const metadata = {
@@ -11,14 +12,15 @@ export default async function FamilyLoginPage({
 }: {
   searchParams: Promise<{ redirect?: string; sent?: string; error?: string }>;
 }) {
+  const t = await getTranslations("auth");
   const params = await searchParams;
   const redirectTo = params.redirect || "/dashboard?audience=family";
   return (
     <AudienceSignIn
       audience="family"
       pageKey="account.login"
-      headline="Sign in to your family account"
-      intro="Use your email or your Google account. New here? We'll set you up automatically when you sign in — no separate signup needed."
+      headline={t("familyHeadline")}
+      intro={t("familyIntro")}
       signupCta={null}
       redirectTo={redirectTo}
       sent={params.sent === "1"}

@@ -8,10 +8,22 @@ export type MessageTree = { [key: string]: string | MessageTree };
  */
 export async function loadMessages(locale: AppLocale): Promise<MessageTree> {
   switch (locale) {
+    case "en-US":
+      return (await import("../../messages/en-US.json")).default as MessageTree;
     case "es":
       return (await import("../../messages/es.json")).default as MessageTree;
+    case "pl":
+      return (await import("../../messages/pl.json")).default as MessageTree;
     case "ur":
       return (await import("../../messages/ur.json")).default as MessageTree;
+    case "ro":
+      return (await import("../../messages/ro.json")).default as MessageTree;
+    case "bn":
+      return (await import("../../messages/bn.json")).default as MessageTree;
+    case "de":
+      return (await import("../../messages/de.json")).default as MessageTree;
+    case "fr":
+      return (await import("../../messages/fr.json")).default as MessageTree;
     case "en-GB":
     default:
       return (await import("../../messages/en-GB.json")).default as MessageTree;

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import MarketingShell from "@/components/marketing-shell";
 import CaregiverCard from "@/components/caregiver-card";
 import { BookingTypeTabs } from "@/app/book/_components/booking-type-tabs";
@@ -57,6 +58,7 @@ export default async function FindCarePage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
+  const t = await getTranslations("search");
   const sp = await searchParams;
   const rawCountry =
     sp.country === "US" || sp.country === "GB" ? sp.country : undefined;
@@ -174,31 +176,27 @@ export default async function FindCarePage({
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
           <div>
             <span className="inline-block px-3 py-1 rounded-full bg-brand-50 text-brand-700 text-xs font-medium">
-              Find care
+              {t("badge")}
             </span>
             <h1 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight text-slate-900">
-              Vetted caregivers near you.
+              {t("title")}
             </h1>
-            <p className="mt-2 text-slate-600 max-w-2xl">
-              Every caregiver here is identity-verified, background-checked,
-              and ready to take bookings.
-            </p>
+            <p className="mt-2 text-slate-600 max-w-2xl">{t("subtitle")}</p>
             {requestedDateLabel && (
               <p className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 text-brand-700 text-xs font-medium">
                 <span aria-hidden>→</span>
-                Showing carers for {requestedDateLabel}. Confirm exact times when
-                you message them.
+                {t("showingForDate", { date: requestedDateLabel })}
               </p>
             )}
           </div>
           {!user && (
             <div className="text-sm text-slate-500">
-              Browsing as a guest.{" "}
+              {t("browsingAsGuest")}{" "}
               <Link
                 href="/login?redirectTo=/find-care"
                 className="text-brand-700 hover:underline"
               >
-                Sign in to book
+                {t("signInToBook")}
               </Link>
               .
             </div>
@@ -211,30 +209,30 @@ export default async function FindCarePage({
           className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-8 gap-3 bg-white p-4 rounded-2xl border border-slate-100"
         >
           <label className="text-sm sm:col-span-2 lg:col-span-2">
-            <span className="text-slate-700 font-medium">Search</span>
+            <span className="text-slate-700 font-medium">{t("filterSearch")}</span>
             <input
               type="text"
               name="q"
               defaultValue={q ?? ""}
-              placeholder="Name, headline, keyword…"
+              placeholder={t("filterSearchPlaceholder")}
               className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </label>
           <label className="text-sm sm:col-span-1 lg:col-span-2">
             <span className="text-slate-700 font-medium">
-              {US_REGION_ENABLED ? "Postcode / ZIP" : "Postcode"}
+              {US_REGION_ENABLED ? t("filterPostcodeZip") : t("filterPostcode")}
             </span>
             <input
               type="text"
               name="postcode"
               defaultValue={sp.postcode ?? ""}
-              placeholder={US_REGION_ENABLED ? "e.g. SW1A 1AA or 10001" : "e.g. SW1A 1AA"}
+              placeholder={US_REGION_ENABLED ? t("filterPostcodeZipPlaceholder") : t("filterPostcodePlaceholder")}
               autoComplete="postal-code"
               className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </label>
           <label className="text-sm">
-            <span className="text-slate-700 font-medium">Within</span>
+            <span className="text-slate-700 font-medium">{t("filterWithin")}</span>
             <select
               name="radius"
               defaultValue={String(radiusKm)}
@@ -248,13 +246,13 @@ export default async function FindCarePage({
             </select>
           </label>
           <label className="text-sm">
-            <span className="text-slate-700 font-medium">Work type</span>
+            <span className="text-slate-700 font-medium">{t("filterWorkType")}</span>
             <select
               name="format"
               defaultValue={format ?? ""}
               className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
             >
-              <option value="">Any</option>
+              <option value="">{t("any")}</option>
               {CARE_FORMATS.map((f) => (
                 <option key={f.key} value={f.key}>
                   {f.short}
@@ -263,13 +261,13 @@ export default async function FindCarePage({
             </select>
           </label>
           <label className="text-sm">
-            <span className="text-slate-700 font-medium">Service</span>
+            <span className="text-slate-700 font-medium">{t("filterService")}</span>
             <select
               name="service"
               defaultValue={service ?? ""}
               className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
             >
-              <option value="">Any service</option>
+              <option value="">{t("anyService")}</option>
               {SERVICES.map((s) => (
                 <option key={s.key} value={s.key}>
                   {s.label}
@@ -278,13 +276,13 @@ export default async function FindCarePage({
             </select>
           </label>
           <label className="text-sm">
-            <span className="text-slate-700 font-medium">City</span>
+            <span className="text-slate-700 font-medium">{t("filterCity")}</span>
             <select
               name="city"
               defaultValue={city ?? ""}
               className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
             >
-              <option value="">Any city</option>
+              <option value="">{t("anyCity")}</option>
               {cityOptions.map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -294,21 +292,21 @@ export default async function FindCarePage({
           </label>
           {US_REGION_ENABLED && (
             <label className="text-sm">
-              <span className="text-slate-700 font-medium">Country</span>
+              <span className="text-slate-700 font-medium">{t("filterCountry")}</span>
               <select
                 name="country"
                 defaultValue={country ?? ""}
                 className="mt-1 w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
               >
-                <option value="">UK + US</option>
-                <option value="GB">UK</option>
-                <option value="US">US</option>
+                <option value="">{t("countryBoth")}</option>
+                <option value="GB">{t("countryGB")}</option>
+                <option value="US">{t("countryUS")}</option>
               </select>
             </label>
           )}
           <div className="text-sm grid grid-cols-2 gap-2">
             <label>
-              <span className="text-slate-700 font-medium">Min /hr</span>
+              <span className="text-slate-700 font-medium">{t("filterMinRate")}</span>
               <input
                 type="number"
                 name="min"
@@ -319,7 +317,7 @@ export default async function FindCarePage({
               />
             </label>
             <label>
-              <span className="text-slate-700 font-medium">Max /hr</span>
+              <span className="text-slate-700 font-medium">{t("filterMaxRate")}</span>
               <input
                 type="number"
                 name="max"
@@ -337,7 +335,7 @@ export default async function FindCarePage({
           >
             <summary className="cursor-pointer text-sm font-medium text-brand-700 hover:underline list-none flex items-center gap-1.5">
               <span aria-hidden className="transition-transform group-open:rotate-90">›</span>
-              More filters
+              {t("moreFilters")}
               {(genders.length +
                 certsSelected.length +
                 (requireDriver ? 1 : 0) +
@@ -360,10 +358,10 @@ export default async function FindCarePage({
             <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
               <fieldset>
                 <legend className="text-sm font-medium text-slate-700">
-                  Gender
+                  {t("gender")}
                 </legend>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Tick any that work — leave blank for all.
+                  {t("genderHint")}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {GENDERS.map((g) => {
@@ -393,7 +391,7 @@ export default async function FindCarePage({
 
               <fieldset>
                 <legend className="text-sm font-medium text-slate-700">
-                  Travel
+                  {t("travel")}
                 </legend>
                 <div className="mt-2 flex flex-col gap-1.5">
                   <label className="inline-flex items-center gap-2 text-sm">
@@ -404,7 +402,7 @@ export default async function FindCarePage({
                       defaultChecked={requireDriver}
                       className="h-4 w-4 accent-brand"
                     />
-                    Has a driver&rsquo;s licence
+                    {t("hasLicence")}
                   </label>
                   <label className="inline-flex items-center gap-2 text-sm">
                     <input
@@ -414,17 +412,17 @@ export default async function FindCarePage({
                       defaultChecked={requireVehicle}
                       className="h-4 w-4 accent-brand"
                     />
-                    Has own vehicle
+                    {t("hasVehicle")}
                   </label>
                 </div>
               </fieldset>
 
               <fieldset className="sm:col-span-2">
                 <legend className="text-sm font-medium text-slate-700">
-                  Required certifications
+                  {t("requiredCerts")}
                 </legend>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Carer must hold every one ticked.
+                  {t("requiredCertsHint")}
                 </p>
                 <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5">
                   {CERTIFICATIONS.map((c) => {
@@ -454,32 +452,32 @@ export default async function FindCarePage({
 
               <label className="text-sm">
                 <span className="text-slate-700 font-medium">
-                  Languages required
+                  {t("languagesRequired")}
                 </span>
                 <span className="block text-xs text-slate-500 mb-1">
-                  Comma-separated. e.g. Polish, Urdu
+                  {t("languagesHint")}
                 </span>
                 <input
                   type="text"
                   name="langs"
                   defaultValue={requiredLanguages.join(", ")}
-                  placeholder="Polish, Urdu"
+                  placeholder={t("languagesPlaceholder")}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200"
                 />
               </label>
 
               <label className="text-sm">
                 <span className="text-slate-700 font-medium">
-                  Carer tags
+                  {t("carerTags")}
                 </span>
                 <span className="block text-xs text-slate-500 mb-1">
-                  e.g. non-smoker, pet-friendly
+                  {t("carerTagsHint")}
                 </span>
                 <input
                   type="text"
                   name="tags"
                   defaultValue={requiredTags.join(", ")}
-                  placeholder="non-smoker, pet-friendly"
+                  placeholder={t("carerTagsPlaceholder")}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200"
                 />
               </label>
@@ -488,20 +486,20 @@ export default async function FindCarePage({
 
           <div className="sm:col-span-2 lg:col-span-8 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between pt-1">
             <p className="text-xs text-slate-500">
-              Rates are pre–service-fee. Final price shown at checkout.
+              {t("ratesNote")}
             </p>
             <div className="flex gap-2 flex-wrap">
               <Link
                 href="/find-care"
                 className="px-4 py-2 rounded-lg bg-white border border-slate-200 text-sm text-slate-700 hover:bg-slate-50 transition"
               >
-                Reset
+                {t("reset")}
               </Link>
               <button
                 type="submit"
                 className="px-5 py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand-600 transition"
               >
-                Apply filters
+                {t("applyFilters")}
               </button>
             </div>
           </div>
@@ -510,7 +508,7 @@ export default async function FindCarePage({
         {/* List ↔ Map view toggle */}
         <div className="mt-6 flex items-center gap-2">
           <span aria-hidden className="px-3 py-1.5 rounded-full bg-brand-50 text-brand-700 text-sm font-semibold">
-            List view
+            {t("listView")}
           </span>
           <Link
             href={(() => {
@@ -525,15 +523,14 @@ export default async function FindCarePage({
             })()}
             className="px-3 py-1.5 rounded-full border border-slate-200 text-slate-700 text-sm hover:bg-slate-50 transition"
           >
-            Map view →
+            {t("mapView")} →
           </Link>
           {near && geocoded && (
             <span className="ml-auto text-xs text-slate-500">
-              Showing carers within {radiusKm} km of{" "}
-              <strong className="text-slate-700">
-                {postcode}
-                {geocoded.city ? ` · ${geocoded.city}` : ""}
-              </strong>
+              {t("withinRadius", {
+                radius: radiusKm,
+                place: `${postcode}${geocoded.city ? ` · ${geocoded.city}` : ""}`,
+              })}
             </span>
           )}
         </div>
@@ -541,15 +538,14 @@ export default async function FindCarePage({
         {/* Results */}
         <div className="mt-8 flex items-baseline justify-between">
           <h2 className="text-lg font-semibold text-slate-900">
-            {sorted.length} caregiver{sorted.length === 1 ? "" : "s"} match your
-            filters
+            {t("resultsCount", { count: sorted.length })}
           </h2>
           {service && (
             <Link
               href={SERVICES.find((s) => s.key === service)?.href ?? "/"}
               className="text-sm text-brand-700 hover:underline"
             >
-              About this service →
+              {t("aboutService")} →
             </Link>
           )}
         </div>
@@ -557,17 +553,16 @@ export default async function FindCarePage({
         {sorted.length === 0 ? (
           <div className="mt-6 p-8 rounded-2xl bg-slate-50 border border-slate-200 text-center">
             <p className="text-slate-700 font-medium">
-              No caregivers match these filters yet.
+              {t("noResultsTitle")}
             </p>
             <p className="mt-2 text-sm text-slate-600">
-              Try widening your search — fewer filters, a nearby city, or a
-              broader rate range. New caregivers are joining weekly.
+              {t("noResultsBody")}
             </p>
             <Link
               href="/find-care"
               className="mt-4 inline-block px-5 py-2 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand-600 transition"
             >
-              Reset filters
+              {t("resetFilters")}
             </Link>
           </div>
         ) : (
@@ -588,29 +583,29 @@ export default async function FindCarePage({
               • support → neutral slate. */}
         <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
           <div className="bg-white p-5 rounded-2xl border border-brand-100 shadow-sm">
-            <h3 className="font-semibold text-slate-900">How vetting works</h3>
+            <h3 className="font-semibold text-slate-900">{t("vettingTitle")}</h3>
             <p className="mt-1 text-slate-700">
-              ID + selfie, full background check, payouts-enabled.{" "}
+              {t("vettingBody")}{" "}
               <Link href="/trust" className="text-brand-700 hover:underline">
-                See standards
+                {t("vettingLink")}
               </Link>
               .
             </p>
           </div>
           <div className="bg-amber-50 p-5 rounded-2xl border border-amber-100">
-            <h3 className="font-semibold text-slate-900">What you&rsquo;ll pay</h3>
+            <h3 className="font-semibold text-slate-900">{t("costTitle")}</h3>
             <p className="mt-1 text-slate-700">
-              Caregiver rate + 30% service fee, all-in.{" "}
+              {t("costBody")}{" "}
               <Link href="/pricing" className="text-brand-700 hover:underline">
-                Pricing detail
+                {t("costLink")}
               </Link>
               .
             </p>
           </div>
           <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
-            <h3 className="font-semibold text-slate-900">Need help choosing?</h3>
+            <h3 className="font-semibold text-slate-900">{t("helpTitle")}</h3>
             <p className="mt-1 text-slate-700">
-              Email{" "}
+              {t("helpBody")}{" "}
               <a
                 href="mailto:support@specialcarer.com"
                 className="text-brand-700 hover:underline"

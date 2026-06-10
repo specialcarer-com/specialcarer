@@ -44,24 +44,34 @@ test("profile wins over both cookie and Accept-Language", () => {
 });
 
 test("unsupported profile locale is skipped, falls through to cookie", () => {
-  // pl is a valid chat-translate target but NOT a shipped UI locale in V1A.
+  // 'ja' is neither a shipped UI locale nor a chat-translate target.
   assert.equal(
-    resolveLocale({ profileLocale: "pl", cookieLocale: "es" }),
+    resolveLocale({ profileLocale: "ja", cookieLocale: "es" }),
     "es",
   );
 });
 
 test("unsupported cookie is skipped, falls through to Accept-Language", () => {
   assert.equal(
-    resolveLocale({ cookieLocale: "de", acceptLanguage: "ur-PK" }),
+    resolveLocale({ cookieLocale: "ja", acceptLanguage: "ur-PK" }),
     "ur",
   );
 });
 
+test("newly shipped locales resolve directly", () => {
+  // PR B ships pl/de/fr/ro/bn/en-US — these now win at their tier.
+  assert.equal(resolveLocale({ profileLocale: "pl", cookieLocale: "es" }), "pl");
+  assert.equal(resolveLocale({ cookieLocale: "de" }), "de");
+  assert.equal(resolveLocale({ profileLocale: "fr" }), "fr");
+});
+
 test("matchAcceptLanguage honours q-weights and prefix matching", () => {
-  // Highest-q supported tag wins; en-US prefix-maps to en-GB.
+  // Highest-q supported tag wins.
   assert.equal(matchAcceptLanguage("fr;q=0.2,es;q=0.8"), "es");
-  assert.equal(matchAcceptLanguage("en-US,en;q=0.9"), "en-GB");
+  // en-US now ships, so it exact-matches ahead of the en-GB prefix fallback.
+  assert.equal(matchAcceptLanguage("en-US,en;q=0.9"), "en-US");
+  // A bare/regional English with no en-US tag still prefix-maps to en-GB.
+  assert.equal(matchAcceptLanguage("en-AU,en;q=0.9"), "en-GB");
   assert.equal(matchAcceptLanguage("ja,ko;q=0.5"), null);
   assert.equal(matchAcceptLanguage(""), null);
   assert.equal(matchAcceptLanguage(null), null);

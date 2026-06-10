@@ -1,14 +1,16 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
 type TabKey = "visiting" | "live-in" | "browse";
 
-const TABS: { key: TabKey; label: string; href: string }[] = [
-  { key: "visiting", label: "Visiting care", href: "/book/visiting" },
-  { key: "live-in", label: "Live-in-care", href: "/book/live-in" },
-  { key: "browse", label: "Browse & choose your carer", href: "/find-care" },
+const TABS: { key: TabKey; labelKey: string; href: string }[] = [
+  { key: "visiting", labelKey: "tabVisiting", href: "/book/visiting" },
+  { key: "live-in", labelKey: "tabLiveIn", href: "/book/live-in" },
+  { key: "browse", labelKey: "tabBrowse", href: "/find-care" },
 ];
 
-export function BookingTypeTabs({ current }: { current: TabKey }) {
+export async function BookingTypeTabs({ current }: { current: TabKey }) {
+  const t = await getTranslations("booking");
   return (
     <nav
       aria-label="Booking type"
@@ -29,7 +31,7 @@ export function BookingTypeTabs({ current }: { current: TabKey }) {
                     : "text-slate-600 hover:text-slate-900 hover:bg-white/60",
                 ].join(" ")}
               >
-                {tab.label}
+                {t(tab.labelKey)}
               </Link>
             </li>
           );

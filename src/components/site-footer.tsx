@@ -6,40 +6,46 @@ import type { ComponentType, SVGProps } from "react";
 type FooterLink = { href: string; label: string; external?: boolean };
 type FooterGroup = { id: string; headingKey: string; links: FooterLink[] };
 
-const CARE_LINKS: FooterLink[] = [
-  { href: "/services/elderly-care", label: "Elderly care" },
-  { href: "/services/childcare", label: "Childcare" },
-  { href: "/services/special-needs", label: "Special-needs" },
-  { href: "/services/postnatal", label: "Postnatal" },
-  { href: "/services/complex-care", label: "Complex care" },
-  { href: "/care-formats/live-in", label: "Live-in care" },
-  { href: "/care-formats/visiting", label: "Visiting care" },
-  { href: "/find-care", label: "Find care now" },
-  { href: "/care-in", label: "Cities" },
-  { href: "/coverage", label: "Coverage map" },
+// `labelKey` resolves against the footer.links namespace; the external
+// mailto keeps a literal label (an address is not translatable).
+type FooterLinkDef = { href: string; labelKey?: string; label?: string; external?: boolean };
+
+const CARE_LINKS: FooterLinkDef[] = [
+  { href: "/services/elderly-care", labelKey: "elderlyCare" },
+  { href: "/services/childcare", labelKey: "childcare" },
+  { href: "/services/special-needs", labelKey: "specialNeeds" },
+  { href: "/services/postnatal", labelKey: "postnatal" },
+  { href: "/services/complex-care", labelKey: "complexCare" },
+  { href: "/care-formats/live-in", labelKey: "liveIn" },
+  { href: "/care-formats/visiting", labelKey: "visiting" },
+  { href: "/find-care", labelKey: "findCareNow" },
+  { href: "/care-in", labelKey: "cities" },
+  { href: "/coverage", labelKey: "coverageMap" },
 ];
 
-const COMPANY_LINKS: FooterLink[] = [
-  { href: "/about", label: "About" },
-  { href: "/trust", label: "Trust & safety" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/employers", label: "For employers" },
-  { href: "/organisations", label: "For organisations" },
-  { href: "/become-a-caregiver", label: "Become a caregiver" },
-  { href: "/blog", label: "Blog" },
-  { href: "/press", label: "Press & media" },
-  { href: "/contact", label: "Contact" },
+const COMPANY_LINKS: FooterLinkDef[] = [
+  { href: "/about", labelKey: "about" },
+  { href: "/trust", labelKey: "trust" },
+  { href: "/pricing", labelKey: "pricing" },
+  { href: "/employers", labelKey: "employers" },
+  { href: "/organisations", labelKey: "organisations" },
+  { href: "/become-a-caregiver", labelKey: "becomeCaregiver" },
+  { href: "/blog", labelKey: "blog" },
+  { href: "/press", labelKey: "press" },
+  { href: "/contact", labelKey: "contact" },
 ];
 
-const LEGAL_LINKS: FooterLink[] = [
-  { href: "/privacy", label: "Privacy policy" },
-  { href: "/terms", label: "Terms of service" },
-  { href: "/cookies", label: "Cookie notice" },
-  { href: "/account/delete", label: "Delete account" },
+const LEGAL_LINKS: FooterLinkDef[] = [
+  { href: "/privacy", labelKey: "privacy" },
+  { href: "/terms", labelKey: "terms" },
+  { href: "/cookies", labelKey: "cookies" },
+  { href: "/account/delete", labelKey: "deleteAccount" },
   { href: "mailto:privacy@specialcarer.com", label: "privacy@specialcarer.com", external: true },
 ];
 
-const GROUPS: FooterGroup[] = [
+type FooterGroupDef = { id: string; headingKey: string; links: FooterLinkDef[] };
+
+const GROUPS: FooterGroupDef[] = [
   { id: "care", headingKey: "careServices", links: CARE_LINKS },
   { id: "company", headingKey: "company", links: COMPANY_LINKS },
   { id: "legal", headingKey: "legal", links: LEGAL_LINKS },
@@ -103,6 +109,13 @@ const SOCIAL_LINKS: { href: string; label: string; Icon: SocialIcon }[] = [
 
 export default async function SiteFooter() {
   const t = await getTranslations("footer");
+  const tl = await getTranslations("footer.links");
+  const resolveLinks = (links: FooterLinkDef[]): FooterLink[] =>
+    links.map((l) => ({
+      href: l.href,
+      label: l.labelKey ? tl(l.labelKey) : (l.label ?? ""),
+      external: l.external,
+    }));
   return (
     <footer className="bg-brand-100 text-slate-900">
       <div className="max-w-6xl mx-auto px-6 py-12 text-sm">
@@ -148,7 +161,7 @@ export default async function SiteFooter() {
           {GROUPS.map((g) => (
             <nav key={g.id} aria-label={t(g.headingKey)}>
               <h3 className="text-brand-700 font-semibold">{t(g.headingKey)}</h3>
-              <LinkList links={g.links} />
+              <LinkList links={resolveLinks(g.links)} />
             </nav>
           ))}
         </div>
