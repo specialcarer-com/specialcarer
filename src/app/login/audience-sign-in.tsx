@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { LoginForm } from "./login-form";
 import MarketingShell from "@/components/marketing-shell";
 import PageHeroBanner from "@/components/page-hero-banner";
@@ -22,7 +23,7 @@ export type AudienceSignInProps = {
  *  - the standard LoginForm with a per-audience redirect destination
  *  - an optional signup CTA for new users
  */
-export default function AudienceSignIn({
+export default async function AudienceSignIn({
   pageKey,
   headline,
   intro,
@@ -31,6 +32,7 @@ export default function AudienceSignIn({
   sent,
   error,
 }: AudienceSignInProps) {
+  const t = await getTranslations("auth");
   return (
     <MarketingShell>
       <PageHeroBanner pageKey={pageKey} height="md" tint="soft" />
@@ -44,16 +46,13 @@ export default function AudienceSignIn({
 
           {sent && (
             <div className="mt-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm">
-              <strong>Check your inbox.</strong> We&rsquo;ve sent you a
-              one-click sign-in link. It expires in 1 hour.
+              <strong>{t("checkInbox")}</strong> {t("sentLink")}
             </div>
           )}
 
           {error && (
             <div className="mt-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-sm">
-              {error === "callback"
-                ? "We couldn't sign you in. The link may have expired — please try again."
-                : "Something went wrong. Please try again."}
+              {error === "callback" ? t("errorCallback") : t("errorGeneric")}
             </div>
           )}
 
@@ -75,20 +74,20 @@ export default function AudienceSignIn({
           ) : null}
 
           <p className="mt-8 text-xs text-slate-500 text-center">
-            Not the right account?{" "}
+            {t("notRightAccount")}{" "}
             <Link href="/login" className="underline hover:text-slate-700">
-              Choose a different sign-in
+              {t("chooseDifferent")}
             </Link>
           </p>
 
           <p className="mt-2 text-xs text-slate-500 text-center">
-            By continuing, you agree to our{" "}
+            {t("termsPrefix")}{" "}
             <Link href="/terms" className="underline hover:text-slate-700">
-              Terms
+              {t("terms")}
             </Link>{" "}
-            and{" "}
+            {t("and")}{" "}
             <Link href="/privacy" className="underline hover:text-slate-700">
-              Privacy Policy
+              {t("privacyPolicy")}
             </Link>
             .
           </p>

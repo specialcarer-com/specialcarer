@@ -23,6 +23,7 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { OVERNIGHT_RATE_MULTIPLIER } from "@/lib/pricing";
 
 type Tab = "now" | "schedule" | "recurring";
@@ -35,12 +36,12 @@ type ServiceType =
   | "postnatal"
   | "complex_care";
 
-const SERVICES: { value: ServiceType; label: string }[] = [
-  { value: "elderly_care", label: "Elderly care" },
-  { value: "childcare", label: "Childcare" },
-  { value: "special_needs", label: "Special-needs" },
-  { value: "postnatal", label: "Postnatal" },
-  { value: "complex_care", label: "Complex care" },
+const SERVICES: { value: ServiceType; labelKey: string }[] = [
+  { value: "elderly_care", labelKey: "serviceElderly" },
+  { value: "childcare", labelKey: "serviceChildcare" },
+  { value: "special_needs", labelKey: "serviceSpecialNeeds" },
+  { value: "postnatal", labelKey: "servicePostnatal" },
+  { value: "complex_care", labelKey: "serviceComplex" },
 ];
 
 const DURATION_MIN = 1;
@@ -51,8 +52,8 @@ const OVERNIGHT_START = "20:00";
 const OVERNIGHT_END = "08:00";
 const OVERNIGHT_HOURS = 12;
 
-function formatHours(h: number): string {
-  return h % 1 === 0 ? `${h.toFixed(0)} hrs` : `${h.toFixed(1)} hrs`;
+function formatHoursValue(h: number): string {
+  return h % 1 === 0 ? h.toFixed(0) : h.toFixed(1);
 }
 
 type Match = {
@@ -392,10 +393,11 @@ function SegmentedControl({
   tab: Tab;
   onChange: (t: Tab) => void;
 }) {
+  const t = useTranslations("booking");
   const items: { key: Tab; label: string; icon: ReactNode }[] = [
-    { key: "now", label: "Now", icon: <BoltIcon /> },
-    { key: "schedule", label: "Schedule", icon: <CalIcon /> },
-    { key: "recurring", label: "Recurring", icon: <RepeatIcon /> },
+    { key: "now", label: t("tabNow"), icon: <BoltIcon /> },
+    { key: "schedule", label: t("tabSchedule"), icon: <CalIcon /> },
+    { key: "recurring", label: t("tabRecurring"), icon: <RepeatIcon /> },
   ];
   return (
     <div className="rounded-pill bg-slate-100 p-1 grid grid-cols-3 gap-1">
@@ -480,23 +482,24 @@ function DurationSlider({
   overnightRate: boolean;
   applyOvernight: () => void;
 }) {
+  const t = useTranslations("booking");
   const presets: {
     label: string;
     active: boolean;
     onClick: () => void;
   }[] = [
     {
-      label: "4 hrs",
+      label: t("preset4"),
       active: !overnightRate && durationHours === 4,
       onClick: () => setDurationHours(4),
     },
     {
-      label: "8 hrs",
+      label: t("preset8"),
       active: !overnightRate && durationHours === 8,
       onClick: () => setDurationHours(8),
     },
     {
-      label: "Overnight (8pm–8am)",
+      label: t("presetOvernight"),
       active: overnightRate,
       onClick: applyOvernight,
     },
@@ -505,9 +508,11 @@ function DurationSlider({
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <FieldLabel surface={surface}>For how long?</FieldLabel>
+        <FieldLabel surface={surface}>{t("howLong")}</FieldLabel>
         <span className="text-[15px] font-bold text-slate-900">
-          {overnightRate ? "12 hrs · overnight" : formatHours(durationHours)}
+          {overnightRate
+            ? t("overnightLabel")
+            : t("hrs", { count: formatHoursValue(durationHours) })}
         </span>
       </div>
       <input
@@ -577,6 +582,7 @@ function SchedulePanel({
   overnightRate: boolean;
   applyOvernight: () => void;
 }) {
+  const t = useTranslations("booking");
   const [sh, sm] = start.split(":").map(Number);
   const [eh, em] = end.split(":").map(Number);
   const haveTimes = ![sh, sm, eh, em].some((n) => Number.isNaN(n));
@@ -593,7 +599,7 @@ function SchedulePanel({
   const mins = minutes % 60;
   const durationLabel =
     minutes === 0
-      ? "End time must be after start"
+      ? t("endAfterStart")
       : `${hours > 0 ? `${hours} hr` : ""}${
           mins > 0 ? ` ${mins} min` : ""
         }`.trim();
@@ -607,7 +613,7 @@ function SchedulePanel({
       />
 
       <div>
-        <FieldLabel surface={surface}>When?</FieldLabel>
+        <FieldLabel surface={surface}>{t("when")}</FieldLabel>
         <input
           type="date"
           value={date}
@@ -620,7 +626,7 @@ function SchedulePanel({
       <div className="flex flex-wrap gap-2">
         {[
           {
-            label: "4 hrs",
+            label: t("preset4"),
             active:
               !overnightRate && start === "09:00" && end === "13:00",
             onClick: () => {
@@ -629,7 +635,7 @@ function SchedulePanel({
             },
           },
           {
-            label: "8 hrs",
+            label: t("preset8"),
             active:
               !overnightRate && start === "09:00" && end === "17:00",
             onClick: () => {
@@ -638,7 +644,7 @@ function SchedulePanel({
             },
           },
           {
-            label: "Overnight (8pm–8am)",
+            label: t("presetOvernight"),
             active: overnightRate,
             onClick: applyOvernight,
           },
@@ -660,7 +666,7 @@ function SchedulePanel({
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <FieldLabel surface={surface}>Start</FieldLabel>
+          <FieldLabel surface={surface}>{t("start")}</FieldLabel>
           <input
             type="time"
             value={start}
@@ -670,7 +676,7 @@ function SchedulePanel({
         </div>
         <div>
           <FieldLabel surface={surface}>
-            End{overnightRate ? " (next day)" : ""}
+            {overnightRate ? t("endNextDay") : t("end")}
           </FieldLabel>
           <input
             type="time"
@@ -682,8 +688,8 @@ function SchedulePanel({
       </div>
 
       <p className="text-[13px] text-slate-500">
-        Duration: {durationLabel}
-        {overnightRate ? " · sleep-in rate applies" : ""}
+        {t("duration", { label: durationLabel })}
+        {overnightRate ? ` · ${t("sleepInApplies")}` : ""}
       </p>
 
       <ServicePicker surface={surface} value={service} onChange={setService} />
@@ -696,6 +702,7 @@ function SchedulePanel({
 // ────────────────────────────────────────────────────────────────────
 
 function RecurringPanel({ surface }: { surface: Surface }) {
+  const t = useTranslations("booking");
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "loading" | "ok" | "err">("idle");
   const [errMsg, setErrMsg] = useState<string | null>(null);
@@ -719,15 +726,15 @@ function RecurringPanel({ surface }: { surface: Surface }) {
         setState("err");
         setErrMsg(
           json.error === "invalid_email"
-            ? "Please enter a valid email."
-            : "Something went wrong. Please try again."
+            ? t("invalidEmail")
+            : t("genericError")
         );
         return;
       }
       setState("ok");
     } catch {
       setState("err");
-      setErrMsg("Network error. Please try again.");
+      setErrMsg(t("networkError"));
     }
   }
 
@@ -743,19 +750,17 @@ function RecurringPanel({ surface }: { surface: Surface }) {
         </span>
         <div className="min-w-0">
           <h2 className="text-[18px] font-bold text-slate-900">
-            Recurring care, coming this week
+            {t("recurringTitle")}
           </h2>
           <p className="mt-1 text-[14px] text-slate-600">
-            Book the same carer for a weekly schedule — same time, same person,
-            zero re-booking. We&rsquo;re finishing it now. Join the waitlist
-            and we&rsquo;ll email you the moment it goes live.
+            {t("recurringBody")}
           </p>
         </div>
       </div>
 
       {state === "ok" ? (
         <div className="mt-5 rounded-card bg-emerald-50 border border-emerald-200 p-4 text-sm text-emerald-800">
-          You&rsquo;re on the list. We&rsquo;ll be in touch shortly.
+          {t("recurringSuccess")}
         </div>
       ) : (
         <form onSubmit={submit} className="mt-5 space-y-3">
@@ -773,7 +778,7 @@ function RecurringPanel({ surface }: { surface: Surface }) {
             disabled={state === "loading"}
             className="w-full h-12 rounded-btn bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition disabled:opacity-60"
           >
-            {state === "loading" ? "Adding…" : "Notify me"}
+            {state === "loading" ? t("adding") : t("notifyMe")}
           </button>
           {errMsg && (
             <p className="text-[13px] text-rose-600">{errMsg}</p>
@@ -805,7 +810,8 @@ function StickyActionBar({
   disabled: boolean;
   onClick: () => void;
 }) {
-  const ctaLabel = tab === "now" ? "Find carer" : "Find carers";
+  const t = useTranslations("booking");
+  const ctaLabel = tab === "now" ? t("findCarer") : t("findCarers");
   const rawRateCents = quote.minRateCents;
   // Sleep-in shifts pay 0.7× the standard hourly rate (industry norm).
   const effectiveRateCents =
@@ -815,11 +821,13 @@ function StickyActionBar({
   const hoursStr = hours.toFixed(hours % 1 === 0 ? 0 : 1);
   const fareLine =
     effectiveRateCents != null && hours > 0
-      ? `${hoursStr} hrs${overnightRate ? " overnight" : ""} × ${fmtRate(
-          effectiveRateCents,
-          quote.currency
-        )}/hr = ${fmtTotal(hours, effectiveRateCents, quote.currency)}`
-      : "Enter your postcode to see live pricing";
+      ? t("fareLine", {
+          hours: hoursStr,
+          overnight: overnightRate ? t("overnightSuffix") : "",
+          rate: fmtRate(effectiveRateCents, quote.currency),
+          total: fmtTotal(hours, effectiveRateCents, quote.currency),
+        })
+      : t("enterPostcodePricing");
 
   const positionClass =
     surface === "mobile"
@@ -844,9 +852,9 @@ function StickyActionBar({
         <div className="mt-2 mb-3 text-[12px] text-slate-600 leading-tight">
           <div className="font-semibold text-slate-800">{fareLine}</div>
           {overnightRate && effectiveRateCents != null && (
-            <div className="text-slate-500">Sleep-in rate applies (0.7×).</div>
+            <div className="text-slate-500">{t("sleepInNote")}</div>
           )}
-          <div>Held securely. Released to carer 24h after shift.</div>
+          <div>{t("heldSecurely")}</div>
         </div>
         <button
           type="button"
@@ -862,6 +870,7 @@ function StickyActionBar({
 }
 
 function EtaPill({ tab, quote }: { tab: Tab; quote: LiveQuote }) {
+  const t = useTranslations("booking");
   if (quote.loading) {
     return (
       <div className="inline-flex items-center gap-2 rounded-pill bg-slate-900 text-white px-3.5 py-1.5 text-[12px]">
@@ -875,7 +884,7 @@ function EtaPill({ tab, quote }: { tab: Tab; quote: LiveQuote }) {
     return (
       <div className="inline-flex items-center gap-2 rounded-pill bg-slate-100 text-slate-600 px-3.5 py-1.5 text-[12px] font-medium">
         <span className="inline-block w-2 h-2 rounded-full bg-slate-300" />
-        Enter a postcode to see availability
+        {t("enterPostcodeAvailability")}
       </div>
     );
   }
@@ -883,29 +892,27 @@ function EtaPill({ tab, quote }: { tab: Tab; quote: LiveQuote }) {
   const dotColor = quote.count >= 3 ? "bg-emerald-400" : "bg-amber-400";
   const rate =
     quote.minRateCents != null
-      ? `from ${fmtRate(quote.minRateCents, quote.currency)}/hr`
+      ? t("fromRate", { rate: fmtRate(quote.minRateCents, quote.currency) })
       : null;
 
   if (tab === "schedule") {
     return (
       <div className="inline-flex items-center gap-2 rounded-pill bg-slate-900 text-white px-3.5 py-1.5 text-[12px] font-medium">
         <span className={`inline-block w-2 h-2 rounded-full ${dotColor} sc-pulse`} />
-        <span>
-          ✦ {quote.count} carer{quote.count === 1 ? "" : "s"} in your area
-        </span>
+        <span>{t("carersInArea", { count: quote.count })}</span>
         {rate && <span className="opacity-80">· {rate}</span>}
       </div>
     );
   }
 
   const eta =
-    quote.minEtaMinutes != null ? `~${quote.minEtaMinutes} min away` : null;
+    quote.minEtaMinutes != null
+      ? t("minAway", { minutes: quote.minEtaMinutes })
+      : null;
   return (
     <div className="inline-flex items-center gap-2 rounded-pill bg-slate-900 text-white px-3.5 py-1.5 text-[12px] font-medium">
       <span className={`inline-block w-2 h-2 rounded-full ${dotColor} sc-pulse`} />
-      <span>
-        ✦ {quote.count} carer{quote.count === 1 ? "" : "s"} available
-      </span>
+      <span>{t("carersAvailable", { count: quote.count })}</span>
       {eta && <span className="opacity-80">· {eta}</span>}
       {rate && <span className="opacity-80">· {rate}</span>}
     </div>
@@ -925,14 +932,15 @@ function PostcodeField({
   value: string;
   onChange: (s: string) => void;
 }) {
+  const t = useTranslations("booking");
   return (
     <div>
-      <FieldLabel surface={surface}>Where do you need care?</FieldLabel>
+      <FieldLabel surface={surface}>{t("wherePrompt")}</FieldLabel>
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="e.g. SW1A 1AA or 10001"
+        placeholder={t("postcodePlaceholder")}
         autoComplete="postal-code"
         className={inputClass(surface)}
       />
@@ -949,9 +957,10 @@ function ServicePicker({
   value: ServiceType;
   onChange: (s: ServiceType) => void;
 }) {
+  const t = useTranslations("booking");
   return (
     <div>
-      <FieldLabel surface={surface}>What kind of care?</FieldLabel>
+      <FieldLabel surface={surface}>{t("whatKind")}</FieldLabel>
       <div className="grid grid-cols-2 gap-2">
         {SERVICES.map((s) => {
           const on = value === s.value;
@@ -966,7 +975,7 @@ function ServicePicker({
                   : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
               }`}
             >
-              <span className="text-sm font-semibold">{s.label}</span>
+              <span className="text-sm font-semibold">{t(s.labelKey)}</span>
             </button>
           );
         })}

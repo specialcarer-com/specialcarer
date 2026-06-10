@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import MarketingShell from "@/components/marketing-shell";
 import CareFormatChooser from "./care-format-chooser";
 import type { Country } from "@/lib/pricing";
@@ -35,17 +36,17 @@ export default async function BookEntryPage({
     ""
   ).toUpperCase();
   const country: Country = ipCountry === "US" ? "US" : "GB";
+  const t = await getTranslations("booking");
 
   return (
     <MarketingShell>
       <div className="pt-10 sm:pt-14 pb-6">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">
-            What kind of care do you need?
+            {t("entryTitle")}
           </h1>
           <p className="mt-2 text-slate-600 max-w-xl mx-auto">
-            Two simple paths. Pick the one that fits your situation &mdash;
-            we&rsquo;ll take it from there.
+            {t("entrySubtitle")}
           </p>
         </div>
       </div>

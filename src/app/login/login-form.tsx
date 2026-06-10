@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 
 type Props = { redirectTo: string };
 type Stage = "enter-email" | "enter-code";
 
 export function LoginForm({ redirectTo }: Props) {
+  const t = useTranslations("auth");
   const router = useRouter();
   const [stage, setStage] = useState<Stage>("enter-email");
   const [email, setEmail] = useState("");
@@ -54,7 +56,7 @@ export function LoginForm({ redirectTo }: Props) {
       setStage("enter-code");
       setResendCooldown(30);
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : "Couldn't send code");
+      setErrorMsg(err instanceof Error ? err.message : t("couldntSendCode"));
     } finally {
       setSubmitting(false);
     }
@@ -86,7 +88,7 @@ export function LoginForm({ redirectTo }: Props) {
         }
         lastErr = error;
       }
-      if (!verified) throw lastErr ?? new Error("Invalid code");
+      if (!verified) throw lastErr ?? new Error(t("invalidCode"));
       // Decide where to send them based on profile completeness
       const {
         data: { user },
@@ -107,10 +109,10 @@ export function LoginForm({ redirectTo }: Props) {
       }
       router.refresh();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Invalid code";
+      const msg = err instanceof Error ? err.message : t("invalidCode");
       setErrorMsg(
         msg.toLowerCase().includes("expired") || msg.toLowerCase().includes("invalid")
-          ? "That code is invalid or expired. Try again or request a new one."
+          ? t("invalidOrExpired")
           : msg
       );
       setSubmitting(false);
@@ -124,7 +126,7 @@ export function LoginForm({ redirectTo }: Props) {
       await sendCode(email);
       setResendCooldown(30);
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : "Couldn't resend code");
+      setErrorMsg(err instanceof Error ? err.message : t("couldntResendCode"));
     }
   }
 
@@ -146,14 +148,13 @@ export function LoginForm({ redirectTo }: Props) {
     return (
       <div className="space-y-6">
         <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-700">
-          We sent a code to <strong>{email}</strong>. Enter it below.
-          The code expires in 1 hour.
+          {t("codeSentTo", { email })}
         </div>
 
         <form onSubmit={handleCodeSubmit} className="space-y-3">
           <label className="block">
             <span className="text-sm font-medium text-slate-700">
-              Verification code
+              {t("verificationCode")}
             </span>
             <input
               ref={codeInputRef}
@@ -179,7 +180,7 @@ export function LoginForm({ redirectTo }: Props) {
             disabled={submitting || code.length < 6}
             className="w-full px-4 py-3 rounded-xl bg-brand text-white font-medium hover:bg-brand-600 transition disabled:opacity-50"
           >
-            {submitting ? "Verifying…" : "Verify and continue"}
+            {submitting ? t("verifying") : t("verifyAndContinue")}
           </button>
         </form>
 
@@ -193,7 +194,7 @@ export function LoginForm({ redirectTo }: Props) {
             }}
             className="text-slate-600 hover:text-slate-900 underline"
           >
-            Use a different email
+            {t("useDifferentEmail")}
           </button>
           <button
             type="button"
@@ -202,8 +203,8 @@ export function LoginForm({ redirectTo }: Props) {
             className="text-brand hover:text-brand-600 disabled:text-slate-400 disabled:cursor-not-allowed"
           >
             {resendCooldown > 0
-              ? `Resend in ${resendCooldown}s`
-              : "Resend code"}
+              ? t("resendIn", { seconds: resendCooldown })
+              : t("resendCode")}
           </button>
         </div>
       </div>
@@ -220,12 +221,12 @@ export function LoginForm({ redirectTo }: Props) {
             className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border border-slate-200 hover:bg-slate-50 transition font-medium"
           >
             <GoogleIcon />
-            <span>Continue with Google</span>
+            <span>{t("continueWithGoogle")}</span>
           </button>
 
           <div className="flex items-center gap-3 text-xs text-slate-400">
             <div className="flex-1 h-px bg-slate-200" />
-            <span>or</span>
+            <span>{t("or")}</span>
             <div className="flex-1 h-px bg-slate-200" />
           </div>
         </>
@@ -233,13 +234,13 @@ export function LoginForm({ redirectTo }: Props) {
 
       <form onSubmit={handleEmailSubmit} className="space-y-3">
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">Email</span>
+          <span className="text-sm font-medium text-slate-700">{t("email")}</span>
           <input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            placeholder={t("emailPlaceholder")}
             autoComplete="email"
             className="mt-1 w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand"
           />
@@ -252,12 +253,11 @@ export function LoginForm({ redirectTo }: Props) {
           disabled={submitting || !email}
           className="w-full px-4 py-3 rounded-xl bg-brand text-white font-medium hover:bg-brand-600 transition disabled:opacity-50"
         >
-          {submitting ? "Sending code…" : "Email me a sign-in code"}
+          {submitting ? t("sendingCode") : t("sendCode")}
         </button>
 
         <p className="text-xs text-slate-500 text-center pt-1">
-          We&rsquo;ll email you a numeric code instead of a clickable link, so
-          email scanners can&rsquo;t hijack your sign-in.
+          {t("scannerNote")}
         </p>
       </form>
     </div>

@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import AudienceSignIn from "../audience-sign-in";
 
 export const metadata = {
@@ -11,17 +12,18 @@ export default async function CaregiverLoginPage({
 }: {
   searchParams: Promise<{ redirect?: string; sent?: string; error?: string }>;
 }) {
+  const t = await getTranslations("auth");
   const params = await searchParams;
   const redirectTo = params.redirect || "/dashboard?audience=caregiver";
   return (
     <AudienceSignIn
       audience="caregiver"
       pageKey="audience.caregivers"
-      headline="Sign in to your caregiver account"
-      intro="Pick up shifts, manage bookings, see your payouts, and grow your reputation."
+      headline={t("caregiverHeadline")}
+      intro={t("caregiverIntro")}
       signupCta={{
-        lead: "New to SpecialCarers?",
-        label: "Apply to be a caregiver",
+        lead: t("caregiverCtaLead"),
+        label: t("caregiverCtaLabel"),
         href: "/become-a-caregiver",
       }}
       redirectTo={redirectTo}

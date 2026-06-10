@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 
 type Props = { redirectTo: string };
 
 export function ResetPasswordForm({ redirectTo }: Props) {
+  const t = useTranslations("auth");
+  const tv = useTranslations("validation");
   const router = useRouter();
   const [next, setNext] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
@@ -29,11 +32,11 @@ export function ResetPasswordForm({ redirectTo }: Props) {
     setError(null);
 
     if (next.length < 8) {
-      setError("Password must be at least 8 characters.");
+      setError(tv("passwordTooShort"));
       return;
     }
     if (next !== confirmPw) {
-      setError("Passwords don't match.");
+      setError(tv("passwordsDontMatch"));
       return;
     }
 
@@ -55,9 +58,9 @@ export function ResetPasswordForm({ redirectTo }: Props) {
   if (authed === false) {
     return (
       <div className="rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-900">
-        Your reset link has expired or is invalid. Please{" "}
+        {t("resetExpiredPrefix")}{" "}
         <a href="/login" className="font-semibold underline">
-          request a new one
+          {t("requestNewLink")}
         </a>
         .
       </div>
@@ -71,7 +74,7 @@ export function ResetPasswordForm({ redirectTo }: Props) {
           htmlFor="new-password"
           className="text-sm font-medium text-slate-700"
         >
-          New password
+          {t("newPassword")}
         </label>
         <input
           id="new-password"
@@ -79,7 +82,7 @@ export function ResetPasswordForm({ redirectTo }: Props) {
           autoComplete="new-password"
           value={next}
           onChange={(e) => setNext(e.target.value)}
-          placeholder="At least 8 characters"
+          placeholder={t("newPasswordPlaceholder")}
           className="rounded-xl border border-slate-300 px-4 py-3 text-base focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand"
           required
           minLength={8}
@@ -91,7 +94,7 @@ export function ResetPasswordForm({ redirectTo }: Props) {
           htmlFor="confirm-password"
           className="text-sm font-medium text-slate-700"
         >
-          Confirm new password
+          {t("confirmNewPassword")}
         </label>
         <input
           id="confirm-password"
@@ -99,7 +102,7 @@ export function ResetPasswordForm({ redirectTo }: Props) {
           autoComplete="new-password"
           value={confirmPw}
           onChange={(e) => setConfirmPw(e.target.value)}
-          placeholder="Repeat new password"
+          placeholder={t("confirmNewPasswordPlaceholder")}
           className="rounded-xl border border-slate-300 px-4 py-3 text-base focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand"
           required
           minLength={8}
@@ -117,7 +120,7 @@ export function ResetPasswordForm({ redirectTo }: Props) {
         disabled={loading || authed === null}
         className="mt-2 inline-flex items-center justify-center rounded-full bg-brand px-6 py-3 text-base font-semibold text-white transition hover:bg-brand/90 disabled:opacity-60"
       >
-        {loading ? "Updating…" : "Set new password"}
+        {loading ? t("updating") : t("setNewPassword")}
       </button>
     </form>
   );

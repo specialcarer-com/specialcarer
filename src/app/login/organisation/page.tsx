@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import AudienceSignIn from "../audience-sign-in";
 
 export const metadata = {
@@ -11,17 +12,18 @@ export default async function OrganisationLoginPage({
 }: {
   searchParams: Promise<{ redirect?: string; sent?: string; error?: string }>;
 }) {
+  const t = await getTranslations("auth");
   const params = await searchParams;
   const redirectTo = params.redirect || "/dashboard?audience=organisation";
   return (
     <AudienceSignIn
       audience="organisation"
       pageKey="audience.organisations"
-      headline="Sign in to your organisation account"
-      intro="Care homes, councils, NHS trusts, fostering agencies, schools, and charities — manage bookings, contracts, and your team."
+      headline={t("orgHeadline")}
+      intro={t("orgIntro")}
       signupCta={{
-        lead: "Not partnered with SpecialCarers yet?",
-        label: "Talk to our partnerships team",
+        lead: t("orgCtaLead"),
+        label: t("orgCtaLabel"),
         href: "/organisations#apply",
       }}
       redirectTo={redirectTo}

@@ -9,7 +9,19 @@
  * chat-translate-pref handler already enforce.
  */
 
-export const SUPPORTED_LOCALES = ["en-GB", "es", "ur"] as const;
+// en-GB is listed first so an "en" / "en-*" Accept-Language prefix resolves to
+// UK English (the source locale) rather than en-US.
+export const SUPPORTED_LOCALES = [
+  "en-GB",
+  "en-US",
+  "es",
+  "pl",
+  "ur",
+  "ro",
+  "bn",
+  "de",
+  "fr",
+] as const;
 export type AppLocale = (typeof SUPPORTED_LOCALES)[number];
 
 export const DEFAULT_LOCALE: AppLocale = "en-GB";
@@ -17,8 +29,14 @@ export const DEFAULT_LOCALE: AppLocale = "en-GB";
 /** Native labels shown in the language picker. */
 export const LOCALE_LABELS: Record<AppLocale, string> = {
   "en-GB": "English (UK)",
+  "en-US": "English (US)",
   es: "Español",
+  pl: "Polski",
   ur: "اردو",
+  ro: "Română",
+  bn: "বাংলা",
+  de: "Deutsch",
+  fr: "Français",
 };
 
 /** Locales that render right-to-left. */

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { LoginForm } from "./login-form";
 import MarketingShell from "@/components/marketing-shell";
 import PageHeroBanner from "@/components/page-hero-banner";
@@ -12,18 +13,18 @@ export const metadata = {
 const AUDIENCES = [
   {
     href: "/login/caregiver",
-    title: "For caregivers",
-    desc: "Pick up shifts, manage bookings, and get paid.",
+    titleKey: "audienceCaregiverTitle",
+    descKey: "audienceCaregiverDesc",
   },
   {
     href: "/login/family",
-    title: "For families",
-    desc: "Book trusted carers and manage your care plan.",
+    titleKey: "audienceFamilyTitle",
+    descKey: "audienceFamilyDesc",
   },
   {
     href: "/login/organisation",
-    title: "For organisations",
-    desc: "Care homes, councils, NHS trusts, schools, and charities.",
+    titleKey: "audienceOrgTitle",
+    descKey: "audienceOrgDesc",
   },
 ] as const;
 
@@ -32,6 +33,7 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ redirect?: string; sent?: string; error?: string }>;
 }) {
+  const t = await getTranslations("auth");
   const params = await searchParams;
   const redirectTo = params.redirect || "/dashboard";
   const sent = params.sent === "1";
@@ -51,24 +53,20 @@ export default async function LoginPage({
           {showFormFallback ? (
             <div className="max-w-md mx-auto">
               <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
-                Sign in to SpecialCarers
+                {t("signInTitle")}
               </h1>
-              <p className="mt-2 text-slate-600">
-                Use your email or your Google account. New here? We&rsquo;ll
-                set you up automatically.
-              </p>
+              <p className="mt-2 text-slate-600">{t("fallbackSubtitle")}</p>
 
               {sent && (
                 <div className="mt-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm">
-                  <strong>Check your inbox.</strong> We&rsquo;ve sent you a
-                  one-click sign-in link. It expires in 1 hour.
+                  <strong>{t("checkInbox")}</strong> {t("sentLink")}
                 </div>
               )}
               {error && (
                 <div className="mt-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-sm">
                   {error === "callback"
-                    ? "We couldn't sign you in. The link may have expired — please try again."
-                    : "Something went wrong. Please try again."}
+                    ? t("errorCallback")
+                    : t("errorGeneric")}
                 </div>
               )}
 
@@ -77,13 +75,13 @@ export default async function LoginPage({
               </div>
 
               <p className="mt-8 text-xs text-slate-500 text-center">
-                By continuing, you agree to our{" "}
+                {t("termsPrefix")}{" "}
                 <Link href="/terms" className="underline hover:text-slate-700">
-                  Terms
+                  {t("terms")}
                 </Link>{" "}
-                and{" "}
+                {t("and")}{" "}
                 <Link href="/privacy" className="underline hover:text-slate-700">
-                  Privacy Policy
+                  {t("privacyPolicy")}
                 </Link>
                 .
               </p>
@@ -92,12 +90,9 @@ export default async function LoginPage({
             <>
               <div className="text-center max-w-2xl mx-auto">
                 <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">
-                  Sign in to SpecialCarers
+                  {t("signInTitle")}
                 </h1>
-                <p className="mt-3 text-slate-600">
-                  Pick the account type you&rsquo;re signing in with. Each
-                  takes you to the right place.
-                </p>
+                <p className="mt-3 text-slate-600">{t("chooserSubtitle")}</p>
               </div>
 
               <ul className="mt-10 grid gap-4 md:grid-cols-3">
@@ -108,13 +103,13 @@ export default async function LoginPage({
                       className="group flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-6 transition hover:border-brand hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand"
                     >
                       <span className="text-lg font-semibold text-slate-900 group-hover:text-brand">
-                        {a.title}
+                        {t(a.titleKey)}
                       </span>
                       <span className="mt-2 text-sm text-slate-600">
-                        {a.desc}
+                        {t(a.descKey)}
                       </span>
                       <span className="mt-6 inline-flex items-center gap-1 text-sm font-medium text-brand">
-                        Continue
+                        {t("audienceContinue")}
                         <span
                           aria-hidden
                           className="transition-transform group-hover:translate-x-0.5"
@@ -128,13 +123,13 @@ export default async function LoginPage({
               </ul>
 
               <p className="mt-10 text-xs text-slate-500 text-center">
-                By continuing, you agree to our{" "}
+                {t("termsPrefix")}{" "}
                 <Link href="/terms" className="underline hover:text-slate-700">
-                  Terms
+                  {t("terms")}
                 </Link>{" "}
-                and{" "}
+                {t("and")}{" "}
                 <Link href="/privacy" className="underline hover:text-slate-700">
-                  Privacy Policy
+                  {t("privacyPolicy")}
                 </Link>
                 .
               </p>
