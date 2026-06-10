@@ -87,7 +87,17 @@ export type JournalEntry = {
   photos: JournalPhoto[];
   created_at: string;
   updated_at: string;
+  /**
+   * Gap 29: AI "Key points" summary (markdown bullet list) for long notes.
+   * - string → summary ready, render it.
+   * - null   → no summary row yet. If the body is long (>= JOURNAL_SUMMARY_MIN_CHARS)
+   *            one is likely still being generated → show "Summarising…".
+   */
+  summary: string | null;
 };
+
+/** Notes at/over this length get an AI "Key points" summary (gap 29). */
+export const JOURNAL_SUMMARY_MIN_CHARS = 200;
 
 /** Maximum photos per entry — enforced both by DB CHECK and UI. */
 export const JOURNAL_MAX_PHOTOS = 6;
