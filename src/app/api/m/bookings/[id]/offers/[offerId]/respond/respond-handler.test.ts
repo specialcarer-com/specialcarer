@@ -1,17 +1,28 @@
 /**
- * Tests for the carer offer-respond handler (gap 17).
+ * Tests for the carer offer-respond handler (gap 17 + accept→booking loop).
  *
- * Drives the pure handler with a stub client that records the update payload,
- * so we assert status transitions / expiry / validation without a live DB.
+ * Drives the pure handler with an in-memory client that simulates the
+ * accept_match_offer RPC (first-accept-wins for "Now", seeker-pick for
+ * "Scheduled"). No live DB needed.
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   handleRespond,
   parseRespondBody,
+  type AcceptRpcResult,
   type OfferRow,
   type RespondClient,
+  type RespondResult,
 } from "./respond-handler";
+
+/** Narrow a RespondResult to its success body for assertions. */
+function okBody(
+  res: RespondResult,
+): Extract<RespondResult["body"], { ok: true }> {
+  assert.ok("ok" in res.body && res.body.ok === true, "expected an ok body");
+  return res.body;
+}
 
 const NOW = Date.parse("2026-06-09T12:00:00Z");
 const FUTURE = new Date(NOW + 5 * 60 * 1000).toISOString();
@@ -27,6 +38,7 @@ type UpdateCall = {
 function makeClient(
   offer: OfferRow | null,
   calls: UpdateCall[],
+  acceptResult: AcceptRpcResult = { result: "pending_seeker_pick" },
 ): RespondClient {
   return {
     async loadOffer() {
@@ -34,6 +46,9 @@ function makeClient(
     },
     async updateOffer(args) {
       calls.push(args);
+    },
+    async acceptOffer() {
+      return acceptResult;
     },
   };
 }
@@ -94,15 +109,65 @@ describe("handleRespond", () => {
     now: NOW,
   };
 
-  it("accepts a pending offer", async () => {
+  it("accept on a NOW booking returns instant_confirm and does not double-update the offer", async () => {
     const calls: UpdateCall[] = [];
-    const client = makeClient(offerRow(), calls);
+    const client = makeClient(offerRow(), calls, {
+      result: "instant_confirm",
+      booking_id: "booking-1",
+      mode: "now",
+    });
     const res = await handleRespond(client, { ...base, body: { action: "accept" } });
     assert.equal(res.status, 200);
-    assert.deepEqual(res.body, { ok: true, action: "accept" });
-    assert.equal(calls.length, 1);
-    assert.equal(calls[0].status, "accepted");
-    assert.equal(calls[0].declineReason, null);
+    const body = okBody(res);
+    assert.equal(body.action, "accept");
+    assert.ok(body.action === "accept" && body.outcome.result === "instant_confirm");
+    // The RPC owns the offer write; the handler must not also updateOffer.
+    assert.equal(calls.length, 0);
+  });
+
+  it("accept on a SCHEDULED booking returns pending_seeker_pick", async () => {
+    const calls: UpdateCall[] = [];
+    const client = makeClient(offerRow(), calls, {
+      result: "pending_seeker_pick",
+      booking_id: "booking-1",
+      mode: "scheduled",
+    });
+    const res = await handleRespond(client, { ...base, body: { action: "accept" } });
+    assert.equal(res.status, 200);
+    const body = okBody(res);
+    assert.ok(body.action === "accept");
+    assert.equal(body.outcome.result, "pending_seeker_pick");
+    assert.equal(body.outcome.mode, "scheduled");
+  });
+
+  it("accept that lost the NOW race surfaces result 'lost' with 200", async () => {
+    const calls: UpdateCall[] = [];
+    const client = makeClient(offerRow(), calls, {
+      result: "lost",
+      booking_id: "booking-1",
+      mode: "now",
+    });
+    const res = await handleRespond(client, { ...base, body: { action: "accept" } });
+    assert.equal(res.status, 200);
+    const body = okBody(res);
+    assert.ok(body.action === "accept");
+    assert.equal(body.outcome.result, "lost");
+  });
+
+  it("fires onAccepted with the offer + rpc result", async () => {
+    const calls: UpdateCall[] = [];
+    const seen: AcceptRpcResult[] = [];
+    const client = makeClient(offerRow(), calls, {
+      result: "instant_confirm",
+      booking_id: "booking-1",
+      mode: "now",
+    });
+    client.onAccepted = ({ rpc }) => {
+      seen.push(rpc);
+    };
+    await handleRespond(client, { ...base, body: { action: "accept" } });
+    assert.equal(seen.length, 1);
+    assert.equal(seen[0].result, "instant_confirm");
   });
 
   it("declines a pending offer and stores the reason", async () => {
@@ -113,6 +178,7 @@ describe("handleRespond", () => {
       body: { action: "decline", reason: "busy that day" },
     });
     assert.equal(res.status, 200);
+    okBody(res);
     assert.equal(calls[0].status, "declined");
     assert.equal(calls[0].declineReason, "busy that day");
   });
@@ -140,6 +206,23 @@ describe("handleRespond", () => {
     assert.equal(res.status, 410);
     assert.equal(calls.length, 1);
     assert.equal(calls[0].status, "expired");
+  });
+
+  it("410 when the RPC reports the offer expired under its lock", async () => {
+    const calls: UpdateCall[] = [];
+    const client = makeClient(offerRow(), calls, { result: "expired" });
+    const res = await handleRespond(client, { ...base, body: { action: "accept" } });
+    assert.equal(res.status, 410);
+  });
+
+  it("409 when the RPC reports an invalid state under its lock", async () => {
+    const calls: UpdateCall[] = [];
+    const client = makeClient(offerRow(), calls, {
+      result: "invalid_state",
+      status: "declined",
+    });
+    const res = await handleRespond(client, { ...base, body: { action: "accept" } });
+    assert.equal(res.status, 409);
   });
 
   it("400 on an invalid body before any DB read", async () => {

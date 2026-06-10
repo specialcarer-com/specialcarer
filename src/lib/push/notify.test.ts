@@ -188,6 +188,41 @@ describe("buildPayload — message.received", () => {
   });
 });
 
+describe("buildPayload — match confirm events", () => {
+  it("job.confirmed targets the winning carer and links to the booking", () => {
+    const out = buildPayload({
+      type: "job.confirmed",
+      bookingId: BOOKING_ID,
+      carerId: CARER_ID,
+      startsAt: "2026-06-10T09:00:00.000Z",
+    });
+    assert.equal(out.recipientUserId, CARER_ID);
+    assert.equal(out.deeplink, `/m/bookings/${BOOKING_ID}`);
+    assert.match(out.title, /got the job/i);
+  });
+
+  it("job.lost targets the losing carer with a 'position filled' message", () => {
+    const out = buildPayload({
+      type: "job.lost",
+      bookingId: BOOKING_ID,
+      carerId: CARER_ID,
+    });
+    assert.equal(out.recipientUserId, CARER_ID);
+    assert.match(out.title, /filled/i);
+  });
+
+  it("booking.confirmed_for_seeker targets the seeker", () => {
+    const out = buildPayload({
+      type: "booking.confirmed_for_seeker",
+      bookingId: BOOKING_ID,
+      seekerId: SEEKER_ID,
+      startsAt: "2026-06-10T09:00:00.000Z",
+    });
+    assert.equal(out.recipientUserId, SEEKER_ID);
+    assert.equal(out.deeplink, `/m/bookings/${BOOKING_ID}`);
+  });
+});
+
 function makeToken(token: string, user_id: string): PushToken {
   return {
     id: `id-${token}`,
