@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { triggerNoteSummary } from "@/lib/care-notes/trigger";
 
 export const dynamic = "force-dynamic";
 
@@ -110,6 +111,9 @@ export async function POST(
       { status: 500 },
     );
   }
+
+  // Gap 29: long quick-log notes get an AI "Key points" summary too. Detached.
+  triggerNoteSummary(row.id, bodyText);
 
   return NextResponse.json({ entry: row });
 }

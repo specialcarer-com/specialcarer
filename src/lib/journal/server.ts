@@ -8,6 +8,7 @@
 
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { triggerNoteSummary } from "@/lib/care-notes/trigger";
 import {
   JOURNAL_MAX_PHOTOS,
   JOURNAL_MAX_BODY,
@@ -57,6 +58,20 @@ async function hydrateEntries(
   const signed = await signPhotos(client, allPaths);
   const byPath = new Map(signed.map((s) => [s.path, s]));
 
+  // Gap 29: batch-fetch AI "Key points" summaries for these notes in one query
+  // (RLS lets readers of a note read its summary). Missing rows → null.
+  const summaryByNote = new Map<string, string>();
+  const noteIds = rows.map((r) => r.id);
+  if (noteIds.length) {
+    const { data: summaries } = await client
+      .from("care_note_summaries")
+      .select("note_id, summary")
+      .in("note_id", noteIds);
+    for (const s of (summaries ?? []) as { note_id: string; summary: string }[]) {
+      summaryByNote.set(s.note_id, s.summary);
+    }
+  }
+
   return rows.map((r) => ({
     id: r.id,
     author_id: r.author_id,
@@ -70,6 +85,7 @@ async function hydrateEntries(
     ),
     created_at: r.created_at,
     updated_at: r.updated_at,
+    summary: summaryByNote.get(r.id) ?? null,
   }));
 }
 
@@ -166,6 +182,10 @@ export async function createJournalEntry(
           : "Sorry — we couldn't save your note. Please try again.",
     };
   }
+
+  // Gap 29: kick off AI "Key points" summarisation for long notes. Detached —
+  // never blocks or fails the save; the family timeline polls for the result.
+  triggerNoteSummary(data.id, body);
 
   return { ok: true, entryId: data.id };
 }

@@ -18,6 +18,7 @@ import {
   JOURNAL_MOOD_LABEL,
   type JournalEntry,
 } from "@/lib/journal/types";
+import { CareNoteSummary } from "../_components/CareNoteSummary";
 import {
   TopBar,
   BottomNav,
@@ -194,9 +195,11 @@ function EntryCard({
         <span className="text-[12px] text-subheading shrink-0">{t}</span>
       </div>
 
-      <p className="text-[14px] text-heading whitespace-pre-wrap leading-relaxed">
-        {entry.body}
-      </p>
+      <CareNoteSummary
+        noteId={entry.id}
+        body={entry.body}
+        initialSummary={entry.summary}
+      />
 
       {entry.photos.length > 0 && (
         <div className="mt-3 grid grid-cols-3 gap-2">
