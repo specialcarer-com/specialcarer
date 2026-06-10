@@ -43,6 +43,8 @@ export type SearchRow = {
   weekly_rate_cents: number | null;
   currency: string | null;
   created_at: string | null;
+  home_lat?: number | null;
+  home_lng?: number | null;
   is_online?: boolean | null;
   last_online_at?: string | null;
 };
@@ -68,6 +70,11 @@ export type ApiSearchCarer = {
   hourly_rate_cents: number | null;
   weekly_rate_cents: number | null;
   currency: "GBP" | "USD";
+  // Great-circle km from the search origin (originLat/originLng), or null when
+  // no origin was supplied or the carer has no geocoded location. Drives the
+  // "Nearest" rerank in src/lib/match/rerank.ts.
+  distance_km: number | null;
+  created_at: string;
   is_online: boolean;
   last_online_at: string | null;
 };
@@ -101,6 +108,8 @@ export type SearchQueryParams = {
   sort?: string | null;
   limit?: string | null;
   offset?: string | null;
+  originLat?: string | null;
+  originLng?: string | null;
 };
 
 export type ParsedSearchParams = {
@@ -113,6 +122,10 @@ export type ParsedSearchParams = {
   sort: Sort;
   limit: number;
   offset: number;
+  // Search-origin coordinates for distance_km. Both null unless a valid
+  // lat/lng pair was supplied; distance falls back to null when absent.
+  originLat: number | null;
+  originLng: number | null;
 };
 
 const DEFAULT_LIMIT = 20;
@@ -140,6 +153,18 @@ function parseFloatNonNeg(raw: string | null | undefined): number | null {
   return n;
 }
 
+/** Parse a coordinate within [min, max]; returns null for missing/invalid. */
+function parseCoord(
+  raw: string | null | undefined,
+  min: number,
+  max: number,
+): number | null {
+  if (raw == null || raw === "") return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < min || n > max) return null;
+  return n;
+}
+
 function isCanonicalService(v: string): v is CanonicalService {
   return (CANONICAL_SERVICES as readonly string[]).includes(v);
 }
@@ -163,6 +188,11 @@ export function parseSearchParams(raw: SearchQueryParams): ParsedSearchParams {
   const sort: Sort = sortRaw && isSort(sortRaw) ? sortRaw : "rating_desc";
   const limit = parseIntInRange(raw.limit, 1, MAX_LIMIT, DEFAULT_LIMIT);
   const offset = parseIntInRange(raw.offset, 0, 10000, 0);
+  // Both coordinates must be valid for an origin to apply; a lone lat or lng
+  // can't anchor a distance, so we drop the pair.
+  const latParsed = parseCoord(raw.originLat, -90, 90);
+  const lngParsed = parseCoord(raw.originLng, -180, 180);
+  const hasOrigin = latParsed != null && lngParsed != null;
   return {
     q,
     service,
@@ -175,6 +205,8 @@ export function parseSearchParams(raw: SearchQueryParams): ParsedSearchParams {
     sort,
     limit,
     offset,
+    originLat: hasOrigin ? latParsed : null,
+    originLng: hasOrigin ? lngParsed : null,
   };
 }
 
@@ -220,7 +252,35 @@ function normaliseCurrency(c: string | null): "GBP" | "USD" {
   return up === "USD" ? "USD" : "GBP";
 }
 
-function toCarer(r: SearchRow): ApiSearchCarer {
+const EARTH_RADIUS_KM = 6371;
+
+/**
+ * Great-circle distance in km between two WGS84 points (haversine). Mirrors
+ * the `6371 * acos(...)` SQL idiom but in JS, since the search handler has no
+ * SQL/PostGIS surface to compute it. Returns null when either point is unknown.
+ */
+function haversineKm(
+  lat1: number | null | undefined,
+  lng1: number | null | undefined,
+  lat2: number,
+  lng2: number,
+): number | null {
+  if (lat1 == null || lng1 == null) return null;
+  if (!Number.isFinite(lat1) || !Number.isFinite(lng1)) return null;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return EARTH_RADIUS_KM * c;
+}
+
+function toCarer(
+  r: SearchRow,
+  origin: { lat: number; lng: number } | null,
+): ApiSearchCarer {
   return {
     user_id: r.user_id,
     display_name: r.display_name,
@@ -255,6 +315,10 @@ function toCarer(r: SearchRow): ApiSearchCarer {
     hourly_rate_cents: r.hourly_rate_cents,
     weekly_rate_cents: r.weekly_rate_cents,
     currency: normaliseCurrency(r.currency),
+    distance_km: origin
+      ? haversineKm(r.home_lat, r.home_lng, origin.lat, origin.lng)
+      : null,
+    created_at: r.created_at ?? "",
     is_online: r.is_online === true,
     last_online_at: r.last_online_at ?? null,
   };
@@ -266,7 +330,22 @@ const BASE_COLS =
 // migration hasn't run yet, selecting them errors; we detect that and retry
 // with BASE_COLS so search keeps working (carers just render as offline).
 const PRESENCE_COLS = "is_online, last_online_at";
-const SELECT_COLS = `${BASE_COLS}, ${PRESENCE_COLS}`;
+// Geo columns come from the latlng migration (gap-19 follow-up). Only selected
+// when a search origin is supplied; if the migration hasn't run, the same
+// missing-column retry drops them and "Nearest" gracefully degrades to null
+// distances.
+const GEO_COLS = "home_lat, home_lng";
+
+/** Build the SELECT column list for a query attempt. */
+function buildCols(opts: { presence: boolean; geo: boolean }): string {
+  return [
+    BASE_COLS,
+    opts.presence ? PRESENCE_COLS : null,
+    opts.geo ? GEO_COLS : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
 
 /** Returns true when a Postgres error looks like an unknown-column error. */
 function isMissingColumnError(msg: string): boolean {
@@ -340,15 +419,31 @@ export async function handleSearch(args: {
   const { client, params } = args;
   const p = parseSearchParams(params);
 
-  let { data, error, count } = await runQuery(client, SELECT_COLS, p);
+  const origin =
+    p.originLat != null && p.originLng != null
+      ? { lat: p.originLat, lng: p.originLng }
+      : null;
+
+  let { data, error, count } = await runQuery(
+    client,
+    buildCols({ presence: true, geo: origin != null }),
+    p,
+  );
+  // If an optional column group is missing (presence or geo migration not yet
+  // applied), retry with just the base columns. Distances/presence degrade to
+  // null rather than 500ing the whole search.
   if (error && isMissingColumnError(error.message)) {
-    ({ data, error, count } = await runQuery(client, BASE_COLS, p));
+    ({ data, error, count } = await runQuery(
+      client,
+      buildCols({ presence: false, geo: false }),
+      p,
+    ));
   }
   if (error) {
     return { status: 500, body: { error: error.message } };
   }
 
-  const carers = (data ?? []).map(toCarer);
+  const carers = (data ?? []).map((r) => toCarer(r, origin));
   return {
     status: 200,
     body: {

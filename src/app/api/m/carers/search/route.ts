@@ -21,6 +21,8 @@ export const dynamic = "force-dynamic";
  *   sort                rating_desc (default) | price_asc | price_desc | recent
  *   limit               1..50, default 20
  *   offset              >=0, default 0
+ *   originLat,originLng search-origin coords (WGS84) for distance_km; both
+ *                       required together, else distance_km is null
  *
  * Auth: any signed-in user. The Supabase user-scoped client is passed
  * through so RLS enforces row visibility (in addition to is_published).
@@ -45,6 +47,8 @@ export async function GET(req: Request) {
     sort: url.searchParams.get("sort"),
     limit: url.searchParams.get("limit"),
     offset: url.searchParams.get("offset"),
+    originLat: url.searchParams.get("originLat"),
+    originLng: url.searchParams.get("originLng"),
   };
 
   const result = await handleSearch({
