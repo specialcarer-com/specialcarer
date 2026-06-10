@@ -26,11 +26,17 @@ type OfferStatus = MatchOfferCard["status"];
 function statusChip(status: OfferStatus): { label: string; cls: string } {
   switch (status) {
     case "accepted":
-      return { label: "Accepted", cls: "bg-emerald-50 text-emerald-700" };
+      return { label: "Said yes", cls: "bg-emerald-50 text-emerald-700" };
+    case "accepted_and_confirmed":
+      return { label: "Confirmed", cls: "bg-emerald-100 text-emerald-800" };
     case "declined":
       return { label: "Declined", cls: "bg-zinc-100 text-zinc-500" };
     case "expired":
       return { label: "Expired", cls: "bg-zinc-100 text-zinc-500" };
+    case "lost":
+      return { label: "Filled elsewhere", cls: "bg-zinc-100 text-zinc-500" };
+    case "cancelled":
+      return { label: "Closed", cls: "bg-zinc-100 text-zinc-500" };
     default:
       return { label: "Waiting…", cls: "bg-amber-50 text-amber-700" };
   }
@@ -41,6 +47,52 @@ export default function FindCarersCard({ bookingId }: { bookingId: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [poolSize, setPoolSize] = useState<number | null>(null);
+  const [picking, setPicking] = useState<string | null>(null);
+
+  // The carer who was confirmed (instant "Now" win or seeker pick), if any.
+  const confirmedOffer =
+    offers?.find((o) => o.status === "accepted_and_confirmed") ?? null;
+  // Carers who accepted and are awaiting the seeker's pick (scheduled case).
+  const accepters = offers?.filter((o) => o.status === "accepted") ?? [];
+
+  const pickOffer = useCallback(
+    async (carerId: string) => {
+      if (picking) return;
+      const offer = offers?.find((o) => o.carer_id === carerId);
+      if (!offer) return;
+      setPicking(carerId);
+      setError(null);
+      try {
+        const res = await fetch(`/api/m/bookings/${bookingId}/pick-offer`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ offerId: offer.id }),
+        });
+        if (!res.ok) {
+          setError("Couldn’t confirm that carer. Please try again.");
+          return;
+        }
+        // Optimistically reflect the confirm; Realtime will reconcile.
+        setOffers((prev) =>
+          prev
+            ? prev.map((o) =>
+                o.carer_id === carerId
+                  ? { ...o, status: "accepted_and_confirmed" }
+                  : o.status === "accepted" || o.status === "pending"
+                    ? { ...o, status: "cancelled" }
+                    : o,
+              )
+            : prev,
+        );
+      } catch {
+        setError("Couldn’t confirm that carer. Please try again.");
+      } finally {
+        setPicking(null);
+      }
+    },
+    [bookingId, offers, picking],
+  );
 
   const findCarers = useCallback(async () => {
     if (loading) return;
@@ -80,11 +132,17 @@ export default function FindCarersCard({ bookingId }: { bookingId: string }) {
           filter: `booking_id=eq.${bookingId}`,
         },
         (payload) => {
-          const row = payload.new as { carer_id: string; status: OfferStatus };
+          const row = payload.new as {
+            id: string;
+            carer_id: string;
+            status: OfferStatus;
+          };
           setOffers((prev) =>
             prev
               ? prev.map((o) =>
-                  o.carer_id === row.carer_id ? { ...o, status: row.status } : o,
+                  o.carer_id === row.carer_id
+                    ? { ...o, id: o.id || row.id, status: row.status }
+                    : o,
                 )
               : prev,
           );
@@ -106,10 +164,25 @@ export default function FindCarersCard({ bookingId }: { bookingId: string }) {
           </span>
         )}
       </div>
-      <p className="mt-1 text-[12px] text-subheading leading-relaxed">
-        We’ll match you with the best-fit carers nearby and notify them
-        instantly. You’ll see their replies here live.
-      </p>
+      {confirmedOffer ? (
+        <p className="mt-1 text-[12px] text-subheading leading-relaxed">
+          Confirmed with{" "}
+          <span className="font-semibold text-heading">
+            {confirmedOffer.display_name ?? "your carer"}
+          </span>
+          . They’ve been notified and the other carers were released.
+        </p>
+      ) : accepters.length > 0 ? (
+        <p className="mt-1 text-[12px] text-subheading leading-relaxed">
+          Carers who said yes — tap Confirm to lock one in. The others are
+          released automatically.
+        </p>
+      ) : (
+        <p className="mt-1 text-[12px] text-subheading leading-relaxed">
+          We’ll match you with the best-fit carers nearby and notify them
+          instantly. You’ll see their replies here live.
+        </p>
+      )}
 
       {error && (
         <p className="mt-2 text-[12px] text-red-600">{error}</p>
@@ -152,11 +225,24 @@ export default function FindCarersCard({ bookingId }: { bookingId: string }) {
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-1">
-                  <span
-                    className={`inline-flex items-center rounded-pill px-2 py-0.5 text-[11px] font-semibold ${chip.cls}`}
-                  >
-                    {chip.label}
-                  </span>
+                  {o.status === "accepted" && !confirmedOffer && o.id ? (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      onClick={() => pickOffer(o.carer_id)}
+                      disabled={picking != null}
+                    >
+                      {picking === o.carer_id
+                        ? "Confirming…"
+                        : `Confirm ${o.display_name ?? "carer"}`}
+                    </Button>
+                  ) : (
+                    <span
+                      className={`inline-flex items-center rounded-pill px-2 py-0.5 text-[11px] font-semibold ${chip.cls}`}
+                    >
+                      {chip.label}
+                    </span>
+                  )}
                   <span
                     className="text-[11px] font-bold"
                     style={{ color: TEAL }}

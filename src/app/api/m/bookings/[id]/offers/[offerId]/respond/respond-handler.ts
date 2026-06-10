@@ -3,14 +3,18 @@
  *
  * Body: { action: 'accept' | 'decline', reason?: string }
  *
- * This updates ONLY booking_match_offers.status — it does NOT mutate
- * bookings.caregiver_id. That column is NOT NULL in this schema and the
- * existing booking-acceptance flow remains its single writer. An accepted
- * candidate offer is the signal ops/automation use to lock a carer in
- * (deferred — see migration notes). Keeping the write surface here to the
- * candidate layer is the smaller, safer diff.
+ * Accepting now closes the matching loop via the `accept_match_offer` RPC
+ * (SECURITY DEFINER, see migration 20260610_offer_accept_booking_confirm.sql):
+ *   • "Now" booking (starts within 60 min): first-accept-wins — the RPC
+ *     atomically writes bookings.caregiver_id, confirms the booking, and
+ *     cancels the other offers. Result is 'instant_confirm' (winner) or
+ *     'lost' (lost the race).
+ *   • "Scheduled" booking: the offer is marked 'accepted' and the seeker
+ *     picks later. Result is 'pending_seeker_pick'.
  *
- * Driven by a stubbed Supabase client in tests, so no live DB is needed.
+ * Declining still only flips the offer's own status — no booking mutation.
+ *
+ * Driven by an injected client in tests, so no live DB is needed.
  */
 
 export type RespondAction = "accept" | "decline";
@@ -46,13 +50,33 @@ export type OfferRow = {
   id: string;
   booking_id: string;
   carer_id: string;
-  status: "pending" | "accepted" | "declined" | "expired";
+  status:
+    | "pending"
+    | "accepted"
+    | "declined"
+    | "expired"
+    | "cancelled"
+    | "accepted_and_confirmed"
+    | "lost";
   expires_at: string;
+};
+
+/** The outcome of the accept_match_offer RPC, surfaced to the UI. */
+export type AcceptRpcResult = {
+  result:
+    | "instant_confirm"
+    | "lost"
+    | "pending_seeker_pick"
+    | "expired"
+    | "invalid_state";
+  booking_id?: string;
+  mode?: "now" | "scheduled";
+  status?: string;
 };
 
 /**
  * Narrow client surface used by the handler. Lets tests pass a stub that
- * records the update payload without a real Supabase client.
+ * records the update payload / RPC call without a real Supabase client.
  */
 export type RespondClient = {
   loadOffer: (args: {
@@ -66,10 +90,27 @@ export type RespondClient = {
     respondedAt: string;
     declineReason: string | null;
   }) => Promise<void>;
+  /** Calls the accept_match_offer RPC and returns its jsonb result. */
+  acceptOffer: (args: { offerId: string }) => Promise<AcceptRpcResult>;
+  /**
+   * Fire-and-forget pushes for the accept outcome. Implementations dispatch
+   * job.confirmed / job.lost / booking.confirmed_for_seeker as appropriate.
+   */
+  onAccepted?: (args: {
+    offer: OfferRow;
+    rpc: AcceptRpcResult;
+  }) => Promise<void> | void;
 };
 
 export type RespondResult =
-  | { status: number; body: { ok: true; action: RespondAction } }
+  | {
+      status: number;
+      body: { ok: true; action: "decline" };
+    }
+  | {
+      status: number;
+      body: { ok: true; action: "accept"; outcome: AcceptRpcResult };
+    }
   | { status: number; body: { error: string } };
 
 export async function handleRespond(
@@ -117,13 +158,33 @@ export async function handleRespond(
     return { status: 410, body: { error: "Offer has expired" } };
   }
 
-  const status = parsed.action === "accept" ? "accepted" : "declined";
-  await client.updateOffer({
-    offerId: offer.id,
-    status,
-    respondedAt: nowIso,
-    declineReason: parsed.action === "decline" ? parsed.reason : null,
-  });
+  if (parsed.action === "decline") {
+    await client.updateOffer({
+      offerId: offer.id,
+      status: "declined",
+      respondedAt: nowIso,
+      declineReason: parsed.reason,
+    });
+    return { status: 200, body: { ok: true, action: "decline" } };
+  }
 
-  return { status: 200, body: { ok: true, action: parsed.action } };
+  // Accept: delegate to the RPC, which owns the booking mutation + race guard.
+  const rpc = await client.acceptOffer({ offerId: offer.id });
+
+  // The offer raced and lost between our SELECT and the RPC's row lock.
+  if (rpc.result === "expired") {
+    return { status: 410, body: { error: "Offer has expired" } };
+  }
+  if (rpc.result === "invalid_state") {
+    return {
+      status: 409,
+      body: { error: `Offer is already ${rpc.status ?? "resolved"}` },
+    };
+  }
+
+  if (client.onAccepted) {
+    await client.onAccepted({ offer, rpc });
+  }
+
+  return { status: 200, body: { ok: true, action: "accept", outcome: rpc } };
 }

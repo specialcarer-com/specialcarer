@@ -75,6 +75,23 @@ export type DispatchEvent =
       bookingId: string;
       carerId: string;
       startsAt: string;
+    }
+  | {
+      type: "job.confirmed";
+      bookingId: string;
+      carerId: string;
+      startsAt: string;
+    }
+  | {
+      type: "job.lost";
+      bookingId: string;
+      carerId: string;
+    }
+  | {
+      type: "booking.confirmed_for_seeker";
+      bookingId: string;
+      seekerId: string;
+      startsAt: string;
     };
 
 export type BuiltPayload = {
@@ -198,6 +215,30 @@ export function buildPayload(event: DispatchEvent): BuiltPayload {
         title: "New job offer",
         body: `A family is looking for a carer — shift starts ${shortDate(event.startsAt)}. Respond before it expires.`,
         deeplink: `/m/jobs?offer=${event.bookingId}`,
+        payload: { ...event },
+      };
+    case "job.confirmed":
+      return {
+        recipientUserId: event.carerId,
+        title: "You got the job",
+        body: `You're confirmed — shift starts ${shortDate(event.startsAt)}.`,
+        deeplink: `/m/bookings/${event.bookingId}`,
+        payload: { ...event },
+      };
+    case "job.lost":
+      return {
+        recipientUserId: event.carerId,
+        title: "Position filled",
+        body: "This shift was filled by another carer. Thanks for responding.",
+        deeplink: `/m/jobs`,
+        payload: { ...event },
+      };
+    case "booking.confirmed_for_seeker":
+      return {
+        recipientUserId: event.seekerId,
+        title: "Your carer is confirmed",
+        body: `A carer is locked in — shift starts ${shortDate(event.startsAt)}.`,
+        deeplink: `/m/bookings/${event.bookingId}`,
         payload: { ...event },
       };
   }

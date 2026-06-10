@@ -26,6 +26,7 @@ export const dynamic = "force-dynamic";
 
 /** A match offer enriched with carer card data, as returned to the seeker UI. */
 export type MatchOfferCard = {
+  id: string;
   carer_id: string;
   score: number;
   score_breakdown: ScoreBreakdown;
@@ -35,8 +36,18 @@ export type MatchOfferCard = {
   rating_avg: number | null;
   rating_count: number;
   proximity: number;
-  status: "pending" | "accepted" | "declined" | "expired";
+  status: MatchOfferStatus;
 };
+
+/** Lifecycle states an offer can be in (mirrors the DB CHECK constraint). */
+export type MatchOfferStatus =
+  | "pending"
+  | "accepted"
+  | "declined"
+  | "expired"
+  | "cancelled"
+  | "accepted_and_confirmed"
+  | "lost";
 
 export type FindMatchesResponse = {
   offers: MatchOfferCard[];
@@ -112,10 +123,25 @@ export async function POST(
     }
   }
 
+  // Read back the persisted offer ids so the seeker UI can confirm a carer
+  // (pick-offer needs the offer id, which runAutoMatch does not surface).
+  const offerIdByCarer = new Map<string, string>();
+  if (carerIds.length > 0) {
+    const { data: persisted } = await admin
+      .from("booking_match_offers")
+      .select("id, carer_id")
+      .eq("booking_id", bookingId)
+      .in("carer_id", carerIds);
+    for (const r of persisted ?? []) {
+      offerIdByCarer.set(r.carer_id as string, r.id as string);
+    }
+  }
+
   const offers = result.offers.map((o) => {
     const card = cardById.get(o.carer_id);
     const distance = o.score_breakdown.distance;
     return {
+      id: offerIdByCarer.get(o.carer_id) ?? "",
       carer_id: o.carer_id,
       score: o.score,
       score_breakdown: o.score_breakdown,
@@ -126,7 +152,7 @@ export async function POST(
       rating_count: card?.rating_count ?? 0,
       // Surface a coarse proximity hint (0..1) without leaking exact km.
       proximity: Math.round(distance * 100) / 100,
-      status: "pending" as const,
+      status: "pending" as MatchOfferStatus,
     };
   });
 
