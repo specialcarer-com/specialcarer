@@ -1,0 +1,36 @@
+{
+  "common": {
+    "findCare": "Find care",
+    "dashboard": "Dashboard",
+    "admin": "Admin",
+    "signIn": "Sign in",
+    "language": "Language",
+    "languagePickerLabel": "Choose language"
+  },
+  "nav": {
+    "howItWorks": "How it works",
+    "services": "Services",
+    "trust": "Trust & safety",
+    "pricing": "Pricing",
+    "employers": "For employers",
+    "organisations": "For organisations",
+    "caregivers": "For caregivers",
+    "blog": "Blog",
+    "typeOfCare": "Type of care",
+    "howDelivered": "How it’s delivered",
+    "elderlyCare": "Elderly care",
+    "childcare": "Childcare",
+    "specialNeeds": "Special-needs care",
+    "postnatal": "Postnatal & newborn",
+    "complexCare": "Complex care",
+    "liveIn": "Live-in care",
+    "visiting": "Visiting care"
+  },
+  "footer": {
+    "careServices": "Care services",
+    "company": "Company",
+    "legal": "Legal",
+    "tagline": "On-demand, vetted caregivers for families across the UK. A product of All Care 4 U Group Limited.",
+    "emergency": "For care emergencies dial 999. Use the in-app SOS button for active-shift incidents."
+  }
+}

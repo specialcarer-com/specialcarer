@@ -1,0 +1,36 @@
+{
+  "common": {
+    "findCare": "Buscar cuidado",
+    "dashboard": "Panel",
+    "admin": "Administración",
+    "signIn": "Iniciar sesión",
+    "language": "Idioma",
+    "languagePickerLabel": "Elegir idioma"
+  },
+  "nav": {
+    "howItWorks": "Cómo funciona",
+    "services": "Servicios",
+    "trust": "Confianza y seguridad",
+    "pricing": "Precios",
+    "employers": "Para empresas",
+    "organisations": "Para organizaciones",
+    "caregivers": "Para cuidadores",
+    "blog": "Blog",
+    "typeOfCare": "Tipo de cuidado",
+    "howDelivered": "Cómo se presta",
+    "elderlyCare": "Cuidado de mayores",
+    "childcare": "Cuidado infantil",
+    "specialNeeds": "Cuidado de necesidades especiales",
+    "postnatal": "Posparto y recién nacidos",
+    "complexCare": "Cuidado complejo",
+    "liveIn": "Cuidado interno",
+    "visiting": "Cuidado por visitas"
+  },
+  "footer": {
+    "careServices": "Servicios de cuidado",
+    "company": "Empresa",
+    "legal": "Legal",
+    "tagline": "Cuidadores verificados a demanda para familias de todo el Reino Unido. Un producto de All Care 4 U Group Limited.",
+    "emergency": "Para emergencias de cuidado, llame al 999. Use el botón SOS de la aplicación para incidentes durante un turno activo."
+  }
+}

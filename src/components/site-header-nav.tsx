@@ -17,31 +17,32 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
 const SERVICES_OF_CARE = [
-  { href: "/services/elderly-care", label: "Elderly care" },
-  { href: "/services/childcare", label: "Childcare" },
-  { href: "/services/special-needs", label: "Special-needs care" },
-  { href: "/services/postnatal", label: "Postnatal & newborn" },
-  { href: "/services/complex-care", label: "Complex care" },
-];
+  { href: "/services/elderly-care", key: "elderlyCare" },
+  { href: "/services/childcare", key: "childcare" },
+  { href: "/services/special-needs", key: "specialNeeds" },
+  { href: "/services/postnatal", key: "postnatal" },
+  { href: "/services/complex-care", key: "complexCare" },
+] as const;
 
 const CARE_FORMATS = [
-  { href: "/care-formats/live-in", label: "Live-in care" },
-  { href: "/care-formats/visiting", label: "Visiting care" },
-];
+  { href: "/care-formats/live-in", key: "liveIn" },
+  { href: "/care-formats/visiting", key: "visiting" },
+] as const;
 
 // Top-level marketing nav items in display order, used both for rendering and
 // for matching the current pathname to highlight the active section.
-const TOP_LEVEL: { href: string; label: string }[] = [
-  { href: "/how-it-works", label: "How it works" },
-  { href: "/trust", label: "Trust & safety" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/employers", label: "For employers" },
-  { href: "/organisations", label: "For organisations" },
-  { href: "/become-a-caregiver", label: "For caregivers" },
-  { href: "/blog", label: "Blog" },
+const TOP_LEVEL: { href: string; key: string }[] = [
+  { href: "/how-it-works", key: "howItWorks" },
+  { href: "/trust", key: "trust" },
+  { href: "/pricing", key: "pricing" },
+  { href: "/employers", key: "employers" },
+  { href: "/organisations", key: "organisations" },
+  { href: "/become-a-caregiver", key: "caregivers" },
+  { href: "/blog", key: "blog" },
 ];
 
 // Treat a nav item as active if the current path matches it exactly or sits
@@ -56,6 +57,7 @@ export default function SiteHeaderNav() {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const t = useTranslations("nav");
 
   const servicesActive =
     pathname?.startsWith("/services/") || pathname?.startsWith("/care-formats/") || false;
@@ -98,7 +100,7 @@ export default function SiteHeaderNav() {
             : ""
         }`}
       >
-        How it works
+        {t("howItWorks")}
       </Link>
 
       {/* Services dropdown — click + hover (desktop) / click only (touch) */}
@@ -120,7 +122,7 @@ export default function SiteHeaderNav() {
               : ""
           }`}
         >
-          Services
+          {t("services")}
           <svg
             className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`}
             viewBox="0 0 12 12"
@@ -140,7 +142,7 @@ export default function SiteHeaderNav() {
           >
             <div className="bg-white rounded-xl border border-slate-100 shadow-lg p-2 w-60">
               <p className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-wider uppercase text-slate-400">
-                Type of care
+                {t("typeOfCare")}
               </p>
               {SERVICES_OF_CARE.map((s) => (
                 <Link
@@ -150,12 +152,12 @@ export default function SiteHeaderNav() {
                   onClick={() => setOpen(false)}
                   className="block px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50"
                 >
-                  {s.label}
+                  {t(s.key)}
                 </Link>
               ))}
               <div className="my-2 border-t border-slate-100" />
               <p className="px-3 pt-1 pb-1 text-[10px] font-semibold tracking-wider uppercase text-slate-400">
-                How it&rsquo;s delivered
+                {t("howDelivered")}
               </p>
               {CARE_FORMATS.map((s) => (
                 <Link
@@ -165,7 +167,7 @@ export default function SiteHeaderNav() {
                   onClick={() => setOpen(false)}
                   className="block px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50"
                 >
-                  {s.label}
+                  {t(s.key)}
                 </Link>
               ))}
             </div>
@@ -187,7 +189,7 @@ export default function SiteHeaderNav() {
                 : ""
             }`}
           >
-            {item.label}
+            {t(item.key)}
           </Link>
         );
       })}

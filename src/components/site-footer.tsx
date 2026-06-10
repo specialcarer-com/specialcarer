@@ -1,9 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
+import { getTranslations } from "next-intl/server";
 import type { ComponentType, SVGProps } from "react";
 
 type FooterLink = { href: string; label: string; external?: boolean };
-type FooterGroup = { id: string; heading: string; links: FooterLink[] };
+type FooterGroup = { id: string; headingKey: string; links: FooterLink[] };
 
 const CARE_LINKS: FooterLink[] = [
   { href: "/services/elderly-care", label: "Elderly care" },
@@ -39,9 +40,9 @@ const LEGAL_LINKS: FooterLink[] = [
 ];
 
 const GROUPS: FooterGroup[] = [
-  { id: "care", heading: "Care services", links: CARE_LINKS },
-  { id: "company", heading: "Company", links: COMPANY_LINKS },
-  { id: "legal", heading: "Legal", links: LEGAL_LINKS },
+  { id: "care", headingKey: "careServices", links: CARE_LINKS },
+  { id: "company", headingKey: "company", links: COMPANY_LINKS },
+  { id: "legal", headingKey: "legal", links: LEGAL_LINKS },
 ];
 
 function LinkList({ links }: { links: FooterLink[] }) {
@@ -100,7 +101,8 @@ const SOCIAL_LINKS: { href: string; label: string; Icon: SocialIcon }[] = [
   { href: "https://x.com/specialcarer", label: "X (Twitter)", Icon: XIcon },
 ];
 
-export default function SiteFooter() {
+export default async function SiteFooter() {
+  const t = await getTranslations("footer");
   return (
     <footer className="bg-brand-100 text-slate-900">
       <div className="max-w-6xl mx-auto px-6 py-12 text-sm">
@@ -119,14 +121,8 @@ export default function SiteFooter() {
               className="h-12 w-auto"
             />
           </Link>
-          <p className="mt-4 text-[#0f3a3a]">
-            On-demand, vetted caregivers for families across the UK. A
-            product of All Care 4 U Group Limited.
-          </p>
-          <p className="mt-4 text-xs text-[#1f4e4d]">
-            For care emergencies dial 999. Use the in-app SOS
-            button for active-shift incidents.
-          </p>
+          <p className="mt-4 text-[#0f3a3a]">{t("tagline")}</p>
+          <p className="mt-4 text-xs text-[#1f4e4d]">{t("emergency")}</p>
 
           {/* Social */}
           <ul className="mt-5 flex items-center gap-3">
@@ -150,8 +146,8 @@ export default function SiteFooter() {
             tablet+: 3 columns of groups (each list reverts to 1 col). */}
         <div className="mt-10 grid gap-8 sm:grid-cols-3">
           {GROUPS.map((g) => (
-            <nav key={g.id} aria-label={g.heading}>
-              <h3 className="text-brand-700 font-semibold">{g.heading}</h3>
+            <nav key={g.id} aria-label={t(g.headingKey)}>
+              <h3 className="text-brand-700 font-semibold">{t(g.headingKey)}</h3>
               <LinkList links={g.links} />
             </nav>
           ))}

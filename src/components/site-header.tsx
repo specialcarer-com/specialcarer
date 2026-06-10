@@ -1,11 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import SiteHeaderNav from "@/components/site-header-nav";
 import SignInDropdown from "@/components/sign-in-dropdown";
 import MobileMenu from "@/components/mobile-menu";
 
 export default async function SiteHeader() {
+  const t = await getTranslations("common");
   const supabase = await createClient();
   const {
     data: { user },
@@ -40,7 +42,7 @@ export default async function SiteHeader() {
             href="/admin"
             className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-50 text-amber-700 border border-amber-100 text-xs font-semibold uppercase tracking-wider hover:bg-amber-100"
           >
-            Admin
+            {t("admin")}
           </Link>
         )}
         {user ? (
@@ -48,7 +50,7 @@ export default async function SiteHeader() {
             href="/dashboard"
             className="px-4 py-2 rounded-full bg-brand text-white text-sm font-medium hover:bg-brand-600 transition"
           >
-            Dashboard
+            {t("dashboard")}
           </Link>
         ) : (
           <>
@@ -57,7 +59,7 @@ export default async function SiteHeader() {
               href="/find-care"
               className="px-3 sm:px-4 py-2 rounded-full bg-brand text-white text-sm font-medium hover:bg-brand-600 transition"
             >
-              Find care
+              {t("findCare")}
             </Link>
           </>
         )}
