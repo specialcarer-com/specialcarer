@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { LOCALE_COOKIE } from "@/i18n/config";
+import { resolveLocale } from "@/i18n/resolve-locale";
 
 type CookieToSet = { name: string; value: string; options?: CookieOptions };
 
@@ -138,6 +140,25 @@ export async function middleware(req: NextRequest) {
     const url = req.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
+  }
+
+  // Seed the NEXT_LOCALE cookie so the resolved UI locale is stable across
+  // requests and readable client-side. We deliberately keep this cheap — no
+  // extra DB call here. The authoritative profile-wins resolution happens in
+  // src/i18n/request.ts (which does its own getUser); middleware only ensures
+  // anonymous visitors get a cookie derived from their existing cookie or the
+  // Accept-Language header.
+  const existingLocale = req.cookies.get(LOCALE_COOKIE)?.value ?? null;
+  const resolvedLocale = resolveLocale({
+    cookieLocale: existingLocale,
+    acceptLanguage: req.headers.get("accept-language"),
+  });
+  if (existingLocale !== resolvedLocale) {
+    res.cookies.set(LOCALE_COOKIE, resolvedLocale, {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: "lax",
+    });
   }
 
   return res;

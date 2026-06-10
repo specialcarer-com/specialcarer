@@ -30,6 +30,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { MEMBERSHIPS_ENABLED } from "@/lib/memberships/flag";
 import { useAccessibility } from "@/lib/i18n/LocaleContext";
+import { LanguagePicker } from "./_components/LanguagePicker";
 
 type Row = {
   href: string;
@@ -333,8 +334,12 @@ export default function ProfilePage() {
           More
         </p>
         <ul className="overflow-hidden rounded-card bg-white shadow-card">
-          {/* Accessibility settings row */}
+          {/* UI language picker (gap 43 V1A) */}
           <li>
+            <LanguagePicker />
+          </li>
+          {/* Accessibility settings row */}
+          <li className="border-t border-line">
             <Link
               href="/m/profile/accessibility"
               className="flex items-center gap-3 px-4 py-3.5 active:bg-muted/60"

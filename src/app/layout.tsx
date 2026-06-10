@@ -1,8 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
 import CookieBanner from "@/components/cookie-banner";
 import SkipToContent from "@/components/skip-to-content";
+import { dirFor, isAppLocale, DEFAULT_LOCALE } from "@/i18n/config";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -48,13 +51,30 @@ export const viewport: Viewport = {
   themeColor: "#039EA0",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const resolved = await getLocale();
+  const locale = isAppLocale(resolved) ? resolved : DEFAULT_LOCALE;
+  const messages = await getMessages();
+  const dir = dirFor(locale);
+
   return (
-    <html lang="en" className={inter.variable}>
+    <html
+      lang={locale}
+      dir={dir}
+      className={inter.variable}
+      // RTL locales fall back to a system stack with broad Arabic-script
+      // coverage (Plus Jakarta Sans / Inter have no Urdu glyphs).
+      style={
+        dir === "rtl"
+          ? { fontFamily: 'system-ui, "Noto Sans Arabic", sans-serif' }
+          : undefined
+      }
+    >
       <body className="font-sans antialiased bg-white text-slate-900">
-        <SkipToContent />
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <SkipToContent />
         {/* Site-wide "Beta is live" banner — only renders when
             NEXT_PUBLIC_TESTFLIGHT_URL is set in the deploy env. */}
         {process.env.NEXT_PUBLIC_TESTFLIGHT_URL ? (
@@ -79,8 +99,9 @@ export default function RootLayout({
           </div>
         ) : null}
 
-        {children}
-        <CookieBanner />
+          {children}
+          <CookieBanner />
+        </NextIntlClientProvider>
       </body>
     </html>
   );
