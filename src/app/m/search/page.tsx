@@ -23,6 +23,7 @@ import {
   normalisePostcode,
 } from "@/lib/care/postcode";
 import { rankCarers, type RerankCarer, type RerankSort } from "@/lib/match/rerank";
+import { buildCarerSearchParams } from "./search-params";
 
 const TEAL = "#039EA0";
 
@@ -186,6 +187,17 @@ export default function SearchPage() {
   const [postcode, setPostcode] = useState("");
   const [radiusKm, setRadiusKm] = useState<number>(10);
 
+  // Search origin (gap 19 follow-up). Geocoded server-side from the postcode
+  // box, or — when the box is empty — from the seeker's saved postcode. Feeds
+  // originLat/originLng into the search API so distance_km is populated and the
+  // "Nearest" sort actually sorts. Null origin = search runs without distances.
+  const [origin, setOrigin] = useState<{
+    lat: number;
+    lng: number;
+    source: "input" | "profile";
+    postcode: string;
+  } | null>(null);
+
   // Booking preference filters (additive, work alongside the existing
   // credential filters). Backed by an opt-in bottom-sheet panel.
   const [filterOpen, setFilterOpen] = useState(false);
@@ -261,6 +273,48 @@ export default function SearchPage() {
     return () => window.clearTimeout(id);
   }, [q]);
 
+  // Resolve the search origin. We debounce on the postcode box (geocoding per
+  // keystroke would hammer Mapbox) and only hit the endpoint once the postcode
+  // is a plausible shape, or empty — an empty box asks the server to fall back
+  // to the seeker's saved postcode. Half-typed/invalid postcodes are skipped so
+  // we don't churn the origin while the user is mid-entry.
+  useEffect(() => {
+    const trimmed = postcode.trim();
+    if (trimmed.length > 0 && !postcodeValid) return;
+
+    const ac = new AbortController();
+    const id = window.setTimeout(() => {
+      const qs = trimmed ? `?postcode=${encodeURIComponent(trimmed)}` : "";
+      fetch(`/api/m/geocode${qs}`, {
+        signal: ac.signal,
+        credentials: "include",
+      })
+        .then(async (r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return (await r.json()) as {
+            origin: {
+              lat: number;
+              lng: number;
+              source: "input" | "profile";
+              postcode: string;
+            } | null;
+          };
+        })
+        .then((data) => setOrigin(data.origin))
+        // Geocoding is best-effort: on failure we leave origin null so search
+        // still works, just without distances / Nearest sort.
+        .catch((err: unknown) => {
+          if (err instanceof DOMException && err.name === "AbortError") return;
+          setOrigin(null);
+        });
+    }, 400);
+
+    return () => {
+      ac.abort();
+      window.clearTimeout(id);
+    };
+  }, [postcode, postcodeValid]);
+
   // Reflect API state in a ref so we can cancel a stale fetch when the
   // user changes filters mid-flight.
   const abortRef = useRef<AbortController | null>(null);
@@ -269,13 +323,11 @@ export default function SearchPage() {
     abortRef.current?.abort();
     abortRef.current = ac;
 
-    const params = new URLSearchParams();
-    if (debouncedQ.trim()) params.set("q", debouncedQ.trim());
-    if (service !== "all") {
-      const mapped = API_SERVICE[service];
-      if (mapped) params.set("service", mapped);
-    }
-    params.set("limit", "50");
+    const params = buildCarerSearchParams({
+      q: debouncedQ,
+      service: service !== "all" ? (API_SERVICE[service] ?? null) : null,
+      origin,
+    });
 
     setLoading(true);
     setError(null);
@@ -298,7 +350,7 @@ export default function SearchPage() {
       });
 
     return () => ac.abort();
-  }, [debouncedQ, service]);
+  }, [debouncedQ, service, origin]);
 
   const results = useMemo(() => {
     const reqLangs = requiredLangs
@@ -537,6 +589,12 @@ export default function SearchPage() {
         {!postcodeValid && postcode.trim().length > 0 && (
           <p className="mt-1 text-[12px] text-status-error-fg">
             Enter a valid UK postcode (e.g. SW1A 1AA) or US ZIP (e.g. 10001).
+          </p>
+        )}
+        {origin && (
+          <p className="mt-1 text-[12px] font-medium" style={{ color: TEAL }}>
+            Showing distances from {origin.postcode}
+            {origin.source === "profile" ? " (your saved postcode)" : ""}
           </p>
         )}
 
