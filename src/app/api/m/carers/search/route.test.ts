@@ -16,6 +16,7 @@ import {
   type SearchFilterBuilder,
   type SearchRow,
 } from "./search-handler";
+import { rankCarers, type RerankCarer } from "@/lib/match/rerank";
 
 type FilterCall =
   | { kind: "eq"; col: string; value: unknown }
@@ -107,6 +108,8 @@ function row(over: Partial<SearchRow> = {}): SearchRow {
     weekly_rate_cents: null,
     currency: "GBP",
     created_at: "2026-01-01T00:00:00Z",
+    home_lat: null,
+    home_lng: null,
     ...over,
   };
 }
@@ -340,5 +343,188 @@ describe("handleSearch", () => {
     assert.deepEqual(c.languages, []);
     assert.equal(c.rating_avg, 4.25);
     assert.equal(c.rating_count, 0);
+  });
+});
+
+/* ── origin parsing ──────────────────────────────────────────────── */
+describe("parseSearchParams origin", () => {
+  it("parses a valid lat/lng pair", () => {
+    const p = parseSearchParams({ originLat: "51.5074", originLng: "-0.1276" });
+    assert.equal(p.originLat, 51.5074);
+    assert.equal(p.originLng, -0.1276);
+  });
+
+  it("drops the pair when either coordinate is missing", () => {
+    assert.equal(parseSearchParams({ originLat: "51.5" }).originLat, null);
+    assert.equal(parseSearchParams({ originLat: "51.5" }).originLng, null);
+    assert.equal(parseSearchParams({ originLng: "-0.1" }).originLat, null);
+  });
+
+  it("rejects out-of-range or non-numeric coordinates", () => {
+    const p = parseSearchParams({ originLat: "999", originLng: "-0.1" });
+    assert.equal(p.originLat, null);
+    assert.equal(p.originLng, null);
+    const q = parseSearchParams({ originLat: "abc", originLng: "1" });
+    assert.equal(q.originLat, null);
+  });
+});
+
+/* ── distance_km + created_at plumbing (gap 19 follow-up) ─────────── */
+describe("handleSearch distance + created_at plumbing", () => {
+  // London origin; carers placed at known UK city centroids.
+  const LONDON = { lat: 51.5074, lng: -0.1276 };
+  const cityRows: SearchRow[] = [
+    // ~555 km from London
+    row({ user_id: "glasgow", home_lat: 55.8642, home_lng: -4.2518 }),
+    // ~0 km
+    row({ user_id: "london", home_lat: 51.5074, home_lng: -0.1276 }),
+    // ~163 km
+    row({ user_id: "birmingham", home_lat: 52.4862, home_lng: -1.8904 }),
+  ];
+
+  it("computes distance_km from origin and feeds an ascending Nearest sort", async () => {
+    const client = makeClient({ rows: cityRows, count: 3 });
+    const res = await handleSearch({
+      client,
+      params: { sort: "rating_desc", originLat: "51.5074", originLng: "-0.1276" },
+    });
+    assert.equal(res.status, 200);
+    if (res.status !== 200) return;
+
+    // Every carer carries a finite distance, smallest for London itself.
+    const byId = Object.fromEntries(res.body.carers.map((c) => [c.user_id, c]));
+    assert.ok((byId.london.distance_km ?? Infinity) < 1);
+    assert.ok((byId.birmingham.distance_km ?? 0) > 100);
+    assert.ok((byId.birmingham.distance_km ?? 0) < 250);
+    assert.ok((byId.glasgow.distance_km ?? 0) > 400);
+
+    // The reranker (the consumer) now orders by ascending distance.
+    const ranked = rankCarers<RerankCarer & { user_id: string }>(
+      res.body.carers.map((c) => ({
+        ...c,
+        id: c.user_id,
+        rating: c.rating_avg,
+        rating_count: c.rating_count,
+        distance_km: c.distance_km,
+        is_online: c.is_online,
+        last_online_at: c.last_online_at,
+        created_at: c.created_at,
+      })),
+      { sort: "nearest", floatOnlineFirst: false },
+    );
+    assert.deepEqual(
+      ranked.map((c) => c.user_id),
+      ["london", "birmingham", "glasgow"],
+    );
+  });
+
+  it("passes created_at through and feeds a descending Newest sort", async () => {
+    const rows: SearchRow[] = [
+      row({ user_id: "old", created_at: "2025-01-01T00:00:00Z" }),
+      row({ user_id: "new", created_at: "2026-06-01T00:00:00Z" }),
+      row({ user_id: "mid", created_at: "2025-09-01T00:00:00Z" }),
+    ];
+    const client = makeClient({ rows, count: 3 });
+    const res = await handleSearch({ client, params: {} });
+    assert.equal(res.status, 200);
+    if (res.status !== 200) return;
+
+    const byId = Object.fromEntries(res.body.carers.map((c) => [c.user_id, c]));
+    assert.equal(byId.new.created_at, "2026-06-01T00:00:00Z");
+
+    const ranked = rankCarers<RerankCarer & { user_id: string }>(
+      res.body.carers.map((c) => ({
+        ...c,
+        id: c.user_id,
+        rating: c.rating_avg,
+        rating_count: c.rating_count,
+        distance_km: c.distance_km,
+        is_online: c.is_online,
+        last_online_at: c.last_online_at,
+        created_at: c.created_at,
+      })),
+      { sort: "newest", floatOnlineFirst: false },
+    );
+    assert.deepEqual(
+      ranked.map((c) => c.user_id),
+      ["new", "mid", "old"],
+    );
+  });
+
+  it("no origin → distance_km is null and does not request geo columns", async () => {
+    const calls: FilterCall[] = [];
+    const client = makeClient({ rows: [row()], calls });
+    const res = await handleSearch({ client, params: {} });
+    assert.equal(res.status, 200);
+    if (res.status !== 200) return;
+    assert.equal(res.body.carers[0].distance_km, null);
+  });
+
+  it("missing origin → Nearest sort falls back gracefully (no crash, unknown distance last)", async () => {
+    const rows: SearchRow[] = [
+      row({ user_id: "a", rating_avg: 4.0 }),
+      row({ user_id: "b", rating_avg: 5.0 }),
+    ];
+    const client = makeClient({ rows, count: 2 });
+    const res = await handleSearch({ client, params: { sort: "rating_desc" } });
+    assert.equal(res.status, 200);
+    if (res.status !== 200) return;
+    // All distances null; reranker must not throw and falls back to the id
+    // tiebreaker (all distances equal → ascending id).
+    const ranked = rankCarers<RerankCarer & { user_id: string }>(
+      res.body.carers.map((c) => ({
+        ...c,
+        id: c.user_id,
+        rating: c.rating_avg,
+        rating_count: c.rating_count,
+        distance_km: c.distance_km,
+        is_online: c.is_online,
+        last_online_at: c.last_online_at,
+        created_at: c.created_at,
+      })),
+      { sort: "nearest", floatOnlineFirst: false },
+    );
+    assert.deepEqual(
+      ranked.map((c) => c.user_id),
+      ["a", "b"],
+    );
+  });
+
+  it("retries without geo columns when the latlng migration is absent", async () => {
+    // First attempt (with geo cols) errors as if home_lat is unknown; the
+    // handler retries with base columns and still returns 200.
+    let attempt = 0;
+    const builder: SearchFilterBuilder = {
+      eq: () => builder,
+      ilike: () => builder,
+      contains: () => builder,
+      gte: () => builder,
+      lte: () => builder,
+      or: () => builder,
+      order: () => builder,
+      async range() {
+        attempt += 1;
+        if (attempt === 1) {
+          return {
+            data: null,
+            error: { message: 'column "home_lat" does not exist' },
+            count: null,
+          };
+        }
+        return { data: [row({ user_id: "z" })], error: null, count: 1 };
+      },
+    };
+    const client: SearchQueryClient = {
+      from: () => ({ select: () => builder }),
+    };
+    const res = await handleSearch({
+      client,
+      params: { originLat: "51.5", originLng: "-0.1" },
+    });
+    assert.equal(res.status, 200);
+    if (res.status !== 200) return;
+    assert.equal(attempt, 2);
+    // Geo columns weren't returned on the fallback, so distance is null.
+    assert.equal(res.body.carers[0].distance_km, null);
   });
 });

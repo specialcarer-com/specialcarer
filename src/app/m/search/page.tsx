@@ -52,6 +52,8 @@ type ApiSearchCarer = {
   hourly_rate_cents: number | null;
   weekly_rate_cents: number | null;
   currency: "GBP" | "USD";
+  distance_km?: number | null;
+  created_at?: string | null;
   is_online?: boolean | null;
   last_online_at?: string | null;
 };
@@ -93,6 +95,8 @@ type PageCarer = {
   tags?: string[];
   isOnline: boolean;
   lastOnlineAt: string | null;
+  distanceKm: number | null;
+  createdAt: string | null;
 };
 
 function adaptCarer(c: ApiSearchCarer): PageCarer {
@@ -138,6 +142,8 @@ function adaptCarer(c: ApiSearchCarer): PageCarer {
     tags: c.tags,
     isOnline: c.is_online === true,
     lastOnlineAt: c.last_online_at ?? null,
+    distanceKm: c.distance_km ?? null,
+    createdAt: c.created_at ?? null,
   };
 }
 
@@ -362,8 +368,9 @@ export default function SearchPage() {
   ]);
 
   // Apply the "Online now" hard filter, then rerank with the shared scorer.
-  // Search has no per-carer distance/created_at wired in, so the reranker
-  // orders on rating + online recency; fresh-online carers float to the top.
+  // distance_km / created_at come from the search API (distance is null unless
+  // the request carried an origin), so Nearest/Newest sorts are real now;
+  // fresh-online carers still float to the top.
   const ranked = useMemo(() => {
     const pool = onlineOnly ? results.filter((c) => c.isOnline) : results;
     const ordered = rankCarers<RerankCarer & PageCarer>(
@@ -371,10 +378,10 @@ export default function SearchPage() {
         ...c,
         rating: c.rating,
         rating_count: c.reviewCount,
-        distance_km: null,
+        distance_km: c.distanceKm,
         is_online: c.isOnline,
         last_online_at: c.lastOnlineAt,
-        created_at: null,
+        created_at: c.createdAt,
       })),
       { sort, maxDistanceKm: radiusKm },
     );
