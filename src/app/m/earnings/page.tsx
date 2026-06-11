@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { TopBar, BottomNav } from "../_components/ui";
 import EarningsClient from "./EarningsClient";
+import EarningsV1Client from "./EarningsV1Client";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Earnings — SpecialCarers" };
@@ -16,6 +17,9 @@ export default async function EarningsPage() {
   return (
     <div className="min-h-screen bg-bg-screen sc-with-bottom-nav">
       <TopBar title="Earnings" back="/m/profile" />
+      <div className="px-5 pt-3">
+        <EarningsV1Client />
+      </div>
       <EarningsClient />
       <BottomNav active="jobs" role="carer" />
     </div>

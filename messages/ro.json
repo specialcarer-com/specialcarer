@@ -270,5 +270,39 @@
     "exampleHint": "Încearcă: „Rezervă-o pe Sarah pentru mâine la ora 15” sau „Găsește un îngrijitor în Manchester”",
     "micPermission": "Este nevoie de acces la microfon pentru rezervarea vocală.",
     "notSupported": "Funcția vocală nu este acceptată pe acest dispozitiv"
+  },
+  "earnings": {
+    "periodSwitcherLabel": "Alege perioada de câștiguri",
+    "period": {
+      "this_week": "Săptămâna aceasta",
+      "this_month": "Luna aceasta",
+      "last_month": "Luna trecută",
+      "all_time": "Din totdeauna"
+    },
+    "headline": {
+      "this_week": "Câștigat săptămâna aceasta",
+      "this_month": "Câștigat luna aceasta",
+      "last_month": "Câștigat luna trecută",
+      "all_time": "Câștigat în total"
+    },
+    "grossLabel": "Brut",
+    "feeLabel": "Comision",
+    "vsPrior": "față de perioada anterioară",
+    "upcoming": {
+      "title": "Viitor — încă necâștigat",
+      "caption": "{count, plural, =0 {Nicio rezervare confirmată încă} one {# rezervare confirmată} few {# rezervări confirmate} other {# de rezervări confirmate}}"
+    },
+    "list": {
+      "title": "Rezervări finalizate recent"
+    },
+    "rowGrossFee": "{gross} brut · {fee} comision",
+    "empty": {
+      "title": "Încă fără câștiguri",
+      "body": "Rezervările finalizate vor apărea aici împreună cu plata ta netă."
+    },
+    "loadMore": "Încarcă mai multe",
+    "loadingMore": "Se încarcă…",
+    "loadError": "Câștigurile nu au putut fi încărcate. Încearcă din nou.",
+    "retry": "Încearcă din nou"
   }
 }

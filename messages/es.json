@@ -270,5 +270,39 @@
     "exampleHint": "Prueba: «Reservar a Sara para mañana a las 3 pm» o «Buscar un cuidador en Madrid»",
     "micPermission": "Se necesita acceso al micrófono para la reserva por voz.",
     "notSupported": "La voz no es compatible con este dispositivo"
+  },
+  "earnings": {
+    "periodSwitcherLabel": "Elegir periodo de ingresos",
+    "period": {
+      "this_week": "Esta semana",
+      "this_month": "Este mes",
+      "last_month": "Mes pasado",
+      "all_time": "Histórico"
+    },
+    "headline": {
+      "this_week": "Ganado esta semana",
+      "this_month": "Ganado este mes",
+      "last_month": "Ganado el mes pasado",
+      "all_time": "Ganado en total"
+    },
+    "grossLabel": "Bruto",
+    "feeLabel": "Comisión",
+    "vsPrior": "frente al periodo anterior",
+    "upcoming": {
+      "title": "Próximo — aún no ganado",
+      "caption": "{count, plural, =0 {Sin reservas confirmadas todavía} one {# reserva confirmada} other {# reservas confirmadas}}"
+    },
+    "list": {
+      "title": "Reservas completadas recientes"
+    },
+    "rowGrossFee": "{gross} bruto · {fee} comisión",
+    "empty": {
+      "title": "Aún no hay ingresos",
+      "body": "Las reservas completadas aparecerán aquí con tu pago neto."
+    },
+    "loadMore": "Cargar más",
+    "loadingMore": "Cargando…",
+    "loadError": "No se pudieron cargar tus ingresos. Inténtalo de nuevo.",
+    "retry": "Reintentar"
   }
 }

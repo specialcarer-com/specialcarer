@@ -270,5 +270,39 @@
     "exampleHint": "Try: \"Book Sarah for tomorrow 3pm\" or \"Find a carer in Manchester\"",
     "micPermission": "Microphone access is needed for voice booking.",
     "notSupported": "Voice not supported on this device"
+  },
+  "earnings": {
+    "periodSwitcherLabel": "Choose earnings period",
+    "period": {
+      "this_week": "This week",
+      "this_month": "This month",
+      "last_month": "Last month",
+      "all_time": "All time"
+    },
+    "headline": {
+      "this_week": "Earned this week",
+      "this_month": "Earned this month",
+      "last_month": "Earned last month",
+      "all_time": "Earned all time"
+    },
+    "grossLabel": "Gross",
+    "feeLabel": "Fee",
+    "vsPrior": "vs previous period",
+    "upcoming": {
+      "title": "Upcoming — not yet earned",
+      "caption": "{count, plural, =0 {No confirmed bookings yet} one {# confirmed booking} other {# confirmed bookings}}"
+    },
+    "list": {
+      "title": "Recent completed bookings"
+    },
+    "rowGrossFee": "{gross} gross · {fee} fee",
+    "empty": {
+      "title": "No earnings yet",
+      "body": "Completed bookings will show up here with your take-home pay."
+    },
+    "loadMore": "Load more",
+    "loadingMore": "Loading…",
+    "loadError": "Couldn't load your earnings. Please try again.",
+    "retry": "Try again"
   }
 }
