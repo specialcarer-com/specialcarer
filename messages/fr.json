@@ -323,5 +323,51 @@
     "rotateUrl": "Renouveler le lien",
     "disable": "Désactiver",
     "rotateHelp": "Le renouvellement crée un nouveau lien et désactive l'ancien. La désactivation supprime entièrement le flux."
+  },
+  "timeline": {
+    "day": {
+      "today": "Today",
+      "yesterday": "Yesterday"
+    },
+    "card": {
+      "someone": "Someone",
+      "noteCreated": "{actor} added a journal note",
+      "bookingConfirmed": "A visit was confirmed",
+      "bookingStarted": "{actor} started a visit",
+      "bookingCompleted": "{actor} completed a visit",
+      "bookingCancelled": "A visit was cancelled",
+      "keyPoints": "Key points",
+      "photos": "{count} photos",
+      "addComment": "Add a comment",
+      "noComments": "No comments yet",
+      "commentCount": "{count} comments"
+    },
+    "reaction": {
+      "heart": "Love",
+      "pray": "Thinking of you",
+      "thanks": "Thank you",
+      "concern": "Concerned"
+    },
+    "comment": {
+      "none": "Be the first to comment.",
+      "someone": "Someone",
+      "placeholder": "Write a comment…",
+      "send": "Send",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this comment?"
+    },
+    "empty": {
+      "title": "Nothing here yet",
+      "body": "When a carer adds a journal note or a visit happens, it'll show up here for the whole family."
+    },
+    "loadMore": {
+      "label": "Load more",
+      "loading": "Loading…"
+    },
+    "error": {
+      "load": "Couldn't load more activity. Please try again.",
+      "reaction": "Couldn't update your reaction. Please try again.",
+      "comment": "Couldn't post your comment. Please try again."
+    }
   }
 }

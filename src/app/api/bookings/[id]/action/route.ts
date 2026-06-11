@@ -117,6 +117,19 @@ export async function POST(
       console.error("[booking.cancel] unredeem failed", err);
     }
 
+    // Gap 41: family-timeline event. Fire-and-forget.
+    try {
+      const { recordBookingEvent } = await import("@/lib/timeline/ingest");
+      void recordBookingEvent({
+        bookingId,
+        transition: "cancelled",
+        actorId: user.id,
+        adminClient: admin,
+      });
+    } catch (e) {
+      console.error("[booking.cancel] timeline event failed", e);
+    }
+
     return NextResponse.json({ ok: true, status: "cancelled" });
   }
 
@@ -184,6 +197,20 @@ export async function POST(
         updated_at: startNow,
       })
       .eq("id", bookingId);
+
+    // Gap 41: family-timeline event. Fire-and-forget.
+    try {
+      const { recordBookingEvent } = await import("@/lib/timeline/ingest");
+      void recordBookingEvent({
+        bookingId,
+        transition: "started",
+        actorId: user.id,
+        adminClient: admin,
+      });
+    } catch (e) {
+      console.error("[booking.start] timeline event failed", e);
+    }
+
     return NextResponse.json({ ok: true, status: "in_progress" });
   }
 
@@ -241,6 +268,25 @@ export async function POST(
       });
     } catch (e) {
       console.error("[action.complete] journal event failed", e);
+    }
+
+    // Gap 41: family-timeline event. Fire-and-forget.
+    try {
+      const { recordBookingEvent } = await import("@/lib/timeline/ingest");
+      const { data: cprof } = await admin
+        .from("caregiver_profiles")
+        .select("display_name")
+        .eq("user_id", user.id)
+        .maybeSingle<{ display_name: string | null }>();
+      void recordBookingEvent({
+        bookingId,
+        transition: "completed",
+        actorId: user.id,
+        actorName: cprof?.display_name ?? null,
+        adminClient: admin,
+      });
+    } catch (e) {
+      console.error("[action.complete] timeline event failed", e);
     }
 
     // Referral progress: if this carer was referred, bump their

@@ -53,6 +53,10 @@ export default function FamilyClient({
   const [pending, startTransition] = useTransition();
   const [emailInput, setEmailInput] = useState("");
   const [nameInput, setNameInput] = useState("");
+  const [relationshipInput, setRelationshipInput] = useState("");
+  const [roleInput, setRoleInput] = useState<"commenter" | "viewer">(
+    "commenter",
+  );
 
   if (!data) {
     return (
@@ -97,6 +101,8 @@ export default function FamilyClient({
         body: JSON.stringify({
           email,
           displayName: nameInput.trim() || undefined,
+          relationship: relationshipInput.trim() || undefined,
+          timelineRole: roleInput,
         }),
       });
       const json = (await res.json().catch(() => ({}))) as {
@@ -109,6 +115,8 @@ export default function FamilyClient({
       }
       setEmailInput("");
       setNameInput("");
+      setRelationshipInput("");
+      setRoleInput("commenter");
       setInfo(
         json.emailSent
           ? `Invite sent to ${email}.`
@@ -176,6 +184,12 @@ export default function FamilyClient({
             ? "Family members see your bookings, chats, and care journal — read-only. Only you can book, message carers and manage payment."
             : "You can see this family's bookings, chats, and care journal updates. The primary contact handles bookings and payments."}
         </p>
+        <a
+          href="/m/timeline"
+          className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-[13px] font-bold text-white active:bg-primary-600"
+        >
+          View family timeline
+        </a>
       </Card>
 
       {info && (
@@ -226,7 +240,15 @@ export default function FamilyClient({
                         ? `Invited${m.invited_email ? ` · ${m.invited_email}` : ""}`
                         : m.email && m.email !== memberDisplayName(m)
                           ? m.email
-                          : "Member · read only"}
+                          : "Member"}
+                    {!isPrimaryRow && m.relationship
+                      ? ` · ${m.relationship}`
+                      : ""}
+                    {!isPrimaryRow
+                      ? m.timeline_role === "viewer"
+                        ? " · can view timeline"
+                        : " · can comment"
+                      : ""}
                   </p>
                 </div>
                 {m.status === "invited" ? (
@@ -320,6 +342,41 @@ export default function FamilyClient({
               onChange={(e) => setNameInput(e.target.value)}
               disabled={pending || remaining <= 0}
             />
+            <Input
+              type="text"
+              placeholder="Relationship, e.g. Daughter (optional)"
+              value={relationshipInput}
+              onChange={(e) => setRelationshipInput(e.target.value)}
+              disabled={pending || remaining <= 0}
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setRoleInput("commenter")}
+                disabled={pending || remaining <= 0}
+                className={`flex-1 rounded-xl border px-3 py-2.5 text-[13px] font-semibold transition disabled:opacity-50 ${
+                  roleInput === "commenter"
+                    ? "border-primary bg-primary-50 text-primary"
+                    : "border-line text-subheading"
+                }`}
+                aria-pressed={roleInput === "commenter"}
+              >
+                Can comment
+              </button>
+              <button
+                type="button"
+                onClick={() => setRoleInput("viewer")}
+                disabled={pending || remaining <= 0}
+                className={`flex-1 rounded-xl border px-3 py-2.5 text-[13px] font-semibold transition disabled:opacity-50 ${
+                  roleInput === "viewer"
+                    ? "border-primary bg-primary-50 text-primary"
+                    : "border-line text-subheading"
+                }`}
+                aria-pressed={roleInput === "viewer"}
+              >
+                View only
+              </button>
+            </div>
             <Button
               type="submit"
               disabled={pending || remaining <= 0 || !emailInput.trim()}

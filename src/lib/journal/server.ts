@@ -9,6 +9,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { triggerNoteSummary } from "@/lib/care-notes/trigger";
+import { recordNoteEvent } from "@/lib/timeline/ingest";
 import {
   JOURNAL_MAX_PHOTOS,
   JOURNAL_MAX_BODY,
@@ -186,6 +187,19 @@ export async function createJournalEntry(
   // Gap 29: kick off AI "Key points" summarisation for long notes. Detached —
   // never blocks or fails the save; the family timeline polls for the result.
   triggerNoteSummary(data.id, body);
+
+  // Gap 41: record a family-timeline event for this note. Fire-and-forget —
+  // recordNoteEvent swallows its own errors and must never fail the save.
+  void recordNoteEvent({
+    entryId: data.id,
+    authorId: user.id,
+    bookingId: input.bookingId ?? null,
+    aboutUserId: input.aboutUserId ?? null,
+    kind: input.kind ?? "note",
+    mood: input.mood ?? null,
+    body,
+    photoCount: photos.length,
+  });
 
   return { ok: true, entryId: data.id };
 }

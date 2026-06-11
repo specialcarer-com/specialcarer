@@ -119,6 +119,19 @@ async function dispatchSeekerPick(
       startsAt,
     });
 
+    // Gap 41: family-timeline event for the confirmation. Fire-and-forget.
+    try {
+      const { recordBookingEvent } = await import("@/lib/timeline/ingest");
+      void recordBookingEvent({
+        bookingId: args.bookingId,
+        transition: "confirmed",
+        actorId: args.winnerCarerId,
+        adminClient: admin,
+      });
+    } catch (e) {
+      console.error("[pick-offer] timeline event failed", e);
+    }
+
     const { data: losers } = await admin
       .from("booking_match_offers")
       .select("carer_id")

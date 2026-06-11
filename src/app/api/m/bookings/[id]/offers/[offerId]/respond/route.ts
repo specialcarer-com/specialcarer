@@ -131,6 +131,19 @@ async function dispatchInstantConfirm(
       });
     }
 
+    // Gap 41: family-timeline event for the confirmation. Fire-and-forget.
+    try {
+      const { recordBookingEvent } = await import("@/lib/timeline/ingest");
+      void recordBookingEvent({
+        bookingId: offer.booking_id,
+        transition: "confirmed",
+        actorId: offer.carer_id,
+        adminClient: admin,
+      });
+    } catch (e) {
+      console.error("[respond] timeline event failed", e);
+    }
+
     // Losing carers — every offer the RPC just cancelled as filled_by_other_carer.
     const { data: losers } = await admin
       .from("booking_match_offers")
