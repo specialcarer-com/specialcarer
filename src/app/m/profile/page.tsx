@@ -29,7 +29,7 @@ import {
 } from "../_components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { MEMBERSHIPS_ENABLED } from "@/lib/memberships/flag";
-import { useAccessibility } from "@/lib/i18n/LocaleContext";
+import { useTranslations } from "next-intl";
 import { LanguagePicker } from "./_components/LanguagePicker";
 
 type Row = {
@@ -203,7 +203,7 @@ function sectionsForRole(role: Role | null): Section[] {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { t } = useAccessibility();
+  const t = useTranslations("accessibility");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -348,7 +348,7 @@ export default function ProfilePage() {
                 <IconA11y />
               </span>
               <span className="flex-1 text-[14.5px] font-medium text-heading">
-                {t("accessibility.settings")}
+                {t("settings")}
               </span>
               <IconChevronRight />
             </Link>

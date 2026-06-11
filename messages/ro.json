@@ -252,5 +252,23 @@
     "invalidEmail": "Te rugăm să introduci un e-mail valid.",
     "passwordTooShort": "Parola trebuie să aibă cel puțin 8 caractere.",
     "passwordsDontMatch": "Parolele nu se potrivesc."
+  },
+  "accessibility": {
+    "settings": "Accesibilitate",
+    "language": "Limbă",
+    "largeText": "Text mare",
+    "largeTextHelp": "Mărește dimensiunea de bază a fontului la 18 px în toată aplicația",
+    "reducedMotion": "Mișcare redusă",
+    "voiceBooking": "Rezervare vocală",
+    "voiceBookingHelp": "Folosește microfonul pentru a căuta sau a publica un job de îngrijire fără mâini"
+  },
+  "voice": {
+    "listening": "Ascult…",
+    "idle": "Atinge pentru a vorbi",
+    "prompt": "Ce ai dori să faci?",
+    "didntCatch": "Nu am înțeles. Te rog încearcă din nou.",
+    "exampleHint": "Încearcă: „Rezervă-o pe Sarah pentru mâine la ora 15” sau „Găsește un îngrijitor în Manchester”",
+    "micPermission": "Este nevoie de acces la microfon pentru rezervarea vocală.",
+    "notSupported": "Funcția vocală nu este acceptată pe acest dispozitiv"
   }
 }

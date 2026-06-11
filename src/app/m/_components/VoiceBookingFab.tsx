@@ -10,7 +10,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAccessibility } from "@/lib/i18n/LocaleContext";
+import { useLocale, useTranslations } from "next-intl";
+import { useAccessibility } from "./AccessibilityProvider";
 import { parseVoiceIntent } from "@/lib/ai/voiceParser";
 
 // ─── types ─────────────────────────────────────────────────────────────────
@@ -86,7 +87,9 @@ function Toast({ message, onDismiss }: { message: string; onDismiss: () => void 
 // ─── main component ────────────────────────────────────────────────────────
 export default function VoiceBookingFab() {
   const router = useRouter();
-  const { voiceEnabled, t, locale } = useAccessibility();
+  const { voiceEnabled } = useAccessibility();
+  const t = useTranslations("voice");
+  const locale = useLocale();
   const [state, setState] = useState<State>("idle");
   const [toast, setToast] = useState<string | null>(null);
   const recognitionRef = useRef<ISpeechRecognition | null>(null);
@@ -101,7 +104,7 @@ export default function VoiceBookingFab() {
       const intent = parseVoiceIntent(transcript);
 
       if (!intent) {
-        showToast(t("voice.didntCatch"));
+        showToast(t("didntCatch"));
         setState("idle");
         return;
       }
@@ -129,7 +132,7 @@ export default function VoiceBookingFab() {
   const startListening = useCallback(() => {
     const Ctor = getSpeechRecognition();
     if (!Ctor) {
-      showToast("Voice not supported on this device");
+      showToast(t("notSupported"));
       return;
     }
 
@@ -145,9 +148,9 @@ export default function VoiceBookingFab() {
 
     rec.onerror = (e: SpeechRecognitionErrorEvent) => {
       if (e.error === "not-allowed") {
-        showToast(t("voice.micPermission"));
+        showToast(t("micPermission"));
       } else {
-        showToast(t("voice.didntCatch"));
+        showToast(t("didntCatch"));
       }
       setState("idle");
     };
@@ -176,7 +179,7 @@ export default function VoiceBookingFab() {
   if (!voiceEnabled) return null;
 
   const isListening = state === "listening";
-  const label = isListening ? t("voice.listening") : t("voice.idle");
+  const label = isListening ? t("listening") : t("idle");
 
   return (
     <>

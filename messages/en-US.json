@@ -252,5 +252,23 @@
     "invalidEmail": "Please enter a valid email.",
     "passwordTooShort": "Password must be at least 8 characters.",
     "passwordsDontMatch": "Passwords don’t match."
+  },
+  "accessibility": {
+    "settings": "Accessibility",
+    "language": "Language",
+    "largeText": "Large text",
+    "largeTextHelp": "Increases base font size to 18px across the app",
+    "reducedMotion": "Reduced motion",
+    "voiceBooking": "Voice booking",
+    "voiceBookingHelp": "Use your microphone to search or post a care job hands-free"
+  },
+  "voice": {
+    "listening": "Listening…",
+    "idle": "Tap to speak",
+    "prompt": "What would you like to do?",
+    "didntCatch": "Didn't catch that. Please try again.",
+    "exampleHint": "Try: \"Book Sarah for tomorrow 3pm\" or \"Find a caregiver in Boston\"",
+    "micPermission": "Microphone access is needed for voice booking.",
+    "notSupported": "Voice not supported on this device"
   }
 }
