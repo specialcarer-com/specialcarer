@@ -270,5 +270,39 @@
     "exampleHint": "Essayez : « Réserver Sarah pour demain à 15h » ou « Trouver un soignant à Manchester »",
     "micPermission": "L'accès au microphone est nécessaire pour la réservation vocale.",
     "notSupported": "La voix n'est pas prise en charge sur cet appareil"
+  },
+  "earnings": {
+    "periodSwitcherLabel": "Choisir la période de revenus",
+    "period": {
+      "this_week": "Cette semaine",
+      "this_month": "Ce mois-ci",
+      "last_month": "Le mois dernier",
+      "all_time": "Depuis le début"
+    },
+    "headline": {
+      "this_week": "Gagné cette semaine",
+      "this_month": "Gagné ce mois-ci",
+      "last_month": "Gagné le mois dernier",
+      "all_time": "Gagné au total"
+    },
+    "grossLabel": "Brut",
+    "feeLabel": "Commission",
+    "vsPrior": "par rapport à la période précédente",
+    "upcoming": {
+      "title": "À venir — pas encore gagné",
+      "caption": "{count, plural, =0 {Aucune réservation confirmée} one {# réservation confirmée} other {# réservations confirmées}}"
+    },
+    "list": {
+      "title": "Réservations récemment terminées"
+    },
+    "rowGrossFee": "{gross} brut · {fee} commission",
+    "empty": {
+      "title": "Pas encore de revenus",
+      "body": "Les réservations terminées apparaîtront ici avec votre rémunération nette."
+    },
+    "loadMore": "Charger plus",
+    "loadingMore": "Chargement…",
+    "loadError": "Impossible de charger vos revenus. Veuillez réessayer.",
+    "retry": "Réessayer"
   }
 }

@@ -270,5 +270,39 @@
     "exampleHint": "Versuche: „Buche Sarah für morgen 15 Uhr“ oder „Finde eine Pflegekraft in Manchester“",
     "micPermission": "Für die Sprachbuchung wird Mikrofonzugriff benötigt.",
     "notSupported": "Sprache wird auf diesem Gerät nicht unterstützt"
+  },
+  "earnings": {
+    "periodSwitcherLabel": "Verdienstzeitraum wählen",
+    "period": {
+      "this_week": "Diese Woche",
+      "this_month": "Dieser Monat",
+      "last_month": "Letzter Monat",
+      "all_time": "Gesamt"
+    },
+    "headline": {
+      "this_week": "Diese Woche verdient",
+      "this_month": "Diesen Monat verdient",
+      "last_month": "Letzten Monat verdient",
+      "all_time": "Insgesamt verdient"
+    },
+    "grossLabel": "Brutto",
+    "feeLabel": "Gebühr",
+    "vsPrior": "gegenüber dem Vorzeitraum",
+    "upcoming": {
+      "title": "Bevorstehend — noch nicht verdient",
+      "caption": "{count, plural, =0 {Noch keine bestätigten Buchungen} one {# bestätigte Buchung} other {# bestätigte Buchungen}}"
+    },
+    "list": {
+      "title": "Kürzlich abgeschlossene Buchungen"
+    },
+    "rowGrossFee": "{gross} brutto · {fee} Gebühr",
+    "empty": {
+      "title": "Noch keine Einnahmen",
+      "body": "Abgeschlossene Buchungen erscheinen hier mit Ihrem Nettoverdienst."
+    },
+    "loadMore": "Mehr laden",
+    "loadingMore": "Wird geladen…",
+    "loadError": "Einnahmen konnten nicht geladen werden. Bitte erneut versuchen.",
+    "retry": "Erneut versuchen"
   }
 }

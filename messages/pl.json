@@ -270,5 +270,39 @@
     "exampleHint": "Spróbuj: „Zarezerwuj Sarę na jutro na 15:00” lub „Znajdź opiekuna w Manchesterze”",
     "micPermission": "Do rezerwacji głosowej wymagany jest dostęp do mikrofonu.",
     "notSupported": "Funkcja głosowa nie jest obsługiwana na tym urządzeniu"
+  },
+  "earnings": {
+    "periodSwitcherLabel": "Wybierz okres zarobków",
+    "period": {
+      "this_week": "Ten tydzień",
+      "this_month": "Ten miesiąc",
+      "last_month": "Poprzedni miesiąc",
+      "all_time": "Cały okres"
+    },
+    "headline": {
+      "this_week": "Zarobiono w tym tygodniu",
+      "this_month": "Zarobiono w tym miesiącu",
+      "last_month": "Zarobiono w zeszłym miesiącu",
+      "all_time": "Zarobiono łącznie"
+    },
+    "grossLabel": "Brutto",
+    "feeLabel": "Prowizja",
+    "vsPrior": "w porównaniu z poprzednim okresem",
+    "upcoming": {
+      "title": "Nadchodzące — jeszcze nie zarobione",
+      "caption": "{count, plural, =0 {Brak potwierdzonych rezerwacji} one {# potwierdzona rezerwacja} few {# potwierdzone rezerwacje} many {# potwierdzonych rezerwacji} other {# potwierdzonych rezerwacji}}"
+    },
+    "list": {
+      "title": "Ostatnio ukończone rezerwacje"
+    },
+    "rowGrossFee": "{gross} brutto · {fee} prowizja",
+    "empty": {
+      "title": "Brak zarobków",
+      "body": "Ukończone rezerwacje pojawią się tutaj wraz z Twoim wynagrodzeniem netto."
+    },
+    "loadMore": "Załaduj więcej",
+    "loadingMore": "Ładowanie…",
+    "loadError": "Nie udało się załadować zarobków. Spróbuj ponownie.",
+    "retry": "Spróbuj ponownie"
   }
 }
