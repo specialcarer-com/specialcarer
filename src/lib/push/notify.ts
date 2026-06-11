@@ -92,6 +92,15 @@ export type DispatchEvent =
       bookingId: string;
       seekerId: string;
       startsAt: string;
+    }
+  | {
+      type: "offer.expired";
+      bookingId: string;
+      seekerId: string;
+      // Carers who were shortlisted but didn't get picked. Cheap to grab in
+      // the expiry sweep; kept on the event for downstream use (e.g. a future
+      // "shift went unfilled" nudge to carers — see PR follow-up).
+      shortlistedCaregiverIds?: string[];
     };
 
 export type BuiltPayload = {
@@ -238,6 +247,17 @@ export function buildPayload(event: DispatchEvent): BuiltPayload {
         recipientUserId: event.seekerId,
         title: "Your carer is confirmed",
         body: `A carer is locked in — shift starts ${shortDate(event.startsAt)}.`,
+        deeplink: `/m/bookings/${event.bookingId}`,
+        payload: { ...event },
+      };
+    // Copy is inline English-only here, matching every other variant above.
+    // TODO(i18n): push templates aren't localised yet — localise the whole
+    // dispatcher in one pass rather than special-casing this event.
+    case "offer.expired":
+      return {
+        recipientUserId: event.seekerId,
+        title: "Offer expired",
+        body: "No carer accepted in time. Re-post or adjust your search?",
         deeplink: `/m/bookings/${event.bookingId}`,
         payload: { ...event },
       };

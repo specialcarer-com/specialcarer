@@ -223,6 +223,37 @@ describe("buildPayload — match confirm events", () => {
   });
 });
 
+describe("buildPayload — offer.expired", () => {
+  it("targets the seeker with the expiry copy and links to the booking", () => {
+    const out = buildPayload({
+      type: "offer.expired",
+      bookingId: BOOKING_ID,
+      seekerId: SEEKER_ID,
+    });
+    assert.equal(out.recipientUserId, SEEKER_ID);
+    assert.equal(out.title, "Offer expired");
+    assert.equal(
+      out.body,
+      "No carer accepted in time. Re-post or adjust your search?",
+    );
+    assert.equal(out.deeplink, `/m/bookings/${BOOKING_ID}`);
+  });
+
+  it("carries shortlistedCaregiverIds through onto the payload when present", () => {
+    const out = buildPayload({
+      type: "offer.expired",
+      bookingId: BOOKING_ID,
+      seekerId: SEEKER_ID,
+      shortlistedCaregiverIds: [CARER_ID],
+    });
+    assert.deepEqual(
+      (out.payload as { shortlistedCaregiverIds?: string[] })
+        .shortlistedCaregiverIds,
+      [CARER_ID],
+    );
+  });
+});
+
 function makeToken(token: string, user_id: string): PushToken {
   return {
     id: `id-${token}`,

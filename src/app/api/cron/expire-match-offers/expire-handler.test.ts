@@ -13,6 +13,7 @@ import {
   handleExpire,
   isExpiryEligible,
   type ExpireClient,
+  type ExpiredBooking,
   type OfferLike,
 } from "./expire-handler";
 
@@ -79,11 +80,32 @@ describe("isExpiryEligible", () => {
   });
 });
 
+const BOOKING_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+const BOOKING_B = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+const SEEKER_A = "11111111-1111-1111-1111-111111111111";
+const SEEKER_B = "22222222-2222-2222-2222-222222222222";
+
 describe("handleExpire", () => {
-  it("returns 200 + expired_count on success", async () => {
+  it("returns 200 + summed expired_count across affected bookings", async () => {
     const client: ExpireClient = {
       async expireStale() {
-        return { expiredCount: 3, error: null };
+        return {
+          bookings: [
+            {
+              bookingId: BOOKING_A,
+              seekerId: SEEKER_A,
+              expiredCount: 2,
+              shortlistedCaregiverIds: ["c1", "c2"],
+            },
+            {
+              bookingId: BOOKING_B,
+              seekerId: SEEKER_B,
+              expiredCount: 1,
+              shortlistedCaregiverIds: ["c3"],
+            },
+          ],
+          error: null,
+        };
       },
     };
     const res = await handleExpire(client);
@@ -91,14 +113,66 @@ describe("handleExpire", () => {
     assert.deepEqual(res.body, { ok: true, expired_count: 3 });
   });
 
+  it("returns 200 + zero count when nothing expired", async () => {
+    const client: ExpireClient = {
+      async expireStale() {
+        return { bookings: [], error: null };
+      },
+    };
+    const res = await handleExpire(client);
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body, { ok: true, expired_count: 0 });
+  });
+
   it("returns 500 + error when the RPC fails", async () => {
     const client: ExpireClient = {
       async expireStale() {
-        return { expiredCount: 0, error: "boom" };
+        return { bookings: [], error: "boom" };
       },
     };
     const res = await handleExpire(client);
     assert.equal(res.status, 500);
     assert.deepEqual(res.body, { ok: false, error: "boom" });
+  });
+
+  it("invokes onExpired with the affected bookings (fire-and-forget)", async () => {
+    let seen: ExpiredBooking[] | null = null;
+    const client: ExpireClient = {
+      async expireStale() {
+        return {
+          bookings: [
+            {
+              bookingId: BOOKING_A,
+              seekerId: SEEKER_A,
+              expiredCount: 1,
+              shortlistedCaregiverIds: ["c1"],
+            },
+          ],
+          error: null,
+        };
+      },
+      onExpired(bookings) {
+        seen = bookings;
+      },
+    };
+    const res = await handleExpire(client);
+    assert.equal(res.status, 200);
+    assert.notEqual(seen, null);
+    assert.equal(seen!.length, 1);
+    assert.equal(seen![0].seekerId, SEEKER_A);
+  });
+
+  it("skips onExpired when nothing expired", async () => {
+    let called = false;
+    const client: ExpireClient = {
+      async expireStale() {
+        return { bookings: [], error: null };
+      },
+      onExpired() {
+        called = true;
+      },
+    };
+    await handleExpire(client);
+    assert.equal(called, false);
   });
 });
