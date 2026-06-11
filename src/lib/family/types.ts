@@ -5,6 +5,8 @@
 
 export type FamilyMemberRole = "primary" | "member";
 export type FamilyMemberStatus = "active" | "invited" | "removed";
+/** Gap 41: timeline write capability for a family member. */
+export type FamilyTimelineRole = "viewer" | "commenter";
 export type FamilyInviteStatus =
   | "pending"
   | "accepted"
@@ -21,6 +23,10 @@ export type FamilyMember = {
   status: FamilyMemberStatus;
   joined_at: string | null;
   created_at: string;
+  /** Gap 41: free-text relationship label, e.g. "Daughter". */
+  relationship?: string | null;
+  /** Gap 41: whether this member may comment on the timeline. */
+  timeline_role?: FamilyTimelineRole;
   /** Hydrated from auth.users when available. */
   email?: string | null;
 };
