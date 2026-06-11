@@ -304,5 +304,24 @@
     "loadingMore": "Wird geladen…",
     "loadError": "Einnahmen konnten nicht geladen werden. Bitte erneut versuchen.",
     "retry": "Erneut versuchen"
+  },
+  "calendar": {
+    "addToCalendar": "Zum Kalender hinzufügen",
+    "addToCalendarHelp": "Lade diese Buchung als Kalenderdatei für Google, Apple oder Outlook herunter.",
+    "syncTitle": "Kalender-Synchronisierung",
+    "syncIntro": "Abonniere einen privaten Feed, damit deine anstehenden Buchungen automatisch in deiner Kalender-App erscheinen und aktuell bleiben.",
+    "setupTitle": "Kalender-Synchronisierung einrichten",
+    "setupHelp": "Erstelle einen privaten Link, den du zu Google Kalender, Apple Kalender oder Outlook hinzufügen kannst.",
+    "setup": "Kalender-Synchronisierung einrichten",
+    "yourFeedUrl": "Dein Kalender-Feed",
+    "feedUrlHelp": "Halte diesen Link privat — wer ihn hat, kann deine anstehenden Buchungen sehen.",
+    "revealUrl": "Link anzeigen",
+    "hideUrl": "Link ausblenden",
+    "copyUrl": "Link kopieren",
+    "copied": "Kopiert",
+    "openInCalendar": "Im Kalender öffnen",
+    "rotateUrl": "Link erneuern",
+    "disable": "Deaktivieren",
+    "rotateHelp": "Beim Erneuern wird ein neuer Link erstellt und der alte deaktiviert. Deaktivieren entfernt den Feed vollständig."
   }
 }

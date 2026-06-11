@@ -304,5 +304,24 @@
     "loadingMore": "Ładowanie…",
     "loadError": "Nie udało się załadować zarobków. Spróbuj ponownie.",
     "retry": "Spróbuj ponownie"
+  },
+  "calendar": {
+    "addToCalendar": "Dodaj do kalendarza",
+    "addToCalendarHelp": "Pobierz tę rezerwację jako plik kalendarza dla Google, Apple lub Outlook.",
+    "syncTitle": "Synchronizacja kalendarza",
+    "syncIntro": "Subskrybuj prywatny kanał, aby Twoje nadchodzące rezerwacje pojawiały się automatycznie w aplikacji kalendarza i były na bieżąco.",
+    "setupTitle": "Skonfiguruj synchronizację",
+    "setupHelp": "Utwórz prywatny link, który możesz dodać do Google Calendar, Apple Calendar lub Outlook.",
+    "setup": "Skonfiguruj synchronizację",
+    "yourFeedUrl": "Twój kanał kalendarza",
+    "feedUrlHelp": "Zachowaj ten link w tajemnicy — każdy, kto go ma, widzi Twoje nadchodzące rezerwacje.",
+    "revealUrl": "Pokaż link",
+    "hideUrl": "Ukryj link",
+    "copyUrl": "Kopiuj link",
+    "copied": "Skopiowano",
+    "openInCalendar": "Otwórz w kalendarzu",
+    "rotateUrl": "Odśwież link",
+    "disable": "Wyłącz",
+    "rotateHelp": "Odświeżenie tworzy nowy link i unieważnia poprzedni. Wyłączenie całkowicie usuwa kanał."
   }
 }

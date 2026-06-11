@@ -148,6 +148,27 @@ function IconA11y() {
   );
 }
 
+/** Calendar-with-sync glyph for the Calendar sync menu row. */
+function IconCalSync() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="3" y="4" width="18" height="17" rx="2" />
+      <path d="M3 9h18M8 2v4M16 2v4" />
+      <path d="M9 15h3M12 15a2 2 0 1 1-1.7 1" />
+    </svg>
+  );
+}
+
 /** Inline shield glyph used for the Support & Safety menu row. */
 function IconShield() {
   return (
@@ -204,6 +225,7 @@ function sectionsForRole(role: Role | null): Section[] {
 export default function ProfilePage() {
   const router = useRouter();
   const t = useTranslations("accessibility");
+  const tCal = useTranslations("calendar");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -337,6 +359,21 @@ export default function ProfilePage() {
           {/* UI language picker (gap 43 V1A) */}
           <li>
             <LanguagePicker />
+          </li>
+          {/* Calendar sync (gap 40) */}
+          <li className="border-t border-line">
+            <Link
+              href="/m/profile/calendar-sync"
+              className="flex items-center gap-3 px-4 py-3.5 active:bg-muted/60"
+            >
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-primary-50 text-primary">
+                <IconCalSync />
+              </span>
+              <span className="flex-1 text-[14.5px] font-medium text-heading">
+                {tCal("syncTitle")}
+              </span>
+              <IconChevronRight />
+            </Link>
           </li>
           {/* Accessibility settings row */}
           <li className="border-t border-line">
