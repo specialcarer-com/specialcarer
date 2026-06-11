@@ -304,5 +304,24 @@
     "loadingMore": "Chargement…",
     "loadError": "Impossible de charger vos revenus. Veuillez réessayer.",
     "retry": "Réessayer"
+  },
+  "calendar": {
+    "addToCalendar": "Ajouter au calendrier",
+    "addToCalendarHelp": "Téléchargez cette réservation sous forme de fichier calendrier pour Google, Apple ou Outlook.",
+    "syncTitle": "Synchronisation du calendrier",
+    "syncIntro": "Abonnez-vous à un flux privé pour que vos prochaines réservations apparaissent automatiquement dans votre application de calendrier et restent à jour.",
+    "setupTitle": "Configurer la synchronisation",
+    "setupHelp": "Créez un lien privé que vous pouvez ajouter à Google Agenda, Apple Calendrier ou Outlook.",
+    "setup": "Configurer la synchronisation",
+    "yourFeedUrl": "Votre flux de calendrier",
+    "feedUrlHelp": "Gardez ce lien privé — toute personne qui le possède peut voir vos prochaines réservations.",
+    "revealUrl": "Afficher le lien",
+    "hideUrl": "Masquer le lien",
+    "copyUrl": "Copier le lien",
+    "copied": "Copié",
+    "openInCalendar": "Ouvrir dans le calendrier",
+    "rotateUrl": "Renouveler le lien",
+    "disable": "Désactiver",
+    "rotateHelp": "Le renouvellement crée un nouveau lien et désactive l'ancien. La désactivation supprime entièrement le flux."
   }
 }

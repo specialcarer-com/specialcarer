@@ -304,5 +304,24 @@
     "loadingMore": "Cargando…",
     "loadError": "No se pudieron cargar tus ingresos. Inténtalo de nuevo.",
     "retry": "Reintentar"
+  },
+  "calendar": {
+    "addToCalendar": "Añadir al calendario",
+    "addToCalendarHelp": "Descarga esta reserva como archivo de calendario para Google, Apple u Outlook.",
+    "syncTitle": "Sincronización de calendario",
+    "syncIntro": "Suscríbete a un feed privado para que tus próximas reservas aparezcan automáticamente en tu calendario y se mantengan actualizadas.",
+    "setupTitle": "Configurar la sincronización",
+    "setupHelp": "Crea un enlace privado que puedes añadir a Google Calendar, Apple Calendar u Outlook.",
+    "setup": "Configurar la sincronización",
+    "yourFeedUrl": "Tu feed de calendario",
+    "feedUrlHelp": "Mantén este enlace privado: cualquiera que lo tenga puede ver tus próximas reservas.",
+    "revealUrl": "Mostrar enlace",
+    "hideUrl": "Ocultar enlace",
+    "copyUrl": "Copiar enlace",
+    "copied": "Copiado",
+    "openInCalendar": "Abrir en el calendario",
+    "rotateUrl": "Renovar enlace",
+    "disable": "Desactivar",
+    "rotateHelp": "Renovar crea un enlace nuevo y desactiva el anterior. Desactivar elimina el feed por completo."
   }
 }

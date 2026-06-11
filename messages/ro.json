@@ -304,5 +304,24 @@
     "loadingMore": "Se încarcă…",
     "loadError": "Câștigurile nu au putut fi încărcate. Încearcă din nou.",
     "retry": "Încearcă din nou"
+  },
+  "calendar": {
+    "addToCalendar": "Adaugă în calendar",
+    "addToCalendarHelp": "Descarcă această rezervare ca fișier de calendar pentru Google, Apple sau Outlook.",
+    "syncTitle": "Sincronizare calendar",
+    "syncIntro": "Abonează-te la un flux privat pentru ca rezervările tale viitoare să apară automat în aplicația de calendar și să rămână la zi.",
+    "setupTitle": "Configurează sincronizarea",
+    "setupHelp": "Creează un link privat pe care îl poți adăuga în Google Calendar, Apple Calendar sau Outlook.",
+    "setup": "Configurează sincronizarea",
+    "yourFeedUrl": "Fluxul tău de calendar",
+    "feedUrlHelp": "Păstrează acest link privat — oricine îl are îți poate vedea rezervările viitoare.",
+    "revealUrl": "Afișează linkul",
+    "hideUrl": "Ascunde linkul",
+    "copyUrl": "Copiază linkul",
+    "copied": "Copiat",
+    "openInCalendar": "Deschide în calendar",
+    "rotateUrl": "Reînnoiește linkul",
+    "disable": "Dezactivează",
+    "rotateHelp": "Reînnoirea creează un link nou și îl dezactivează pe cel vechi. Dezactivarea elimină complet fluxul."
   }
 }

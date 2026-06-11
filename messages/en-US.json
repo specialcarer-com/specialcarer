@@ -304,5 +304,24 @@
     "loadingMore": "Loading…",
     "loadError": "Couldn't load your earnings. Please try again.",
     "retry": "Try again"
+  },
+  "calendar": {
+    "addToCalendar": "Add to calendar",
+    "addToCalendarHelp": "Download this booking as a calendar file for Google, Apple, or Outlook.",
+    "syncTitle": "Calendar sync",
+    "syncIntro": "Subscribe to a private feed so your upcoming bookings show up automatically in your calendar app and stay up to date.",
+    "setupTitle": "Set up calendar sync",
+    "setupHelp": "Create a private link you can add to Google Calendar, Apple Calendar, or Outlook.",
+    "setup": "Set up calendar sync",
+    "yourFeedUrl": "Your calendar feed",
+    "feedUrlHelp": "Keep this link private — anyone with it can see your upcoming bookings.",
+    "revealUrl": "Reveal link",
+    "hideUrl": "Hide link",
+    "copyUrl": "Copy link",
+    "copied": "Copied",
+    "openInCalendar": "Open in calendar",
+    "rotateUrl": "Rotate link",
+    "disable": "Disable",
+    "rotateHelp": "Rotating creates a new link and stops the old one from working. Disabling removes the feed entirely."
   }
 }
