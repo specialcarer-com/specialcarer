@@ -87,4 +87,33 @@ describe("rankCandidates", () => {
   it("clamps negative topN to empty", () => {
     assert.deepEqual(rankCandidates([candidate()], 10, -3, NOW), []);
   });
+
+  it("uses a real cached rate when present and the neutral default when absent", () => {
+    // Two carers identical on every other signal. `with-rates` carries real
+    // response/completion rates (as loaded from caregiver_rates_cache);
+    // `no-rates` has null on both (no cache row → neutral fallback). The carer
+    // with real positive rates must score strictly higher, and the null carer
+    // must contribute zero on those two signals (default behaviour, no crash).
+    const withRates = candidate({
+      carer_id: "with-rates",
+      response_rate: 1,
+      completion_rate: 1,
+    });
+    const noRates = candidate({
+      carer_id: "no-rates",
+      response_rate: null,
+      completion_rate: null,
+    });
+    const ranked = rankCandidates([noRates, withRates], 10, 5, NOW);
+    assert.equal(ranked[0].carer_id, "with-rates");
+    assert.ok(ranked[0].score > ranked[1].score);
+    // Null carer falls back to the neutral default (zero contribution), and
+    // the gap equals exactly the two weights (0.15 + 0.05 = 0.20 → 20 points).
+    assert.equal(ranked[1].score_breakdown.response_rate, 0);
+    assert.equal(ranked[1].score_breakdown.completion_rate, 0);
+    assert.equal(
+      Math.round((ranked[0].score - ranked[1].score) * 100) / 100,
+      20,
+    );
+  });
 });
