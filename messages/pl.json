@@ -252,5 +252,23 @@
     "invalidEmail": "Wprowadź prawidłowy adres e-mail.",
     "passwordTooShort": "Hasło musi mieć co najmniej 8 znaków.",
     "passwordsDontMatch": "Hasła nie są zgodne."
+  },
+  "accessibility": {
+    "settings": "Dostępność",
+    "language": "Język",
+    "largeText": "Duży tekst",
+    "largeTextHelp": "Zwiększa podstawowy rozmiar czcionki do 18 pikseli w całej aplikacji",
+    "reducedMotion": "Ograniczony ruch",
+    "voiceBooking": "Rezerwacja głosowa",
+    "voiceBookingHelp": "Użyj mikrofonu, aby wyszukać lub zlecić opiekę bez użycia rąk"
+  },
+  "voice": {
+    "listening": "Słucham…",
+    "idle": "Dotknij, aby mówić",
+    "prompt": "Co chcesz zrobić?",
+    "didntCatch": "Nie zrozumiałem. Spróbuj ponownie.",
+    "exampleHint": "Spróbuj: „Zarezerwuj Sarę na jutro na 15:00” lub „Znajdź opiekuna w Manchesterze”",
+    "micPermission": "Do rezerwacji głosowej wymagany jest dostęp do mikrofonu.",
+    "notSupported": "Funkcja głosowa nie jest obsługiwana na tym urządzeniu"
   }
 }

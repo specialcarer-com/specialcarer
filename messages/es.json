@@ -252,5 +252,23 @@
     "invalidEmail": "Introduce un correo válido.",
     "passwordTooShort": "La contraseña debe tener al menos 8 caracteres.",
     "passwordsDontMatch": "Las contraseñas no coinciden."
+  },
+  "accessibility": {
+    "settings": "Accesibilidad",
+    "language": "Idioma",
+    "largeText": "Texto grande",
+    "largeTextHelp": "Aumenta el tamaño base de la fuente a 18 px en toda la aplicación",
+    "reducedMotion": "Movimiento reducido",
+    "voiceBooking": "Reserva por voz",
+    "voiceBookingHelp": "Usa el micrófono para buscar o publicar un trabajo de cuidado sin usar las manos"
+  },
+  "voice": {
+    "listening": "Escuchando…",
+    "idle": "Toca para hablar",
+    "prompt": "¿Qué deseas hacer?",
+    "didntCatch": "No te entendí. Por favor, inténtalo de nuevo.",
+    "exampleHint": "Prueba: «Reservar a Sara para mañana a las 3 pm» o «Buscar un cuidador en Madrid»",
+    "micPermission": "Se necesita acceso al micrófono para la reserva por voz.",
+    "notSupported": "La voz no es compatible con este dispositivo"
   }
 }

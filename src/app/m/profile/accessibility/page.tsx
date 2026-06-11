@@ -1,35 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { TopBar, Toggle } from "../../_components/ui";
 import {
   useAccessibility,
   type TextScale,
-} from "@/lib/i18n/LocaleContext";
-import {
-  LOCALES,
-  LOCALE_LABELS,
-  type Locale,
-} from "@/lib/i18n";
+} from "../../_components/AccessibilityProvider";
+import { LanguagePicker } from "../_components/LanguagePicker";
 
 /**
  * Accessibility settings page — /m/profile/accessibility
  *
- * • Language picker (radio list with native names)
+ * • Language picker (shared LanguagePicker — next-intl cookie + profile)
  * • Large-text toggle
  * • Reduced-motion indicator (read-only, reflects prefers-reduced-motion)
  * • Voice booking toggle
  */
 export default function AccessibilityPage() {
-  const {
-    locale,
-    setLocale,
-    textScale,
-    setTextScale,
-    voiceEnabled,
-    setVoiceEnabled,
-    t,
-  } = useAccessibility();
+  const { textScale, setTextScale, voiceEnabled, setVoiceEnabled } =
+    useAccessibility();
+  const t = useTranslations("accessibility");
 
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
@@ -45,7 +36,7 @@ export default function AccessibilityPage() {
 
   return (
     <div className="min-h-screen bg-bg-screen">
-      <TopBar title={t("accessibility.settings")} back="/m/profile" />
+      <TopBar title={t("settings")} back="/m/profile" />
 
       <div className="px-5 pt-4 pb-16 space-y-6">
 
@@ -55,52 +46,15 @@ export default function AccessibilityPage() {
             id="sc-a11y-lang-heading"
             className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-subheading"
           >
-            {t("accessibility.language")}
+            {t("language")}
           </p>
 
+          {/* Canonical locale picker — writes the NEXT_LOCALE cookie and
+              profiles.chat_translate_to (next-intl source of truth). */}
           <ul className="overflow-hidden rounded-card bg-white shadow-card">
-            {LOCALES.map((l: Locale, i) => {
-              const isSelected = locale === l;
-              return (
-                <li
-                  key={l}
-                  className={i > 0 ? "border-t border-line" : ""}
-                >
-                  <label className="flex items-center gap-3 px-4 py-3.5 cursor-pointer active:bg-muted/60">
-                    {/* Visually hidden native radio — we style the whole row */}
-                    <input
-                      type="radio"
-                      name="sc-locale"
-                      value={l}
-                      checked={isSelected}
-                      onChange={() => setLocale(l)}
-                      className="sr-only"
-                    />
-                    <span
-                      aria-hidden
-                      className={[
-                        "flex-shrink-0 h-5 w-5 rounded-full border-2 grid place-items-center",
-                        isSelected
-                          ? "border-primary bg-primary"
-                          : "border-line bg-white",
-                      ].join(" ")}
-                    >
-                      {isSelected && (
-                        <span className="h-2 w-2 rounded-full bg-white" />
-                      )}
-                    </span>
-                    <span className="flex-1 text-[14.5px] font-medium text-heading">
-                      {LOCALE_LABELS[l]}
-                    </span>
-                    {isSelected && (
-                      <span className="text-[11px] font-semibold text-primary uppercase tracking-wide">
-                        Active
-                      </span>
-                    )}
-                  </label>
-                </li>
-              );
-            })}
+            <li>
+              <LanguagePicker />
+            </li>
           </ul>
         </section>
 
@@ -119,16 +73,16 @@ export default function AccessibilityPage() {
               <div className="flex items-start gap-3 px-4 py-3.5">
                 <div className="flex-1 min-w-0">
                   <p className="text-[14.5px] font-medium text-heading">
-                    {t("accessibility.largeText")}
+                    {t("largeText")}
                   </p>
                   <p className="mt-0.5 text-[12px] text-subheading leading-snug">
-                    {t("accessibility.largeTextHelp")}
+                    {t("largeTextHelp")}
                   </p>
                 </div>
                 <Toggle
                   checked={textScale === "lg"}
                   onChange={(v) => setTextScale(v ? "lg" : "md" as TextScale)}
-                  label={t("accessibility.largeText")}
+                  label={t("largeText")}
                 />
               </div>
             </li>
@@ -138,7 +92,7 @@ export default function AccessibilityPage() {
               <div className="flex items-start gap-3 px-4 py-3.5">
                 <div className="flex-1 min-w-0">
                   <p className="text-[14.5px] font-medium text-heading">
-                    {t("accessibility.reducedMotion")}
+                    {t("reducedMotion")}
                   </p>
                   <p className="mt-0.5 text-[12px] text-subheading leading-snug">
                     Controlled by your device's motion settings
@@ -175,16 +129,16 @@ export default function AccessibilityPage() {
               <div className="flex items-start gap-3 px-4 py-3.5">
                 <div className="flex-1 min-w-0">
                   <p className="text-[14.5px] font-medium text-heading">
-                    {t("accessibility.voiceBooking")}
+                    {t("voiceBooking")}
                   </p>
                   <p className="mt-0.5 text-[12px] text-subheading leading-snug">
-                    {t("accessibility.voiceBookingHelp")}
+                    {t("voiceBookingHelp")}
                   </p>
                 </div>
                 <Toggle
                   checked={voiceEnabled}
                   onChange={setVoiceEnabled}
-                  label={t("accessibility.voiceBooking")}
+                  label={t("voiceBooking")}
                 />
               </div>
             </li>

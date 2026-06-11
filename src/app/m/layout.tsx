@@ -3,7 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "../globals.css";
 import "./mobile.css";
 import StatusBarController from "@/components/native/StatusBarController";
-import { LocaleProvider } from "@/lib/i18n/LocaleContext";
+import { AccessibilityProvider } from "./_components/AccessibilityProvider";
 
 /**
  * Mobile app shell — Capacitor loads /m/* directly.
@@ -16,7 +16,8 @@ import { LocaleProvider } from "@/lib/i18n/LocaleContext";
  *    so the splash overlay reaches edge-to-edge. StatusBarController flips
  *    glyph colour from LIGHT (splash) → DARK (app chrome) at runtime.
  *  - Bottom safe-area padding is applied per-screen via .sc-safe-bottom.
- *  - LocaleProvider wraps children to provide i18n + accessibility context.
+ *  - AccessibilityProvider supplies large-text + voice-booking prefs. The UI
+ *    locale (and lang/dir) is owned by next-intl via the root layout.
  */
 
 const jakarta = Plus_Jakarta_Sans({
@@ -55,11 +56,11 @@ export default function MobileLayout({
         </a>
         {/* Runtime status-bar glyph controller (no-op on web). */}
         <StatusBarController />
-        <LocaleProvider>
+        <AccessibilityProvider>
           <main id="sc-main" tabIndex={-1}>
             {children}
           </main>
-        </LocaleProvider>
+        </AccessibilityProvider>
       </div>
     </div>
   );
