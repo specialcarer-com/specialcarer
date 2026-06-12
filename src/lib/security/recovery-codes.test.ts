@@ -6,13 +6,15 @@ import assert from "node:assert/strict";
 import {
   RECOVERY_CODE_COUNT,
   RECOVERY_CODE_LENGTH,
-  generateRecoveryCode,
-  generateRecoveryCodeBatch,
   formatRecoveryCode,
   normaliseRecoveryCode,
+} from "./recovery-codes";
+import {
+  generateRecoveryCode,
+  generateRecoveryCodeBatch,
   hashRecoveryCode,
   verifyRecoveryCode,
-} from "./recovery-codes";
+} from "./recovery-codes-core";
 
 const BASE32 = /^[0-9A-HJKMNP-TV-Z]+$/; // Crockford: no I, L, O, U
 

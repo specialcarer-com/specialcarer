@@ -6,7 +6,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { consumeFromList, issueBatch, type StoredCode } from "./store-core";
-import { hashRecoveryCode, verifyRecoveryCode } from "./recovery-codes";
+import { hashRecoveryCode, verifyRecoveryCode } from "./recovery-codes-core";
 
 test("issueBatch deletes prior unused codes BEFORE inserting the new batch", async () => {
   const calls: string[] = [];
