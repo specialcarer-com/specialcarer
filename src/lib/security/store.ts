@@ -5,7 +5,7 @@ import {
   generateRecoveryCodeBatch,
   hashRecoveryCode,
   verifyRecoveryCode,
-} from "./recovery-codes";
+} from "./recovery-codes.server";
 import { consumeFromList, issueBatch } from "./store-core";
 
 /**

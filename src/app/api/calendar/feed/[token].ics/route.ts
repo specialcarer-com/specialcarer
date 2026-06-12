@@ -25,13 +25,14 @@ const FEED_WINDOW_DAYS = 90;
  * route should be capped per-token (e.g. 60 req/hour) once that lands; until
  * then the cost is bounded by the cheap indexed token lookup + 90-day query.
  */
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ token: string }> },
-) {
-  const { token: raw } = await params;
-  // The dynamic segment captures the trailing ".ics"; strip it before lookup.
-  const token = raw.replace(/\.ics$/i, "");
+export async function GET(req: Request) {
+  // Next 15's typed-routes generator strips the literal ".ics" from the
+  // `[token].ics` segment and emits an EMPTY params type for this route, so we
+  // can't read the token from `params` without a build-time type error. Derive
+  // it from the URL pathname instead (last path segment, sans ".ics").
+  const { pathname } = new URL(req.url);
+  const last = pathname.split("/").pop() ?? "";
+  const token = decodeURIComponent(last).replace(/\.ics$/i, "");
 
   if (!isValidCalendarToken(token)) {
     return new NextResponse("Not found", { status: 404 });
