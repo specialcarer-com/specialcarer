@@ -36,7 +36,42 @@ export default function LoginPage() {
       // (set at sign-up); falls back to /m/home if missing — middleware
       // will then redirect carers to /m/jobs.
       const role = (data.user?.user_metadata as { role?: string } | undefined)?.role;
-      router.replace(role === "caregiver" ? "/m/jobs" : "/m/home");
+      const dest = role === "caregiver" ? "/m/jobs" : "/m/home";
+
+      // 2FA step-up (gap 13): if the account has an active TOTP factor, the
+      // password sign-in only reaches aal1 — the session is NOT yet trusted.
+      // Send the user to the code-entry screen before granting access.
+      const { data: aal } =
+        await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aal?.currentLevel === "aal1" && aal?.nextLevel === "aal2") {
+        router.replace(`/m/sign-in/2fa?next=${encodeURIComponent(dest)}`);
+        return;
+      }
+
+      // Admin enforcement (gap 13): if 2FA is required for this user and they
+      // have no active factor, block onward access once the grace period has
+      // lapsed — they can only enrol. nextLevel === "aal1" here means no factor
+      // exists (otherwise the aal2 branch above would have fired).
+      if (data.user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("mfa_required, mfa_grace_period_ends_at")
+          .eq("id", data.user.id)
+          .maybeSingle<{
+            mfa_required: boolean | null;
+            mfa_grace_period_ends_at: string | null;
+          }>();
+        if (profile?.mfa_required) {
+          const grace = profile.mfa_grace_period_ends_at;
+          const lapsed = !grace || new Date(grace).getTime() <= Date.now();
+          if (lapsed) {
+            router.replace("/m/sign-in/2fa-required");
+            return;
+          }
+        }
+      }
+
+      router.replace(dest);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign-in failed.");
     } finally {
