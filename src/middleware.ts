@@ -5,8 +5,15 @@ import { resolveLocale } from "@/i18n/resolve-locale";
 
 type CookieToSet = { name: string; value: string; options?: CookieOptions };
 
-// Routes that require an authenticated user
-const PROTECTED_PREFIXES = ["/dashboard", "/onboarding", "/admin"];
+// Routes that require an authenticated user.
+//
+// NOTE: /onboarding is intentionally NOT listed. Step 1 of onboarding is the
+// unauthenticated sign-up form (reached from /become-a-caregiver?audience=carer
+// and the seeker equivalent), so the route must be publicly reachable. The page
+// itself renders the sign-up form when there is no session and only advances to
+// the authenticated profile step once a session exists — i.e. the gate is
+// per-step, enforced in the page, not per-route here.
+const PROTECTED_PREFIXES = ["/dashboard", "/admin"];
 // Routes that require an admin role on top of being signed in
 const ADMIN_PREFIXES = ["/admin"];
 

@@ -67,7 +67,7 @@ export default function Page() {
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
               <Link
-                href="/onboarding"
+                href="/onboarding?audience=carer"
                 className="px-6 py-3 rounded-xl bg-brand text-white font-medium hover:bg-brand-600 transition text-center"
               >
                 Apply to caregive
@@ -202,7 +202,7 @@ export default function Page() {
             booking shifts the moment they do.
           </p>
           <Link
-            href="/onboarding"
+            href="/onboarding?audience=carer"
             className="mt-6 inline-block px-6 py-3 rounded-xl bg-white text-brand-700 font-semibold hover:bg-brand-50 transition"
           >
             Start your application
