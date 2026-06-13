@@ -162,6 +162,14 @@ export const PAGE_BANNER_SLOTS: PageBannerSlot[] = [
     fallbackGradient: tealCream,
     defaultAlt: "Become a SpecialCarers caregiver",
   },
+  {
+    key: "audience.families",
+    label: "For families",
+    group: "Audiences",
+    path: "/signup/family",
+    fallbackGradient: creamTeal,
+    defaultAlt: "A family welcoming a professional carer at home",
+  },
   // ── Account ──
   {
     key: "account.login",
