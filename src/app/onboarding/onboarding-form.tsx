@@ -4,10 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+type CountryOption = { code: string; name: string };
+
 type Props = {
   defaultName: string;
   defaultCountry: string;
   defaultRole: "seeker" | "caregiver" | "admin";
+  countries: CountryOption[];
   next: string;
 };
 
@@ -15,11 +18,14 @@ export function OnboardingForm({
   defaultName,
   defaultCountry,
   defaultRole,
+  countries,
   next,
 }: Props) {
   const router = useRouter();
   const [fullName, setFullName] = useState(defaultName);
-  const [country, setCountry] = useState(defaultCountry || "GB");
+  const [country, setCountry] = useState(
+    defaultCountry || countries[0]?.code || "GB"
+  );
   const [role, setRole] = useState<"seeker" | "caregiver">(
     defaultRole === "caregiver" ? "caregiver" : "seeker"
   );
@@ -135,8 +141,11 @@ export function OnboardingForm({
           onChange={(e) => setCountry(e.target.value)}
           className="mt-1 w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand bg-white"
         >
-          <option value="GB">United Kingdom</option>
-          <option value="US">United States</option>
+          {countries.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.name}
+            </option>
+          ))}
         </select>
       </label>
 

@@ -31,6 +31,18 @@ export default async function OnboardingPage({
     redirect(next || "/dashboard");
   }
 
+  const { data: countryRows } = await supabase
+    .from("countries")
+    .select("code, name")
+    .eq("enabled_for_signup", true)
+    .order("display_order", { ascending: true })
+    .order("name", { ascending: true });
+  // Fall back to GB if the table is somehow empty (it is pre-seeded).
+  const countries =
+    countryRows && countryRows.length > 0
+      ? countryRows
+      : [{ code: "GB", name: "United Kingdom" }];
+
   return (
     <main className="min-h-screen flex flex-col">
       <header className="px-6 py-5 border-b border-slate-100">
@@ -51,6 +63,7 @@ export default async function OnboardingPage({
               defaultName={profile?.full_name ?? ""}
               defaultCountry={profile?.country ?? ""}
               defaultRole={profile?.role ?? "seeker"}
+              countries={countries}
               next={next || "/dashboard"}
             />
           </div>
