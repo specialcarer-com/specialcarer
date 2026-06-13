@@ -60,3 +60,17 @@ export function fmtCurrency(cents: number, currency: Currency): string {
 export function fmtCurrencyWhole(cents: number, currency: Currency): string {
   return `${currencySymbol(currency)}${(cents / 100).toFixed(0)}`;
 }
+
+/**
+ * Canonical money formatter for the consumer-facing UI. SpecialCarers is a
+ * single-currency (GBP) UK business and the default locale is en-GB, so
+ * amounts persisted against UK accounts must render as GBP £ even when a
+ * stale per-row `currency` value says otherwise. Use this anywhere the app
+ * *displays* a stored money amount to a user (dashboards, listings, etc).
+ */
+export function formatGBP(cents: number): string {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+  }).format(cents / 100);
+}

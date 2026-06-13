@@ -23,7 +23,12 @@ export function isServiceKey(s: string | null | undefined): s is ServiceKey {
   return !!s && SERVICES.some((x) => x.key === s);
 }
 
-export function formatMoney(cents: number, currency: "GBP" | "USD"): string {
-  const symbol = currency === "GBP" ? "£" : "$";
-  return `${symbol}${(cents / 100).toFixed(2)}`;
+export function formatMoney(cents: number, _currency?: "GBP" | "USD"): string {
+  // SpecialCarers is a single-currency (GBP) UK business with an en-GB
+  // default locale. Stored carer/booking rows can carry a stale
+  // currency='USD' value, but the consumer UI must always render GBP £.
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+  }).format(cents / 100);
 }

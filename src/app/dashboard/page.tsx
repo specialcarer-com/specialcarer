@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeReadiness } from "@/lib/care/profile";
 import { CARER_FEE_PERCENT } from "@/lib/fees/config";
+import { formatGBP } from "@/lib/pricing";
 import Image from "next/image";
 import RecurringSuggestionBanner from "@/components/RecurringSuggestionBanner";
 import UpcomingBookingsWidget, {
@@ -50,10 +51,9 @@ const STATUS_TONE: Record<string, string> = {
   disputed: "bg-rose-50 text-rose-700",
 };
 
-function fmtMoney(cents: number | null | undefined, currency: string | null | undefined) {
+function fmtMoney(cents: number | null | undefined) {
   if (cents == null) return "—";
-  const sym = (currency ?? "gbp").toLowerCase() === "usd" ? "$" : "£";
-  return `${sym}${(cents / 100).toFixed(2)}`;
+  return formatGBP(cents);
 }
 
 export default async function DashboardPage() {
@@ -481,11 +481,11 @@ export default async function DashboardPage() {
             <div className="mt-6 grid sm:grid-cols-3 gap-3">
               <Stat
                 label="Lifetime payouts"
-                value={fmtMoney(totalEarnedCents, profile.country === "US" ? "usd" : "gbp")}
+                value={fmtMoney(totalEarnedCents)}
               />
               <Stat
                 label="Pending release"
-                value={fmtMoney(pendingPayoutCents, profile.country === "US" ? "usd" : "gbp")}
+                value={fmtMoney(pendingPayoutCents)}
                 hint="24h hold after each shift"
               />
               <Stat label="Bookings to date" value={String((bookings ?? []).length)} />
@@ -563,7 +563,6 @@ export default async function DashboardPage() {
                                 isCaregiver
                                   ? carerPayoutCents(b.subtotal_cents ?? 0)
                                   : b.total_cents,
-                                b.currency,
                               )}
                               {isCaregiver && (
                                 <span className="ml-1 text-[10px] font-normal text-slate-500">
@@ -616,7 +615,6 @@ export default async function DashboardPage() {
                                 isCaregiver
                                   ? carerPayoutCents(b.subtotal_cents ?? 0)
                                   : b.total_cents,
-                                b.currency,
                               )}
                               {isCaregiver && (
                                 <span className="ml-1 text-[10px] font-normal text-slate-500">

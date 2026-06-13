@@ -122,6 +122,10 @@ export async function POST(req: Request) {
   if (body.currency !== "gbp" && body.currency !== "usd") {
     return NextResponse.json({ error: "Invalid currency" }, { status: 400 });
   }
+  // SpecialCarers is a single-currency UK business: every booking, payment
+  // intent and stored row settles in GBP regardless of any stale carer-side
+  // currency the client may forward.
+  const bookingCurrency = "gbp" as const;
   if (body.caregiver_id === user.id) {
     return NextResponse.json(
       { error: "You cannot book yourself" },
@@ -217,7 +221,7 @@ export async function POST(req: Request) {
       subtotal_cents: subtotalCents,
       platform_fee_cents: platformFeeCents,
       total_cents: totalCents,
-      currency: body.currency,
+      currency: bookingCurrency,
       service_type: body.service_type!,
       // Smart-default photo consent. Care for older / clinical /
       // postnatal recipients defaults ON (families want updates),
@@ -339,7 +343,7 @@ export async function POST(req: Request) {
   // Create PaymentIntent with manual capture — funds held in escrow
   const intent = await stripe.paymentIntents.create({
     amount: intentAmount,
-    currency: body.currency,
+    currency: bookingCurrency,
     capture_method: "manual",
     application_fee_amount: intentApplicationFee,
     transfer_data: {
@@ -359,7 +363,7 @@ export async function POST(req: Request) {
     status: "requires_payment_method",
     amount_cents: intentAmount,
     application_fee_cents: intentApplicationFee,
-    currency: body.currency,
+    currency: bookingCurrency,
     destination_account_id: caregiverStripe.stripe_account_id,
     raw: intent as unknown as Record<string, unknown>,
   });
@@ -382,7 +386,7 @@ export async function POST(req: Request) {
         serviceType: body.service_type!,
         locationCity: body.location_city,
         totalCents,
-        currency: body.currency,
+        currency: bookingCurrency,
       });
     } catch (err) {
       console.error("[instant-notify] failed", err);
@@ -396,6 +400,6 @@ export async function POST(req: Request) {
     platform_fee_cents: platformFeeCents,
     referral_credit_applied_cents: appliedCreditCents,
     amount_due_cents: intentAmount,
-    currency: body.currency,
+    currency: bookingCurrency,
   });
 }
