@@ -75,9 +75,20 @@ export async function GET(req: NextRequest) {
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name, country")
+      .select("full_name, country, role")
       .eq("id", user.id)
       .maybeSingle();
+
+    // Admins land in the admin dashboard, not the seeker surface. Honor an
+    // explicit ?next that already points into /admin/* (e.g. a deep link the
+    // admin clicked); otherwise default admins to /admin/countries. If no
+    // profile row exists yet, fall through to the normal redirect below.
+    if (profile?.role === "admin") {
+      const adminTarget = explicitNext?.startsWith("/admin/")
+        ? explicitNext
+        : "/admin/countries";
+      return NextResponse.redirect(new URL(adminTarget, req.url));
+    }
 
     if (!profile?.full_name || !profile?.country) {
       const onboardingPath = wantsMobile ? "/m/onboarding" : "/onboarding";
