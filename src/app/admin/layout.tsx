@@ -40,6 +40,7 @@ const SECTIONS: NavSection[] = [
       { href: "/admin/finance", label: "Finance" },
       { href: "/admin/payroll", label: "Payroll" },
       { href: "/admin/analytics", label: "Analytics" },
+      { href: "/admin/countries", label: "Countries" },
       { href: "/admin/audit-log", label: "Audit log" },
     ],
   },
