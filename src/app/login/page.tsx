@@ -122,6 +122,30 @@ export default async function LoginPage({
                 ))}
               </ul>
 
+              <div className="mt-10 flex flex-col items-center gap-2 text-sm text-slate-600">
+                <span className="text-slate-500">{t("newToSpecialCarers")}</span>
+                <div className="flex flex-wrap justify-center gap-x-5 gap-y-2">
+                  <Link
+                    href="/signup/caregiver"
+                    className="font-medium text-brand hover:text-brand-600 underline"
+                  >
+                    {t("signupLinkCaregiver")}
+                  </Link>
+                  <Link
+                    href="/signup/family"
+                    className="font-medium text-brand hover:text-brand-600 underline"
+                  >
+                    {t("signupLinkFamily")}
+                  </Link>
+                  <Link
+                    href="/signup/organisation"
+                    className="font-medium text-brand hover:text-brand-600 underline"
+                  >
+                    {t("signupLinkOrg")}
+                  </Link>
+                </div>
+              </div>
+
               <p className="mt-10 text-xs text-slate-500 text-center">
                 {t("termsPrefix")}{" "}
                 <Link href="/terms" className="underline hover:text-slate-700">

@@ -19,6 +19,13 @@ const nextConfig: NextConfig = {
       // Catch the common 'business' path that some procurement teams
       // search for.
       { source: "/business", destination: "/organisations", permanent: true },
+      // The multi-step /m/org/register flow is retired in favour of the
+      // single-page /signup/organisation flow. Permanently redirect the old
+      // entry point and every step (step-1 … step-9, step-7-5) so external
+      // bookmarks and emails referencing the old URLs keep working. The route
+      // files are kept in place; these redirects intercept before they render.
+      { source: "/m/org/register", destination: "/signup/organisation", permanent: true },
+      { source: "/m/org/register/:path*", destination: "/signup/organisation", permanent: true },
     ];
   },
 };

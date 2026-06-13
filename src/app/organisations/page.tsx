@@ -176,7 +176,7 @@ export default function OrganisationsPage() {
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link
-            href="/m/org/register/step-1"
+            href="/signup/organisation"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-pill bg-slate-900 text-white text-sm font-semibold shadow-sm hover:bg-slate-800 transition"
           >
             Get started
@@ -398,7 +398,7 @@ export default function OrganisationsPage() {
               days.
             </p>
             <Link
-              href="/m/org/register/step-1"
+              href="/signup/organisation"
               className="mt-5 inline-block px-6 py-3 rounded-pill bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition"
             >
               Get started
