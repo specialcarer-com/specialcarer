@@ -16,13 +16,17 @@ type Props = {
 type Stage = "enter-details" | "enter-code";
 
 // Map the marketing audience onto the profile role enum
-// (seeker | caregiver | admin). Family and organisation are both care
-// *consumers* and map to "seeker"; organisations additionally carry their
-// organisation name in user metadata.
-const ROLE_FOR_AUDIENCE: Record<SignupAudience, "seeker" | "caregiver"> = {
+// (seeker | caregiver | admin | organization). Families are care consumers
+// and map to "seeker"; organisations are a first-class role and additionally
+// carry their organisation name in metadata, which the handle_new_user()
+// trigger uses to create the organizations row + owner membership.
+const ROLE_FOR_AUDIENCE: Record<
+  SignupAudience,
+  "seeker" | "caregiver" | "organization"
+> = {
   caregiver: "caregiver",
   family: "seeker",
-  organisation: "seeker",
+  organisation: "organization",
 };
 
 export function SignupForm({ audience, next }: Props) {
@@ -55,8 +59,9 @@ export function SignupForm({ audience, next }: Props) {
       options: {
         shouldCreateUser: true,
         // Seed the new user's metadata so the handle_new_user() trigger stamps
-        // the right role on profile creation. organisation_name is carried for
-        // organisation sign-ups (no profiles column needed).
+        // the right role on profile creation. For organisation sign-ups,
+        // organisation_name drives the trigger to create the organizations
+        // row + owner membership and link profiles.organization_id.
         data: {
           full_name: fullName.trim(),
           role: ROLE_FOR_AUDIENCE[audience],
