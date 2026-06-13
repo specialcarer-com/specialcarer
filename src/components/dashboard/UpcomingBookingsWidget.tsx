@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatGBP } from "@/lib/pricing";
 
 export type UpcomingBookingRow = {
   id: string;
@@ -36,10 +37,9 @@ const VERTICAL_LABEL: Record<string, string> = {
   complex_care: "Complex care",
 };
 
-function fmtMoney(cents: number | null, currency: string | null) {
+function fmtMoney(cents: number | null) {
   if (cents == null) return "";
-  const sym = (currency ?? "gbp").toLowerCase() === "usd" ? "$" : "£";
-  return `${sym}${(cents / 100).toFixed(2)}`;
+  return formatGBP(cents);
 }
 
 /**
@@ -108,7 +108,7 @@ export default function UpcomingBookingsWidget({
                     </span>
                     {b.total_cents != null && (
                       <span className="font-semibold text-slate-900">
-                        {fmtMoney(b.total_cents, b.currency)}
+                        {fmtMoney(b.total_cents)}
                       </span>
                     )}
                   </div>

@@ -46,8 +46,8 @@ function distanceLabel(m: number | null): string {
 }
 
 function rateLabel(m: Marker): string {
-  if (!m.currency || m.hourly_rate_cents == null) return "Rate on request";
-  return `${formatMoney(m.hourly_rate_cents, m.currency)}/hr`;
+  if (m.hourly_rate_cents == null) return "Rate on request";
+  return `${formatMoney(m.hourly_rate_cents)}/hr`;
 }
 
 export default function FindCareMapClient({

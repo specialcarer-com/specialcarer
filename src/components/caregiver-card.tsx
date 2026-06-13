@@ -43,19 +43,18 @@ function formatDistance(m: number): string {
 }
 
 function formatRate(c: CaregiverCardData): string {
-  if (!c.currency) return "Rate on request";
   const offersVisiting = c.care_formats.includes("visiting");
   const offersLiveIn = c.care_formats.includes("live_in");
   const parts: string[] = [];
   if (offersVisiting && c.hourly_rate_cents != null) {
-    parts.push(`${formatMoney(c.hourly_rate_cents, c.currency)}/hr`);
+    parts.push(`${formatMoney(c.hourly_rate_cents)}/hr`);
   }
   if (offersLiveIn && c.weekly_rate_cents != null) {
-    parts.push(`${formatMoney(c.weekly_rate_cents, c.currency)}/wk`);
+    parts.push(`${formatMoney(c.weekly_rate_cents)}/wk`);
   }
   // Fallback for legacy/unset format data
   if (parts.length === 0 && c.hourly_rate_cents != null) {
-    parts.push(`${formatMoney(c.hourly_rate_cents, c.currency)}/hr`);
+    parts.push(`${formatMoney(c.hourly_rate_cents)}/hr`);
   }
   return parts.length > 0 ? parts.join(" · ") : "Rate on request";
 }
