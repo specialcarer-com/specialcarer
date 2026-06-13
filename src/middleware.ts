@@ -9,6 +9,10 @@ type CookieToSet = { name: string; value: string; options?: CookieOptions };
 const PROTECTED_PREFIXES = ["/dashboard", "/onboarding", "/admin"];
 // Routes that require an admin role on top of being signed in
 const ADMIN_PREFIXES = ["/admin"];
+// Admin auth flow — must be reachable by unauthenticated visitors so admins
+// can sign in. Exempt from the /admin auth + role gates below (the page itself
+// enforces admin-only access after OTP verification).
+const ADMIN_PUBLIC_PREFIXES = ["/admin/login"];
 
 // Mobile app role isolation. Each user's account is permanently bound to a
 // role at sign-up; carers and care receivers must not be able to access each
@@ -39,6 +43,12 @@ const MOBILE_CAREGIVER_ONLY_PREFIXES = [
 ];
 
 export async function middleware(req: NextRequest) {
+  // Expose the resolved pathname to server components via a request header.
+  // The /admin layout reads this to skip its requireAdmin() gate on the
+  // public /admin/login page. Set on the request (not response) so server
+  // components can read it through headers(), and set before createServerClient
+  // so it survives the NextResponse.next() rebuild inside the cookie setAll().
+  req.headers.set("x-pathname", req.nextUrl.pathname);
   let res = NextResponse.next({ request: req });
 
   const supabase = createServerClient(
@@ -68,7 +78,11 @@ export async function middleware(req: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = req.nextUrl;
-  const isProtected = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
+  const isAdminPublic = ADMIN_PUBLIC_PREFIXES.some((p) =>
+    pathname.startsWith(p),
+  );
+  const isProtected =
+    !isAdminPublic && PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
 
   if (isProtected && !user) {
     const url = req.nextUrl.clone();
@@ -78,7 +92,8 @@ export async function middleware(req: NextRequest) {
   }
 
   // Admin-only routes — verify role on profiles
-  const isAdminRoute = ADMIN_PREFIXES.some((p) => pathname.startsWith(p));
+  const isAdminRoute =
+    !isAdminPublic && ADMIN_PREFIXES.some((p) => pathname.startsWith(p));
   if (isAdminRoute && user) {
     const { data: profile } = await supabase
       .from("profiles")

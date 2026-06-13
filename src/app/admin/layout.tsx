@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/auth";
@@ -82,6 +83,15 @@ export default async function AdminLayout({
 }: {
   children: ReactNode;
 }) {
+  // The /admin/login page is the unauthenticated admin sign-in flow. It must
+  // render without the admin chrome and without requireAdmin() (which would
+  // redirect anonymous visitors away before they could ever sign in). The
+  // page enforces admin-only access itself after OTP verification.
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  if (pathname.startsWith("/admin/login")) {
+    return <>{children}</>;
+  }
+
   const admin = await requireAdmin();
 
   return (
