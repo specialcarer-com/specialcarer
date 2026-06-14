@@ -4,8 +4,9 @@
  * Tip of the day (gap 46) — a rotating strip on the carer dashboard.
  *
  * Picks one tip per calendar day (UTC) from CARER_TIPS via the pure
- * `selectTipForDate` helper, so every carer sees the same tip on a given
- * day and it refreshes automatically at midnight UTC. No backend needed.
+ * `tipIndexForDate` helper, so every carer sees the same tip on a given
+ * day. A timer recomputes the index at the next UTC midnight, so the tip
+ * refreshes even if the dashboard is left open. No backend needed.
  *
  * Brand styling: teal accent (#039EA0) on a cream card (#F4EFE6), matching
  * the rest of the carer home surface.
@@ -28,8 +29,8 @@ function msUntilNextUtcMidnight(now: Date): number {
 }
 
 export default function TipOfTheDay() {
-  // Re-derive the index whenever `day` changes; a timer bumps it at the next
-  // UTC midnight so the tip refreshes for carers who leave the page open.
+  // Index of today's tip; a timer bumps it at the next UTC midnight so the
+  // tip refreshes for carers who leave the page open.
   const [index, setIndex] = useState(() =>
     tipIndexForDate(new Date(), CARER_TIPS.length),
   );
