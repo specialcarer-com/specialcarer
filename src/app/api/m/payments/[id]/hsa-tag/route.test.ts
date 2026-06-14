@@ -24,7 +24,7 @@ const PAYMENT = "00000000-0000-0000-0000-0000000000aa";
 const FIXED_NOW = new Date("2026-06-14T12:00:00.000Z");
 
 function paymentRow(): HsaTagPaymentRow {
-  return { id: PAYMENT, seeker_id: PAYER };
+  return { id: PAYMENT, seeker_id: PAYER, currency: "usd" };
 }
 
 function client(overrides?: {
@@ -114,6 +114,21 @@ describe("handleHsaTag", () => {
       payment_id: PAYMENT,
       eligible: true,
       client: client(),
+    });
+    assert.equal(res.status, 403);
+  });
+
+  it("403 when the payment is not USD (US-only)", async () => {
+    const res = await handleHsaTag({
+      user_id: PAYER,
+      payment_id: PAYMENT,
+      eligible: true,
+      client: client({
+        found: {
+          data: { id: PAYMENT, seeker_id: PAYER, currency: "gbp" },
+          error: null,
+        },
+      }),
     });
     assert.equal(res.status, 403);
   });

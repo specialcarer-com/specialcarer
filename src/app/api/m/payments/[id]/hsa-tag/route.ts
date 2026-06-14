@@ -41,10 +41,11 @@ export async function POST(
       const admin = createAdminClient();
       const { data, error } = await admin
         .from("payments")
-        .select("id, bookings!inner(seeker_id)")
+        .select("id, currency, bookings!inner(seeker_id)")
         .eq("id", id)
         .maybeSingle<{
           id: string;
+          currency: string;
           bookings: { seeker_id: string } | { seeker_id: string }[];
         }>();
       if (error) return { data: null, error };
@@ -55,6 +56,7 @@ export async function POST(
       const row: HsaTagPaymentRow = {
         id: data.id,
         seeker_id: booking?.seeker_id ?? "",
+        currency: data.currency ?? "",
       };
       return { data: row, error: null };
     },

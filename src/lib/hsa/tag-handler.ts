@@ -16,6 +16,8 @@ export type HsaTagPaymentRow = {
   id: string;
   /** seeker_id on the payment's booking — the payer. */
   seeker_id: string;
+  /** currency on the payment's booking — HSA/FSA is USD/US-only. */
+  currency: string;
 };
 
 /** Thin DB interface. */
@@ -71,6 +73,13 @@ export async function handleHsaTag(
   }
   if (found.data.seeker_id !== user_id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  // HSA/FSA tagging is US-only — reject tagging a non-USD payment.
+  if (found.data.currency.toLowerCase() !== "usd") {
+    return NextResponse.json(
+      { error: "HSA/FSA tagging is US-only" },
+      { status: 403 },
+    );
   }
 
   const taggedAt = eligible ? now.toISOString() : null;

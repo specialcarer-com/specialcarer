@@ -55,7 +55,7 @@ export default function ExpensesClient() {
   const [totalCents, setTotalCents] = useState(0);
   const [count, setCount] = useState(0);
   const [err, setErr] = useState<string | null>(null);
-  const [savingId, setSavingId] = useState<string | null>(null);
+  const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
 
   const load = useCallback(async (y: number) => {
     setLoading(true);
@@ -89,7 +89,8 @@ export default function ExpensesClient() {
   }, [year, load]);
 
   async function toggle(p: Payment, next: boolean) {
-    setSavingId(p.id);
+    if (savingIds.has(p.id)) return;
+    setSavingIds((s) => new Set(s).add(p.id));
     setErr(null);
     // Optimistic update.
     setPayments((prev) =>
@@ -113,7 +114,11 @@ export default function ExpensesClient() {
       setCount((c) => c - (next ? 1 : -1));
       setErr("Couldn't update that payment. Please try again.");
     } finally {
-      setSavingId(null);
+      setSavingIds((s) => {
+        const n = new Set(s);
+        n.delete(p.id);
+        return n;
+      });
     }
   }
 
@@ -208,9 +213,7 @@ export default function ExpensesClient() {
               <div className="flex-shrink-0 pl-3">
                 <Toggle
                   checked={p.eligible}
-                  onChange={(v) => {
-                    if (savingId !== p.id) void toggle(p, v);
-                  }}
+                  onChange={(v) => void toggle(p, v)}
                   label="HSA/FSA eligible"
                 />
               </div>
