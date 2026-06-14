@@ -26,6 +26,7 @@ import { SosButton } from "../_components/SosButton";
 import { isSosButtonVisible } from "../_components/sos-visibility";
 import { TasksSection } from "@/lib/booking-tasks/TasksSection";
 import FindCarersCard from "./FindCarersCard";
+import DesignatedPayerCard from "./DesignatedPayerCard";
 import { serviceLabel, formatMoney } from "@/lib/care/services";
 import type { ApiBookingDetail } from "@/app/api/m/bookings/[id]/route";
 
@@ -349,6 +350,12 @@ function BookingDetailInner() {
             }}
           />
         )}
+
+        {/* Designated payer (gap 31) — self-hides unless flag on + seeker. */}
+        <DesignatedPayerCard
+          bookingId={data.id}
+          isSeeker={data.as_role === "seeker"}
+        />
 
         {/* Payment status — visible only when a payment row exists. */}
         {data.payment && (
