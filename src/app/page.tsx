@@ -22,13 +22,13 @@ export const metadata: Metadata = {
     "Special Carers — Vetted UK Carers, Babysitters & Nannies | specialcarers.com",
   description:
     "Find a Special Carer — DBS-checked RSWs, HCAs, babysitters and nannies in London and across the UK. Book vetted care in minutes.",
-  alternates: { canonical: "https://specialcarer.com/" },
+  alternates: { canonical: "https://www.specialcarers.com/" },
   openGraph: {
     title:
       "Special Carers — Vetted UK Carers, Babysitters & Nannies | specialcarers.com",
     description:
       "Find a Special Carer — DBS-checked RSWs, HCAs, babysitters and nannies in London and across the UK. Book vetted care in minutes.",
-    url: "https://specialcarer.com/",
+    url: "https://www.specialcarers.com/",
     siteName: "SpecialCarers",
     type: "website",
     images: [
@@ -79,8 +79,8 @@ export default async function Home() {
       {
         "@type": "Organization",
         name: "SpecialCarers",
-        url: "https://specialcarer.com",
-        logo: "https://specialcarer.com/icon.png",
+        url: "https://www.specialcarers.com",
+        logo: "https://www.specialcarers.com/icon.png",
         sameAs: [],
         parentOrganization: {
           "@type": "Organization",
@@ -97,11 +97,11 @@ export default async function Home() {
       },
       {
         "@type": "WebSite",
-        url: "https://specialcarer.com",
+        url: "https://www.specialcarers.com",
         name: "SpecialCarers",
         potentialAction: {
           "@type": "SearchAction",
-          target: "https://specialcarer.com/find-care?q={query}",
+          target: "https://www.specialcarers.com/find-care?q={query}",
           "query-input": "required name=query",
         },
       },

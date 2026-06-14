@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title: "SpecialCarers — Trusted care, on your schedule",
   description:
     "On-demand and scheduled childcare, elder care, and home support from vetted, DBS-checked caregivers across the UK.",
-  metadataBase: new URL("https://specialcarer.com"),
+  metadataBase: new URL("https://www.specialcarers.com"),
   manifest: "/site.webmanifest",
   icons: {
     icon: [
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "SpecialCarers",
     description: "Trusted care, on your schedule.",
-    url: "https://specialcarer.com",
+    url: "https://www.specialcarers.com",
     siteName: "SpecialCarers",
     type: "website",
     images: [

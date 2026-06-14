@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: "For organisations — SpecialCarers",
   description:
     "Vetted carers for councils, NHS trusts, fostering agencies, residential homes, schools, and charities. Master Services Agreement and DPA in place. Strict verification of every buyer.",
-  alternates: { canonical: "https://specialcarer.com/organisations" },
+  alternates: { canonical: "https://www.specialcarers.com/organisations" },
   robots: { index: true, follow: true },
   keywords: [
     "hire vetted carers organisation",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     title: "SpecialCarers for organisations",
     description:
       "Vetted carers for councils, NHS, fostering agencies, residential homes, schools and charities. MSA + DPA in place.",
-    url: "https://specialcarer.com/organisations",
+    url: "https://www.specialcarers.com/organisations",
     siteName: "SpecialCarers",
     type: "website",
     images: [

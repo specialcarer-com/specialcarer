@@ -59,7 +59,7 @@ export default function PrivacyPage() {
         <li>
           <strong>You can</strong> access, export, correct, or delete your
           data at any time at{" "}
-          <a href="/account/delete">specialcarer.com/account/delete</a> or by
+          <a href="/account/delete">specialcarers.com/account/delete</a> or by
           emailing{" "}
           <a href="mailto:privacy@allcare4u.co.uk">privacy@allcare4u.co.uk</a>.
         </li>
@@ -398,7 +398,7 @@ export default function PrivacyPage() {
 
       <h2 id="security">Security</h2>
       <ul>
-        <li>All traffic to specialcarer.com is encrypted with TLS 1.2+.</li>
+        <li>All traffic to specialcarers.com is encrypted with TLS 1.2+.</li>
         <li>
           Passwords are hashed with bcrypt by Supabase Auth; we never see
           them.
