@@ -30,6 +30,7 @@ import type {
 } from "@/app/api/m/bookings/upcoming/route";
 import type { ApiRecentCarer } from "@/app/api/m/carers/recent/route";
 import { CarerTile } from "../_components/CarerTile";
+import PredictiveSlotCard from "./PredictiveSlotCard";
 
 /**
  * Home (seeker) — Figma 7:1652.
@@ -311,6 +312,11 @@ export default function SeekerHomeClient() {
           </div>
         </>
       )}
+
+      {/* Predictive "usual time" tile — one-tap rebook of the seeker's
+          detected recurring slot. Renders nothing when there's no such
+          slot (API 204). Sits directly below the Book again strip. */}
+      <PredictiveSlotCard />
 
       {/* Care journal quick-access. */}
       <SectionTitle title="Care journal" />
