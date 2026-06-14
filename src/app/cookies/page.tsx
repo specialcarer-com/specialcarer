@@ -59,7 +59,7 @@ export default function CookiesPage() {
         <tbody>
           <tr>
             <td>sb-access-token, sb-refresh-token</td>
-            <td>specialcarer.com (via Supabase Auth)</td>
+            <td>specialcarers.com (via Supabase Auth)</td>
             <td>Keeps you signed in</td>
             <td>Session / 7 days</td>
           </tr>
@@ -71,13 +71,13 @@ export default function CookiesPage() {
           </tr>
           <tr>
             <td>sc_csrf</td>
-            <td>specialcarer.com</td>
+            <td>specialcarers.com</td>
             <td>CSRF protection on form submissions</td>
             <td>Session</td>
           </tr>
           <tr>
             <td>sc_consent</td>
-            <td>specialcarer.com</td>
+            <td>specialcarers.com</td>
             <td>Remembers your cookie-consent choice</td>
             <td>1 year</td>
           </tr>
@@ -102,7 +102,7 @@ export default function CookiesPage() {
         <tbody>
           <tr>
             <td>sc_anon</td>
-            <td>specialcarer.com</td>
+            <td>specialcarers.com</td>
             <td>
               Anonymous device identifier for product analytics
               (page views, conversion funnel). No name, email, or IP is
@@ -121,7 +121,7 @@ export default function CookiesPage() {
       <h2 id="control">How to control cookies</h2>
       <ul>
         <li>
-          When you first visit specialcarer.com you will see a banner
+          When you first visit specialcarers.com you will see a banner
           letting you accept or decline non-essential cookies. You can
           change your choice at any time using the &quot;Cookie settings&quot;
           link in the footer.
