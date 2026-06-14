@@ -17,15 +17,13 @@
  */
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Avatar,
   BottomNav,
   Card,
-  IconAward,
   IconBag,
   IconCal,
-  IconCert,
   IconChevronRight,
   IconClock,
   IconPin,
@@ -37,6 +35,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { serviceLabel } from "@/lib/care/services";
 import GoOnlineCard from "./GoOnlineCard";
+import TipOfTheDay from "./TipOfTheDay";
 
 type EarningsSummary = {
   today_cents: number;
@@ -237,8 +236,6 @@ export default function CarerHomeClient() {
     };
   }, []);
 
-  const tip = useMemo(() => pickTip(), []);
-
   return (
     <main className="min-h-[100dvh] bg-bg-screen sc-with-bottom-nav">
       {/* Teal hero header — distinct from seeker home (white) */}
@@ -335,6 +332,9 @@ export default function CarerHomeClient() {
 
       {/* Go online toggle (gap 18) — availability presence for seekers */}
       <GoOnlineCard />
+
+      {/* Tip of the day (gap 46) — rotating daily strip */}
+      <TipOfTheDay />
 
       {/* Next shift card */}
       {activeJob && (
@@ -561,38 +561,6 @@ export default function CarerHomeClient() {
         </>
       )}
 
-      {/* Tip of the day */}
-      <SectionTitle title="Tip of the day" />
-      <div className="px-4 pb-6">
-        <Card>
-          <div className="flex items-start gap-3">
-            <span
-              className="grid h-11 w-11 flex-none place-items-center rounded-full"
-              style={{
-                background: "rgba(3,158,160,0.10)",
-                color: "#039EA0",
-              }}
-              aria-hidden
-            >
-              {tip.icon === "award" ? <IconAward /> : <IconCert />}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-bold text-heading">{tip.title}</p>
-              <p className="mt-0.5 text-[12px] text-subheading">{tip.body}</p>
-              {tip.cta && tip.href && (
-                <Link
-                  href={tip.href}
-                  className="mt-2 inline-flex items-center gap-1 text-[13px] font-bold text-primary"
-                >
-                  {tip.cta}
-                  <IconChevronRight />
-                </Link>
-              )}
-            </div>
-          </div>
-        </Card>
-      </div>
-
       <BottomNav active="home" role="carer" />
     </main>
   );
@@ -650,61 +618,4 @@ function QuickAction({
       </div>
     </Link>
   );
-}
-
-/* ──────────────────────────────────────────────────────────────────
-   Tip of the day — rotates by date so it feels fresh without
-   needing a backend for now.
-   ────────────────────────────────────────────────────────────────── */
-type Tip = {
-  icon: "award" | "cert";
-  title: string;
-  body: string;
-  cta?: string;
-  href?: string;
-};
-
-const TIPS: Tip[] = [
-  {
-    icon: "award",
-    title: "Carers with a photo get 2× more bookings",
-    body: "A clear, friendly headshot helps families pick you faster.",
-    cta: "Update profile",
-    href: "/m/profile",
-  },
-  {
-    icon: "cert",
-    title: "Add an extra certification",
-    body: "First-aid, dementia, or moving-and-handling certs unlock higher-paying shifts.",
-    cta: "Add certification",
-    href: "/m/profile",
-  },
-  {
-    icon: "award",
-    title: "Open your weekend availability",
-    body: "Saturday and Sunday shifts pay up to 30% more on SpecialCarers.",
-    cta: "Set availability",
-    href: "/m/schedule",
-  },
-  {
-    icon: "cert",
-    title: "Reply within 30 minutes",
-    body: "Carers who reply quickly get priority on new invites.",
-  },
-  {
-    icon: "award",
-    title: "Refer a fellow carer",
-    body: "Earn a bonus when someone you refer completes their first shift.",
-    cta: "View referrals",
-    href: "/m/profile",
-  },
-];
-
-function pickTip(): Tip {
-  // Day-of-year rotation
-  const now = new Date();
-  const start = new Date(now.getFullYear(), 0, 0);
-  const diff = now.getTime() - start.getTime();
-  const day = Math.floor(diff / 86_400_000);
-  return TIPS[day % TIPS.length];
 }
