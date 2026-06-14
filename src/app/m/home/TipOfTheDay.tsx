@@ -11,19 +11,44 @@
  * the rest of the carer home surface.
  */
 
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { CARER_TIPS } from "@/lib/tips/carerTips";
-import { selectTipForDate } from "@/lib/tips/selectTip";
+import { tipIndexForDate } from "@/lib/tips/selectTip";
 
 const TEAL = "#039EA0";
 const CREAM = "#F4EFE6";
 
+function msUntilNextUtcMidnight(now: Date): number {
+  const next = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate() + 1,
+  );
+  return next - now.getTime();
+}
+
 export default function TipOfTheDay() {
-  const { tip, number, total } = useMemo(() => {
-    const t = selectTipForDate(new Date(), CARER_TIPS);
-    const idx = CARER_TIPS.findIndex((x) => x.id === t.id);
-    return { tip: t, number: idx + 1, total: CARER_TIPS.length };
+  // Re-derive the index whenever `day` changes; a timer bumps it at the next
+  // UTC midnight so the tip refreshes for carers who leave the page open.
+  const [index, setIndex] = useState(() =>
+    tipIndexForDate(new Date(), CARER_TIPS.length),
+  );
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const scheduleNext = () => {
+      timer = setTimeout(() => {
+        setIndex(tipIndexForDate(new Date(), CARER_TIPS.length));
+        scheduleNext();
+      }, msUntilNextUtcMidnight(new Date()) + 1000);
+    };
+    scheduleNext();
+    return () => clearTimeout(timer);
   }, []);
+
+  const tip = CARER_TIPS[index];
+  const number = index + 1;
+  const total = CARER_TIPS.length;
 
   return (
     <div className="px-4 pt-4">

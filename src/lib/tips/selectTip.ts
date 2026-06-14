@@ -15,16 +15,25 @@ export function dayOfYearUTC(date: Date): number {
 }
 
 /**
+ * Index into `tips` for a given calendar day (UTC) — day-of-year mod length,
+ * so it advances by one each day and cycles back to the start once the list
+ * is exhausted (including across year boundaries).
+ */
+export function tipIndexForDate(date: Date, length: number): number {
+  if (length <= 0) {
+    throw new Error("tipIndexForDate: length must be positive");
+  }
+  return (dayOfYearUTC(date) - 1) % length;
+}
+
+/**
  * Deterministically pick one tip for a given calendar day (UTC).
  *
- * Pure: same `date` and `tips` always yield the same tip, and the choice
- * advances by one each day, cycling back to the start after the list is
- * exhausted (including across year boundaries).
+ * Pure: same `date` and `tips` always yield the same tip.
  */
 export function selectTipForDate(date: Date, tips: Tip[]): Tip {
   if (tips.length === 0) {
     throw new Error("selectTipForDate: tips must not be empty");
   }
-  const index = (dayOfYearUTC(date) - 1) % tips.length;
-  return tips[index];
+  return tips[tipIndexForDate(date, tips.length)];
 }

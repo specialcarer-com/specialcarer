@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { selectTipForDate, dayOfYearUTC } from "./selectTip";
+import { selectTipForDate, dayOfYearUTC, tipIndexForDate } from "./selectTip";
 import type { Tip } from "./carerTips";
 import { CARER_TIPS } from "./carerTips";
 
@@ -23,6 +23,18 @@ describe("dayOfYearUTC", () => {
     const morning = new Date(Date.UTC(2026, 5, 14, 1, 0, 0));
     const night = new Date(Date.UTC(2026, 5, 14, 23, 59, 59));
     assert.equal(dayOfYearUTC(morning), dayOfYearUTC(night));
+  });
+});
+
+describe("tipIndexForDate", () => {
+  it("is 0-based and matches the tip selected for the day", () => {
+    const date = new Date(Date.UTC(2026, 0, 2)); // day 2 -> index 1
+    assert.equal(tipIndexForDate(date, TIPS.length), 1);
+    assert.equal(selectTipForDate(date, TIPS).id, TIPS[1].id);
+  });
+
+  it("throws on a non-positive length", () => {
+    assert.throws(() => tipIndexForDate(new Date(), 0));
   });
 });
 
