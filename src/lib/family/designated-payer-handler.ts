@@ -14,6 +14,10 @@ import {
   type HouseholdClient,
   type HouseholdMember,
 } from "./household";
+import {
+  reissueIntentForPayer,
+  type ReissueAdapter,
+} from "./designated-payer-reissue";
 
 /** Minimal booking row we need for authorisation + current payer. */
 export type DesignatedPayerBookingRow = {
@@ -108,12 +112,29 @@ export type HandleSetInput = {
   payerUserId: unknown;
   flagEnabled: boolean;
   client: DesignatedPayerClient;
+  /**
+   * Optional PaymentIntent re-issue adapter (rollout plan Option B). When
+   * provided and a non-null payer is set with the flag on, the handler cancels
+   * any pre-charge intent on the booking and re-creates it billed to the payer.
+   * Omitted in the pure unit tests that only exercise the column-write path.
+   */
+  reissue?: ReissueAdapter;
+  /** Injectable logger so tests can assert the canary lines. */
+  logger?: Pick<typeof console, "warn" | "info" | "error">;
 };
 
 export async function handleSetDesignatedPayer(
   input: HandleSetInput,
 ): Promise<NextResponse> {
-  const { user_id, booking_id, payerUserId, flagEnabled, client } = input;
+  const {
+    user_id,
+    booking_id,
+    payerUserId,
+    flagEnabled,
+    client,
+    reissue,
+    logger = console,
+  } = input;
 
   if (!flagEnabled) {
     return NextResponse.json(FEATURE_DISABLED, { status: 403 });
@@ -169,6 +190,8 @@ export async function handleSetDesignatedPayer(
     );
   }
 
+  const previousPayer = booking.data.designated_payer_user_id;
+
   const upd = await client.setDesignatedPayer(booking_id, payer);
   if (upd.error) {
     return NextResponse.json(
@@ -181,13 +204,112 @@ export async function handleSetDesignatedPayer(
     ? members.find((m) => m.user_id === payer)?.display_name ?? null
     : null;
 
-  const body: GetDesignatedPayerResponse = {
+  const base: GetDesignatedPayerResponse = {
     designatedPayerUserId: payer,
     designatedPayerName: payerName,
     isFlagEnabled: true,
     householdAdults: members,
   };
-  return NextResponse.json(body, { status: 200 });
+
+  // Attempt PaymentIntent re-issue (rollout plan Option B). Only when a real
+  // payer (not a clear, not the seeker themselves) is set and the route wired
+  // a Stripe adapter. Clearing the payer or setting the seeker as payer never
+  // re-issues — there is nothing to bill to a different customer.
+  const shouldReissue =
+    reissue !== undefined && payer !== null && payer !== user_id;
+
+  if (!shouldReissue) {
+    logger.info(
+      JSON.stringify({
+        event: "designated_payer_set",
+        bookingId: booking_id,
+        seekerId: user_id,
+        payerId: payer,
+        flagEnabled: true,
+        intentReissued: false,
+      }),
+    );
+    return NextResponse.json(base, { status: 200 });
+  }
+
+  const result = await reissueIntentForPayer({
+    bookingId: booking_id,
+    seekerId: user_id,
+    payerUserId: payer,
+    adapter: reissue!,
+    logger,
+  });
+
+  if (result.kind === "failed") {
+    // Roll back the column so the booking's stored payer matches its intent.
+    await client.setDesignatedPayer(booking_id, previousPayer);
+    return NextResponse.json(
+      {
+        error: "Failed to re-issue payment intent",
+        phase: result.phase,
+        code: result.code,
+      },
+      { status: 500 },
+    );
+  }
+
+  logger.info(
+    JSON.stringify({
+      event: "designated_payer_set",
+      bookingId: booking_id,
+      seekerId: user_id,
+      payerId: payer,
+      flagEnabled: true,
+      intentReissued: result.kind === "reissued",
+    }),
+  );
+
+  switch (result.kind) {
+    case "reissued":
+      return NextResponse.json(
+        {
+          ...base,
+          ok: true,
+          intentReissued: true,
+          newIntentId: result.newIntentId,
+          payerHasPaymentMethod: true,
+        },
+        { status: 200 },
+      );
+    case "no_pm":
+      return NextResponse.json(
+        {
+          ...base,
+          ok: true,
+          intentReissued: false,
+          payerHasPaymentMethod: false,
+          warning: "payer_no_pm_will_fallback",
+        },
+        { status: 200 },
+      );
+    case "already_in_flight":
+      return NextResponse.json(
+        {
+          ...base,
+          ok: true,
+          intentReissued: false,
+          reason: "intent_already_in_flight",
+          payerSetForFutureCharges: true,
+        },
+        { status: 200 },
+      );
+    case "no_intent":
+      return NextResponse.json(
+        {
+          ...base,
+          ok: true,
+          intentReissued: false,
+          reason: "no_existing_intent",
+          payerSetForFutureCharges: true,
+        },
+        { status: 200 },
+      );
+  }
 }
 
 export type { HouseholdMember };
