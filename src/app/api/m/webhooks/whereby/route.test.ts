@@ -1,8 +1,8 @@
 /**
  * Tests for the Whereby webhook route. The route has no next/headers / cookie
  * dependency, so we drive POST directly with a real Request and a real
- * Whereby-Signature header (t=<unix_s>,v1=<hex>) computed against
- * WHEREBY_WEBHOOK_SECRET over `${t}.${body}`.
+ * "Whereby-Signature" header ("t=<unix_seconds>,v1=<hex_hmac>") computed against
+ * WHEREBY_WEBHOOK_SECRET.
  */
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
@@ -11,8 +11,7 @@ import { POST } from "./route";
 
 const SECRET = "whsec_test";
 
-function sign(body: string): string {
-  const t = Math.floor(Date.now() / 1000);
+function sign(body: string, t: number = Math.floor(Date.now() / 1000)): string {
   const v1 = crypto
     .createHmac("sha256", SECRET)
     .update(`${t}.${body}`)
@@ -62,8 +61,15 @@ describe("POST /api/m/webhooks/whereby", () => {
 
   it("returns 401 for an invalid signature", async () => {
     const body = JSON.stringify({ type: "room.client.left" });
-    const t = Math.floor(Date.now() / 1000);
-    const res = await POST(request(body, `t=${t},v1=deadbeef`));
+    const ts = Math.floor(Date.now() / 1000);
+    const res = await POST(request(body, `t=${ts},v1=deadbeef`));
+    assert.equal(res.status, 401);
+  });
+
+  it("returns 401 for a stale timestamp (replay protection)", async () => {
+    const body = JSON.stringify({ type: "room.client.left" });
+    const stale = Math.floor(Date.now() / 1000) - 600;
+    const res = await POST(request(body, sign(body, stale)));
     assert.equal(res.status, 401);
   });
 

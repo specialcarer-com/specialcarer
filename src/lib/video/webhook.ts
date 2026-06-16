@@ -1,11 +1,11 @@
 /**
  * Whereby webhook signature verification.
  *
- * Whereby signs webhook deliveries with the header
- *   Whereby-Signature: t=<unix_seconds>,v1=<hex_hmac>
- * where the HMAC-SHA256 is computed over `${t}.${rawBody}` using
- * WHEREBY_WEBHOOK_SECRET. We verify in constant time and reject deliveries
- * whose timestamp is outside the replay window.
+ * Whereby signs webhook deliveries with a "Whereby-Signature" header of the
+ * form "t=<unix_seconds>,v1=<hex_hmac>". The HMAC-SHA256 is computed over
+ * `${t}.${rawBody}` using WHEREBY_WEBHOOK_SECRET. We parse the t/v1 pair,
+ * reject timestamps outside a 5-minute window (replay protection), then
+ * compare the signature in constant time.
  */
 import crypto from "crypto";
 
@@ -24,20 +24,21 @@ export function verifyWherebySignature(
   if (!signatureHeader || !secret) return false;
 
   // Whereby format: "t=<unix_seconds>,v1=<hex_hmac>"
-  const parts = signatureHeader
-    .split(",")
-    .reduce<Record<string, string>>((acc, part) => {
+  const parts = signatureHeader.split(",").reduce<Record<string, string>>(
+    (acc, part) => {
       const eq = part.indexOf("=");
       if (eq === -1) return acc;
       acc[part.slice(0, eq).trim()] = part.slice(eq + 1).trim();
       return acc;
-    }, {});
+    },
+    {},
+  );
 
   const t = parts["t"];
   const v1 = parts["v1"];
   if (!t || !v1) return false;
 
-  // Replay protection
+  // Replay protection: reject timestamps too far from now in either direction.
   const ts = Number.parseInt(t, 10);
   if (!Number.isFinite(ts)) return false;
   if (Math.abs(now / 1000 - ts) > MAX_TIMESTAMP_SKEW_SECONDS) return false;
