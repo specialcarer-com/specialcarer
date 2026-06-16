@@ -1,38 +1,71 @@
 /**
  * Whereby webhook signature verification.
  *
- * Whereby signs webhook deliveries with an HMAC-SHA256 over the raw request
- * body using WHEREBY_WEBHOOK_SECRET. We verify in constant time and tolerate a
- * "sha256=" prefix on the provided signature (same convention as the uCheck
- * webhook).
+ * Whereby signs webhook deliveries with the header
+ *   Whereby-Signature: t=<unix_seconds>,v1=<hex_hmac>
+ * where the HMAC-SHA256 is computed over `${t}.${rawBody}` using
+ * WHEREBY_WEBHOOK_SECRET. We verify in constant time and reject deliveries
+ * whose timestamp is outside the replay window.
  */
 import crypto from "crypto";
 
+/**
+ * Max allowed clock skew / replay window for Whereby webhook timestamps.
+ * Whereby docs recommend a few minutes; we use 5.
+ */
+const MAX_TIMESTAMP_SKEW_SECONDS = 300;
+
 export function verifyWherebySignature(
   rawBody: string,
-  signature: string | null,
+  signatureHeader: string | null,
+  now: number = Date.now(),
 ): boolean {
   const secret = process.env.WHEREBY_WEBHOOK_SECRET;
-  if (!signature || !secret) return false;
+  if (!signatureHeader || !secret) return false;
 
+  // Whereby format: "t=<unix_seconds>,v1=<hex_hmac>"
+  const parts = signatureHeader
+    .split(",")
+    .reduce<Record<string, string>>((acc, part) => {
+      const eq = part.indexOf("=");
+      if (eq === -1) return acc;
+      acc[part.slice(0, eq).trim()] = part.slice(eq + 1).trim();
+      return acc;
+    }, {});
+
+  const t = parts["t"];
+  const v1 = parts["v1"];
+  if (!t || !v1) return false;
+
+  // Replay protection
+  const ts = Number.parseInt(t, 10);
+  if (!Number.isFinite(ts)) return false;
+  if (Math.abs(now / 1000 - ts) > MAX_TIMESTAMP_SKEW_SECONDS) return false;
+
+  const signedPayload = `${t}.${rawBody}`;
   const computed = crypto
     .createHmac("sha256", secret)
-    .update(rawBody)
+    .update(signedPayload)
     .digest("hex");
 
-  const provided = signature.replace(/^sha256=/, "").toLowerCase();
-  if (provided.length !== computed.length) return false;
+  if (v1.length !== computed.length) return false;
 
-  return crypto.timingSafeEqual(
-    Buffer.from(provided, "hex"),
-    Buffer.from(computed, "hex"),
-  );
+  try {
+    return crypto.timingSafeEqual(
+      Buffer.from(v1, "hex"),
+      Buffer.from(computed, "hex"),
+    );
+  } catch {
+    return false;
+  }
 }
 
 export const KNOWN_WEBHOOK_EVENTS = [
   "room.client.joined",
   "room.client.left",
-  "recording.ready",
+  "room.session.started",
+  "room.session.ended",
+  "recording.finished",
 ] as const;
 
 export type WherebyWebhookEvent = (typeof KNOWN_WEBHOOK_EVENTS)[number];
