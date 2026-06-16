@@ -36,6 +36,7 @@ import { createClient } from "@/lib/supabase/client";
 import { serviceLabel } from "@/lib/care/services";
 import GoOnlineCard from "./GoOnlineCard";
 import TipOfTheDay from "./TipOfTheDay";
+import VerifyIdentityCard from "@/components/identity/VerifyIdentityCard";
 
 type EarningsSummary = {
   today_cents: number;
@@ -421,6 +422,12 @@ export default function CarerHomeClient() {
           </div>
         </>
       )}
+
+      {/* Identity verification (Veriff). Renders nothing while the
+          IDENTITY_VERIFICATION_ENABLED flag is off. */}
+      <div className="px-4 mt-4">
+        <VerifyIdentityCard />
+      </div>
 
       {/* Find work — always visible, primary CTA */}
       <SectionTitle title="Find work" />

@@ -31,6 +31,7 @@ import type {
 import type { ApiRecentCarer } from "@/app/api/m/carers/recent/route";
 import { CarerTile } from "../_components/CarerTile";
 import PredictiveSlotCard from "./PredictiveSlotCard";
+import VerifyIdentityCard from "@/components/identity/VerifyIdentityCard";
 
 /**
  * Home (seeker) — Figma 7:1652.
@@ -340,6 +341,12 @@ export default function SeekerHomeClient() {
           detected recurring slot. Renders nothing when there's no such
           slot (API 204). Sits directly below the Book again strip. */}
       <PredictiveSlotCard />
+
+      {/* Identity verification (Veriff). Renders nothing while the
+          IDENTITY_VERIFICATION_ENABLED flag is off. */}
+      <div className="px-4 mt-4">
+        <VerifyIdentityCard />
+      </div>
 
       {/* Care journal quick-access. */}
       <SectionTitle title="Care journal" />
