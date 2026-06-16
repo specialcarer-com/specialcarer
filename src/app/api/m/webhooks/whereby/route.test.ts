@@ -1,7 +1,8 @@
 /**
  * Tests for the Whereby webhook route. The route has no next/headers / cookie
- * dependency, so we drive POST directly with a real Request and a real HMAC
- * signature computed against WHEREBY_WEBHOOK_SECRET.
+ * dependency, so we drive POST directly with a real Request and a real
+ * Whereby-Signature header (t=<unix_s>,v1=<hex>) computed against
+ * WHEREBY_WEBHOOK_SECRET over `${t}.${body}`.
  */
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
@@ -11,7 +12,12 @@ import { POST } from "./route";
 const SECRET = "whsec_test";
 
 function sign(body: string): string {
-  return crypto.createHmac("sha256", SECRET).update(body).digest("hex");
+  const t = Math.floor(Date.now() / 1000);
+  const v1 = crypto
+    .createHmac("sha256", SECRET)
+    .update(`${t}.${body}`)
+    .digest("hex");
+  return `t=${t},v1=${v1}`;
 }
 
 function request(body: string, signature: string | null): Request {
@@ -48,15 +54,16 @@ describe("POST /api/m/webhooks/whereby", () => {
     assert.equal(res.status, 200);
   });
 
-  it("tolerates a sha256= prefix on the signature", async () => {
-    const body = JSON.stringify({ type: "recording.ready" });
-    const res = await POST(request(body, `sha256=${sign(body)}`));
+  it("returns 200 for a recording.finished event", async () => {
+    const body = JSON.stringify({ type: "recording.finished" });
+    const res = await POST(request(body, sign(body)));
     assert.equal(res.status, 200);
   });
 
   it("returns 401 for an invalid signature", async () => {
     const body = JSON.stringify({ type: "room.client.left" });
-    const res = await POST(request(body, "deadbeef"));
+    const t = Math.floor(Date.now() / 1000);
+    const res = await POST(request(body, `t=${t},v1=deadbeef`));
     assert.equal(res.status, 401);
   });
 
