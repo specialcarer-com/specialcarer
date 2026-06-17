@@ -69,19 +69,24 @@ function makeClient(opts: {
         };
       }
       if (table === "caregiver_profiles") {
+        const profileResult = async () => ({
+          data: opts.profileError ? null : (opts.profile ?? null),
+          error: opts.profileError ?? null,
+        });
+        // Supports both `.eq(user_id).maybeSingle()` and the
+        // `.eq(user_id).eq(country, "GB").maybeSingle()` chain used by the
+        // UK-only regional scoping path.
         return {
           select() {
             return {
               eq() {
                 return {
-                  async maybeSingle() {
+                  eq() {
                     return {
-                      data: opts.profileError
-                        ? null
-                        : (opts.profile ?? null),
-                      error: opts.profileError ?? null,
+                      maybeSingle: profileResult,
                     };
                   },
+                  maybeSingle: profileResult,
                 };
               },
             };
@@ -279,6 +284,19 @@ describe("getCarerVerifiedStatusWith — flag ON", () => {
     const client = makeClient({ profile: null });
     const out = await getCarerVerifiedStatusWith(client, CARER, true);
     assert.equal(out.status, "pending");
+    assert.equal(out.at, null);
+  });
+
+  it("guards against an invalid verified_at timestamp", async () => {
+    const client = makeClient({
+      profile: {
+        verified_status: "verified",
+        verified_at: "not-a-real-date",
+        certifications: null,
+      },
+    });
+    const out = await getCarerVerifiedStatusWith(client, CARER, true);
+    assert.equal(out.status, "verified");
     assert.equal(out.at, null);
   });
 });
