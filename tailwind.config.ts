@@ -13,8 +13,24 @@ export default {
           500: "#0E7C7B",
           600: "#0B6463",
           700: "#084C4B",
+          // ── Mobile redesign semantic tokens (PR-R1) ──────────────
+          // Behind NEXT_PUBLIC_MOBILE_REDESIGN_ENABLED. Mirrored as CSS
+          // vars in globals.css. Named keys (teal/peach/cream/ink) sit
+          // alongside the marketing scale above without clobbering it.
+          teal: "#039EA0",
+          peach: "#F4A261",
+          cream: "#F4EFE6",
+          ink: "#0F1416",
         },
         accent: { DEFAULT: "#F4A261" },
+
+        // Semantic state colours (WCAG AA, >=4.5:1 on white).
+        state: {
+          success: "#1B7F4B",
+          warning: "#B9651A",
+          error: "#C2362F",
+          info: "#1E6FB8",
+        },
 
         // ── Mobile app palette (Figma "Care App Redesign") ───────────
         // Used by /m/* routes only.
@@ -57,9 +73,21 @@ export default {
         pill: "9999px",
         btn: "12px",
       },
+      // Mobile redesign spacing scale (PR-R1): 4 / 8 / 12 / 16 / 24 px.
+      // Available as p-mobile-xs, gap-mobile-md, etc.
+      spacing: {
+        "mobile-xs": "4px",
+        "mobile-sm": "8px",
+        "mobile-md": "12px",
+        "mobile-lg": "16px",
+        "mobile-xl": "24px",
+      },
       boxShadow: {
         card: "0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.04)",
         nav: "0 -2px 10px rgba(15, 23, 42, 0.05)",
+        // Mobile redesign elevation tokens (PR-R1).
+        "card-sm": "0 1px 2px rgba(15, 20, 22, 0.06)",
+        "card-md": "0 4px 16px rgba(15, 20, 22, 0.10)",
       },
     },
   },

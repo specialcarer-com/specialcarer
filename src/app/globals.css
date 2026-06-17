@@ -5,6 +5,31 @@
 :root {
   --background: #ffffff;
   --foreground: #0f172a;
+
+  /* ───────────────────────────────────────────────────────────────
+     Mobile redesign tokens (PR-R1). Mirror tailwind.config.ts so
+     non-Tailwind contexts (inline styles, third-party widgets) can use
+     the same values. Gated in practice by NEXT_PUBLIC_MOBILE_REDESIGN_ENABLED
+     — the variables are inert until redesigned components consume them.
+     ─────────────────────────────────────────────────────────────── */
+  --brand-teal: #039ea0;
+  --brand-peach: #f4a261;
+  --brand-cream: #f4efe6;
+  --brand-ink: #0f1416;
+
+  --state-success: #1b7f4b;
+  --state-warning: #b9651a;
+  --state-error: #c2362f;
+  --state-info: #1e6fb8;
+
+  --space-mobile-xs: 4px;
+  --space-mobile-sm: 8px;
+  --space-mobile-md: 12px;
+  --space-mobile-lg: 16px;
+  --space-mobile-xl: 24px;
+
+  --shadow-card-sm: 0 1px 2px rgba(15, 20, 22, 0.06);
+  --shadow-card-md: 0 4px 16px rgba(15, 20, 22, 0.1);
 }
 
 html, body { height: 100%; }
