@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { US_REGION_ENABLED } from "@/lib/region";
 
 export const dynamic = "force-dynamic";
 
@@ -113,11 +114,16 @@ export async function GET() {
   const carerName = new Map<string, string | null>();
   const carerAvatar = new Map<string, string | null>();
   if (carerIds.length > 0) {
+    // UK-only regional scoping: caregiver_profiles must be filtered to GB
+    // unless the US launch flag is on. Carers filtered out by the country
+    // gate simply fall back to profiles.full_name / avatar_url below.
+    let carersQuery = supabase
+      .from("caregiver_profiles")
+      .select("user_id, display_name, photo_url")
+      .in("user_id", carerIds);
+    if (!US_REGION_ENABLED) carersQuery = carersQuery.eq("country", "GB");
     const [{ data: carers }, { data: profs }] = await Promise.all([
-      supabase
-        .from("caregiver_profiles")
-        .select("user_id, display_name, photo_url")
-        .in("user_id", carerIds),
+      carersQuery,
       supabase
         .from("profiles")
         .select("id, full_name, avatar_url")

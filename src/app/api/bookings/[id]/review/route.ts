@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { US_REGION_ENABLED } from "@/lib/region";
 import {
   CATEGORY_KEYS,
   MAX_PRIVATE_FEEDBACK,
@@ -98,12 +99,15 @@ export async function GET(
   let caregiverName: string | null = null;
   let caregiverAvatar: string | null = null;
   if (booking.caregiver_id) {
+    // UK-only regional scoping: caregiver_profiles must be filtered to GB
+    // unless the US launch flag is on. Canonical pattern (src/lib/care/search.ts).
+    let carerQuery = admin
+      .from("caregiver_profiles")
+      .select("display_name, photo_url")
+      .eq("user_id", booking.caregiver_id);
+    if (!US_REGION_ENABLED) carerQuery = carerQuery.eq("country", "GB");
     const [{ data: carer }, { data: prof }] = await Promise.all([
-      admin
-        .from("caregiver_profiles")
-        .select("display_name, photo_url")
-        .eq("user_id", booking.caregiver_id)
-        .maybeSingle(),
+      carerQuery.maybeSingle(),
       admin
         .from("profiles")
         .select("full_name, avatar_url")
