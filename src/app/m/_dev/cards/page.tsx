@@ -5,15 +5,26 @@ import {
   CarerCardSkeleton,
   type CarerCardData,
 } from "@/components/m/CarerCard";
+import { isMobileRedesignEnabled } from "@/lib/mobile-redesign/flag";
+import {
+  getCarerQualifications,
+  getCarerVerifiedStatus,
+  qualificationChipLabel,
+} from "@/lib/m/carer-qualifications";
 
 /**
- * Dev-only visual gallery for <CarerCard> (PR-R1). Lets a reviewer eyeball
- * all three variants + skeletons + edge cases without wiring real data.
+ * Dev-only visual gallery for <CarerCard> (PR-R1, extended in PR-R2).
+ *
+ * PR-R1 added the static sample sections. PR-R2 adds a flag-gated "Live data"
+ * section that wires <CarerCard> to the real structured qualifications +
+ * canonical verified_status via the src/lib/m/carer-qualifications helpers.
+ * Pass ?carerId=<uuid> to render a real carer; with no id (or the flag off)
+ * the section is skipped and only the static samples render.
  *
  * Hard-gated: returns 404 in production builds so it never ships. Not linked
- * from any nav.
+ * from any nav. No production carer-card renderer is touched — that is PR-R4.
  */
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
 const sample: CarerCardData = {
   id: "c1",
@@ -73,8 +84,42 @@ function Section({
   );
 }
 
-export default function CardsDevPage() {
+/**
+ * Build a CarerCardData from the PR-R2 structured helpers. Returns null on any
+ * failure so the gallery still renders its static samples. Dev-only path.
+ */
+async function loadLiveCarer(
+  carerId: string,
+): Promise<CarerCardData | null> {
+  try {
+    const [quals, verified] = await Promise.all([
+      getCarerQualifications(carerId),
+      getCarerVerifiedStatus(carerId),
+    ]);
+    return {
+      id: carerId,
+      displayName: `Carer ${carerId.slice(0, 8)}`,
+      avatarUrl: null,
+      verified: verified.status === "verified",
+      qualifications: quals.map(qualificationChipLabel),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export default async function CardsDevPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ carerId?: string }>;
+}) {
   if (process.env.NODE_ENV === "production") notFound();
+
+  const { carerId } = await searchParams;
+  const live =
+    isMobileRedesignEnabled() && carerId
+      ? await loadLiveCarer(carerId)
+      : null;
 
   return (
     <main className="font-display mx-auto flex max-w-[680px] flex-col gap-mobile-xl bg-brand-cream p-mobile-lg">
@@ -86,6 +131,18 @@ export default function CardsDevPage() {
           PR-R1 dev preview — not shipped to production.
         </p>
       </header>
+
+      {live && (
+        <Section title="Live data (PR-R2, flag on)">
+          <div className="flex flex-col gap-mobile-md">
+            <CarerCard carer={live} variant="list" href="#" />
+            <div className="grid grid-cols-2 gap-mobile-md">
+              <CarerCard carer={live} variant="tile" href="#" />
+              <CarerCard carer={live} variant="inline" href="#" />
+            </div>
+          </div>
+        </Section>
+      )}
 
       <Section title="Inline (carousel)">
         <div className="flex gap-mobile-md overflow-x-auto pb-mobile-sm">
