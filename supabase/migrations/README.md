@@ -101,3 +101,29 @@ To rewrite history cleanly, run `repair.sh` once — it issues the
 `supabase migration repair` commands that re-stamp each manual entry
 under its repo filename version. This is one-shot cleanup; it is not
 required for the workflow to function.
+
+## Baseline migration — `20260617120000_baseline_schema.sql`
+
+Three tables — `caregiver_profiles`, `reviews`, `background_checks` —
+were created directly in the Supabase **dashboard** before this
+migration folder existed. Later migrations `ALTER` them, index them and
+add RLS policies, but no `CREATE TABLE` for them ever lived in the repo.
+A fresh `supabase db reset` therefore failed (the ALTERs had no table to
+target). The baseline file captures these **pre-migration-system tables**
+so a from-scratch build matches production.
+
+Rules going forward:
+
+- **All schema changes must be numbered migrations** in this folder — no
+  more dashboard edits. The baseline is the last out-of-band schema we
+  intend to absorb.
+- The baseline is **idempotent** (every statement `IF NOT EXISTS` /
+  guarded), so it is a **no-op on prod** and safe to re-run.
+- ⚠️ The baseline was authored **without access to a live `db dump`**, so
+  some column types/defaults are best-effort and marked `UNVERIFIED` in
+  the file header. Before relying on it as the source of truth, a
+  maintainer with a Supabase PAT must run
+  `supabase db dump --schema public` and reconcile. See
+  `mobile_redesign/db_drift_report.md` for the full drift analysis,
+  including the separate ~120-remote-vs-87-repo migration-ledger mismatch
+  that currently keeps CI auto-apply disabled.
