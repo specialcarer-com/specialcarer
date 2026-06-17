@@ -9,7 +9,6 @@ export default function ExistingDbsPage() {
   const router = useRouter();
   const [certNumber, setCertNumber] = useState("");
   const [kind, setKind] = useState<"adult" | "child">("adult");
-  const [dob, setDob] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -31,7 +30,6 @@ export default function ExistingDbsPage() {
           body: JSON.stringify({
             certificateNumber: certNumber.trim(),
             kind,
-            dateOfBirth: dob,
           }),
         });
       } catch {
@@ -83,7 +81,7 @@ export default function ExistingDbsPage() {
         ) : (
           <form onSubmit={submit} className="rounded-card bg-white p-4 shadow-card space-y-4">
             {err && (
-              <div className="rounded-lg bg-rose-50 p-3 text-[13px] text-rose-700">
+              <div className="rounded-lg bg-accent/10 p-3 text-[13px] text-ink">
                 {err}
               </div>
             )}
@@ -111,18 +109,6 @@ export default function ExistingDbsPage() {
                 <option value="adult">Adult</option>
                 <option value="child">Child</option>
               </select>
-            </label>
-
-            <label className="block text-[13px]">
-              <span className="mb-1 block font-medium text-heading">
-                Date of birth
-              </span>
-              <input
-                type="date"
-                value={dob}
-                onChange={(e) => setDob(e.target.value)}
-                className="w-full rounded-lg border border-line px-3 py-2"
-              />
             </label>
 
             <button

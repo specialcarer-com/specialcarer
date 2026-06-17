@@ -342,7 +342,7 @@ export async function chooseUpfrontPayment(
 
 /**
  * Self-verify path: a carer who already holds a live Update-Service DBS gives
- * us their certificate number + DOB; we validate it via the vendor's Update
+ * us their certificate number; we validate it via the vendor's Update
  * Service API. On a 'clear' result we create an approved, Update-Service-
  * enrolled application for the requested kind with recovery waived (SC didn't
  * front the £60). Anything else returns invalid so the carer is steered to the
@@ -355,7 +355,6 @@ export async function selfVerifyExistingDbs(
   input: {
     certificateNumber: string;
     kind: DbsKind;
-    dateOfBirth: string;
   },
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
   if (!isDbsEnabled()) throw new DbsDisabledError();
@@ -411,6 +410,7 @@ export async function selfVerifyExistingDbs(
     update_service_last_checked_at: nowIso,
     decision_at: nowIso,
     recovery_status: "waived",
+    cost_pence: 0,
   };
 
   if (existing) {
@@ -419,7 +419,6 @@ export async function selfVerifyExistingDbs(
     await admin.from("dbs_applications").insert({
       carer_id: carerId,
       kind: input.kind,
-      cost_pence: 0,
       ...patch,
     });
   }

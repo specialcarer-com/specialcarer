@@ -325,7 +325,6 @@ describe("selfVerifyExistingDbs (MockDbsVendor + fake DB)", () => {
     const result = await selfVerifyExistingDbs("carer-1", {
       certificateNumber: "001234567890",
       kind: "adult",
-      dateOfBirth: "1990-01-01",
     });
     assert.deepEqual(result, { ok: true });
 
@@ -348,7 +347,6 @@ describe("selfVerifyExistingDbs (MockDbsVendor + fake DB)", () => {
     await selfVerifyExistingDbs("carer-1", {
       certificateNumber: "001234567890",
       kind: "child",
-      dateOfBirth: "1990-01-01",
     });
 
     // Still two rows; the child one is now approved + enrolled.
@@ -356,6 +354,7 @@ describe("selfVerifyExistingDbs (MockDbsVendor + fake DB)", () => {
     const child = db.tables.dbs_applications.rows.find((r) => r.kind === "child");
     assert.equal(child?.status, "approved");
     assert.equal(child?.update_service_enrolled, true);
+    assert.equal(child?.cost_pence, 0);
   });
 
   it("returns ok:false (no row written) when the cert is not 'clear'", async () => {
@@ -363,7 +362,6 @@ describe("selfVerifyExistingDbs (MockDbsVendor + fake DB)", () => {
     const result = await selfVerifyExistingDbs("carer-1", {
       certificateNumber: "009999999999",
       kind: "adult",
-      dateOfBirth: "1990-01-01",
     });
     assert.equal(result.ok, false);
     if (!result.ok) assert.match(result.reason, /Update Service/);

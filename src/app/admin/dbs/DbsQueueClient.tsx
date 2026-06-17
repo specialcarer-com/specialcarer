@@ -26,8 +26,8 @@ function crossCheckLabel(passed: boolean | null): {
 } {
   if (passed === null) return { text: "Not run", cls: "text-slate-400" };
   return passed
-    ? { text: "Pass", cls: "text-emerald-600" }
-    : { text: "Mismatch", cls: "text-rose-600" };
+    ? { text: "Pass", cls: "text-primary" }
+    : { text: "Mismatch", cls: "text-accent" };
 }
 
 type SortKey = "submitted_at" | "carer_name" | "kind";

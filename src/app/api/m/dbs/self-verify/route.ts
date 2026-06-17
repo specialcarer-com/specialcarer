@@ -3,7 +3,7 @@
  *
  * Carer self-verify path: validate an existing live Update-Service DBS so the
  * carer doesn't pay for a fresh check. Body:
- *   { certificateNumber: string, kind: "adult"|"child", dateOfBirth: "YYYY-MM-DD" }
+ *   { certificateNumber: string, kind: "adult"|"child" }
  *
  * On a valid certificate the carer's application is created/updated as approved
  * with recovery waived. Gated by NEXT_PUBLIC_DBS_ENABLED (403 when off).
@@ -39,8 +39,6 @@ export async function POST(req: Request) {
   const certificateNumber =
     typeof b.certificateNumber === "string" ? b.certificateNumber.trim() : "";
   const kind = b.kind;
-  const dateOfBirth =
-    typeof b.dateOfBirth === "string" ? b.dateOfBirth.trim() : "";
 
   if (!/^\d{12}$/.test(certificateNumber)) {
     return NextResponse.json(
@@ -54,18 +52,11 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) {
-    return NextResponse.json(
-      { error: "Date of birth must be YYYY-MM-DD." },
-      { status: 400 },
-    );
-  }
 
   try {
     const result = await selfVerifyExistingDbs(user.id, {
       certificateNumber,
       kind,
-      dateOfBirth,
     });
     if (!result.ok) {
       return NextResponse.json({ error: result.reason }, { status: 422 });
