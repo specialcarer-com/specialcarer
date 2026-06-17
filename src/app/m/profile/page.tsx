@@ -29,6 +29,7 @@ import {
 } from "../_components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { MEMBERSHIPS_ENABLED } from "@/lib/memberships/flag";
+import { DBS_ENABLED } from "@/lib/dbs/flag";
 import { useTranslations } from "next-intl";
 import { LanguagePicker } from "./_components/LanguagePicker";
 
@@ -88,6 +89,16 @@ const CAREGIVER_SECTION: Section = {
       icon: <IconCert />,
       label: "Get vetted",
     },
+    // DBS Check — only visible when NEXT_PUBLIC_DBS_ENABLED is on.
+    ...(DBS_ENABLED
+      ? [
+          {
+            href: "/m/dbs",
+            icon: <IconCert />,
+            label: "DBS Check",
+          },
+        ]
+      : []),
     {
       href: "/m/profile/certifications",
       icon: <IconCert />,
