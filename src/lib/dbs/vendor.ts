@@ -1,5 +1,5 @@
 /**
- * DBS application vendor adapter (PR-DBS-1).
+ * DBS application vendor adapter.
  *
  * SpecialCarers applies for a fresh Enhanced DBS on the carer's behalf via a
  * vendor (uCheck). This file is the seam between our service layer and that
@@ -8,11 +8,30 @@
  *   - MockDbsVendor  — in-memory state machine. Default in dev (DBS_VENDOR=mock).
  *                      Deterministic + configurable so the service + admin
  *                      flows can be exercised without a live integration.
- *   - UCheckVendor   — stub. Throws until UCHECK_API_KEY is set; the real
- *                      integration lands in PR-DBS-2.
+ *   - UCheckVendor   — real REST integration (PR-DBS-2). Talks to the uCheck
+ *                      API for fresh applications AND Update Service status.
  *
  * Selected at runtime via the DBS_VENDOR env var (mock | ucheck), defaulting
  * to mock.
+ *
+ * ── uCheck API assumptions (PR-DBS-2) ───────────────────────────────────────
+ * uCheck exposes a RESTful DBS API (https://www.ucheck.co.uk/api/) but the
+ * detailed endpoint contract is only released to partners under an onboarding
+ * agreement (≈8-12 weeks) — there is no public OpenAPI spec. This client is
+ * built against the documented shape with the following ASSUMPTIONS, all of
+ * which are isolated here so a single patch updates them once the partner docs
+ * land:
+ *   - Base URL:   UCHECK_API_BASE (default https://api.ucheck.co.uk/v1).
+ *                 Point this at the sandbox host during onboarding; the prod
+ *                 host once approved. Controlled entirely by env.
+ *   - Auth:       Authorization: Bearer <UCHECK_API_KEY>.
+ *   - Submit:     POST /applications { kind, applicant: {...} }
+ *                 → { id | reference } used as our vendorReference.
+ *   - Status:     GET /applications/{ref} → { status: <uCheck code> }.
+ *   - Update Svc: GET /update-service/{certificateNumber}
+ *                 → { result: 'clear' | 'change_pending' | 'invalidated' }.
+ * TODO(uCheck-partner-docs): confirm exact paths, request/response field names,
+ * and status vocabulary against the partner docs and adjust the maps below.
  */
 
 import type { DbsKind, DbsStatus } from "./types";
@@ -39,12 +58,28 @@ export type GetStatusResult = {
   certificateNumber?: string;
 };
 
+/** Update Service status for a live certificate (self-verify + daily poll). */
+export type UpdateServiceStatus = "clear" | "change_pending" | "invalidated";
+
+export type GetUpdateServiceResult = {
+  status: UpdateServiceStatus;
+  checkedAt: Date;
+};
+
 export interface DbsVendor {
   readonly name: string;
   submitApplication(
     input: SubmitApplicationInput,
   ): Promise<SubmitApplicationResult>;
   getStatus(vendorReference: string): Promise<GetStatusResult>;
+  /**
+   * Query the DBS Update Service for a live certificate. Used by the daily
+   * polling cron and the carer self-verify path. Certificate number is the
+   * 12-digit DBS certificate id.
+   */
+  getUpdateServiceStatus(
+    certificateNumber: string,
+  ): Promise<GetUpdateServiceResult>;
 }
 
 // ── MockDbsVendor ────────────────────────────────────────────────────────────
@@ -67,6 +102,7 @@ export class MockDbsVendor implements DbsVendor {
   readonly name = "mock";
   private store = new Map<string, MockEntry>();
   private counter = 0;
+  private updateService = new Map<string, UpdateServiceStatus>();
 
   async submitApplication(
     input: SubmitApplicationInput,
@@ -103,6 +139,14 @@ export class MockDbsVendor implements DbsVendor {
     };
   }
 
+  async getUpdateServiceStatus(
+    certificateNumber: string,
+  ): Promise<GetUpdateServiceResult> {
+    // Default to 'clear'; tests script other outcomes via configureUpdateService().
+    const status = this.updateService.get(certificateNumber) ?? "clear";
+    return { status, checkedAt: new Date() };
+  }
+
   /**
    * Test helper: script the status path a reference returns on successive
    * getStatus() calls. Not part of the DbsVendor interface.
@@ -119,33 +163,267 @@ export class MockDbsVendor implements DbsVendor {
     if (opts.certificateNumber) entry.certificateNumber = opts.certificateNumber;
   }
 
+  /** Test helper: script an Update Service result for a certificate number. */
+  configureUpdateService(
+    certificateNumber: string,
+    status: UpdateServiceStatus,
+  ): void {
+    this.updateService.set(certificateNumber, status);
+  }
+
   /** Test helper: drop all in-memory state. */
   reset(): void {
     this.store.clear();
+    this.updateService.clear();
     this.counter = 0;
   }
 }
 
-// ── UCheckVendor (stub) ──────────────────────────────────────────────────────
+// ── UCheckVendor (real REST integration) ─────────────────────────────────────
 
-const PR_DBS_2_MESSAGE = "uCheck integration arrives in PR-DBS-2";
+const DEFAULT_UCHECK_BASE = "https://api.ucheck.co.uk/v1";
+const DEFAULT_UCHECK_TIMEOUT_MS = 10_000;
+const UCHECK_RETRY_ATTEMPTS = 3;
+
+function timeoutMs(): number {
+  const raw = process.env.UCHECK_TIMEOUT_MS;
+  const parsed = raw ? Number.parseInt(raw, 10) : NaN;
+  return Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : DEFAULT_UCHECK_TIMEOUT_MS;
+}
+
+export class UCheckApiError extends Error {
+  readonly status: number;
+  readonly body?: unknown;
+  constructor(status: number, message: string, body?: unknown) {
+    super(message);
+    this.name = "UCheckApiError";
+    this.status = status;
+    this.body = body;
+  }
+}
+
+/** Map uCheck application status codes to our internal DbsStatus enum. */
+export function mapUCheckStatus(raw: string): DbsStatus {
+  switch (raw.toLowerCase()) {
+    case "draft":
+    case "created":
+    case "not_started":
+      return "not_started";
+    case "submitted":
+    case "received":
+    case "pending":
+      return "submitted";
+    case "in_progress":
+    case "processing":
+    case "with_dbs":
+    case "countersigned":
+      return "in_progress";
+    case "complete":
+    case "completed":
+    case "clear":
+    case "approved":
+      return "approved";
+    case "rejected":
+    case "declined":
+    case "failed":
+      return "rejected";
+    case "expired":
+    case "withdrawn":
+      return "expired";
+    default:
+      // Unknown codes are treated as still-in-flight rather than guessed
+      // approved/rejected — safest default for a safeguarding gate.
+      return "in_progress";
+  }
+}
+
+/** Map a uCheck Update Service result to our enum. */
+export function mapUCheckUpdateServiceStatus(raw: string): UpdateServiceStatus {
+  switch (raw.toLowerCase()) {
+    case "clear":
+    case "no_change":
+    case "current":
+      return "clear";
+    case "change_pending":
+    case "changed":
+    case "review":
+      return "change_pending";
+    case "invalidated":
+    case "invalid":
+    case "revoked":
+    case "expired":
+      return "invalidated";
+    default:
+      // Conservative: anything unrecognised is treated as needing review.
+      return "change_pending";
+  }
+}
 
 /**
- * Stub for the real uCheck integration. Every method throws until
- * UCHECK_API_KEY is configured — at which point PR-DBS-2 fills in the bodies.
+ * Real uCheck integration. Talks to the uCheck REST API over fetch with a 10s
+ * timeout and exponential-backoff retry (3 attempts) on 5xx / network errors.
+ * 4xx responses fail fast (no retry). Reads UCHECK_API_KEY / UCHECK_API_BASE.
  */
 export class UCheckVendor implements DbsVendor {
   readonly name = "ucheck";
 
-  async submitApplication(
-    _input: SubmitApplicationInput,
-  ): Promise<SubmitApplicationResult> {
-    throw new Error(PR_DBS_2_MESSAGE);
+  private base(): string {
+    return process.env.UCHECK_API_BASE || DEFAULT_UCHECK_BASE;
   }
 
-  async getStatus(_vendorReference: string): Promise<GetStatusResult> {
-    throw new Error(PR_DBS_2_MESSAGE);
+  private apiKey(): string {
+    const key = process.env.UCHECK_API_KEY;
+    if (!key) throw new UCheckApiError(0, "Missing UCHECK_API_KEY");
+    return key;
   }
+
+  private async request<T>(
+    path: string,
+    init: { method: "GET" | "POST"; body?: unknown },
+  ): Promise<T> {
+    const url = `${this.base()}${path}`;
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= UCHECK_RETRY_ATTEMPTS; attempt += 1) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs());
+      try {
+        const res = await fetch(url, {
+          method: init.method,
+          headers: {
+            Authorization: `Bearer ${this.apiKey()}`,
+            Accept: "application/json",
+            ...(init.body ? { "Content-Type": "application/json" } : {}),
+          },
+          body: init.body ? JSON.stringify(init.body) : undefined,
+          signal: controller.signal,
+        });
+
+        // Retry on 5xx; fail fast on 4xx.
+        if (res.status >= 500) {
+          lastError = new UCheckApiError(
+            res.status,
+            `uCheck ${init.method} ${path} failed (${res.status})`,
+            await safeBody(res),
+          );
+          await backoff(attempt);
+          continue;
+        }
+        if (!res.ok) {
+          throw new UCheckApiError(
+            res.status,
+            `uCheck ${init.method} ${path} failed (${res.status})`,
+            await safeBody(res),
+          );
+        }
+        return (await res.json()) as T;
+      } catch (e) {
+        // AbortError (timeout) + network errors are retryable.
+        if (e instanceof UCheckApiError && e.status !== 0) throw e;
+        lastError = e;
+        if (attempt < UCHECK_RETRY_ATTEMPTS) await backoff(attempt);
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    if (lastError instanceof UCheckApiError) throw lastError;
+    const message =
+      lastError instanceof Error ? lastError.message : "uCheck request failed";
+    throw new UCheckApiError(0, message);
+  }
+
+  async submitApplication(
+    input: SubmitApplicationInput,
+  ): Promise<SubmitApplicationResult> {
+    const { carerDetails } = input;
+    const data = await this.request<{ id?: string; reference?: string }>(
+      "/applications",
+      {
+        method: "POST",
+        body: {
+          kind: input.kind,
+          applicant: {
+            firstName: firstNameOf(carerDetails.legalName, carerDetails.surname),
+            lastName: carerDetails.surname,
+            dob: carerDetails.dateOfBirth,
+            address: {
+              line1: carerDetails.addressLine1,
+              postcode: carerDetails.postcode,
+            },
+          },
+        },
+      },
+    );
+    const vendorReference = data.reference ?? data.id;
+    if (!vendorReference) {
+      throw new UCheckApiError(
+        502,
+        "uCheck submitApplication response missing reference",
+        data,
+      );
+    }
+    return { vendorReference };
+  }
+
+  async getStatus(vendorReference: string): Promise<GetStatusResult> {
+    const data = await this.request<{
+      status?: string;
+      decisionAt?: string;
+      completedAt?: string;
+      certificateNumber?: string;
+      certificate?: { number?: string };
+    }>(`/applications/${encodeURIComponent(vendorReference)}`, {
+      method: "GET",
+    });
+    const rawStatus = data.status ?? "in_progress";
+    const decisionRaw = data.decisionAt ?? data.completedAt;
+    return {
+      status: mapUCheckStatus(rawStatus),
+      decisionAt: decisionRaw ? new Date(decisionRaw) : undefined,
+      certificateNumber:
+        data.certificateNumber ?? data.certificate?.number ?? undefined,
+    };
+  }
+
+  async getUpdateServiceStatus(
+    certificateNumber: string,
+  ): Promise<GetUpdateServiceResult> {
+    const data = await this.request<{ result?: string; status?: string }>(
+      `/update-service/${encodeURIComponent(certificateNumber)}`,
+      { method: "GET" },
+    );
+    const raw = data.result ?? data.status ?? "change_pending";
+    return {
+      status: mapUCheckUpdateServiceStatus(raw),
+      checkedAt: new Date(),
+    };
+  }
+}
+
+async function safeBody(res: Response): Promise<unknown> {
+  try {
+    return await res.json();
+  } catch {
+    return undefined;
+  }
+}
+
+/** Exponential backoff: ~100ms, 200ms, 400ms … capped at 2s. */
+function backoff(attempt: number): Promise<void> {
+  const ms = Math.min(2000, 100 * 2 ** (attempt - 1));
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Best-effort first name: legalName minus a trailing surname. */
+function firstNameOf(legalName: string, surname: string): string {
+  const trimmed = legalName.trim();
+  if (surname && trimmed.toLowerCase().endsWith(surname.toLowerCase())) {
+    return trimmed.slice(0, trimmed.length - surname.length).trim() || trimmed;
+  }
+  return trimmed.split(/\s+/)[0] ?? trimmed;
 }
 
 // ── Selection ────────────────────────────────────────────────────────────────

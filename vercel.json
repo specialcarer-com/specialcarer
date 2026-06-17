@@ -38,6 +38,10 @@
       "schedule": "47 8 * * *"
     },
     {
+      "path": "/api/cron/dbs-update-service-poll",
+      "schedule": "23 6 * * *"
+    },
+    {
       "path": "/api/cron/booking-reminders",
       "schedule": "0 8 * * *"
     },
