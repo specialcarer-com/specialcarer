@@ -103,6 +103,22 @@ test("formatters handle null and part-pound / single-review cases", () => {
   assert.equal(formatRating(null, 10), null);
 });
 
+test("bookingState renders no badge when the redesign flag is off (default)", () => {
+  // The test process runs without NEXT_PUBLIC_MOBILE_REDESIGN_ENABLED, so the
+  // flag is off and the card must be byte-identical to one without a state.
+  for (const variant of VARIANTS) {
+    const withState = render(
+      h(CarerCard, { carer: sarah, variant, bookingState: "in_progress" }),
+    );
+    const without = render(h(CarerCard, { carer: sarah, variant }));
+    assert.equal(withState, without, `${variant}: flag-off no-op`);
+    assert.ok(
+      !withState.includes("data-booking-state"),
+      `${variant}: no badge marker`,
+    );
+  }
+});
+
 test("loading skeleton snapshot is stable for every variant", () => {
   const snapshots: Record<string, string> = {};
   for (const variant of VARIANTS) {

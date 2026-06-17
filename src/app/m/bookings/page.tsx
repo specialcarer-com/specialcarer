@@ -21,6 +21,11 @@ import type {
   ApiBookingListItem,
   ApiBookingsListResponse,
 } from "@/app/api/m/bookings/route";
+import { isMobileRedesignEnabled } from "@/lib/mobile-redesign/flag";
+import {
+  BookingStateBadge,
+  bookingStateFromStatus,
+} from "@/components/m/BookingStateBadge";
 
 /**
  * Bookings list — Figma 30:392.
@@ -115,7 +120,155 @@ function asCurrencyUpper(c: "gbp" | "usd"): "GBP" | "USD" {
   return c === "usd" ? "USD" : "GBP";
 }
 
+/**
+ * Redesign grouping (PR-R3, flag-gated): collapse the lifecycle into three
+ * seeker-meaningful sections. A booking lands in exactly one bucket; statuses
+ * outside these buckets (e.g. paid_out, refunded) fold into Past so nothing is
+ * dropped from the list.
+ */
+type SectionKey = "now" | "upcoming" | "past";
+const SECTION_ORDER: { key: SectionKey; label: string }[] = [
+  { key: "now", label: "Now" },
+  { key: "upcoming", label: "Upcoming" },
+  { key: "past", label: "Past" },
+];
+
+function sectionForStatus(status: string): SectionKey {
+  if (status === "in_progress") return "now";
+  if (status === "accepted" || status === "paid" || status === "pending")
+    return "upcoming";
+  return "past";
+}
+
+/**
+ * One booking card. Shared by the flag-off flat list and the flag-on grouped
+ * sections. The status pill differs by mode: flag-off keeps the existing
+ * tone-mapped <Tag> (incl. timesheet-precedence labels); flag-on uses the
+ * redesigned <BookingStateBadge> when the status maps to a lifecycle state,
+ * falling back to the <Tag> for timesheet/edge states.
+ */
+function BookingCardRow({
+  b,
+  unread,
+  redesign,
+}: {
+  b: ApiBookingListItem;
+  unread: boolean;
+  redesign: boolean;
+}) {
+  const name = counterpartyName(b);
+  const avatar = counterpartyAvatar(b);
+  const location = counterpartyLocation(b);
+
+  // Timesheet state takes precedence on completed bookings — the booking sits
+  // at status='completed' until the seeker confirms or the cron auto-approves;
+  // the pill should reflect that the user can still act, not just "Completed".
+  let tone: Tone = STATUS_TONE[b.status] ?? "neutral";
+  let statusLabel: string = STATUS_LABEL[b.status] ?? b.status;
+  let timesheetOverride = false;
+  if (b.timesheet_status === "pending_approval") {
+    tone = "amber";
+    statusLabel =
+      b.as_role === "seeker" ? "Timesheet pending" : "Awaiting approval";
+    timesheetOverride = true;
+  } else if (b.timesheet_status === "disputed") {
+    tone = "red";
+    statusLabel = "Disputed — under review";
+    timesheetOverride = true;
+  } else if (
+    b.timesheet_status === "approved" ||
+    b.timesheet_status === "auto_approved"
+  ) {
+    tone = "green";
+    statusLabel =
+      b.timesheet_status === "auto_approved" ? "Auto-approved" : "Approved";
+    timesheetOverride = true;
+  }
+
+  // Flag-on: prefer the lifecycle badge, but defer to the <Tag> for timesheet
+  // overrides and statuses that don't map to a lifecycle state.
+  const lifecycleState = bookingStateFromStatus(b.status);
+  const badge =
+    redesign && lifecycleState && !timesheetOverride ? (
+      <BookingStateBadge state={lifecycleState} size="sm" />
+    ) : (
+      <Tag tone={tone}>{statusLabel}</Tag>
+    );
+
+  return (
+    <Link href={`/m/bookings/${b.id}`} className="block">
+      <Card>
+        <div className="flex items-start gap-3">
+          <Avatar src={avatar} name={name} size={56} />
+          <div className="flex-1 min-w-0">
+            <p className="text-[16px] font-bold text-heading truncate flex items-center gap-2">
+              <span className="truncate">{name}</span>
+              {unread && (
+                <span
+                  aria-label="Unread messages"
+                  className="inline-block h-2 w-2 rounded-full flex-shrink-0"
+                  style={{ background: "#039EA0" }}
+                />
+              )}
+            </p>
+            {b.service_type && (
+              <div className="mt-1.5">
+                <Tag tone="primary">{serviceLabel(b.service_type)}</Tag>
+              </div>
+            )}
+          </div>
+          {badge}
+        </div>
+
+        <ul className="mt-4 space-y-2 text-[13px] text-heading">
+          {location && (
+            <li className="flex items-center gap-2">
+              <span className="text-subheading">
+                <IconPin />
+              </span>
+              {location}
+            </li>
+          )}
+          <li className="flex items-center gap-2">
+            <span className="text-subheading">
+              <IconCal />
+            </span>
+            {fmtDateLong(b.starts_at)}
+            {b.starts_at && b.ends_at && (
+              <span className="text-subheading">
+                {" "}
+                · {fmtTimeRange(b.starts_at, b.ends_at)}
+              </span>
+            )}
+          </li>
+          {b.total_cents > 0 && (
+            <li className="flex items-center gap-2 text-subheading">
+              Total:{" "}
+              <span className="font-bold text-heading">
+                {formatMoney(b.total_cents, asCurrencyUpper(b.currency))}
+              </span>
+            </li>
+          )}
+        </ul>
+
+        <div className="border-t border-line mt-4 pt-3 flex items-center justify-end gap-2">
+          <span className="h-10 w-10 rounded-btn bg-primary-50 text-primary grid place-items-center">
+            <IconPhone />
+          </span>
+          <span className="h-10 w-10 rounded-btn bg-primary-50 text-primary grid place-items-center">
+            <IconMail />
+          </span>
+          <span className="h-10 w-10 rounded-btn bg-primary-50 text-primary grid place-items-center">
+            <IconChatBubble />
+          </span>
+        </div>
+      </Card>
+    </Link>
+  );
+}
+
 export default function BookingsPage() {
+  const redesign = isMobileRedesignEnabled();
   const [filter, setFilter] = useState<TabKey>("all");
   const [bookings, setBookings] = useState<ApiBookingListItem[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -225,104 +378,38 @@ export default function BookingsPage() {
           </>
         )}
 
-        {/* Real cards */}
+        {/* Real cards. Flag on: grouped Now/Upcoming/Past sections, each row
+            carrying a <BookingStateBadge>. Flag off: the original flat list. */}
         {bookings !== null &&
-          items.map((b) => {
-            const name = counterpartyName(b);
-            const avatar = counterpartyAvatar(b);
-            const location = counterpartyLocation(b);
-            // Timesheet state takes precedence on completed bookings — the
-            // booking sits at status='completed' until the seeker confirms
-            // or the cron auto-approves; the pill should reflect that the
-            // user can still act, not just "Completed".
-            let tone: Tone = STATUS_TONE[b.status] ?? "neutral";
-            let statusLabel: string = STATUS_LABEL[b.status] ?? b.status;
-            if (b.timesheet_status === "pending_approval") {
-              tone = "amber";
-              statusLabel =
-                b.as_role === "seeker" ? "Timesheet pending" : "Awaiting approval";
-            } else if (b.timesheet_status === "disputed") {
-              tone = "red";
-              statusLabel = "Disputed — under review";
-            } else if (
-              b.timesheet_status === "approved" ||
-              b.timesheet_status === "auto_approved"
-            ) {
-              tone = "green";
-              statusLabel =
-                b.timesheet_status === "auto_approved"
-                  ? "Auto-approved"
-                  : "Approved";
-            }
+          !redesign &&
+          items.map((b) => (
+            <BookingCardRow
+              key={b.id}
+              b={b}
+              unread={unread.has(b.id)}
+              redesign={false}
+            />
+          ))}
+
+        {bookings !== null &&
+          redesign &&
+          SECTION_ORDER.map(({ key, label }) => {
+            const rows = items.filter((b) => sectionForStatus(b.status) === key);
+            if (rows.length === 0) return null;
             return (
-              <Link key={b.id} href={`/m/bookings/${b.id}`} className="block">
-                <Card>
-                  <div className="flex items-start gap-3">
-                    <Avatar src={avatar} name={name} size={56} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[16px] font-bold text-heading truncate flex items-center gap-2">
-                        <span className="truncate">{name}</span>
-                        {unread.has(b.id) && (
-                          <span
-                            aria-label="Unread messages"
-                            className="inline-block h-2 w-2 rounded-full flex-shrink-0"
-                            style={{ background: "#039EA0" }}
-                          />
-                        )}
-                      </p>
-                      {b.service_type && (
-                        <div className="mt-1.5">
-                          <Tag tone="primary">{serviceLabel(b.service_type)}</Tag>
-                        </div>
-                      )}
-                    </div>
-                    <Tag tone={tone}>{statusLabel}</Tag>
-                  </div>
-
-                  <ul className="mt-4 space-y-2 text-[13px] text-heading">
-                    {location && (
-                      <li className="flex items-center gap-2">
-                        <span className="text-subheading">
-                          <IconPin />
-                        </span>
-                        {location}
-                      </li>
-                    )}
-                    <li className="flex items-center gap-2">
-                      <span className="text-subheading">
-                        <IconCal />
-                      </span>
-                      {fmtDateLong(b.starts_at)}
-                      {b.starts_at && b.ends_at && (
-                        <span className="text-subheading">
-                          {" "}
-                          · {fmtTimeRange(b.starts_at, b.ends_at)}
-                        </span>
-                      )}
-                    </li>
-                    {b.total_cents > 0 && (
-                      <li className="flex items-center gap-2 text-subheading">
-                        Total:{" "}
-                        <span className="font-bold text-heading">
-                          {formatMoney(b.total_cents, asCurrencyUpper(b.currency))}
-                        </span>
-                      </li>
-                    )}
-                  </ul>
-
-                  <div className="border-t border-line mt-4 pt-3 flex items-center justify-end gap-2">
-                    <span className="h-10 w-10 rounded-btn bg-primary-50 text-primary grid place-items-center">
-                      <IconPhone />
-                    </span>
-                    <span className="h-10 w-10 rounded-btn bg-primary-50 text-primary grid place-items-center">
-                      <IconMail />
-                    </span>
-                    <span className="h-10 w-10 rounded-btn bg-primary-50 text-primary grid place-items-center">
-                      <IconChatBubble />
-                    </span>
-                  </div>
-                </Card>
-              </Link>
+              <section key={key} className="space-y-4">
+                <h2 className="text-[13px] font-bold uppercase tracking-wide text-subheading">
+                  {label}
+                </h2>
+                {rows.map((b) => (
+                  <BookingCardRow
+                    key={b.id}
+                    b={b}
+                    unread={unread.has(b.id)}
+                    redesign
+                  />
+                ))}
+              </section>
             );
           })}
 

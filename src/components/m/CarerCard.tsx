@@ -2,6 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
+import {
+  BookingStateBadge,
+  type BookingState,
+} from "./BookingStateBadge";
+import { isMobileRedesignEnabled } from "@/lib/mobile-redesign/flag";
 
 /**
  * Shared carer card for the mobile redesign (PR-R1).
@@ -39,6 +44,10 @@ export type CarerCardProps = {
   onPress?: () => void;
   href?: string; // if set, renders as Link
   className?: string;
+  // Optional booking-state badge (PR-R3). Rendered per-variant only when set
+  // AND the mobile-redesign flag is on; otherwise the card is unchanged
+  // (back-compat with PR-R1 call sites).
+  bookingState?: BookingState;
 };
 
 /* ── formatting helpers (exported for tests) ─────────────────────────── */
@@ -233,16 +242,29 @@ function EmptyCard({
 
 /* ── variant bodies ──────────────────────────────────────────────────── */
 
-function InlineBody({ carer }: { carer: CarerCardData }) {
+function InlineBody({
+  carer,
+  bookingState,
+}: {
+  carer: CarerCardData;
+  bookingState?: BookingState;
+}) {
   const rate = formatRate(carer.headlineRate);
   return (
     <div className="flex w-[140px] flex-none flex-col items-center gap-mobile-sm p-mobile-md text-center">
-      <Avatar
-        src={carer.avatarUrl}
-        name={carer.displayName}
-        size={64}
-        verified={carer.verified}
-      />
+      <div className="relative">
+        <Avatar
+          src={carer.avatarUrl}
+          name={carer.displayName}
+          size={64}
+          verified={carer.verified}
+        />
+        {bookingState && (
+          <span className="absolute -right-2 -top-2">
+            <BookingStateBadge state={bookingState} size="sm" />
+          </span>
+        )}
+      </div>
       <p className="w-full truncate text-[14px] font-bold text-brand-ink">
         {carer.displayName}
       </p>
@@ -257,7 +279,13 @@ function InlineBody({ carer }: { carer: CarerCardData }) {
   );
 }
 
-function TileBody({ carer }: { carer: CarerCardData }) {
+function TileBody({
+  carer,
+  bookingState,
+}: {
+  carer: CarerCardData;
+  bookingState?: BookingState;
+}) {
   const rate = formatRate(carer.headlineRate);
   return (
     <div className="flex aspect-square w-full flex-col items-center gap-mobile-sm p-mobile-lg text-center">
@@ -270,6 +298,9 @@ function TileBody({ carer }: { carer: CarerCardData }) {
       <p className="w-full truncate text-[15px] font-bold text-brand-ink">
         {carer.displayName}
       </p>
+      {bookingState && (
+        <BookingStateBadge state={bookingState} size="sm" />
+      )}
       <RatingLine carer={carer} />
       <p className="text-[12px] font-semibold text-subheading">
         {formatDistance(carer.distanceKm)}
@@ -284,7 +315,13 @@ function TileBody({ carer }: { carer: CarerCardData }) {
   );
 }
 
-function ListBody({ carer }: { carer: CarerCardData }) {
+function ListBody({
+  carer,
+  bookingState,
+}: {
+  carer: CarerCardData;
+  bookingState?: BookingState;
+}) {
   const rate = formatRate(carer.headlineRate);
   return (
     <div className="flex w-full items-center gap-mobile-md p-mobile-md">
@@ -310,6 +347,9 @@ function ListBody({ carer }: { carer: CarerCardData }) {
           <span aria-hidden="true">·</span>
           <span>{formatDistance(carer.distanceKm)}</span>
         </div>
+        {bookingState && (
+          <BookingStateBadge state={bookingState} size="sm" />
+        )}
         <QualChips items={carer.qualifications ?? []} />
       </div>
     </div>
@@ -324,10 +364,16 @@ export function CarerCard({
   onPress,
   href,
   className = "",
+  bookingState,
 }: CarerCardProps) {
   if (!carer.displayName) {
     return <EmptyCard variant={variant} className={className} />;
   }
+
+  // The badge is opt-in (bookingState set) and only surfaces under the
+  // redesign flag; otherwise the card renders exactly as in PR-R1.
+  const badgeState =
+    bookingState && isMobileRedesignEnabled() ? bookingState : undefined;
 
   const shell =
     "font-display block rounded-card bg-bg-card shadow-card-sm transition active:scale-[0.99] sc-no-select";
@@ -340,11 +386,11 @@ export function CarerCard({
 
   const body =
     variant === "inline" ? (
-      <InlineBody carer={carer} />
+      <InlineBody carer={carer} bookingState={badgeState} />
     ) : variant === "tile" ? (
-      <TileBody carer={carer} />
+      <TileBody carer={carer} bookingState={badgeState} />
     ) : (
-      <ListBody carer={carer} />
+      <ListBody carer={carer} bookingState={badgeState} />
     );
 
   const ariaLabel = buildAriaLabel(carer);
