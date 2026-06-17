@@ -11,6 +11,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { US_REGION_ENABLED } from "@/lib/region";
 import { getDbsVendor } from "./vendor";
 import { isDbsEnabled } from "./flag";
 import {
@@ -49,10 +50,14 @@ export async function initiateDbsApplications(carerId: string): Promise<void> {
   if (!isDbsEnabled()) throw new DbsDisabledError();
   const admin = client();
 
-  const { data: existing } = await admin
+  let existingQuery = admin
     .from("dbs_applications")
-    .select("kind")
+    .select("kind, caregiver_profiles!inner(country)")
     .eq("carer_id", carerId);
+  if (!US_REGION_ENABLED) {
+    existingQuery = existingQuery.eq("caregiver_profiles.country", "GB");
+  }
+  const { data: existing } = await existingQuery;
   const have = new Set((existing ?? []).map((r) => r.kind as DbsKind));
 
   const toCreate: DbsKind[] = (["adult", "child"] as DbsKind[]).filter(
@@ -69,10 +74,14 @@ export async function initiateDbsApplications(carerId: string): Promise<void> {
     );
   }
 
-  await admin
+  let initiateUpdate = admin
     .from("caregiver_profiles")
     .update({ dbs_overall_status: "in_progress", dbs_search_eligible: false })
     .eq("user_id", carerId);
+  if (!US_REGION_ENABLED) {
+    initiateUpdate = initiateUpdate.eq("country", "GB");
+  }
+  await initiateUpdate;
 }
 
 /**
@@ -95,12 +104,15 @@ export async function submitDbsApplication(
   });
 
   const nowIso = new Date().toISOString();
-  const { data: row } = await admin
+  let rowQuery = admin
     .from("dbs_applications")
-    .select("id")
+    .select("id, caregiver_profiles!inner(country)")
     .eq("carer_id", carerId)
-    .eq("kind", kind)
-    .maybeSingle();
+    .eq("kind", kind);
+  if (!US_REGION_ENABLED) {
+    rowQuery = rowQuery.eq("caregiver_profiles.country", "GB");
+  }
+  const { data: row } = await rowQuery.maybeSingle();
 
   if (row) {
     await admin
@@ -143,11 +155,14 @@ export async function recordManualDecision(
   if (!isDbsEnabled()) throw new DbsDisabledError();
   const admin = client();
 
-  const { data: app } = await admin
+  let appQuery = admin
     .from("dbs_applications")
-    .select("id, carer_id")
-    .eq("id", applicationId)
-    .maybeSingle();
+    .select("id, carer_id, caregiver_profiles!inner(country)")
+    .eq("id", applicationId);
+  if (!US_REGION_ENABLED) {
+    appQuery = appQuery.eq("caregiver_profiles.country", "GB");
+  }
+  const { data: app } = await appQuery.maybeSingle();
   if (!app) throw new Error(`DBS application ${applicationId} not found`);
 
   await admin
@@ -223,10 +238,14 @@ export async function recomputeOverallStatus(
   if (!isDbsEnabled()) throw new DbsDisabledError();
   const admin = client();
 
-  const { data: rows } = await admin
+  let rowsQuery = admin
     .from("dbs_applications")
-    .select("kind, status")
+    .select("kind, status, caregiver_profiles!inner(country)")
     .eq("carer_id", carerId);
+  if (!US_REGION_ENABLED) {
+    rowsQuery = rowsQuery.eq("caregiver_profiles.country", "GB");
+  }
+  const { data: rows } = await rowsQuery;
 
   const byKind = new Map<DbsKind, DbsStatus>();
   for (const r of (rows ?? []) as Array<{ kind: DbsKind; status: DbsStatus }>) {
@@ -238,13 +257,17 @@ export async function recomputeOverallStatus(
     byKind.get("child") ?? null,
   );
 
-  await admin
+  let recomputeUpdate = admin
     .from("caregiver_profiles")
     .update({
       dbs_overall_status: result.overall,
       dbs_search_eligible: result.searchEligible,
     })
     .eq("user_id", carerId);
+  if (!US_REGION_ENABLED) {
+    recomputeUpdate = recomputeUpdate.eq("country", "GB");
+  }
+  await recomputeUpdate;
 
   return result;
 }
@@ -259,6 +282,21 @@ export async function chooseUpfrontPayment(
 ): Promise<{ clientSecret: string | null; amountPence: number }> {
   if (!isDbsEnabled()) throw new DbsDisabledError();
   const admin = client();
+
+  // UK-only regional constraint until the US launch (see @/lib/region).
+  // PostgREST can't filter an UPDATE by an embedded resource, so guard the
+  // upfront-payment write with a GB-carer check before touching anything.
+  if (!US_REGION_ENABLED) {
+    const { data: carer } = await admin
+      .from("caregiver_profiles")
+      .select("user_id")
+      .eq("user_id", carerId)
+      .eq("country", "GB")
+      .maybeSingle();
+    if (!carer) {
+      return { clientSecret: null, amountPence: DBS_COST_PENCE };
+    }
+  }
 
   // Stripe is imported lazily so this module loads without STRIPE_SECRET_KEY
   // (e.g. in unit tests that never call this path).
@@ -282,12 +320,15 @@ export async function chooseUpfrontPayment(
 /** Read a carer's applications for the carer-facing + admin UIs. */
 export async function getCarerDbsApplications(carerId: string) {
   const admin = client();
-  const { data } = await admin
+  let listQuery = admin
     .from("dbs_applications")
     .select(
-      "id, kind, status, vendor, vendor_reference, submitted_at, decision_at, certificate_number, certificate_issued_on, recovery_status, recovery_collected_pence, cost_pence, created_at",
+      "id, kind, status, vendor, vendor_reference, submitted_at, decision_at, certificate_number, certificate_issued_on, recovery_status, recovery_collected_pence, cost_pence, created_at, caregiver_profiles!inner(country)",
     )
-    .eq("carer_id", carerId)
-    .order("kind", { ascending: true });
+    .eq("carer_id", carerId);
+  if (!US_REGION_ENABLED) {
+    listQuery = listQuery.eq("caregiver_profiles.country", "GB");
+  }
+  const { data } = await listQuery.order("kind", { ascending: true });
   return data ?? [];
 }

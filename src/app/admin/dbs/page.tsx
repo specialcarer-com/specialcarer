@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isDbsEnabled } from "@/lib/dbs/flag";
+import { US_REGION_ENABLED } from "@/lib/region";
 import DbsQueueClient, { type DbsQueueRow } from "./DbsQueueClient";
 
 export const dynamic = "force-dynamic";
@@ -36,12 +37,19 @@ export default async function AdminDbsPage() {
   }
 
   const admin = createAdminClient();
-  const { data: apps } = await admin
+  // UK-only regional constraint until the US launch (see @/lib/region). Filter
+  // the queue to GB carers via an inner join on caregiver_profiles.country so
+  // no US applications surface in the admin queue.
+  let appsQuery = admin
     .from("dbs_applications")
     .select(
-      "id, carer_id, kind, status, vendor, vendor_reference, submitted_at, recovery_status, created_at",
+      "id, carer_id, kind, status, vendor, vendor_reference, submitted_at, recovery_status, created_at, caregiver_profiles!inner(country)",
     )
-    .in("status", ["submitted", "in_progress"])
+    .in("status", ["submitted", "in_progress"]);
+  if (!US_REGION_ENABLED) {
+    appsQuery = appsQuery.eq("caregiver_profiles.country", "GB");
+  }
+  const { data: apps } = await appsQuery
     .order("submitted_at", { ascending: true, nullsFirst: false })
     .limit(300);
 

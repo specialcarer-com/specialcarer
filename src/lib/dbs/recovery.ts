@@ -14,6 +14,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { US_REGION_ENABLED } from "@/lib/region";
 import { isDbsEnabled } from "./flag";
 import {
   DBS_RECOVERY_MIN_PENCE,
@@ -101,12 +102,20 @@ export async function applyDbsRecovery(
 
   const admin = createAdminClient();
 
-  // Oldest still-owing row for this carer.
-  const { data: rows } = await admin
+  // Oldest still-owing row for this carer. UK-only regional constraint until
+  // the US launch (see @/lib/region) — restrict to GB carers via an inner join
+  // on caregiver_profiles.country.
+  let rowsQuery = admin
     .from("dbs_applications")
-    .select("id, recovery_status, recovery_collected_pence")
+    .select(
+      "id, recovery_status, recovery_collected_pence, caregiver_profiles!inner(country)",
+    )
     .eq("carer_id", carerId)
-    .in("recovery_status", ["pending", "recovering"])
+    .in("recovery_status", ["pending", "recovering"]);
+  if (!US_REGION_ENABLED) {
+    rowsQuery = rowsQuery.eq("caregiver_profiles.country", "GB");
+  }
+  const { data: rows } = await rowsQuery
     .order("created_at", { ascending: true })
     .limit(1);
 
