@@ -16,11 +16,21 @@ export default function RerunCrossCheckButton({
     setBusy(true);
     setMsg(null);
     try {
-      const res = await fetch(
-        `/api/admin/dbs/${applicationId}/cross-check`,
-        { method: "POST" },
-      );
-      const body = await res.json();
+      let res: Response;
+      try {
+        res = await fetch(`/api/admin/dbs/${applicationId}/cross-check`, {
+          method: "POST",
+        });
+      } catch {
+        setMsg("Network error — please check your connection and try again.");
+        return;
+      }
+      let body: { error?: string; result?: { ok?: boolean } } = {};
+      try {
+        body = await res.json();
+      } catch {
+        body = {};
+      }
       if (!res.ok) {
         setMsg(body.error ?? "Failed to re-run cross-check");
         return;

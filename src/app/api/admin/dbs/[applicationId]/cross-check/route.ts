@@ -38,17 +38,30 @@ export async function POST(
   if (!US_REGION_ENABLED) {
     appQuery = appQuery.eq("caregiver_profiles.country", "GB");
   }
-  const { data: app } = await appQuery.maybeSingle<{ carer_id: string }>();
+  const { data: app, error: appError } =
+    await appQuery.maybeSingle<{ carer_id: string }>();
+  if (appError) {
+    return NextResponse.json(
+      { error: "Failed to load application" },
+      { status: 500 },
+    );
+  }
   if (!app) {
     return NextResponse.json({ error: "Application not found" }, { status: 404 });
   }
 
   // DBS-side facts: carer profile full name (surname) + date of birth.
-  const { data: profile } = await admin
+  const { data: profile, error: profileError } = await admin
     .from("profiles")
     .select("full_name, date_of_birth")
     .eq("id", app.carer_id)
     .maybeSingle<{ full_name: string | null; date_of_birth: string | null }>();
+  if (profileError) {
+    return NextResponse.json(
+      { error: "Failed to load profile" },
+      { status: 500 },
+    );
+  }
 
   const surname = (profile?.full_name ?? "").trim().split(/\s+/).pop() ?? "";
 
@@ -66,9 +79,10 @@ export async function POST(
     });
     return NextResponse.json({ ok: true, result });
   } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Cross-check failed" },
-      { status: 400 },
+    console.error(
+      "[/api/admin/dbs/cross-check] re-run failed",
+      e instanceof Error ? { name: e.name, message: e.message } : e,
     );
+    return NextResponse.json({ error: "Cross-check failed" }, { status: 400 });
   }
 }
