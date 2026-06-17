@@ -72,8 +72,17 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ ok: true });
   } catch (e) {
+    // Log the real cause server-side; return a stable, user-safe message.
+    // Raw exception text can leak vendor wording or internal paths.
+    console.error(
+      "[/api/m/dbs/self-verify] verification failed",
+      e instanceof Error ? { name: e.name, message: e.message } : e,
+    );
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Self-verify failed" },
+      {
+        error:
+          "We couldn't verify your DBS certificate right now. Please try again in a few minutes or contact support.",
+      },
       { status: 502 },
     );
   }

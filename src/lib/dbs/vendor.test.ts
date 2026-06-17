@@ -7,10 +7,10 @@ import assert from "node:assert/strict";
 
 import {
   MockDbsVendor,
-  UCheckVendor,
-  UCheckApiError,
-  mapUCheckStatus,
-  mapUCheckUpdateServiceStatus,
+  DbsRestVendor,
+  DbsApiError,
+  mapDbsStatus,
+  mapDbsUpdateServiceStatus,
 } from "./vendor";
 
 const carerDetails = {
@@ -94,27 +94,27 @@ describe("MockDbsVendor", () => {
 
 // ── Status maps ──────────────────────────────────────────────────────────────
 
-describe("uCheck status maps", () => {
+describe("DBS REST status maps", () => {
   it("maps application status codes", () => {
-    assert.equal(mapUCheckStatus("submitted"), "submitted");
-    assert.equal(mapUCheckStatus("processing"), "in_progress");
-    assert.equal(mapUCheckStatus("complete"), "approved");
-    assert.equal(mapUCheckStatus("declined"), "rejected");
-    assert.equal(mapUCheckStatus("expired"), "expired");
+    assert.equal(mapDbsStatus("submitted"), "submitted");
+    assert.equal(mapDbsStatus("processing"), "in_progress");
+    assert.equal(mapDbsStatus("complete"), "approved");
+    assert.equal(mapDbsStatus("declined"), "rejected");
+    assert.equal(mapDbsStatus("expired"), "expired");
     // Unknown → in_progress (safe for a safeguarding gate).
-    assert.equal(mapUCheckStatus("wat"), "in_progress");
+    assert.equal(mapDbsStatus("wat"), "in_progress");
   });
 
   it("maps update service results", () => {
-    assert.equal(mapUCheckUpdateServiceStatus("clear"), "clear");
-    assert.equal(mapUCheckUpdateServiceStatus("changed"), "change_pending");
-    assert.equal(mapUCheckUpdateServiceStatus("revoked"), "invalidated");
+    assert.equal(mapDbsUpdateServiceStatus("clear"), "clear");
+    assert.equal(mapDbsUpdateServiceStatus("changed"), "change_pending");
+    assert.equal(mapDbsUpdateServiceStatus("revoked"), "invalidated");
     // Unknown → change_pending (conservative).
-    assert.equal(mapUCheckUpdateServiceStatus("wat"), "change_pending");
+    assert.equal(mapDbsUpdateServiceStatus("wat"), "change_pending");
   });
 });
 
-// ── UCheckVendor (real, with mocked fetch) ───────────────────────────────────
+// ── DbsRestVendor (real, with mocked fetch) ───────────────────────────────────
 
 const realFetch = globalThis.fetch;
 
@@ -125,16 +125,16 @@ function jsonResponse(status: number, body: unknown): Response {
   });
 }
 
-describe("UCheckVendor", () => {
+describe("DbsRestVendor", () => {
   beforeEach(() => {
-    process.env.UCHECK_API_KEY = "test-key";
-    process.env.UCHECK_API_BASE = "https://sandbox.ucheck.test/v1";
+    process.env.DBS_API_KEY = "test-key";
+    process.env.DBS_API_BASE = "https://sandbox.ucheck.test/v1";
   });
   afterEach(() => {
     globalThis.fetch = realFetch;
-    delete process.env.UCHECK_API_KEY;
-    delete process.env.UCHECK_API_BASE;
-    delete process.env.UCHECK_TIMEOUT_MS;
+    delete process.env.DBS_API_KEY;
+    delete process.env.DBS_API_BASE;
+    delete process.env.DBS_TIMEOUT_MS;
   });
 
   it("submitApplication posts and returns the vendor reference", async () => {
@@ -144,7 +144,7 @@ describe("UCheckVendor", () => {
       return jsonResponse(201, { reference: "UC-123" });
     }) as typeof fetch;
 
-    const vendor = new UCheckVendor();
+    const vendor = new DbsRestVendor();
     const res = await vendor.submitApplication({
       carerId: "carer-1",
       kind: "adult",
@@ -159,7 +159,7 @@ describe("UCheckVendor", () => {
     assert.equal(headers.Authorization, "Bearer test-key");
   });
 
-  it("getStatus maps the uCheck status code", async () => {
+  it("getStatus maps the DBS partner status code", async () => {
     globalThis.fetch = (async () =>
       jsonResponse(200, {
         status: "complete",
@@ -167,7 +167,7 @@ describe("UCheckVendor", () => {
         certificate: { number: "001234567890" },
       })) as typeof fetch;
 
-    const vendor = new UCheckVendor();
+    const vendor = new DbsRestVendor();
     const res = await vendor.getStatus("UC-123");
     assert.equal(res.status, "approved");
     assert.equal(res.certificateNumber, "001234567890");
@@ -182,7 +182,7 @@ describe("UCheckVendor", () => {
       return jsonResponse(200, { result: "clear" });
     }) as typeof fetch;
 
-    const vendor = new UCheckVendor();
+    const vendor = new DbsRestVendor();
     const res = await vendor.getUpdateServiceStatus("001234567890");
     assert.equal(calls, 3);
     assert.equal(res.status, "clear");
@@ -195,13 +195,13 @@ describe("UCheckVendor", () => {
       return jsonResponse(404, { error: "not found" });
     }) as typeof fetch;
 
-    const vendor = new UCheckVendor();
-    await assert.rejects(() => vendor.getStatus("missing"), UCheckApiError);
+    const vendor = new DbsRestVendor();
+    await assert.rejects(() => vendor.getStatus("missing"), DbsApiError);
     assert.equal(calls, 1);
   });
 
   it("surfaces a timeout (AbortError) as a retried failure", async () => {
-    process.env.UCHECK_TIMEOUT_MS = "20";
+    process.env.DBS_TIMEOUT_MS = "20";
     let calls = 0;
     globalThis.fetch = (async (_url: string, init: RequestInit) => {
       calls += 1;
@@ -216,8 +216,8 @@ describe("UCheckVendor", () => {
       });
     }) as typeof fetch;
 
-    const vendor = new UCheckVendor();
-    await assert.rejects(() => vendor.getStatus("slow"), UCheckApiError);
+    const vendor = new DbsRestVendor();
+    await assert.rejects(() => vendor.getStatus("slow"), DbsApiError);
     // 3 attempts, each aborted.
     assert.equal(calls, 3);
   });
@@ -229,14 +229,14 @@ describe("UCheckVendor", () => {
         headers: { "Content-Type": "text/plain" },
       })) as typeof fetch;
 
-    const vendor = new UCheckVendor();
+    const vendor = new DbsRestVendor();
     await assert.rejects(() => vendor.getStatus("UC-1"));
   });
 
-  it("throws when UCHECK_API_KEY is missing", async () => {
-    delete process.env.UCHECK_API_KEY;
+  it("throws when DBS_API_KEY is missing", async () => {
+    delete process.env.DBS_API_KEY;
     globalThis.fetch = (async () => jsonResponse(200, {})) as typeof fetch;
-    const vendor = new UCheckVendor();
-    await assert.rejects(() => vendor.getStatus("UC-1"), /UCHECK_API_KEY/);
+    const vendor = new DbsRestVendor();
+    await assert.rejects(() => vendor.getStatus("UC-1"), /DBS_API_KEY/);
   });
 });

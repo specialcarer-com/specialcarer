@@ -133,7 +133,7 @@ export async function crossCheckDbsAgainstVeriff(
   const admin = client();
 
   // Latest approved Veriff verification for this carer.
-  const { data: iv } = await admin
+  const { data: iv, error: ivError } = await admin
     .from("identity_verifications")
     .select("decision_json, status, updated_at")
     .eq("user_id", carerId)
@@ -141,6 +141,15 @@ export async function crossCheckDbsAgainstVeriff(
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  // Fail closed: never pretend "no identity verification on file" if the read
+  // failed at the DB layer. A safeguarding gate cannot be bypassed by an
+  // upstream Supabase error.
+  if (ivError) {
+    throw new Error(
+      `cross-check: identity_verifications lookup failed for carer ${carerId}: ${ivError.message}`,
+    );
+  }
 
   if (!iv) {
     // No verified identity to compare against — pass, but record the run.
@@ -165,7 +174,12 @@ export async function crossCheckDbsAgainstVeriff(
   if (!US_REGION_ENABLED) {
     overrideQuery = overrideQuery.eq("caregiver_profiles.country", "GB");
   }
-  const { data: overrideRows } = await overrideQuery;
+  const { data: overrideRows, error: overrideError } = await overrideQuery;
+  if (overrideError) {
+    throw new Error(
+      `cross-check: surname override lookup failed for carer ${carerId}: ${overrideError.message}`,
+    );
+  }
   const overridden = (overrideRows ?? []).length > 0;
 
   const veriff = veriffFactsFromDecision(

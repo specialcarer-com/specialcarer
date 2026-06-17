@@ -4,8 +4,9 @@
  * Drives pollUpdateService() against an in-memory PollClient + a scriptable
  * vendor stub so the three outcomes (clear / change_pending / invalidated),
  * row skipping, and error capture can be exercised without a database or a
- * live uCheck integration. The route-level CRON_SECRET auth is covered by the
- * route itself; this file tests the row-processing logic the route delegates to.
+ * live DBS partner integration. The route-level CRON_SECRET auth is covered
+ * by the route itself; this file tests the row-processing logic the route
+ * delegates to.
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
@@ -212,7 +213,7 @@ describe("pollUpdateService", () => {
     const summary = await pollUpdateService({
       admin: client,
       vendor: makeVendor({
-        "001111111111": new Error("uCheck down"),
+        "001111111111": new Error("DBS vendor down"),
         "002222222222": "clear",
       }),
       now,
@@ -221,7 +222,7 @@ describe("pollUpdateService", () => {
     assert.equal(summary.clear, 1);
     assert.equal(summary.errors.length, 1);
     assert.equal(summary.errors[0].id, "a1");
-    assert.match(summary.errors[0].message, /uCheck down/);
+    assert.match(summary.errors[0].message, /DBS vendor down/);
     // The second (healthy) row still processed.
     assert.deepEqual(calls.markChecked, [["a2", NOW.toISOString()]]);
   });

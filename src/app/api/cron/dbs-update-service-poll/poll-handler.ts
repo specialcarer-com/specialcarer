@@ -3,7 +3,7 @@
  *
  * Kept separate from route.ts so it can be unit-tested with a stubbed client +
  * vendor (mirrors expire-handler / refresh-handler). The route wraps the real
- * Supabase admin client + uCheck vendor and forwards the result.
+ * Supabase admin client + DBS partner vendor and forwards the result.
  */
 
 import type {

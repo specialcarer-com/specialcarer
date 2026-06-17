@@ -23,16 +23,30 @@ export default function ExistingDbsPage() {
     setBusy(true);
     setErr(null);
     try {
-      const res = await fetch("/api/m/dbs/self-verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          certificateNumber: certNumber.trim(),
-          kind,
-          dateOfBirth: dob,
-        }),
-      });
-      const body = await res.json();
+      let res: Response;
+      try {
+        res = await fetch("/api/m/dbs/self-verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            certificateNumber: certNumber.trim(),
+            kind,
+            dateOfBirth: dob,
+          }),
+        });
+      } catch {
+        setErr(
+          "Network error — please check your connection and try again.",
+        );
+        return;
+      }
+      let body: { ok?: boolean; error?: string } = {};
+      try {
+        body = await res.json();
+      } catch {
+        // Non-JSON response from server (e.g. proxy/HTML error page).
+        body = {};
+      }
       if (!res.ok) {
         setErr(body.error ?? "Could not verify this certificate.");
         return;

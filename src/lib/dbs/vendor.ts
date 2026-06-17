@@ -2,35 +2,35 @@
  * DBS application vendor adapter.
  *
  * SpecialCarers applies for a fresh Enhanced DBS on the carer's behalf via a
- * vendor (uCheck). This file is the seam between our service layer and that
- * vendor. Two implementations:
+ * DBS partner. This file is the seam between our service layer and that
+ * partner. Two implementations:
  *
- *   - MockDbsVendor  — in-memory state machine. Default in dev (DBS_VENDOR=mock).
- *                      Deterministic + configurable so the service + admin
- *                      flows can be exercised without a live integration.
- *   - UCheckVendor   — real REST integration (PR-DBS-2). Talks to the uCheck
- *                      API for fresh applications AND Update Service status.
+ *   - MockDbsVendor    — in-memory state machine. Default in dev (DBS_VENDOR=mock).
+ *                        Deterministic + configurable so the service + admin
+ *                        flows can be exercised without a live integration.
+ *   - DbsRestVendor    — real REST integration (PR-DBS-2). Talks to the partner
+ *                        DBS API for fresh applications AND Update Service status.
  *
- * Selected at runtime via the DBS_VENDOR env var (mock | ucheck), defaulting
- * to mock.
+ * Selected at runtime via the DBS_VENDOR env var (mock | rest | ucheck — the
+ * last value is the historical alias and remains accepted), defaulting to mock.
  *
- * ── uCheck API assumptions (PR-DBS-2) ───────────────────────────────────────
- * uCheck exposes a RESTful DBS API (https://www.ucheck.co.uk/api/) but the
- * detailed endpoint contract is only released to partners under an onboarding
- * agreement (≈8-12 weeks) — there is no public OpenAPI spec. This client is
- * built against the documented shape with the following ASSUMPTIONS, all of
- * which are isolated here so a single patch updates them once the partner docs
- * land:
- *   - Base URL:   UCHECK_API_BASE (default https://api.ucheck.co.uk/v1).
+ * ── DBS partner API assumptions (PR-DBS-2) ─────────────────────────────────
+ * The current partner exposes a RESTful DBS API but the detailed endpoint
+ * contract is only released under a partner onboarding agreement (≈8-12
+ * weeks) — there is no public OpenAPI spec. This client is built against the
+ * documented shape with the following ASSUMPTIONS, all of which are isolated
+ * here so a single patch updates them once the partner docs land:
+ *   - Base URL:   DBS_API_BASE (legacy: UCHECK_API_BASE).
  *                 Point this at the sandbox host during onboarding; the prod
  *                 host once approved. Controlled entirely by env.
- *   - Auth:       Authorization: Bearer <UCHECK_API_KEY>.
+ *   - Auth:       Authorization: Bearer <DBS_API_KEY> (legacy:
+ *                 UCHECK_API_KEY).
  *   - Submit:     POST /applications { kind, applicant: {...} }
  *                 → { id | reference } used as our vendorReference.
- *   - Status:     GET /applications/{ref} → { status: <uCheck code> }.
+ *   - Status:     GET /applications/{ref} → { status: <partner code> }.
  *   - Update Svc: GET /update-service/{certificateNumber}
  *                 → { result: 'clear' | 'change_pending' | 'invalidated' }.
- * TODO(uCheck-partner-docs): confirm exact paths, request/response field names,
+ * TODO(dbs-partner-docs): confirm exact paths, request/response field names,
  * and status vocabulary against the partner docs and adjust the maps below.
  */
 
@@ -179,33 +179,33 @@ export class MockDbsVendor implements DbsVendor {
   }
 }
 
-// ── UCheckVendor (real REST integration) ─────────────────────────────────────
+// ── DbsRestVendor (real REST integration) ─────────────────────────────────────
 
-const DEFAULT_UCHECK_BASE = "https://api.ucheck.co.uk/v1";
-const DEFAULT_UCHECK_TIMEOUT_MS = 10_000;
-const UCHECK_RETRY_ATTEMPTS = 3;
+const DEFAULT_DBS_BASE = "https://api.ucheck.co.uk/v1";
+const DEFAULT_DBS_TIMEOUT_MS = 10_000;
+const DBS_RETRY_ATTEMPTS = 3;
 
 function timeoutMs(): number {
-  const raw = process.env.UCHECK_TIMEOUT_MS;
+  const raw = process.env.DBS_TIMEOUT_MS || process.env.UCHECK_TIMEOUT_MS;
   const parsed = raw ? Number.parseInt(raw, 10) : NaN;
   return Number.isFinite(parsed) && parsed > 0
     ? parsed
-    : DEFAULT_UCHECK_TIMEOUT_MS;
+    : DEFAULT_DBS_TIMEOUT_MS;
 }
 
-export class UCheckApiError extends Error {
+export class DbsApiError extends Error {
   readonly status: number;
   readonly body?: unknown;
   constructor(status: number, message: string, body?: unknown) {
     super(message);
-    this.name = "UCheckApiError";
+    this.name = "DbsApiError";
     this.status = status;
     this.body = body;
   }
 }
 
-/** Map uCheck application status codes to our internal DbsStatus enum. */
-export function mapUCheckStatus(raw: string): DbsStatus {
+/** Map DBS partner application status codes to our internal DbsStatus enum. */
+export function mapDbsStatus(raw: string): DbsStatus {
   switch (raw.toLowerCase()) {
     case "draft":
     case "created":
@@ -239,8 +239,8 @@ export function mapUCheckStatus(raw: string): DbsStatus {
   }
 }
 
-/** Map a uCheck Update Service result to our enum. */
-export function mapUCheckUpdateServiceStatus(raw: string): UpdateServiceStatus {
+/** Map a DBS Update Service result to our enum. */
+export function mapDbsUpdateServiceStatus(raw: string): UpdateServiceStatus {
   switch (raw.toLowerCase()) {
     case "clear":
     case "no_change":
@@ -262,20 +262,21 @@ export function mapUCheckUpdateServiceStatus(raw: string): UpdateServiceStatus {
 }
 
 /**
- * Real uCheck integration. Talks to the uCheck REST API over fetch with a 10s
- * timeout and exponential-backoff retry (3 attempts) on 5xx / network errors.
- * 4xx responses fail fast (no retry). Reads UCHECK_API_KEY / UCHECK_API_BASE.
+ * Real DBS partner integration. Talks to the partner REST API over fetch
+ * with a 10s timeout and exponential-backoff retry (3 attempts) on 5xx /
+ * network errors. 4xx responses fail fast (no retry). Reads DBS_API_KEY /
+ * DBS_API_BASE (with legacy UCHECK_API_KEY / UCHECK_API_BASE fallbacks).
  */
-export class UCheckVendor implements DbsVendor {
-  readonly name = "ucheck";
+export class DbsRestVendor implements DbsVendor {
+  readonly name = "dbs-rest";
 
   private base(): string {
-    return process.env.UCHECK_API_BASE || DEFAULT_UCHECK_BASE;
+    return process.env.DBS_API_BASE || process.env.UCHECK_API_BASE || DEFAULT_DBS_BASE;
   }
 
   private apiKey(): string {
-    const key = process.env.UCHECK_API_KEY;
-    if (!key) throw new UCheckApiError(0, "Missing UCHECK_API_KEY");
+    const key = process.env.DBS_API_KEY || process.env.UCHECK_API_KEY;
+    if (!key) throw new DbsApiError(0, "Missing DBS_API_KEY");
     return key;
   }
 
@@ -286,7 +287,7 @@ export class UCheckVendor implements DbsVendor {
     const url = `${this.base()}${path}`;
     let lastError: unknown;
 
-    for (let attempt = 1; attempt <= UCHECK_RETRY_ATTEMPTS; attempt += 1) {
+    for (let attempt = 1; attempt <= DBS_RETRY_ATTEMPTS; attempt += 1) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs());
       try {
@@ -303,36 +304,36 @@ export class UCheckVendor implements DbsVendor {
 
         // Retry on 5xx; fail fast on 4xx.
         if (res.status >= 500) {
-          lastError = new UCheckApiError(
+          lastError = new DbsApiError(
             res.status,
-            `uCheck ${init.method} ${path} failed (${res.status})`,
+            `DBS API ${init.method} ${path} failed (${res.status})`,
             await safeBody(res),
           );
           await backoff(attempt);
           continue;
         }
         if (!res.ok) {
-          throw new UCheckApiError(
+          throw new DbsApiError(
             res.status,
-            `uCheck ${init.method} ${path} failed (${res.status})`,
+            `DBS API ${init.method} ${path} failed (${res.status})`,
             await safeBody(res),
           );
         }
         return (await res.json()) as T;
       } catch (e) {
         // AbortError (timeout) + network errors are retryable.
-        if (e instanceof UCheckApiError && e.status !== 0) throw e;
+        if (e instanceof DbsApiError && e.status !== 0) throw e;
         lastError = e;
-        if (attempt < UCHECK_RETRY_ATTEMPTS) await backoff(attempt);
+        if (attempt < DBS_RETRY_ATTEMPTS) await backoff(attempt);
       } finally {
         clearTimeout(timer);
       }
     }
 
-    if (lastError instanceof UCheckApiError) throw lastError;
+    if (lastError instanceof DbsApiError) throw lastError;
     const message =
-      lastError instanceof Error ? lastError.message : "uCheck request failed";
-    throw new UCheckApiError(0, message);
+      lastError instanceof Error ? lastError.message : "DBS request failed";
+    throw new DbsApiError(0, message);
   }
 
   async submitApplication(
@@ -359,9 +360,9 @@ export class UCheckVendor implements DbsVendor {
     );
     const vendorReference = data.reference ?? data.id;
     if (!vendorReference) {
-      throw new UCheckApiError(
+      throw new DbsApiError(
         502,
-        "uCheck submitApplication response missing reference",
+        "DBS partner submitApplication response missing reference",
         data,
       );
     }
@@ -381,7 +382,7 @@ export class UCheckVendor implements DbsVendor {
     const rawStatus = data.status ?? "in_progress";
     const decisionRaw = data.decisionAt ?? data.completedAt;
     return {
-      status: mapUCheckStatus(rawStatus),
+      status: mapDbsStatus(rawStatus),
       decisionAt: decisionRaw ? new Date(decisionRaw) : undefined,
       certificateNumber:
         data.certificateNumber ?? data.certificate?.number ?? undefined,
@@ -397,7 +398,7 @@ export class UCheckVendor implements DbsVendor {
     );
     const raw = data.result ?? data.status ?? "change_pending";
     return {
-      status: mapUCheckUpdateServiceStatus(raw),
+      status: mapDbsUpdateServiceStatus(raw),
       checkedAt: new Date(),
     };
   }
@@ -442,6 +443,6 @@ export function getMockDbsVendor(): MockDbsVendor {
  */
 export function getDbsVendor(): DbsVendor {
   const choice = (process.env.DBS_VENDOR ?? "mock").toLowerCase();
-  if (choice === "ucheck") return new UCheckVendor();
+  if (choice === "ucheck" || choice === "rest") return new DbsRestVendor();
   return getMockDbsVendor();
 }
