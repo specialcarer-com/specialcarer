@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { US_REGION_ENABLED } from "@/lib/region";
 import { getDbsVendor } from "@/lib/dbs/vendor";
 import { sendEmail } from "@/lib/email/smtp";
 import {
@@ -17,10 +18,12 @@ type Admin = ReturnType<typeof createAdminClient>;
 function makePollClient(admin: Admin): PollClient {
   return {
     async fetchDueRows(cutoffIso) {
-      const { data } = await admin
+      // UK-only regional constraint until the US launch (see @/lib/region) —
+      // only poll GB carers via an inner join on caregiver_profiles.country.
+      let dueQuery = admin
         .from("dbs_applications")
         .select(
-          "id, carer_id, certificate_number, update_service_last_checked_at",
+          "id, carer_id, certificate_number, update_service_last_checked_at, caregiver_profiles!inner(country)",
         )
         .eq("update_service_enrolled", true)
         .eq("status", "approved")
@@ -28,6 +31,10 @@ function makePollClient(admin: Admin): PollClient {
           `update_service_last_checked_at.is.null,update_service_last_checked_at.lt.${cutoffIso}`,
         )
         .limit(500);
+      if (!US_REGION_ENABLED) {
+        dueQuery = dueQuery.eq("caregiver_profiles.country", "GB");
+      }
+      const { data } = await dueQuery;
       return (data ?? []) as DueRow[];
     },
     async markChecked(applicationId, nowIso) {
@@ -44,10 +51,12 @@ function makePollClient(admin: Admin): PollClient {
           update_service_last_checked_at: nowIso,
         })
         .eq("id", applicationId);
-      await admin
+      let changeUpdate = admin
         .from("caregiver_profiles")
         .update({ dbs_overall_status: "in_progress" })
         .eq("user_id", carerId);
+      if (!US_REGION_ENABLED) changeUpdate = changeUpdate.eq("country", "GB");
+      await changeUpdate;
     },
     async markInvalidated(applicationId, carerId, nowIso) {
       await admin
@@ -58,13 +67,15 @@ function makePollClient(admin: Admin): PollClient {
         })
         .eq("id", applicationId);
       // Suspend the carer from search immediately.
-      await admin
+      let suspendUpdate = admin
         .from("caregiver_profiles")
         .update({
           dbs_overall_status: "expired",
           dbs_search_eligible: false,
         })
         .eq("user_id", carerId);
+      if (!US_REGION_ENABLED) suspendUpdate = suspendUpdate.eq("country", "GB");
+      await suspendUpdate;
     },
   };
 }

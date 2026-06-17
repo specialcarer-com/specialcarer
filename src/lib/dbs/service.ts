@@ -373,13 +373,35 @@ export async function selfVerifyExistingDbs(
     };
   }
 
+  // UK-only regional constraint until the US launch (see @/lib/region). The
+  // insert/update below can't filter by an embedded resource, so confirm the
+  // carer is GB before creating or modifying their application.
+  if (!US_REGION_ENABLED) {
+    const { data: carer } = await admin
+      .from("caregiver_profiles")
+      .select("user_id")
+      .eq("user_id", carerId)
+      .eq("country", "GB")
+      .maybeSingle();
+    if (!carer) {
+      return {
+        ok: false,
+        reason:
+          "We couldn't confirm this certificate on the DBS Update Service. Please apply through the standard path.",
+      };
+    }
+  }
+
   const nowIso = new Date().toISOString();
-  const { data: existing } = await admin
+  let existingQuery = admin
     .from("dbs_applications")
-    .select("id")
+    .select("id, caregiver_profiles!inner(country)")
     .eq("carer_id", carerId)
-    .eq("kind", input.kind)
-    .maybeSingle();
+    .eq("kind", input.kind);
+  if (!US_REGION_ENABLED) {
+    existingQuery = existingQuery.eq("caregiver_profiles.country", "GB");
+  }
+  const { data: existing } = await existingQuery.maybeSingle();
 
   const patch = {
     vendor: vendor.name,

@@ -19,6 +19,7 @@ import { requireAdminApi, logAdminAction } from "@/lib/admin/auth";
 import { recordManualDecision } from "@/lib/dbs/service";
 import { recordSurnameOverride } from "@/lib/dbs/cross-check";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { US_REGION_ENABLED } from "@/lib/region";
 import { isDbsEnabled } from "@/lib/dbs/flag";
 
 export const dynamic = "force-dynamic";
@@ -65,11 +66,18 @@ export async function POST(
   // from the application id first.
   if (surnameOverride) {
     const admin = createAdminClient();
-    const { data: appRow } = await admin
+    // UK-only regional constraint until the US launch (see @/lib/region) —
+    // restrict to GB carers via an inner join on caregiver_profiles.country.
+    let appRowQuery = admin
       .from("dbs_applications")
-      .select("carer_id")
-      .eq("id", applicationId)
-      .maybeSingle<{ carer_id: string }>();
+      .select("carer_id, caregiver_profiles!inner(country)")
+      .eq("id", applicationId);
+    if (!US_REGION_ENABLED) {
+      appRowQuery = appRowQuery.eq("caregiver_profiles.country", "GB");
+    }
+    const { data: appRow } = await appRowQuery.maybeSingle<{
+      carer_id: string;
+    }>();
     if (appRow) {
       try {
         await recordSurnameOverride(

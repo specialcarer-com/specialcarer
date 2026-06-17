@@ -20,6 +20,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { US_REGION_ENABLED } from "@/lib/region";
 import { isDbsEnabled } from "./flag";
 import { DbsDisabledError } from "./types";
 
@@ -36,6 +37,24 @@ export function setCrossCheckAdminClientFactory(
 
 function client(): AdminClient {
   return adminClientFactory();
+}
+
+/**
+ * UK-only regional constraint until the US launch (see @/lib/region). PostgREST
+ * can't filter an UPDATE by an embedded resource, so writes to dbs_applications
+ * (which join to caregiver_profiles for country) must be guarded by an explicit
+ * GB-carer check first. Returns true when the carer may be written to.
+ */
+async function carerIsGb(carerId: string): Promise<boolean> {
+  if (US_REGION_ENABLED) return true;
+  const admin = client();
+  const { data } = await admin
+    .from("caregiver_profiles")
+    .select("user_id")
+    .eq("user_id", carerId)
+    .eq("country", "GB")
+    .maybeSingle();
+  return Boolean(data);
 }
 
 export type IdentityFacts = {
@@ -135,12 +154,18 @@ export async function crossCheckDbsAgainstVeriff(
   }
 
   // Is there an admin surname override on any of this carer's applications?
-  const { data: overrideRows } = await admin
+  // UK-only regional constraint (see @/lib/region) — restrict to GB carers via
+  // an inner join on caregiver_profiles.country.
+  let overrideQuery = admin
     .from("dbs_applications")
-    .select("surname_override_by")
+    .select("surname_override_by, caregiver_profiles!inner(country)")
     .eq("carer_id", carerId)
     .not("surname_override_by", "is", null)
     .limit(1);
+  if (!US_REGION_ENABLED) {
+    overrideQuery = overrideQuery.eq("caregiver_profiles.country", "GB");
+  }
+  const { data: overrideRows } = await overrideQuery;
   const overridden = (overrideRows ?? []).length > 0;
 
   const veriff = veriffFactsFromDecision(
@@ -155,6 +180,7 @@ async function persist(
   carerId: string,
   result: CrossCheckResult,
 ): Promise<void> {
+  if (!(await carerIsGb(carerId))) return;
   const admin = client();
   await admin
     .from("dbs_applications")
@@ -177,6 +203,7 @@ export async function recordSurnameOverride(
   reason: string,
 ): Promise<void> {
   if (!isDbsEnabled()) throw new DbsDisabledError();
+  if (!(await carerIsGb(carerId))) return;
   const admin = client();
   await admin
     .from("dbs_applications")

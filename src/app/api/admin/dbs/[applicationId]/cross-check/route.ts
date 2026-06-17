@@ -9,6 +9,7 @@
 import { NextResponse } from "next/server";
 import { requireAdminApi, logAdminAction } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { US_REGION_ENABLED } from "@/lib/region";
 import { crossCheckDbsAgainstVeriff } from "@/lib/dbs/cross-check";
 import { isDbsEnabled } from "@/lib/dbs/flag";
 
@@ -28,11 +29,16 @@ export async function POST(
   const { applicationId } = await params;
   const admin = createAdminClient();
 
-  const { data: app } = await admin
+  // UK-only regional constraint until the US launch (see @/lib/region) —
+  // restrict to GB carers via an inner join on caregiver_profiles.country.
+  let appQuery = admin
     .from("dbs_applications")
-    .select("carer_id")
-    .eq("id", applicationId)
-    .maybeSingle<{ carer_id: string }>();
+    .select("carer_id, caregiver_profiles!inner(country)")
+    .eq("id", applicationId);
+  if (!US_REGION_ENABLED) {
+    appQuery = appQuery.eq("caregiver_profiles.country", "GB");
+  }
+  const { data: app } = await appQuery.maybeSingle<{ carer_id: string }>();
   if (!app) {
     return NextResponse.json({ error: "Application not found" }, { status: 404 });
   }

@@ -90,18 +90,38 @@ type Row = Record<string, unknown>;
 function makeClient(state: {
   identity: Row[];
   applications: Row[];
+  caregivers?: Row[];
 }) {
+  // GB carer for every application by default, so region gating is satisfied
+  // unless a test overrides state.caregivers.
+  const caregivers = () =>
+    state.caregivers ?? [{ user_id: "c1", country: "GB" }];
   return {
     from(table: string) {
       const rows = () =>
-        table === "identity_verifications" ? state.identity : state.applications;
+        table === "identity_verifications"
+          ? state.identity
+          : table === "caregiver_profiles"
+            ? caregivers()
+            : state.applications;
       const filters: Array<(r: Row) => boolean> = [];
+      // A dotted column like "caregiver_profiles.country" models an !inner join:
+      // read the value from the caregiver_profiles row whose user_id matches the
+      // application's carer_id (no join row ⇒ excluded, mirroring an inner join).
+      const matches = (r: Row, col: string, val: unknown): boolean => {
+        if (col.includes(".")) {
+          const [, joinCol] = col.split(".");
+          const joined = caregivers().find((cp) => cp.user_id === r.carer_id);
+          return joined ? joined[joinCol] === val : false;
+        }
+        return r[col] === val;
+      };
       const builder: Record<string, unknown> = {
         select() {
           return builder;
         },
         eq(col: string, val: unknown) {
-          filters.push((r) => r[col] === val);
+          filters.push((r) => matches(r, col, val));
           return builder;
         },
         not(col: string, _op: string, _val: unknown) {
