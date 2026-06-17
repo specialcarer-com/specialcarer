@@ -74,6 +74,7 @@ const SECTIONS: NavSection[] = [
     label: "Compliance",
     items: [
       { href: "/admin/compliance", label: "Compliance dashboard" },
+      { href: "/admin/dbs", label: "DBS applications" },
     ],
   },
 ];

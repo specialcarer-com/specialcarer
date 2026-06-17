@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isDbsEnabled } from "@/lib/dbs/flag";
 
 export const dynamic = "force-dynamic";
 
@@ -61,12 +62,19 @@ export async function GET() {
     created_at: string | null;
   };
 
-  const { data: rows, error } = await supabase
+  let featuredQuery = supabase
     .from("caregiver_profiles")
     .select(
       "user_id, display_name, photo_url, city, country, services, years_experience, rating_avg, rating_count, hourly_rate_cents, currency, created_at",
     )
-    .eq("is_published", true)
+    .eq("is_published", true);
+
+  // DBS gating (PR-DBS-1): only search-eligible carers when the flag is on.
+  if (isDbsEnabled()) {
+    featuredQuery = featuredQuery.eq("dbs_search_eligible", true);
+  }
+
+  const { data: rows, error } = await featuredQuery
     .order("rating_avg", { ascending: false, nullsFirst: false })
     .order("rating_count", { ascending: false })
     .order("created_at", { ascending: false })

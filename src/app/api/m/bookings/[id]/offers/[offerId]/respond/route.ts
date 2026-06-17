@@ -16,6 +16,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isDbsEnabled } from "@/lib/dbs/flag";
 import {
   handleRespond,
   type AcceptRpcResult,
@@ -46,6 +47,31 @@ export async function POST(
   }
 
   const admin = createAdminClient();
+
+  // DBS gating (PR-DBS-1): a carer who isn't search-eligible (both Adult +
+  // Child DBS approved) cannot ACCEPT bookings. Declining is always allowed.
+  // No-op when NEXT_PUBLIC_DBS_ENABLED is off.
+  if (
+    isDbsEnabled() &&
+    typeof body === "object" &&
+    body !== null &&
+    (body as { action?: unknown }).action === "accept"
+  ) {
+    const { data: profile } = await admin
+      .from("caregiver_profiles")
+      .select("dbs_search_eligible")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!profile?.dbs_search_eligible) {
+      return NextResponse.json(
+        {
+          error:
+            "Complete your DBS check before accepting bookings. Adult and Child DBS must both be approved.",
+        },
+        { status: 403 },
+      );
+    }
+  }
   const client: RespondClient = {
     async loadOffer({ offerId, bookingId, carerId }) {
       const { data } = await admin

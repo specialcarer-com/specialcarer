@@ -37,6 +37,7 @@ import { serviceLabel } from "@/lib/care/services";
 import GoOnlineCard from "./GoOnlineCard";
 import TipOfTheDay from "./TipOfTheDay";
 import VerifyIdentityCard from "@/components/identity/VerifyIdentityCard";
+import DbsBanner from "@/components/dbs/DbsBanner";
 
 type EarningsSummary = {
   today_cents: number;
@@ -428,6 +429,10 @@ export default function CarerHomeClient() {
       <div className="px-4 mt-4">
         <VerifyIdentityCard />
       </div>
+
+      {/* DBS prompt (PR-DBS-1). Renders nothing while NEXT_PUBLIC_DBS_ENABLED
+          is off or the carer's DBS is already approved. */}
+      <DbsBanner />
 
       {/* Find work — always visible, primary CTA */}
       <SectionTitle title="Find work" />
