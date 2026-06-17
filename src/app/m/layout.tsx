@@ -4,6 +4,8 @@ import "../globals.css";
 import "./mobile.css";
 import StatusBarController from "@/components/native/StatusBarController";
 import { AccessibilityProvider } from "./_components/AccessibilityProvider";
+import BiometricLockProvider from "./_components/BiometricLockProvider";
+import { MOBILE_PERSISTENT_AUTH_ENABLED } from "@/lib/mobile-auth/flag";
 
 /**
  * Mobile app shell — Capacitor loads /m/* directly.
@@ -58,7 +60,13 @@ export default function MobileLayout({
         <StatusBarController />
         <AccessibilityProvider>
           <main id="sc-main" tabIndex={-1}>
-            {children}
+            {/* Biometric app-lock wraps the app only when the flag is on.
+                When off, children render directly — no behaviour change. */}
+            {MOBILE_PERSISTENT_AUTH_ENABLED ? (
+              <BiometricLockProvider>{children}</BiometricLockProvider>
+            ) : (
+              children
+            )}
           </main>
         </AccessibilityProvider>
       </div>

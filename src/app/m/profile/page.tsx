@@ -31,6 +31,9 @@ import { createClient } from "@/lib/supabase/client";
 import ShareProfileButton from "@/components/profile/ShareProfileButton";
 import { MEMBERSHIPS_ENABLED } from "@/lib/memberships/flag";
 import { DBS_ENABLED } from "@/lib/dbs/flag";
+import { MOBILE_PERSISTENT_AUTH_ENABLED } from "@/lib/mobile-auth/flag";
+import { clearLockPreference } from "@/lib/mobile-auth/lock-native";
+import { AppLockToggle } from "./_components/AppLockToggle";
 import { useTranslations } from "next-intl";
 import { LanguagePicker } from "./_components/LanguagePicker";
 
@@ -336,6 +339,12 @@ export default function ProfilePage() {
   async function logout() {
     const supabase = createClient();
     await supabase.auth.signOut();
+    // Signing out wipes the biometric app-lock preference + stored credential
+    // so the next user on this device starts fresh (no behaviour change when
+    // the flag is off — clearLockPreference is a no-op on web / absent plugin).
+    if (MOBILE_PERSISTENT_AUTH_ENABLED) {
+      await clearLockPreference();
+    }
     router.replace("/m/login");
   }
 
@@ -476,6 +485,11 @@ export default function ProfilePage() {
               <IconChevronRight />
             </Link>
           </li>
+          {/* Biometric app-lock toggle — renders its own <li> (with a top
+              border) only on biometric-capable devices; otherwise nothing, so
+              there is no empty bordered row. Hidden entirely when the flag is
+              off. */}
+          {MOBILE_PERSISTENT_AUTH_ENABLED && <AppLockToggle />}
           <li className="border-t border-line">
             <button
               onClick={logout}
