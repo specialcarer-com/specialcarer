@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import {
   Card,
   IconCal,
@@ -22,7 +23,7 @@ import PostJobFab from "@/components/m/PostJobFab";
  * a signed-in session. Safe because it shows static markup only.
  */
 
-type TabSpec = { key: string; label: string; icon: React.ReactNode };
+type TabSpec = { key: string; label: string; icon: ReactNode };
 
 const OLD_SEEKER_TABS: TabSpec[] = [
   { key: "home", label: "Home", icon: <IconHome /> },
@@ -85,7 +86,7 @@ function Section({
 }: {
   title: string;
   subtitle?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <section className="space-y-3">

@@ -64,6 +64,12 @@ export default function ReviewFormPage({
           cache: "no-store",
         });
         if (cancelled) return;
+        if (res.status === 401) {
+          router.replace(
+            `/m/login?next=${encodeURIComponent(`/m/review/${bookingId}`)}`,
+          );
+          return;
+        }
         if (!res.ok) {
           setState({
             kind: "error",
@@ -120,6 +126,12 @@ export default function ReviewFormPage({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rating, body: body.trim() || undefined }),
       });
+      if (res.status === 401) {
+        router.replace(
+          `/m/login?next=${encodeURIComponent(`/m/review/${bookingId}`)}`,
+        );
+        return;
+      }
       if (!res.ok) {
         const j = (await res.json().catch(() => ({}))) as { error?: string };
         setToast(j.error ?? "Could not save your review.");
@@ -192,7 +204,7 @@ export default function ReviewFormPage({
             </Card>
 
             {!state.reviewable && (
-              <p className="text-[13px] text-[#B9651A] bg-[#FBF1E6] border border-[#F0DCC2] rounded-btn px-3 py-2">
+              <p className="text-[13px] text-[#0F1416] bg-[#F4EFE6] border border-[#F4A261] rounded-btn px-3 py-2">
                 Reviews open once the shift is complete.
               </p>
             )}
@@ -240,7 +252,7 @@ export default function ReviewFormPage({
                 </p>
               )}
               {formError === "rating" && (
-                <p className="mt-2 text-[12px] text-[#C22]">
+                <p className="mt-2 text-[12px] text-[#0F1416]">
                   Please pick a rating from 1 to 5 stars.
                 </p>
               )}

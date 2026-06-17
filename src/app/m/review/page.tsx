@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   Avatar,
@@ -100,6 +101,7 @@ function WrittenRow({ item }: { item: ApiWrittenReviewItem }) {
 
 export default function ReviewHubPage() {
   const redesign = isMobileRedesignEnabled();
+  const router = useRouter();
   const [data, setData] = useState<ApiReviewHubResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -112,9 +114,13 @@ export default function ReviewHubPage() {
           cache: "no-store",
         });
         if (cancelled) return;
+        if (res.status === 401) {
+          router.replace(`/m/login?next=${encodeURIComponent("/m/review")}`);
+          return;
+        }
         if (!res.ok) {
           setData({ pending: [], written: [] });
-          if (res.status !== 401) setErr("Could not load reviews.");
+          setErr("Could not load reviews.");
           return;
         }
         const json = (await res.json()) as ApiReviewHubResponse;
@@ -129,7 +135,7 @@ export default function ReviewHubPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [router]);
 
   const pending = data ? sortPendingNewestFirst(data.pending) : [];
   const written = data ? sortWrittenNewestFirst(data.written) : [];
@@ -150,7 +156,7 @@ export default function ReviewHubPage() {
         {data !== null && err && (
           <p
             aria-live="polite"
-            className="text-[13px] text-[#C22] bg-[#FBEBEB] border border-[#F3CCCC] rounded-btn px-3 py-2"
+            className="text-[13px] text-[#0F1416] bg-[#F4EFE6] border border-[#F4A261] rounded-btn px-3 py-2"
           >
             {err}
           </p>

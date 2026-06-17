@@ -44,6 +44,7 @@ type BookingRow = {
   starts_at: string | null;
   ends_at: string | null;
   service_type: string | null;
+  shift_completed_at: string | null;
   created_at: string;
 };
 
@@ -78,7 +79,9 @@ export async function GET() {
 
   const { data: bookingRows, error: bErr } = await supabase
     .from("bookings")
-    .select("id, caregiver_id, status, starts_at, ends_at, service_type, created_at")
+    .select(
+      "id, caregiver_id, status, starts_at, ends_at, service_type, shift_completed_at, created_at",
+    )
     .eq("seeker_id", user.id)
     .in("status", ["completed", "paid_out"])
     .order("created_at", { ascending: false })
@@ -161,7 +164,7 @@ export async function GET() {
       service_type: b.service_type ?? "",
       starts_at: b.starts_at ?? "",
       ends_at: b.ends_at ?? "",
-      completed_at: b.created_at,
+      completed_at: b.shift_completed_at ?? b.created_at,
     }));
 
   const written: ApiWrittenReviewItem[] = reviews.map((r) => ({
