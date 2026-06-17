@@ -52,6 +52,90 @@ const CATEGORY_TO_COLUMN: Record<CategoryKey, string> = {
  * Only the seeker of a completed/paid_out booking can review. One row
  * per booking_id+reviewer_id (upsert).
  */
+/**
+ * GET /api/bookings/[id]/review
+ *
+ * Returns the signed-in seeker's own review for this booking (or null when
+ * none exists yet) plus the carer the booking is against, so the /m/review
+ * form can prefill in edit mode. RLS scopes the row to reviewer_id=auth.uid().
+ */
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id: bookingId } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const admin = createAdminClient();
+  const { data: booking } = await admin
+    .from("bookings")
+    .select("seeker_id, caregiver_id, status, service_type, starts_at, ends_at")
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (!booking) {
+    return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+  }
+  if (booking.seeker_id !== user.id) {
+    return NextResponse.json(
+      { error: "Only the seeker can review" },
+      { status: 403 },
+    );
+  }
+
+  const { data: review } = await supabase
+    .from("reviews")
+    .select("rating, body, tags")
+    .eq("booking_id", bookingId)
+    .eq("reviewer_id", user.id)
+    .maybeSingle();
+
+  let caregiverName: string | null = null;
+  let caregiverAvatar: string | null = null;
+  if (booking.caregiver_id) {
+    const [{ data: carer }, { data: prof }] = await Promise.all([
+      admin
+        .from("caregiver_profiles")
+        .select("display_name, photo_url")
+        .eq("user_id", booking.caregiver_id)
+        .maybeSingle(),
+      admin
+        .from("profiles")
+        .select("full_name, avatar_url")
+        .eq("id", booking.caregiver_id)
+        .maybeSingle(),
+    ]);
+    caregiverName = carer?.display_name ?? prof?.full_name ?? null;
+    caregiverAvatar = carer?.photo_url ?? prof?.avatar_url ?? null;
+  }
+
+  return NextResponse.json({
+    booking: {
+      id: bookingId,
+      caregiver_id: booking.caregiver_id,
+      caregiver_name: caregiverName,
+      caregiver_avatar: caregiverAvatar,
+      service_type: booking.service_type ?? "",
+      starts_at: booking.starts_at ?? "",
+      ends_at: booking.ends_at ?? "",
+      status: booking.status,
+      reviewable: ["completed", "paid_out"].includes(booking.status),
+    },
+    review: review
+      ? {
+          rating: review.rating,
+          body: review.body,
+          tags: review.tags ?? [],
+        }
+      : null,
+  });
+}
+
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
