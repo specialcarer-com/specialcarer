@@ -15,6 +15,7 @@
  * real server client lazily.
  */
 import { isMobileRedesignEnabled } from "@/lib/mobile-redesign/flag";
+import { US_REGION_ENABLED } from "@/lib/region";
 
 export type QualificationKind =
   | "NVQ_L2"
@@ -70,6 +71,13 @@ type ProfileVerifiedRow = {
   certifications: string[] | null;
 };
 
+/**
+ * UK-only regional scoping (CodeRabbit-enforced policy until Q1–Q2 2027 US
+ * launch). Every Supabase read against `caregiver_profiles` must filter
+ * `country = "GB"` unless `US_REGION_ENABLED` is on. Canonical pattern lives
+ * in `src/lib/care/search.ts` and `src/lib/coverage-server.ts`.
+ */
+
 type BackgroundCheckRow = {
   status: string | null;
 };
@@ -101,9 +109,15 @@ export type QualificationsClient = {
   from(table: "caregiver_profiles"): {
     select(cols: string): {
       eq(
-        col: "user_id",
+        col: "user_id" | "country",
         value: string,
       ): {
+        eq(
+          col: "user_id" | "country",
+          value: string,
+        ): {
+          maybeSingle(): MaybeResult<ProfileVerifiedRow>;
+        };
         maybeSingle(): MaybeResult<ProfileVerifiedRow>;
       };
     };
@@ -187,11 +201,16 @@ export async function getCarerQualificationsWith(
   }
 
   // Fallback: derive from caregiver_profiles.certifications.
-  const { data, error } = await client
+  // UK-only regional scoping (see policy note above): unless the US launch
+  // flag is on, restrict to GB caregivers so we never surface a US row.
+  const profilesQuery = client
     .from("caregiver_profiles")
     .select("verified_status, verified_at, certifications")
-    .eq("user_id", carerId)
-    .maybeSingle();
+    .eq("user_id", carerId);
+  const fallbackResult = await (US_REGION_ENABLED
+    ? profilesQuery.maybeSingle()
+    : profilesQuery.eq("country", "GB").maybeSingle());
+  const { data, error } = fallbackResult;
 
   if (error) {
     throw new Error(`getCarerQualifications (fallback): ${error.message}`);
@@ -238,21 +257,28 @@ export async function getCarerVerifiedStatusWith(
   enabled: boolean,
 ): Promise<CarerVerifiedStatus> {
   if (enabled) {
-    const { data, error } = await client
+    // UK-only regional scoping: same policy as above.
+    const verifiedQuery = client
       .from("caregiver_profiles")
       .select("verified_status, verified_at, certifications")
-      .eq("user_id", carerId)
-      .maybeSingle();
+      .eq("user_id", carerId);
+    const verifiedResult = await (US_REGION_ENABLED
+      ? verifiedQuery.maybeSingle()
+      : verifiedQuery.eq("country", "GB").maybeSingle());
+    const { data, error } = verifiedResult;
 
     if (error) {
       throw new Error(`getCarerVerifiedStatus: ${error.message}`);
     }
 
     const status = coerceStatus(data?.verified_status);
-    const at =
-      status === "verified" && data?.verified_at
-        ? new Date(data.verified_at)
-        : null;
+    // Guard against invalid timestamps in verified_at — a malformed value
+    // would otherwise leak an `Invalid Date` into CarerVerifiedStatus.at.
+    let at: Date | null = null;
+    if (status === "verified" && data?.verified_at) {
+      const parsed = new Date(data.verified_at);
+      if (!Number.isNaN(parsed.getTime())) at = parsed;
+    }
     return { status, at };
   }
 
