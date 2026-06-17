@@ -17,6 +17,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isDbsEnabled } from "@/lib/dbs/flag";
+import { US_REGION_ENABLED } from "@/lib/region";
 import {
   handleRespond,
   type AcceptRpcResult,
@@ -57,11 +58,15 @@ export async function POST(
     body !== null &&
     (body as { action?: unknown }).action === "accept"
   ) {
-    const { data: profile } = await admin
+    let profileQuery = admin
       .from("caregiver_profiles")
       .select("dbs_search_eligible")
-      .eq("user_id", user.id)
-      .maybeSingle();
+      .eq("user_id", user.id);
+    // UK-only regional constraint until the US launch (see @/lib/region).
+    if (!US_REGION_ENABLED) {
+      profileQuery = profileQuery.eq("country", "GB");
+    }
+    const { data: profile } = await profileQuery.maybeSingle();
     if (!profile?.dbs_search_eligible) {
       return NextResponse.json(
         {

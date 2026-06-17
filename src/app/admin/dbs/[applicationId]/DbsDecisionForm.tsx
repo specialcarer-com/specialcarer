@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const BRAND = "#0E7C7B";
+const BRAND = "#039EA0";
 
 export default function DbsDecisionForm({
   applicationId,

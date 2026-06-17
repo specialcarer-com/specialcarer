@@ -93,13 +93,13 @@ class FakeTable {
 class FakeDb {
   tables: Record<string, FakeTable> = {
     dbs_applications: new FakeTable([]),
-    caregiver_profiles: new FakeTable([{ user_id: "carer-1" }]),
+    caregiver_profiles: new FakeTable([{ user_id: "carer-1", country: "GB" }]),
   };
 
   reset() {
     this.tables = {
       dbs_applications: new FakeTable([]),
-      caregiver_profiles: new FakeTable([{ user_id: "carer-1" }]),
+      caregiver_profiles: new FakeTable([{ user_id: "carer-1", country: "GB" }]),
     };
   }
 }
@@ -107,6 +107,26 @@ class FakeDb {
 // A tiny query builder covering exactly the operations the service uses:
 //   select().eq()[.eq()][.maybeSingle()] · insert() · update().eq()[.in()]
 function makeClient(db: FakeDb) {
+  // Resolve a single filter against a row. Dotted columns like
+  // "caregiver_profiles.country" model an !inner join: the value is read from
+  // the caregiver_profiles row whose user_id matches the application's carer_id
+  // (a row that doesn't join is excluded, mirroring an inner join).
+  const matchFilter = (r: Row, col: string, v: unknown): boolean => {
+    let actual: unknown;
+    if (col.includes(".")) {
+      const [, joinCol] = col.split(".");
+      const joined = db.tables.caregiver_profiles.rows.find(
+        (cp) => cp.user_id === r.carer_id,
+      );
+      if (!joined) return false;
+      actual = joined[joinCol];
+    } else {
+      actual = r[col];
+    }
+    return v && typeof v === "object" && "__in" in v
+      ? (v as { __in: unknown[] }).__in.includes(actual)
+      : actual === v;
+  };
   return {
     from(table: string) {
       const t = () => db.tables[table];
@@ -136,11 +156,7 @@ function makeClient(db: FakeDb) {
             },
             __match() {
               return t().rows.filter((r) =>
-                this._f.every(([c, v]) =>
-                  v && typeof v === "object" && "__in" in v
-                    ? (v as { __in: unknown[] }).__in.includes(r[c])
-                    : r[c] === v,
-                ),
+                this._f.every(([c, v]) => matchFilter(r, c, v)),
               );
             },
             __resolve() {
@@ -173,11 +189,7 @@ function makeClient(db: FakeDb) {
             },
             __apply() {
               for (const r of t().rows) {
-                const ok = f.every(([c, v]) =>
-                  v && typeof v === "object" && "__in" in v
-                    ? (v as { __in: unknown[] }).__in.includes(r[c])
-                    : r[c] === v,
-                );
+                const ok = f.every(([c, v]) => matchFilter(r, c, v));
                 if (ok) Object.assign(r, patch);
               }
               return { data: null, error: null };
