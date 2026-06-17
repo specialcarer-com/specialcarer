@@ -14,8 +14,21 @@ export type DbsQueueRow = {
   vendor_reference: string | null;
   submitted_at: string | null;
   recovery_status: string | null;
+  cross_check_passed: boolean | null;
+  update_service_enrolled: boolean | null;
+  update_service_last_checked_at: string | null;
   created_at: string;
 };
+
+function crossCheckLabel(passed: boolean | null): {
+  text: string;
+  cls: string;
+} {
+  if (passed === null) return { text: "Not run", cls: "text-slate-400" };
+  return passed
+    ? { text: "Pass", cls: "text-emerald-600" }
+    : { text: "Mismatch", cls: "text-rose-600" };
+}
 
 type SortKey = "submitted_at" | "carer_name" | "kind";
 
@@ -82,6 +95,8 @@ export default function DbsQueueClient({
               <th className="px-4 py-2 font-medium">Carer</th>
               <th className="px-4 py-2 font-medium">Kind</th>
               <th className="px-4 py-2 font-medium">Status</th>
+              <th className="px-4 py-2 font-medium">Cross-check</th>
+              <th className="px-4 py-2 font-medium">Update Service</th>
               <th className="px-4 py-2 font-medium">Recovery</th>
               <th className="px-4 py-2 font-medium">Submitted</th>
               <th className="px-4 py-2" />
@@ -109,6 +124,18 @@ export default function DbsQueueClient({
                 </td>
                 <td className="px-4 py-3 capitalize">{r.kind}</td>
                 <td className="px-4 py-3 capitalize">{r.status.replace("_", " ")}</td>
+                <td className={`px-4 py-3 font-medium ${crossCheckLabel(r.cross_check_passed).cls}`}>
+                  {crossCheckLabel(r.cross_check_passed).text}
+                </td>
+                <td className="px-4 py-3 text-slate-500">
+                  {r.update_service_enrolled
+                    ? r.update_service_last_checked_at
+                      ? new Date(
+                          r.update_service_last_checked_at,
+                        ).toLocaleDateString()
+                      : "Enrolled · not checked"
+                    : "—"}
+                </td>
                 <td className="px-4 py-3 capitalize">
                   {(r.recovery_status ?? "—").replace("_", " ")}
                 </td>

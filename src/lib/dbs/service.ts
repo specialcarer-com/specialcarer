@@ -13,6 +13,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getDbsVendor } from "./vendor";
 import { isDbsEnabled } from "./flag";
+import { crossCheckDbsAgainstVeriff } from "./cross-check";
 import {
   DBS_COST_PENCE,
   DbsDisabledError,
@@ -21,6 +22,16 @@ import {
   type DbsOverallStatus,
   type DbsStatus,
 } from "./types";
+
+/** Thrown by submitDbsApplication when the Veriff cross-check fails. */
+export class DbsCrossCheckError extends Error {
+  readonly mismatches: string[];
+  constructor(mismatches: string[]) {
+    super("Names don't match — admin will review");
+    this.name = "DbsCrossCheckError";
+    this.mismatches = mismatches;
+  }
+}
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -87,6 +98,18 @@ export async function submitDbsApplication(
   if (!isDbsEnabled()) throw new DbsDisabledError();
   const admin = client();
   const vendor = getDbsVendor();
+
+  // Cross-check the carer-entered name/DOB against their Veriff-confirmed
+  // identity before submitting. A failure blocks submission and surfaces a
+  // "Names don't match — admin will review" message to the carer. No-op pass
+  // when the carer has no completed Veriff verification.
+  const crossCheck = await crossCheckDbsAgainstVeriff(carerId, {
+    surname: carerDetails.surname,
+    dateOfBirth: carerDetails.dateOfBirth,
+  });
+  if (!crossCheck.ok) {
+    throw new DbsCrossCheckError(crossCheck.mismatches);
+  }
 
   const { vendorReference } = await vendor.submitApplication({
     carerId,
@@ -277,6 +300,72 @@ export async function chooseUpfrontPayment(
     .in("recovery_status", ["pending", "recovering"]);
 
   return { clientSecret: intent.client_secret ?? null, amountPence: DBS_COST_PENCE };
+}
+
+/**
+ * Self-verify path: a carer who already holds a live Update-Service DBS gives
+ * us their certificate number + DOB; we validate it via the vendor's Update
+ * Service API. On a 'clear' result we create an approved, Update-Service-
+ * enrolled application for the requested kind with recovery waived (SC didn't
+ * front the £60). Anything else returns invalid so the carer is steered to the
+ * standard application path.
+ *
+ * Returns { ok } on success or { ok:false, reason } on an invalid certificate.
+ */
+export async function selfVerifyExistingDbs(
+  carerId: string,
+  input: {
+    certificateNumber: string;
+    kind: DbsKind;
+    dateOfBirth: string;
+  },
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  if (!isDbsEnabled()) throw new DbsDisabledError();
+  const admin = client();
+  const vendor = getDbsVendor();
+
+  const { status } = await vendor.getUpdateServiceStatus(
+    input.certificateNumber,
+  );
+  if (status !== "clear") {
+    return {
+      ok: false,
+      reason:
+        "We couldn't confirm this certificate on the DBS Update Service. Please apply through the standard path.",
+    };
+  }
+
+  const nowIso = new Date().toISOString();
+  const { data: existing } = await admin
+    .from("dbs_applications")
+    .select("id")
+    .eq("carer_id", carerId)
+    .eq("kind", input.kind)
+    .maybeSingle();
+
+  const patch = {
+    vendor: vendor.name,
+    status: "approved" as DbsStatus,
+    certificate_number: input.certificateNumber,
+    update_service_enrolled: true,
+    update_service_last_checked_at: nowIso,
+    decision_at: nowIso,
+    recovery_status: "waived",
+  };
+
+  if (existing) {
+    await admin.from("dbs_applications").update(patch).eq("id", existing.id);
+  } else {
+    await admin.from("dbs_applications").insert({
+      carer_id: carerId,
+      kind: input.kind,
+      cost_pence: 0,
+      ...patch,
+    });
+  }
+
+  await recomputeOverallStatus(carerId);
+  return { ok: true };
 }
 
 /** Read a carer's applications for the carer-facing + admin UIs. */

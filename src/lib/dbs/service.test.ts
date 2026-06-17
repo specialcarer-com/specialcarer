@@ -20,9 +20,11 @@ import {
   submitDbsApplication,
   recomputeOverallStatus,
   recordManualDecision,
+  selfVerifyExistingDbs,
   setDbsAdminClientFactory,
 } from "./service";
 import { getMockDbsVendor } from "./vendor";
+import { setCrossCheckAdminClientFactory } from "./cross-check";
 
 // ── computeOverall truth table ───────────────────────────────────────────────
 
@@ -94,12 +96,14 @@ class FakeDb {
   tables: Record<string, FakeTable> = {
     dbs_applications: new FakeTable([]),
     caregiver_profiles: new FakeTable([{ user_id: "carer-1" }]),
+    identity_verifications: new FakeTable([]),
   };
 
   reset() {
     this.tables = {
       dbs_applications: new FakeTable([]),
       caregiver_profiles: new FakeTable([{ user_id: "carer-1" }]),
+      identity_verifications: new FakeTable([]),
     };
   }
 }
@@ -124,11 +128,15 @@ function makeClient(db: FakeDb) {
               this._f.push([col, { __in: vals }]);
               return this;
             },
+            not(col: string) {
+              this._f.push([col, { __notNull: true }]);
+              return this;
+            },
             order() {
               return this;
             },
             limit() {
-              return this.__resolve();
+              return this;
             },
             async maybeSingle() {
               const rows = this.__match();
@@ -136,11 +144,15 @@ function makeClient(db: FakeDb) {
             },
             __match() {
               return t().rows.filter((r) =>
-                this._f.every(([c, v]) =>
-                  v && typeof v === "object" && "__in" in v
-                    ? (v as { __in: unknown[] }).__in.includes(r[c])
-                    : r[c] === v,
-                ),
+                this._f.every(([c, v]) => {
+                  if (v && typeof v === "object" && "__in" in v) {
+                    return (v as { __in: unknown[] }).__in.includes(r[c]);
+                  }
+                  if (v && typeof v === "object" && "__notNull" in v) {
+                    return r[c] !== null && r[c] !== undefined;
+                  }
+                  return r[c] === v;
+                }),
               );
             },
             __resolve() {
@@ -200,6 +212,9 @@ describe("initiate + submit round trip (MockDbsVendor + fake DB)", () => {
     db.reset();
     getMockDbsVendor().reset();
     setDbsAdminClientFactory(() => makeClient(db) as never);
+    // The cross-check runs against identity_verifications (absent here → no-op
+    // pass). Point it at the same fake DB so it doesn't reach for a real client.
+    setCrossCheckAdminClientFactory(() => makeClient(db) as never);
   });
 
   it("initiate creates adult + child rows and marks overall in_progress", async () => {
@@ -281,5 +296,66 @@ describe("initiate + submit round trip (MockDbsVendor + fake DB)", () => {
     const result = await recomputeOverallStatus("carer-1");
     assert.equal(result.overall, "rejected");
     assert.equal(result.searchEligible, false);
+  });
+});
+
+describe("selfVerifyExistingDbs (MockDbsVendor + fake DB)", () => {
+  const db = new FakeDb();
+
+  beforeEach(() => {
+    db.reset();
+    getMockDbsVendor().reset();
+    setDbsAdminClientFactory(() => makeClient(db) as never);
+  });
+
+  it("creates an approved, enrolled, recovery-waived row on a 'clear' cert", async () => {
+    // MockDbsVendor.getUpdateServiceStatus defaults to 'clear'.
+    const result = await selfVerifyExistingDbs("carer-1", {
+      certificateNumber: "001234567890",
+      kind: "adult",
+      dateOfBirth: "1990-01-01",
+    });
+    assert.deepEqual(result, { ok: true });
+
+    const apps = db.tables.dbs_applications.rows;
+    assert.equal(apps.length, 1);
+    const adult = apps[0];
+    assert.equal(adult.kind, "adult");
+    assert.equal(adult.status, "approved");
+    assert.equal(adult.certificate_number, "001234567890");
+    assert.equal(adult.update_service_enrolled, true);
+    assert.ok(adult.update_service_last_checked_at);
+    assert.equal(adult.recovery_status, "waived");
+    assert.equal(adult.cost_pence, 0);
+  });
+
+  it("updates an existing row in place rather than creating a duplicate", async () => {
+    await initiateDbsApplications("carer-1");
+    assert.equal(db.tables.dbs_applications.rows.length, 2);
+
+    await selfVerifyExistingDbs("carer-1", {
+      certificateNumber: "001234567890",
+      kind: "child",
+      dateOfBirth: "1990-01-01",
+    });
+
+    // Still two rows; the child one is now approved + enrolled.
+    assert.equal(db.tables.dbs_applications.rows.length, 2);
+    const child = db.tables.dbs_applications.rows.find((r) => r.kind === "child");
+    assert.equal(child?.status, "approved");
+    assert.equal(child?.update_service_enrolled, true);
+  });
+
+  it("returns ok:false (no row written) when the cert is not 'clear'", async () => {
+    getMockDbsVendor().configureUpdateService("009999999999", "invalidated");
+    const result = await selfVerifyExistingDbs("carer-1", {
+      certificateNumber: "009999999999",
+      kind: "adult",
+      dateOfBirth: "1990-01-01",
+    });
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.match(result.reason, /Update Service/);
+    // Nothing persisted.
+    assert.equal(db.tables.dbs_applications.rows.length, 0);
   });
 });

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { TopBar, BottomNav } from "../_components/ui";
 import { isDbsEnabled } from "@/lib/dbs/flag";
 
@@ -131,6 +132,19 @@ export default function CarerDbsPage() {
                 ))}
               </ul>
             </div>
+
+            <Link
+              href="/m/dbs/existing"
+              className="block rounded-card bg-white p-4 shadow-card"
+            >
+              <p className="text-[14px] font-semibold text-heading">
+                I already have a DBS check
+              </p>
+              <p className="mt-1 text-[13px] text-subheading">
+                Registered on the DBS Update Service? Verify it online — no new
+                check and no £60 cost.
+              </p>
+            </Link>
 
             <div className="rounded-card bg-white p-4 shadow-card">
               <p className="text-[12px] font-semibold uppercase tracking-wide text-subheading">
