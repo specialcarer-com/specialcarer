@@ -10,8 +10,8 @@ import {
  * Dev-only visual gallery for <CarerCard> (PR-R1). Lets a reviewer eyeball
  * all three variants + skeletons + edge cases without wiring real data.
  *
- * Hard-gated: returns 404 in production builds so it never ships. Not linked
- * from any nav.
+ * Hard-gated: 404 only on real prod (VERCEL_ENV=production), available on dev
+ * + Vercel previews. Not linked from any nav.
  */
 export const dynamic = "force-static";
 
@@ -74,7 +74,8 @@ function Section({
 }
 
 export default function CardsDevPage() {
-  if (process.env.NODE_ENV === "production") notFound();
+  // 404 on real production (Vercel target = 'production'). Allowed on dev + Vercel previews.
+  if (process.env.VERCEL_ENV === "production") notFound();
 
   return (
     <main className="font-display mx-auto flex max-w-[680px] flex-col gap-mobile-xl bg-brand-cream p-mobile-lg">
