@@ -79,10 +79,9 @@ export async function POST(
     });
     return NextResponse.json({ ok: true, result });
   } catch (e) {
-    console.error(
-      "[/api/admin/dbs/cross-check] re-run failed",
-      e instanceof Error ? { name: e.name, message: e.message } : e,
-    );
-    return NextResponse.json({ error: "Cross-check failed" }, { status: 400 });
+    console.error("[/api/admin/dbs/cross-check] re-run failed", {
+      name: e instanceof Error ? e.name : "UnknownError",
+    });
+    return NextResponse.json({ error: "Cross-check failed" }, { status: 500 });
   }
 }

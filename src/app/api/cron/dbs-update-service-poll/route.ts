@@ -35,13 +35,10 @@ function makePollClient(admin: Admin): PollClient {
           )
           .eq("update_service_enrolled", true)
           .eq("status", "approved")
+          .not("certificate_number", "is", null)
           .or(
             `update_service_last_checked_at.is.null,update_service_last_checked_at.lt.${cutoffIso}`,
           )
-          .order("update_service_last_checked_at", {
-            ascending: true,
-            nullsFirst: true,
-          })
           .order("id", { ascending: true })
           .limit(PAGE_SIZE);
         if (!US_REGION_ENABLED) {

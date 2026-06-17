@@ -127,6 +127,11 @@ function jsonResponse(status: number, body: unknown): Response {
 
 describe("DbsRestVendor", () => {
   beforeEach(() => {
+    // Clear legacy fallbacks so a leaked env var can't satisfy the
+    // "throws when DBS_API_KEY is missing" expectation.
+    delete process.env.UCHECK_API_KEY;
+    delete process.env.UCHECK_API_BASE;
+    delete process.env.UCHECK_TIMEOUT_MS;
     process.env.DBS_API_KEY = "test-key";
     process.env.DBS_API_BASE = "https://sandbox.ucheck.test/v1";
   });
