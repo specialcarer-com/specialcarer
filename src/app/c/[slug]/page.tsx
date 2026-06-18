@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import {
   getPublicCaregiverProfileBySlug,
 } from "@/lib/care/profile";
+import { publicProfileUrl, siteOrigin } from "@/lib/care/public-url";
 import { isValidSlug } from "@/lib/care/slug";
 
 /**
@@ -22,11 +23,15 @@ export async function generateMetadata({
   // The canonical page emits the rich metadata; this alias just points there.
   if (!isValidSlug(slug)) return { title: "Caregiver — SpecialCarers" };
   const profile = await getPublicCaregiverProfileBySlug(slug);
+  // Always emit an absolute URL; falling back to the production origin avoids an
+  // empty/relative canonical (and og:url) when the profile or base URL is absent.
+  const url = profile ? publicProfileUrl(profile) : siteOrigin();
   return {
     title: profile
       ? `${profile.display_name ?? "Caregiver"} — SpecialCarers`
       : "Caregiver — SpecialCarers",
-    alternates: { canonical: `/caregiver/${profile?.user_id ?? ""}` },
+    alternates: { canonical: url },
+    openGraph: { url },
   };
 }
 

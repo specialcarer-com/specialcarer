@@ -85,13 +85,17 @@ export async function getPublicCaregiverProfile(
   requirePublished = true,
 ): Promise<CaregiverProfileFull | null> {
   const admin = createAdminClient();
-  const { data } = await admin
+  const { data, error } = await admin
     .from("caregiver_profiles")
     .select(PUBLIC_PROFILE_COLUMNS)
     .eq("user_id", userId)
     .eq("country", "GB")
     .maybeSingle();
 
+  if (error) {
+    console.error("caregiver_profile_fetch_failed", error);
+    throw new Error("caregiver_profile_fetch_failed");
+  }
   if (!data) return null;
   const profile = mapCaregiverRow(data as unknown as Record<string, unknown>);
   if (requirePublished && !profile.is_published) return null;
@@ -104,13 +108,17 @@ export async function getPublicCaregiverProfileBySlug(
   requirePublished = true,
 ): Promise<CaregiverProfileFull | null> {
   const admin = createAdminClient();
-  const { data } = await admin
+  const { data, error } = await admin
     .from("caregiver_profiles")
     .select(PUBLIC_PROFILE_COLUMNS)
     .eq("public_slug", slug)
     .eq("country", "GB")
     .maybeSingle();
 
+  if (error) {
+    console.error("caregiver_profile_fetch_failed", error);
+    throw new Error("caregiver_profile_fetch_failed");
+  }
   if (!data) return null;
   const profile = mapCaregiverRow(data as unknown as Record<string, unknown>);
   if (requirePublished && !profile.is_published) return null;
@@ -159,19 +167,27 @@ function mapCaregiverRow(data: Record<string, unknown>): CaregiverProfileFull {
  */
 export async function ensurePublicSlug(userId: string): Promise<string | null> {
   const admin = createAdminClient();
-  const { data: row } = await admin
+  const { data: row, error: rowError } = await admin
     .from("caregiver_profiles")
     .select("public_slug, display_name, country")
     .eq("user_id", userId)
     .maybeSingle();
 
+  if (rowError) {
+    console.error("slug_collision_check_failed", rowError);
+    throw new Error("slug_collision_check_failed");
+  }
   if (!row || (row.country as string) !== "GB") return null;
   if (row.public_slug) return row.public_slug as string;
 
-  const { data: existing } = await admin
+  const { data: existing, error: existingError } = await admin
     .from("caregiver_profiles")
     .select("public_slug")
     .not("public_slug", "is", null);
+  if (existingError) {
+    console.error("slug_collision_check_failed", existingError);
+    throw new Error("slug_collision_check_failed");
+  }
   const taken = new Set(
     (existing ?? [])
       .map((r) => r.public_slug as string | null)
@@ -191,7 +207,11 @@ export async function ensurePublicSlug(userId: string): Promise<string | null> {
 export async function computeReadiness(userId: string): Promise<ProfileReadiness> {
   const admin = createAdminClient();
 
-  const [{ data: profile }, { data: stripe }, { data: bg }] = await Promise.all([
+  const [
+    { data: profile, error: profileError },
+    { data: stripe, error: stripeError },
+    { data: bg, error: bgError },
+  ] = await Promise.all([
     admin
       .from("caregiver_profiles")
       .select(
@@ -210,6 +230,17 @@ export async function computeReadiness(userId: string): Promise<ProfileReadiness
       .eq("user_id", userId)
       .eq("status", "cleared"),
   ]);
+
+  // Fail closed: a read error must not be treated as "not ready", which would
+  // silently mask publish-blocking state behind a transient DB failure.
+  if (profileError || stripeError || bgError) {
+    console.error("readiness_check_failed", {
+      profileError,
+      stripeError,
+      bgError,
+    });
+    throw new Error("readiness_check_failed");
+  }
 
   const country = (profile?.country as "GB" | "US") ?? "GB";
   const required = country === "US" ? US_REQUIRED : UK_REQUIRED;
