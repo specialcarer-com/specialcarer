@@ -67,18 +67,18 @@ export default function ShareProfileModal({ url, name, onClose }: Props) {
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="text-[20px] leading-none text-slate-400"
+            className="text-[20px] leading-none text-[#0F1416]/50"
           >
             ×
           </button>
         </div>
 
-        <div className="mt-4 flex items-center gap-2 rounded-btn border border-slate-200 p-2">
+        <div className="mt-4 flex items-center gap-2 rounded-btn border border-[#E5E0D5] p-2">
           <input
             readOnly
             value={url}
             aria-label="Profile link"
-            className="min-w-0 flex-1 bg-transparent px-1 text-[13px] text-slate-700 outline-none"
+            className="min-w-0 flex-1 bg-transparent px-1 text-[13px] text-[#0F1416]/80 outline-none"
           />
           <button
             type="button"
@@ -97,7 +97,7 @@ export default function ShareProfileModal({ url, name, onClose }: Props) {
                 href={l.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center rounded-btn border border-slate-200 px-2 py-2.5 text-[13px] font-semibold text-heading hover:bg-slate-50"
+                className="flex items-center justify-center rounded-btn border border-[#E5E0D5] px-2 py-2.5 text-[13px] font-semibold text-heading hover:bg-[#F4EFE6]"
               >
                 {l.label}
               </a>
@@ -106,10 +106,10 @@ export default function ShareProfileModal({ url, name, onClose }: Props) {
         </ul>
 
         <div className="mt-6 flex flex-col items-center">
-          <div className="rounded-card border border-slate-200 bg-white p-3">
+          <div className="rounded-card border border-[#E5E0D5] bg-white p-3">
             <QRCodeSVG value={url} size={140} fgColor="#0F1416" bgColor="#FFFFFF" />
           </div>
-          <p className="mt-2 text-[12px] text-slate-500">
+          <p className="mt-2 text-[12px] text-[#0F1416]/60">
             Scan to open your profile
           </p>
         </div>

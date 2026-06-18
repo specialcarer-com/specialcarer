@@ -19,16 +19,24 @@ export async function GET() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    return NextResponse.json(
+      { ok: false, error: "unauthenticated" },
+      { status: 401 },
+    );
   }
 
   const readiness = await computeReadiness(user.id);
   if (!readiness.isPublishable) {
-    return NextResponse.json({ ready: false });
+    return NextResponse.json({ ok: true, data: { ready: false } });
   }
 
   // Make sure a slug exists so the shared link is the friendly /c/<slug> form.
+  // ensurePublicSlug is GB-only and returns null for non-GB carers — those have
+  // no public surface, so treat them as not shareable.
   const slug = await ensurePublicSlug(user.id);
+  if (!slug) {
+    return NextResponse.json({ ok: true, data: { ready: false } });
+  }
 
   const admin = createAdminClient();
   const { data: cg } = await admin
@@ -39,8 +47,11 @@ export async function GET() {
 
   const url = publicProfileUrl({ user_id: user.id, public_slug: slug });
   return NextResponse.json({
-    ready: true,
-    url,
-    name: (cg?.display_name as string | null) ?? "Caregiver",
+    ok: true,
+    data: {
+      ready: true,
+      url,
+      name: (cg?.display_name as string | null) ?? "Caregiver",
+    },
   });
 }

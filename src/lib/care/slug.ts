@@ -10,6 +10,9 @@
  */
 
 const SUFFIX_LEN = 4;
+// Must match isValidSlug's limit; the stem is clamped so stem-suffix fits.
+const MAX_SLUG_LEN = 80;
+const MAX_STEM_LEN = MAX_SLUG_LEN - (SUFFIX_LEN + 1);
 
 /** Strip a name token to lowercase a-z0-9, collapsing the rest away. */
 function tokenSlug(part: string): string {
@@ -31,7 +34,10 @@ export function slugStem(displayName: string | null | undefined): string {
   if (tokens.length === 0) return "carer";
   const first = tokens[0];
   const lastInitial = tokens.length > 1 ? tokens[tokens.length - 1][0] : "";
-  return lastInitial ? `${first}-${lastInitial}` : first;
+  const stem = lastInitial ? `${first}-${lastInitial}` : first;
+  // Clamp so the assembled "<stem>-<suffix>" stays within the validator limit,
+  // trimming any trailing hyphen left by the cut.
+  return stem.slice(0, MAX_STEM_LEN).replace(/-+$/, "");
 }
 
 /**

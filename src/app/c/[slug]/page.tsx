@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import {
   getPublicCaregiverProfileBySlug,
@@ -39,5 +39,5 @@ export default async function CarerSlugPage({
   if (!isValidSlug(slug)) notFound();
   const profile = await getPublicCaregiverProfileBySlug(slug);
   if (!profile) notFound();
-  redirect(`/caregiver/${profile.user_id}`);
+  permanentRedirect(`/caregiver/${profile.user_id}`);
 }

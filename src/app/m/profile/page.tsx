@@ -313,12 +313,11 @@ export default function ProfilePage() {
         const res = await fetch("/api/m/profile/share", { cache: "no-store" });
         if (!res.ok) return;
         const json = (await res.json()) as {
-          ready: boolean;
-          url?: string;
-          name?: string;
+          ok: boolean;
+          data?: { ready: boolean; url?: string; name?: string };
         };
-        if (!cancelled && json.ready && json.url) {
-          setShare({ url: json.url, name: json.name ?? "Caregiver" });
+        if (!cancelled && json.ok && json.data?.ready && json.data.url) {
+          setShare({ url: json.data.url, name: json.data.name ?? "Caregiver" });
         }
       } catch {
         /* ignore — CTA simply stays hidden */

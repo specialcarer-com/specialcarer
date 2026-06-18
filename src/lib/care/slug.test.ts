@@ -29,6 +29,13 @@ describe("generateSlug", () => {
   it("is a valid slug regardless of input", () => {
     assert.ok(isValidSlug(generateSlug("Renée O'Brien")));
   });
+
+  it("clamps over-long names to the validator limit", () => {
+    const long = "Bartholomew".repeat(20) + " Wigglesworthington";
+    const slug = generateSlug(long, "7f3a");
+    assert.ok(slug.length <= 80);
+    assert.ok(isValidSlug(slug));
+  });
 });
 
 describe("pickUniqueSlug", () => {

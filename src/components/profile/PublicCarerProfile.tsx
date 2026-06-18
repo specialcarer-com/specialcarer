@@ -63,10 +63,10 @@ export default function PublicCarerProfile({
             )}
             <h1 className="mt-4 font-display text-[26px] font-bold">{name}</h1>
             {profile.headline && (
-              <p className="mt-1 text-[14px] text-slate-600">{profile.headline}</p>
+              <p className="mt-1 text-[14px] text-[#0F1416]/70">{profile.headline}</p>
             )}
             {location && (
-              <p className="mt-1 text-[13px] text-slate-500">{location}</p>
+              <p className="mt-1 text-[13px] text-[#0F1416]/60">{location}</p>
             )}
             <p className="mt-3 inline-flex items-center gap-2 text-[13px] font-medium" style={{ color: "#039EA0" }}>
               <span aria-hidden>✓</span> Background-checked by SpecialCarers
@@ -74,14 +74,14 @@ export default function PublicCarerProfile({
           </div>
 
           {profile.bio && (
-            <p className="mt-6 whitespace-pre-line text-[14px] leading-relaxed text-slate-700">
+            <p className="mt-6 whitespace-pre-line text-[14px] leading-relaxed text-[#0F1416]/80">
               {profile.bio}
             </p>
           )}
 
           {profile.services.length > 0 && (
             <div className="mt-6">
-              <h2 className="text-[12px] font-semibold uppercase tracking-wide text-slate-500">
+              <h2 className="text-[12px] font-semibold uppercase tracking-wide text-[#0F1416]/60">
                 Services
               </h2>
               <ul className="mt-2 flex flex-wrap gap-2">
@@ -125,7 +125,7 @@ export default function PublicCarerProfile({
           </Link>
         </div>
 
-        <p className="mt-6 text-center text-[12px] text-slate-500">
+        <p className="mt-6 text-center text-[12px] text-[#0F1416]/60">
           Trusted, DBS-checked care across the UK.
         </p>
       </section>
@@ -135,9 +135,9 @@ export default function PublicCarerProfile({
 
 function RateCard({ value, label }: { value: string; label: string }) {
   return (
-    <div className="rounded-btn border border-slate-200 p-3 text-center">
+    <div className="rounded-btn border border-[#E5E0D5] p-3 text-center">
       <p className="text-[17px] font-bold leading-none">{value}</p>
-      <p className="mt-1 text-[11px] text-slate-500">{label}</p>
+      <p className="mt-1 text-[11px] text-[#0F1416]/60">{label}</p>
     </div>
   );
 }

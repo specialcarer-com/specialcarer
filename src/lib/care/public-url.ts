@@ -5,11 +5,11 @@ import type { CaregiverProfileFull } from "@/lib/care/profile";
  * copy-link target. Mirrors the fallback used elsewhere (dashboard, referrals).
  */
 export function siteOrigin(): string {
-  return (
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
-    "https://specialcarer.com"
-  );
+  // Treat blank/whitespace env vars as unset so we never emit a relative link.
+  const configured =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_APP_URL?.trim();
+  return (configured || "https://specialcarer.com").replace(/\/$/, "");
 }
 
 /** Canonical public path for a carer — friendly /c/<slug> when available. */

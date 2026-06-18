@@ -121,12 +121,15 @@ export default async function DashboardPage() {
       .from("caregiver_profiles")
       .select("public_slug, display_name")
       .eq("user_id", user.id)
+      .eq("country", "GB")
       .maybeSingle();
-    shareUrl = publicProfileUrl({
-      user_id: user.id,
-      public_slug: (cgShare?.public_slug as string | null) ?? null,
-    });
-    shareName = (cgShare?.display_name as string | null) ?? profile.full_name;
+    const slug = (cgShare?.public_slug as string | null) ?? null;
+    // Slugs are GB-only (UK region policy); a null slug means the public
+    // surface is unavailable, so don't expose a dead share link.
+    if (slug) {
+      shareUrl = publicProfileUrl({ user_id: user.id, public_slug: slug });
+      shareName = (cgShare?.display_name as string | null) ?? profile.full_name;
+    }
   }
 
   // ── Widget data (Phase 5: 5 widgets on the dashboard) ─────────────

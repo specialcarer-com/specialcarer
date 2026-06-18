@@ -140,7 +140,7 @@ function mapCaregiverRow(data: Record<string, unknown>): CaregiverProfileFull {
     max_radius_km: (d.max_radius_km as number | null) ?? null,
     photo_url: (d.photo_url as string | null) ?? null,
     is_published: !!d.is_published,
-    rating_avg: d.rating_avg ? Number(d.rating_avg) : null,
+    rating_avg: d.rating_avg == null ? null : Number(d.rating_avg),
     rating_count: (d.rating_count as number | null) ?? 0,
     gender: (d.gender as GenderKey | null) ?? null,
     has_drivers_license: !!d.has_drivers_license,
