@@ -27,6 +27,7 @@ const MOBILE_SEEKER_ONLY_PREFIXES = [
   // /m/home now branches by role server-side (seeker vs carer dashboard)
   // so it is intentionally NOT in this list.
   "/m/bookings",  // mock data + UI is seeker-perspective only (carer side TBD)
+  "/m/review",    // seekers write reviews of carers (PR-R4 Review hub)
   "/m/search",
   "/m/book",
   "/m/post-job",

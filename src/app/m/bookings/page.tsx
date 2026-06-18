@@ -26,6 +26,7 @@ import {
   BookingStateBadge,
   bookingStateFromStatus,
 } from "@/components/m/BookingStateBadge";
+import PostJobFab from "@/components/m/PostJobFab";
 
 /**
  * Bookings list — Figma 30:392.
@@ -452,6 +453,10 @@ export default function BookingsPage() {
           </Card>
         )}
       </div>
+
+      {/* Post Job moves from a bottom tab to this peach FAB when the redesign
+          is on. /m/post-job still exists as the destination. */}
+      {redesign && <PostJobFab />}
 
       <BottomNav active="bookings" role="seeker" />
     </main>
