@@ -3,6 +3,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeReadiness } from "@/lib/care/profile";
+import { publicProfileUrl } from "@/lib/care/public-url";
+import ShareProfileButton from "@/components/profile/ShareProfileButton";
 import { CARER_FEE_PERCENT } from "@/lib/fees/config";
 import { formatGBP } from "@/lib/pricing";
 import Image from "next/image";
@@ -110,6 +112,22 @@ export default async function DashboardPage() {
 
   // Caregiver-only: readiness + earnings
   const readiness = isCaregiver ? await computeReadiness(user.id) : null;
+
+  // Caregiver-only: public share link (shown once publish-ready).
+  let shareUrl: string | null = null;
+  let shareName = profile.full_name;
+  if (isCaregiver && readiness?.isPublishable) {
+    const { data: cgShare } = await admin
+      .from("caregiver_profiles")
+      .select("public_slug, display_name")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    shareUrl = publicProfileUrl({
+      user_id: user.id,
+      public_slug: (cgShare?.public_slug as string | null) ?? null,
+    });
+    shareName = (cgShare?.display_name as string | null) ?? profile.full_name;
+  }
 
   // ── Widget data (Phase 5: 5 widgets on the dashboard) ─────────────
   // Upcoming bookings (next 3 only — strict spec)
@@ -372,6 +390,9 @@ export default async function DashboardPage() {
                 >
                   Edit profile
                 </Link>
+              )}
+              {isCaregiver && shareUrl && (
+                <ShareProfileButton url={shareUrl} name={shareName} />
               )}
             </div>
           </div>

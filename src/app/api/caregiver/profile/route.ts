@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isServiceKey } from "@/lib/care/services";
 import { isCareFormatKey } from "@/lib/care/formats";
-import { computeReadiness } from "@/lib/care/profile";
+import { computeReadiness, ensurePublicSlug } from "@/lib/care/profile";
 import {
   isCertKey,
   isGenderKey,
@@ -314,7 +314,9 @@ export async function POST(req: Request) {
       .from("caregiver_profiles")
       .update({ is_published: true, updated_at: new Date().toISOString() })
       .eq("user_id", user.id);
-    return NextResponse.json({ ok: true, is_published: true });
+    // Assign the friendly /c/<slug> share URL on first publish (idempotent).
+    const slug = await ensurePublicSlug(user.id);
+    return NextResponse.json({ ok: true, is_published: true, public_slug: slug });
   }
 
   await admin

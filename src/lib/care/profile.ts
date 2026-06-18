@@ -2,12 +2,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { ServiceKey } from "@/lib/care/services";
 import type { CareFormatKey } from "@/lib/care/formats";
 import type { GenderKey } from "@/lib/care/attributes";
+import { pickUniqueSlug } from "@/lib/care/slug";
 
 const UK_REQUIRED = ["enhanced_dbs_barred", "right_to_work", "digital_id"];
 const US_REQUIRED = ["us_criminal", "us_healthcare_sanctions"];
 
 export type CaregiverProfileFull = {
   user_id: string;
+  public_slug: string | null;
   display_name: string | null;
   headline: string | null;
   bio: string | null;
@@ -59,41 +61,130 @@ export async function getCaregiverProfile(
   const { data } = await admin
     .from("caregiver_profiles")
     .select(
-      "user_id, display_name, headline, bio, city, region, country, postcode, hide_precise_location, services, care_formats, hourly_rate_cents, weekly_rate_cents, currency, years_experience, languages, max_radius_km, photo_url, is_published, rating_avg, rating_count, gender, has_drivers_license, has_own_vehicle, tags, certifications",
+      "user_id, public_slug, display_name, headline, bio, city, region, country, postcode, hide_precise_location, services, care_formats, hourly_rate_cents, weekly_rate_cents, currency, years_experience, languages, max_radius_km, photo_url, is_published, rating_avg, rating_count, gender, has_drivers_license, has_own_vehicle, tags, certifications",
     )
     .eq("user_id", userId)
     .maybeSingle();
 
   if (!data) return null;
-  const d = data as unknown as Record<string, unknown>;
+  return mapCaregiverRow(data as unknown as Record<string, unknown>);
+}
+
+const PUBLIC_PROFILE_COLUMNS =
+  "user_id, public_slug, display_name, headline, bio, city, region, country, postcode, hide_precise_location, services, care_formats, hourly_rate_cents, weekly_rate_cents, currency, years_experience, languages, max_radius_km, photo_url, is_published, rating_avg, rating_count, gender, has_drivers_license, has_own_vehicle, tags, certifications";
+
+/**
+ * Fetch a publicly shareable carer profile.
+ *
+ * Enforces the UK-only region policy: only GB carers are returned, so the
+ * unauthenticated /caregiver/[id] and /c/[slug] routes 404 for everyone else.
+ * Pass `requirePublished` (default true) to also hide unpublished drafts.
+ */
+export async function getPublicCaregiverProfile(
+  userId: string,
+  requirePublished = true,
+): Promise<CaregiverProfileFull | null> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("caregiver_profiles")
+    .select(PUBLIC_PROFILE_COLUMNS)
+    .eq("user_id", userId)
+    .eq("country", "GB")
+    .maybeSingle();
+
+  if (!data) return null;
+  const profile = mapCaregiverRow(data as unknown as Record<string, unknown>);
+  if (requirePublished && !profile.is_published) return null;
+  return profile;
+}
+
+/** Resolve a public slug to its (GB-only) carer profile. */
+export async function getPublicCaregiverProfileBySlug(
+  slug: string,
+  requirePublished = true,
+): Promise<CaregiverProfileFull | null> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("caregiver_profiles")
+    .select(PUBLIC_PROFILE_COLUMNS)
+    .eq("public_slug", slug)
+    .eq("country", "GB")
+    .maybeSingle();
+
+  if (!data) return null;
+  const profile = mapCaregiverRow(data as unknown as Record<string, unknown>);
+  if (requirePublished && !profile.is_published) return null;
+  return profile;
+}
+
+function mapCaregiverRow(data: Record<string, unknown>): CaregiverProfileFull {
+  const d = data;
   return {
-    user_id: data.user_id,
-    display_name: data.display_name,
-    headline: data.headline,
-    bio: data.bio,
-    city: data.city,
-    region: data.region,
-    country: (data.country as "GB" | "US") ?? "GB",
+    user_id: d.user_id as string,
+    public_slug: (d.public_slug as string | null) ?? null,
+    display_name: (d.display_name as string | null) ?? null,
+    headline: (d.headline as string | null) ?? null,
+    bio: (d.bio as string | null) ?? null,
+    city: (d.city as string | null) ?? null,
+    region: (d.region as string | null) ?? null,
+    country: (d.country as "GB" | "US") ?? "GB",
     postcode: (d.postcode as string | null) ?? null,
     hide_precise_location: d.hide_precise_location === false ? false : true,
-    services: data.services ?? [],
-    care_formats: data.care_formats ?? [],
-    hourly_rate_cents: data.hourly_rate_cents,
-    weekly_rate_cents: data.weekly_rate_cents,
-    currency: (data.currency as "GBP" | "USD" | null) ?? null,
-    years_experience: data.years_experience,
-    languages: data.languages ?? [],
-    max_radius_km: data.max_radius_km,
-    photo_url: data.photo_url,
-    is_published: !!data.is_published,
-    rating_avg: data.rating_avg ? Number(data.rating_avg) : null,
-    rating_count: data.rating_count ?? 0,
+    services: (d.services as string[] | null) ?? [],
+    care_formats: (d.care_formats as string[] | null) ?? [],
+    hourly_rate_cents: (d.hourly_rate_cents as number | null) ?? null,
+    weekly_rate_cents: (d.weekly_rate_cents as number | null) ?? null,
+    currency: (d.currency as "GBP" | "USD" | null) ?? null,
+    years_experience: (d.years_experience as number | null) ?? null,
+    languages: (d.languages as string[] | null) ?? [],
+    max_radius_km: (d.max_radius_km as number | null) ?? null,
+    photo_url: (d.photo_url as string | null) ?? null,
+    is_published: !!d.is_published,
+    rating_avg: d.rating_avg ? Number(d.rating_avg) : null,
+    rating_count: (d.rating_count as number | null) ?? 0,
     gender: (d.gender as GenderKey | null) ?? null,
     has_drivers_license: !!d.has_drivers_license,
     has_own_vehicle: !!d.has_own_vehicle,
     tags: (d.tags as string[] | null) ?? [],
     certifications: (d.certifications as string[] | null) ?? [],
   };
+}
+
+/**
+ * Ensure a GB carer has a unique `public_slug`, assigning one if missing.
+ *
+ * Idempotent: returns the existing slug when already set. Call this when a
+ * carer publishes so their /c/<slug> link is ready to share. Non-GB carers
+ * (US region not yet launched) get no slug and `null` is returned.
+ */
+export async function ensurePublicSlug(userId: string): Promise<string | null> {
+  const admin = createAdminClient();
+  const { data: row } = await admin
+    .from("caregiver_profiles")
+    .select("public_slug, display_name, country")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!row || (row.country as string) !== "GB") return null;
+  if (row.public_slug) return row.public_slug as string;
+
+  const { data: existing } = await admin
+    .from("caregiver_profiles")
+    .select("public_slug")
+    .not("public_slug", "is", null);
+  const taken = new Set(
+    (existing ?? [])
+      .map((r) => r.public_slug as string | null)
+      .filter((s): s is string => Boolean(s)),
+  );
+
+  const slug = pickUniqueSlug(row.display_name as string | null, taken);
+  const { error } = await admin
+    .from("caregiver_profiles")
+    .update({ public_slug: slug })
+    .eq("user_id", userId);
+  if (error) return null;
+  return slug;
 }
 
 /** Compute the publish-readiness checklist for a caregiver. */
