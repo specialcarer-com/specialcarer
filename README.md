@@ -60,6 +60,25 @@ gets tripped fast if tags are cut for web-only changes. See
 [`docs/ios-release-runbook.md`](docs/ios-release-runbook.md) for the
 policy and the post-incident background.
 
+## Observability (Sentry)
+
+Error and performance monitoring for the web app is wired through
+[`@sentry/nextjs`](https://docs.sentry.io/platforms/javascript/guides/nextjs/).
+
+- **Running locally:** leave the Sentry env vars unset (see `.env.example`).
+  With no DSN, the SDK silently no-ops — no events are sent and no source-map
+  upload runs at build time. To exercise it locally, set `NEXT_PUBLIC_SENTRY_DSN`
+  (and `SENTRY_DSN` for the server) to a real DSN.
+- **PII policy:** `sendDefaultPii` is `false` and a `beforeSend` scrubber
+  (`src/lib/observability/scrub.ts`) strips sensitive fields (DOB, NI number,
+  DBS certificate number, address lines, bank details, cookies) and truncates
+  any postcode to its outward code before events leave the app. User context is
+  limited to `id`, role, and country — never email.
+- **Session Replay** runs at a low sample rate site-wide but is fully disabled
+  on `/dashboard/vetting/*` and `/m/dbs/*`, which render identity documents.
+- **Ad-blocker bypass:** events tunnel through `/api/monitoring` on our own
+  origin.
+
 ## Next steps
 
 - [ ] Apply `0001_init.sql` migration in Supabase

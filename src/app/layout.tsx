@@ -5,6 +5,7 @@ import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
 import CookieBanner from "@/components/cookie-banner";
 import SkipToContent from "@/components/skip-to-content";
+import SentryUserContext from "@/lib/observability/SentryUserContext";
 import { dirFor, isAppLocale, DEFAULT_LOCALE } from "@/i18n/config";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -74,6 +75,7 @@ export default async function RootLayout({
     >
       <body className="font-sans antialiased bg-white text-slate-900">
         <NextIntlClientProvider locale={locale} messages={messages}>
+          <SentryUserContext />
           <SkipToContent />
         {/* Site-wide "Beta is live" banner — only renders when
             NEXT_PUBLIC_TESTFLIGHT_URL is set in the deploy env. */}
