@@ -2,8 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { US_REGION_ENABLED } from "@/lib/region";
 import { isDbsEnabled } from "@/lib/dbs/flag";
 import DbsDecisionForm from "./DbsDecisionForm";
+import RerunCrossCheckButton from "./RerunCrossCheckButton";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "DBS application — Admin" };
@@ -25,22 +27,30 @@ export default async function AdminDbsDetailPage({
   }
 
   const admin = createAdminClient();
-  const { data: app } = await admin
+  // UK-only regional constraint until the US launch (see @/lib/region) —
+  // restrict to GB carers via an inner join on caregiver_profiles.country.
+  let appQuery = admin
     .from("dbs_applications")
     .select(
-      "id, carer_id, kind, status, vendor, vendor_reference, submitted_at, decision_at, certificate_number, certificate_issued_on, recovery_status, recovery_collected_pence, cost_pence, created_at",
+      "id, carer_id, kind, status, vendor, vendor_reference, submitted_at, decision_at, certificate_number, certificate_issued_on, recovery_status, recovery_collected_pence, cost_pence, cross_check_passed, cross_check_run_at, cross_check_mismatches, update_service_enrolled, update_service_last_checked_at, surname_override_by, surname_override_reason, created_at, caregiver_profiles!inner(country)",
     )
-    .eq("id", applicationId)
-    .maybeSingle();
+    .eq("id", applicationId);
+  if (!US_REGION_ENABLED) {
+    appQuery = appQuery.eq("caregiver_profiles.country", "GB");
+  }
+  const { data: app } = await appQuery.maybeSingle();
 
   if (!app) notFound();
 
   // Carer info — public-facing caregiver_profiles fields + profile name/avatar.
-  const { data: profile } = await admin
+  let profileQuery = admin
     .from("caregiver_profiles")
     .select("user_id, display_name, photo_url, city, region, country, location_postcode")
-    .eq("user_id", app.carer_id)
-    .maybeSingle();
+    .eq("user_id", app.carer_id);
+  if (!US_REGION_ENABLED) {
+    profileQuery = profileQuery.eq("country", "GB");
+  }
+  const { data: profile } = await profileQuery.maybeSingle();
   const { data: baseProfile } = await admin
     .from("profiles")
     .select("full_name, avatar_url")
@@ -48,10 +58,14 @@ export default async function AdminDbsDetailPage({
     .maybeSingle();
 
   // Sibling application (the other kind) for at-a-glance context.
-  const { data: siblings } = await admin
+  let siblingsQuery = admin
     .from("dbs_applications")
-    .select("kind, status")
+    .select("kind, status, caregiver_profiles!inner(country)")
     .eq("carer_id", app.carer_id);
+  if (!US_REGION_ENABLED) {
+    siblingsQuery = siblingsQuery.eq("caregiver_profiles.country", "GB");
+  }
+  const { data: siblings } = await siblingsQuery;
 
   const name =
     baseProfile?.full_name ?? profile?.display_name ?? "Unknown carer";
@@ -130,6 +144,54 @@ export default async function AdminDbsDetailPage({
               {(siblings ?? [])
                 .map((s) => `${s.kind}: ${s.status}`)
                 .join(" · ") || "—"}
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-slate-900">
+            Identity cross-check
+          </h2>
+          <RerunCrossCheckButton applicationId={app.id} />
+        </div>
+        <dl className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <dt className="text-slate-500">Veriff cross-check</dt>
+            <dd className="font-medium text-slate-900">
+              {app.cross_check_passed === null
+                ? "Not run"
+                : app.cross_check_passed
+                  ? "Pass"
+                  : `Mismatch (${
+                      Array.isArray(app.cross_check_mismatches)
+                        ? (app.cross_check_mismatches as string[]).join(", ")
+                        : "—"
+                    })`}
+              {app.cross_check_run_at
+                ? ` · ${new Date(app.cross_check_run_at).toLocaleString()}`
+                : ""}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Surname override</dt>
+            <dd className="font-medium text-slate-900">
+              {app.surname_override_by
+                ? app.surname_override_reason || "Applied"
+                : "—"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Update Service</dt>
+            <dd className="font-medium text-slate-900">
+              {app.update_service_enrolled
+                ? app.update_service_last_checked_at
+                  ? `Enrolled · last checked ${new Date(
+                      app.update_service_last_checked_at,
+                    ).toLocaleString()}`
+                  : "Enrolled · not yet checked"
+                : "Not enrolled"}
             </dd>
           </div>
         </dl>

@@ -17,6 +17,9 @@ type AppRow = {
   vendor_reference: string | null;
   submitted_at: string | null;
   recovery_status: string | null;
+  cross_check_passed: boolean | null;
+  update_service_enrolled: boolean | null;
+  update_service_last_checked_at: string | null;
   created_at: string;
 };
 
@@ -43,7 +46,7 @@ export default async function AdminDbsPage() {
   let appsQuery = admin
     .from("dbs_applications")
     .select(
-      "id, carer_id, kind, status, vendor, vendor_reference, submitted_at, recovery_status, created_at, caregiver_profiles!inner(country)",
+      "id, carer_id, kind, status, vendor, vendor_reference, submitted_at, recovery_status, cross_check_passed, update_service_enrolled, update_service_last_checked_at, created_at, caregiver_profiles!inner(country)",
     )
     .in("status", ["submitted", "in_progress"]);
   if (!US_REGION_ENABLED) {
@@ -76,6 +79,9 @@ export default async function AdminDbsPage() {
     vendor_reference: a.vendor_reference,
     submitted_at: a.submitted_at,
     recovery_status: a.recovery_status,
+    cross_check_passed: a.cross_check_passed,
+    update_service_enrolled: a.update_service_enrolled,
+    update_service_last_checked_at: a.update_service_last_checked_at,
     created_at: a.created_at,
   }));
 

@@ -17,6 +17,9 @@
 import { NextResponse } from "next/server";
 import { requireAdminApi, logAdminAction } from "@/lib/admin/auth";
 import { recordManualDecision } from "@/lib/dbs/service";
+import { recordSurnameOverride } from "@/lib/dbs/cross-check";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { US_REGION_ENABLED } from "@/lib/region";
 import { isDbsEnabled } from "@/lib/dbs/flag";
 
 export const dynamic = "force-dynamic";
@@ -57,6 +60,36 @@ export async function POST(
     typeof b.certificateIssuedOn === "string" ? b.certificateIssuedOn.trim() : undefined;
   const notes = typeof b.notes === "string" ? b.notes.slice(0, 2000) : undefined;
   const surnameOverride = b.surnameOverride === true;
+
+  // A surname override (hyphenation / maiden name) is recorded against all of
+  // the carer's applications so a re-run cross-check passes. Resolve the carer
+  // from the application id first.
+  if (surnameOverride) {
+    const admin = createAdminClient();
+    // UK-only regional constraint until the US launch (see @/lib/region) —
+    // restrict to GB carers via an inner join on caregiver_profiles.country.
+    let appRowQuery = admin
+      .from("dbs_applications")
+      .select("carer_id, caregiver_profiles!inner(country)")
+      .eq("id", applicationId);
+    if (!US_REGION_ENABLED) {
+      appRowQuery = appRowQuery.eq("caregiver_profiles.country", "GB");
+    }
+    const { data: appRow } = await appRowQuery.maybeSingle<{
+      carer_id: string;
+    }>();
+    if (appRow) {
+      try {
+        await recordSurnameOverride(
+          appRow.carer_id,
+          guard.admin.id,
+          notes ?? "Surname mismatch override (admin)",
+        );
+      } catch {
+        // override failure must not block the decision below
+      }
+    }
+  }
 
   try {
     await recordManualDecision(
