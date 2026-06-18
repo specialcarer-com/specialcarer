@@ -1,17 +1,16 @@
-import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getCaregiverProfile } from "@/lib/care/profile";
+import { getPublicCaregiverProfile } from "@/lib/care/profile";
+import { buildCaregiverMetadata } from "@/lib/care/public-metadata";
+import PublicCarerProfile from "@/components/profile/PublicCarerProfile";
 
 /**
- * Canonical carer profile lives at /m/carer/[id].
+ * Public, unauthenticated carer profile — the canonical SEO + share target.
  *
- * This route is preserved for backwards-compat and SEO (sitemap, external
- * links, admin dashboards) and 308-redirects to the canonical URL so there's
- * a single rendering path and no chance of design drift between desktop and
- * mobile profiles.
- *
- * Metadata is still generated here so crawlers see correct title/description
- * before following the redirect.
+ * UK-only: getPublicCaregiverProfile filters country = "GB", so non-GB or
+ * unpublished profiles 404. Rendered server-side with full OpenGraph/Twitter
+ * metadata so shared links preview nicely. The richer in-app view lives at
+ * /m/carer/[id] (auth-required); this page is the world-readable surface.
  */
 export const dynamic = "force-dynamic";
 
@@ -21,19 +20,8 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const profile = await getCaregiverProfile(id);
-  if (!profile || !profile.is_published) {
-    return { title: "Caregiver — SpecialCarers" };
-  }
-  const country = profile.country === "GB" ? "UK" : "US";
-  return {
-    title: `${profile.display_name ?? "Caregiver"} — ${profile.city ?? country} caregiver | SpecialCarers`,
-    description:
-      profile.headline ||
-      profile.bio?.slice(0, 160) ||
-      "Verified, background-checked caregiver on SpecialCarers.",
-    alternates: { canonical: `/m/carer/${id}` },
-  };
+  const profile = await getPublicCaregiverProfile(id);
+  return buildCaregiverMetadata(profile);
 }
 
 export default async function CaregiverPage({
@@ -42,5 +30,7 @@ export default async function CaregiverPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  redirect(`/m/carer/${id}`);
+  const profile = await getPublicCaregiverProfile(id);
+  if (!profile) notFound();
+  return <PublicCarerProfile profile={profile} />;
 }

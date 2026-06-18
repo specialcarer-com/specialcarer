@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logAdminAction, type AdminUser } from "@/lib/admin/auth";
 import { getVettingSummary } from "@/lib/vetting/server";
+import { ensurePublicSlug } from "@/lib/care/profile";
 
 export const dynamic = "force-dynamic";
 
@@ -160,6 +161,9 @@ export async function POST(
   if (updErr) {
     return NextResponse.json({ error: updErr.message }, { status: 500 });
   }
+
+  // Assign the friendly /c/<slug> share URL on publish (idempotent, GB-only).
+  if (newPublished) await ensurePublicSlug(userId);
 
   await logAdminAction({
     admin: adminUser,

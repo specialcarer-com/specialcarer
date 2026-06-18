@@ -28,6 +28,7 @@ import {
   IconAward,
 } from "../_components/ui";
 import { createClient } from "@/lib/supabase/client";
+import ShareProfileButton from "@/components/profile/ShareProfileButton";
 import { MEMBERSHIPS_ENABLED } from "@/lib/memberships/flag";
 import { DBS_ENABLED } from "@/lib/dbs/flag";
 import { useTranslations } from "next-intl";
@@ -269,6 +270,7 @@ export default function ProfilePage() {
   const [role, setRole] = useState<Role | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [share, setShare] = useState<{ url: string; name: string } | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -301,6 +303,30 @@ export default function ProfilePage() {
       setLoaded(true);
     })();
   }, []);
+
+  // Share CTA — only carers who are publish-ready get a shareable link.
+  useEffect(() => {
+    if (role !== "caregiver") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/m/profile/share", { cache: "no-store" });
+        if (!res.ok) return;
+        const json = (await res.json()) as {
+          ok: boolean;
+          data?: { ready: boolean; url?: string; name?: string };
+        };
+        if (!cancelled && json.ok && json.data?.ready && json.data.url) {
+          setShare({ url: json.data.url, name: json.data.name ?? "Caregiver" });
+        }
+      } catch {
+        /* ignore — CTA simply stays hidden */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [role]);
 
   async function logout() {
     const supabase = createClient();
@@ -357,6 +383,16 @@ export default function ProfilePage() {
               </Link>
             )}
           </div>
+          {share && (
+            <div className="mt-3">
+              <ShareProfileButton
+                url={share.url}
+                name={share.name}
+                variant="primary"
+                className="w-full"
+              />
+            </div>
+          )}
         </div>
       </div>
 

@@ -35,6 +35,7 @@ export default async function CaregiverProfileEditPage() {
   // Auto-default display_name from profile.full_name if no caregiver_profile yet
   const initial = existing ?? {
     user_id: user.id,
+    public_slug: null,
     display_name: profileRow?.full_name ?? "",
     headline: "",
     bio: "",
