@@ -78,6 +78,7 @@ export default function ProfileEditor({
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [upgradeUrl, setUpgradeUrl] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   function toggleService(key: string) {
@@ -245,6 +246,7 @@ export default function ProfileEditor({
   function handlePublishToggle() {
     startTransition(async () => {
       setErr(null);
+      setUpgradeUrl(null);
       const res = await fetch("/api/caregiver/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -255,10 +257,12 @@ export default function ProfileEditor({
         is_published?: boolean;
         error?: string;
         readiness?: ProfileReadiness;
+        upgrade_url?: string;
       };
       if (!res.ok) {
         setErr(json.error ?? "Action failed");
         if (json.readiness) setReadiness(json.readiness);
+        if (json.upgrade_url) setUpgradeUrl(json.upgrade_url);
         return;
       }
       setIsPublished(!!json.is_published);
@@ -615,6 +619,24 @@ export default function ProfileEditor({
         <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl p-3">
           {err}
         </p>
+      )}
+
+      {upgradeUrl && (
+        <div className="rounded-xl border border-brand/30 bg-brand-50 p-4">
+          <p className="text-sm font-semibold text-brand-900">
+            Become a Founding Carer to publish
+          </p>
+          <p className="mt-1 text-sm text-slate-700">
+            Publishing your profile requires an active £4.99/month Founder
+            Membership. Your founder rate is locked for life.
+          </p>
+          <Link
+            href={upgradeUrl}
+            className="mt-3 inline-flex items-center rounded-xl bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
+          >
+            View membership
+          </Link>
+        </div>
       )}
 
       <div className="flex flex-wrap items-center gap-3">
