@@ -62,7 +62,7 @@ export default function PricingSection() {
 
             <Link
               href="/become-a-caregiver"
-              className="mt-10 inline-flex w-full items-center justify-center rounded-[12px] bg-[#039EA0] px-8 py-4 text-base font-semibold text-white shadow-sm transition hover:bg-[#028688] focus:outline-none focus:ring-2 focus:ring-[#039EA0] focus:ring-offset-2"
+              className="mt-10 inline-flex w-full items-center justify-center rounded-[12px] bg-[#039EA0] px-8 py-4 text-base font-semibold text-white shadow-sm transition hover:bg-[#039EA0]/90 focus:outline-none focus:ring-2 focus:ring-[#039EA0] focus:ring-offset-2"
             >
               Claim your Founder rate
             </Link>
