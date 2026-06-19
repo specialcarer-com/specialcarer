@@ -94,10 +94,16 @@ async function ensureCarerCustomer(
   const existing = data?.stripe_customer_id;
   if (existing) return { ok: true, customerId: existing };
 
-  const customer = await stripe.customers.create({
-    email: user.email ?? undefined,
-    metadata: { carer_user_id: user.id },
-  });
+  let customer: { id: string };
+  try {
+    customer = await stripe.customers.create({
+      email: user.email ?? undefined,
+      metadata: { carer_user_id: user.id },
+    });
+  } catch (err) {
+    console.error("[carer-membership] stripe.customers.create failed", err);
+    return { ok: false, error: "Failed to create Stripe customer" };
+  }
 
   // Persist so future checkouts reuse the customer and the webhook can
   // attribute even before the subscription confirms.
@@ -126,11 +132,20 @@ export async function handleCarerCheckout(
   }
 
   // Resolve the Price by lookup_key — the create script is the source of truth.
-  const prices = await stripe.prices.list({
-    lookup_keys: [CARER_FOUNDER_LOOKUP_KEY],
-    active: true,
-    limit: 1,
-  });
+  let prices: { data: Array<{ id: string; active?: boolean }> };
+  try {
+    prices = await stripe.prices.list({
+      lookup_keys: [CARER_FOUNDER_LOOKUP_KEY],
+      active: true,
+      limit: 1,
+    });
+  } catch (err) {
+    console.error("[carer-membership] stripe.prices.list failed", err);
+    return {
+      status: 500,
+      body: { error: "Unable to start membership checkout" },
+    };
+  }
   const priceId = prices.data.find((p) => p.active !== false)?.id;
   if (!priceId) {
     return {
@@ -144,22 +159,43 @@ export async function handleCarerCheckout(
 
   const customer = await ensureCarerCustomer({ user, supabase, stripe });
   if (!customer.ok) {
-    return { status: 500, body: { error: customer.error } };
+    // Never forward the raw internal/provider error to the client — log it
+    // server-side and return a generic, client-safe message.
+    console.error(
+      "[carer-membership] ensureCarerCustomer failed",
+      customer.error
+    );
+    return {
+      status: 500,
+      body: { error: "Unable to start membership checkout" },
+    };
   }
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    customer: customer.customerId,
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${siteUrl}/m/carer/membership/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${siteUrl}/m/carer/membership`,
-    client_reference_id: user.id,
-    metadata: { carer_user_id: user.id },
-    subscription_data: {
+  let session: { url: string | null };
+  try {
+    session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      customer: customer.customerId,
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${siteUrl}/m/carer/membership/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${siteUrl}/m/carer/membership`,
+      client_reference_id: user.id,
       metadata: { carer_user_id: user.id },
-    },
-    allow_promotion_codes: true,
-  });
+      subscription_data: {
+        metadata: { carer_user_id: user.id },
+      },
+      allow_promotion_codes: true,
+    });
+  } catch (err) {
+    console.error(
+      "[carer-membership] stripe.checkout.sessions.create failed",
+      err
+    );
+    return {
+      status: 500,
+      body: { error: "Unable to start membership checkout" },
+    };
+  }
 
   if (!session.url) {
     return {

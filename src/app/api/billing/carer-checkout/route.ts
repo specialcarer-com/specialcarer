@@ -27,9 +27,13 @@ export async function POST() {
   const supabase = await createClient();
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  if (authError || !user) {
+    return NextResponse.json(
+      { ok: false, error: "unauthenticated" },
+      { status: 401 }
+    );
   }
 
   // 5 checkout starts / minute / carer — billing endpoint, keep it tight.
@@ -40,15 +44,45 @@ export async function POST() {
   const admin = createAdminClient();
 
   // Only carers may take the founder membership.
-  const { data: profile } = await admin
+  const { data: profile, error: profileError } = await admin
     .from("profiles")
     .select("role")
     .eq("id", user.id)
     .maybeSingle();
+  if (profileError) {
+    return NextResponse.json(
+      { ok: false, error: "profile_lookup_failed" },
+      { status: 500 }
+    );
+  }
   if (profile?.role !== "carer") {
     return NextResponse.json(
       { error: "Only carers can take the founder membership." },
       { status: 403 }
+    );
+  }
+
+  // Guard against creating a second subscription for a carer who already has an
+  // active/trialing (non-cancelled) founder membership. The route is directly
+  // POST-able, so this check belongs here, before we open a Checkout Session.
+  const { data: membership, error: membershipError } = await admin
+    .from("carer_memberships")
+    .select("status")
+    .eq("carer_user_id", user.id)
+    .maybeSingle();
+  if (membershipError) {
+    return NextResponse.json(
+      { ok: false, error: "membership_lookup_failed" },
+      { status: 500 }
+    );
+  }
+  if (membership?.status === "active" || membership?.status === "trialing") {
+    return NextResponse.json(
+      {
+        error: "Founder membership is already active.",
+        manage_url: "/m/carer/membership",
+      },
+      { status: 409 }
     );
   }
 

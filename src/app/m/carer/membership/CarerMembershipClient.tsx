@@ -31,15 +31,13 @@ async function postForUrl(path: string): Promise<string> {
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return "—";
-  }
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function PerksList() {
@@ -93,7 +91,7 @@ function StartCheckoutButton({ label }: { label: string }) {
         {busy ? "Opening checkout…" : label}
       </Button>
       {error ? (
-        <p className="mt-2 text-center text-[12px] text-[#C22]">{error}</p>
+        <p className="mt-2 text-center text-[12px] text-[#F4A261]">{error}</p>
       ) : null}
     </>
   );
@@ -128,7 +126,7 @@ function ManageInStripeButton() {
         {busy ? "Opening…" : "Manage in Stripe"}
       </Button>
       {error ? (
-        <p className="mt-2 text-center text-[12px] text-[#C22]">{error}</p>
+        <p className="mt-2 text-center text-[12px] text-[#F4A261]">{error}</p>
       ) : null}
     </>
   );

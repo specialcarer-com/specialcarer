@@ -27,9 +27,9 @@ export default function CarerMembershipSuccessPage() {
             You&apos;re a Founding Carer
           </h1>
           <p className="mt-2 text-[14px] text-subheading">
-            Thank you for joining. Your membership is being activated — it can
-            take a few seconds to appear. You can now publish your public
-            profile and start matching with families.
+            Thank you for joining. Your membership is being activated — this
+            usually takes a few seconds. Once active, you&apos;ll be able to
+            publish your public profile and start matching with families.
           </p>
 
           <Link

@@ -55,6 +55,18 @@ async function main() {
   });
   if (existing.data.length > 0) {
     const price = existing.data[0];
+    if (
+      price.unit_amount !== UNIT_AMOUNT_PENCE ||
+      price.currency !== CURRENCY ||
+      price.recurring?.interval !== "month"
+    ) {
+      throw new Error(
+        `Existing founder price ${price.id} does not match the founder contract ` +
+          `(expected ${UNIT_AMOUNT_PENCE} ${CURRENCY}/month, got ` +
+          `${price.unit_amount} ${price.currency}/${price.recurring?.interval}). ` +
+          `Refusing to reuse a misconfigured price.`
+      );
+    }
     const product =
       typeof price.product === "string" ? price.product : price.product.id;
     console.log("Existing founder price found — reusing.");

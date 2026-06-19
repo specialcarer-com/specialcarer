@@ -396,19 +396,28 @@ async function routeCarerMembershipEvent(
       if (!("deleted" in customer && customer.deleted)) {
         carerUserId = resolveCarerUserId(sub, customer as Stripe.Customer);
       }
-    } catch {
-      // fall through to the warning below
+    } catch (err) {
+      console.error(
+        "[carer-membership] customer lookup failed for subscription",
+        sub.id
+      );
+      // Re-throw so Stripe retries — a transient lookup failure must not be
+      // recorded as processed.
+      throw err instanceof Error
+        ? err
+        : new Error("Stripe customer lookup failed");
     }
   }
 
   if (!carerUserId) {
-    console.warn(
-      "[carer-membership] could not resolve carer_user_id for subscription",
-      sub.id
-    );
-    // It IS a carer sub (lookup_key matched) but we can't attribute it — still
-    // return true so we don't mis-file it into consumer subscriptions.
-    return true;
+    // It IS a carer sub (lookup_key matched) but we can't attribute it yet.
+    // Throw instead of returning true: returning true would let the caller mark
+    // processed_at without writing carer_memberships, so a paid carer could
+    // lose entitlement with no Stripe retry. Throwing keeps it retryable while
+    // still never reaching the consumer-subscription upsert below.
+    const message = `Could not resolve carer_user_id for carer subscription ${sub.id}`;
+    console.warn("[carer-membership]", message);
+    throw new Error(message);
   }
 
   await upsertCarerMembershipFromSubscription({

@@ -316,15 +316,30 @@ export async function POST(req: Request) {
     // unpublished profile to published) requires an active membership.
     // Already-published carers from before this feature are grandfathered:
     // they stay visible and can re-publish edits without a membership.
-    const { data: current } = await admin
+    const { data: current, error: currentError } = await admin
       .from("caregiver_profiles")
       .select("is_published")
       .eq("user_id", user.id)
       .maybeSingle();
+    if (currentError) {
+      return NextResponse.json(
+        { error: "Could not verify current publish state. Please try again." },
+        { status: 500 },
+      );
+    }
     const alreadyPublished = current?.is_published === true;
     if (!alreadyPublished) {
-      const isMember = await isActiveCarerMember(user.id);
-      if (!isMember) {
+      const entitlement = await isActiveCarerMember(user.id);
+      if (!entitlement.ok) {
+        return NextResponse.json(
+          {
+            error:
+              "Could not verify your membership right now. Please try again.",
+          },
+          { status: 503 },
+        );
+      }
+      if (!entitlement.active) {
         return NextResponse.json(
           {
             error:

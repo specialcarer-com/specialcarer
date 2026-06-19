@@ -21,9 +21,13 @@ export async function POST() {
   const supabase = await createClient();
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  if (authError || !user) {
+    return NextResponse.json(
+      { ok: false, error: "unauthenticated" },
+      { status: 401 }
+    );
   }
 
   if (!rateLimit(`carer-portal:${user.id}`, { limit: 5, windowMs: 60_000 })) {
@@ -40,11 +44,17 @@ export async function POST() {
   }
 
   const admin = createAdminClient();
-  const { data: membership } = await admin
+  const { data: membership, error: membershipError } = await admin
     .from("carer_memberships")
     .select("stripe_customer_id")
     .eq("carer_user_id", user.id)
     .maybeSingle();
+  if (membershipError) {
+    return NextResponse.json(
+      { error: "Could not load billing account." },
+      { status: 500 }
+    );
+  }
 
   const customerId = membership?.stripe_customer_id;
   if (!customerId) {
