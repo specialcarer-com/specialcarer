@@ -15,6 +15,7 @@ import {
   inferCountryFromPostcode,
 } from "@/lib/care/postcode";
 import { geocodePostcode } from "@/lib/mapbox/server";
+import { isActiveCarerMember } from "@/lib/carer-membership/server";
 
 export const dynamic = "force-dynamic";
 
@@ -310,6 +311,46 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
+
+    // Founder-membership gating. Only a NEW publish (transitioning an
+    // unpublished profile to published) requires an active membership.
+    // Already-published carers from before this feature are grandfathered:
+    // they stay visible and can re-publish edits without a membership.
+    const { data: current, error: currentError } = await admin
+      .from("caregiver_profiles")
+      .select("is_published")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (currentError) {
+      return NextResponse.json(
+        { error: "Could not verify current publish state. Please try again." },
+        { status: 500 },
+      );
+    }
+    const alreadyPublished = current?.is_published === true;
+    if (!alreadyPublished) {
+      const entitlement = await isActiveCarerMember(user.id);
+      if (!entitlement.ok) {
+        return NextResponse.json(
+          {
+            error:
+              "Could not verify your membership right now. Please try again.",
+          },
+          { status: 503 },
+        );
+      }
+      if (!entitlement.active) {
+        return NextResponse.json(
+          {
+            error:
+              "An active Founder Membership is required to publish your profile.",
+            upgrade_url: "/m/carer/membership",
+          },
+          { status: 403 },
+        );
+      }
+    }
+
     await admin
       .from("caregiver_profiles")
       .update({ is_published: true, updated_at: new Date().toISOString() })
