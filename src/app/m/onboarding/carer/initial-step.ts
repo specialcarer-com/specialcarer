@@ -13,7 +13,7 @@ export function pickInitialStep(
   initial: WizardSnapshot,
   readiness: ProfileReadiness,
 ): number {
-  if (!initial.display_name || !readiness.hasBio) return 1;
+  if (!initial.display_name.trim() || !readiness.hasBio) return 1;
   if (!readiness.hasService) return 2;
   if (!readiness.hasRate || !readiness.hasLocation) return 3;
   if (!readiness.bgChecksCleared) return 4;

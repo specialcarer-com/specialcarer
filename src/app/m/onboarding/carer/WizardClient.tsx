@@ -446,7 +446,11 @@ function Step4({
 
       <VettingRow
         label="Enhanced DBS"
-        status={readiness.bgChecksCleared ? "done" : "todo"}
+        status={
+          readiness.missingChecks?.includes("enhanced_dbs_barred")
+            ? "todo"
+            : "done"
+        }
         href="/m/dbs"
       />
       <VettingRow

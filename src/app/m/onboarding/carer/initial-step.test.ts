@@ -26,6 +26,13 @@ describe("pickInitialStep", () => {
     assert.equal(pickInitialStep({ display_name: "" }, readiness()), 1);
   });
 
+  it("returns 1 when display_name is whitespace-only (treated as empty)", () => {
+    assert.equal(
+      pickInitialStep({ display_name: "   " }, readiness({ hasBio: true })),
+      1,
+    );
+  });
+
   it("returns 1 when a name exists but bio doesn't yet", () => {
     assert.equal(
       pickInitialStep({ display_name: "Priya" }, readiness({ hasBio: false })),
