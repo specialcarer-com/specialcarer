@@ -18,7 +18,7 @@ const pillars = [
   },
   {
     title: "Fair two-way reviews",
-    body: "You review families just as they review you. Good carers are protected and recognised.",
+    body: "You review families and providers just as they review you. Good carers are protected and recognised.",
   },
 ];
 
