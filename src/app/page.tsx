@@ -402,9 +402,10 @@ export default async function Home() {
               monitored throughout each shift.
             </p>
           </div>
-          <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
             {[
               { k: "Enhanced DBS", v: "UK Disclosure and Barring Service checks" },
+              { k: "Right to Work", v: "Confirmed before any carer goes live" },
               { k: "Annual refresh", v: "DBS status re-checked every year" },
               { k: "ID + selfie match", v: "Verified at signup, re-checked yearly" },
               { k: "Live shift tracking", v: "Real-time location for active bookings" },
@@ -487,7 +488,7 @@ export default async function Home() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center max-w-2xl mx-auto">
             <h2 className="text-3xl font-semibold text-slate-900">
-              What families say
+              What families and providers say
             </h2>
             <p className="mt-3 text-slate-600">
               Stories from early users across the UK.
