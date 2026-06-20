@@ -6,6 +6,10 @@
 // NEXT_PUBLIC_ prefix so the flag is readable client-side (the redesign is
 // pure frontend). Same string-equality pattern as the memberships flag
 // (src/lib/memberships/flag.ts) and the identity flag (src/lib/identity/flag.ts).
+//
+// Build cache buster: 2026-06-20T04:45Z (force fresh evaluation of
+// process.env.NEXT_PUBLIC_MOBILE_REDESIGN_ENABLED — earlier no-op trigger
+// file changes did not invalidate the m/* chunk hashes).
 export const MOBILE_REDESIGN_ENABLED =
   process.env.NEXT_PUBLIC_MOBILE_REDESIGN_ENABLED === "true";
 
