@@ -271,6 +271,7 @@ export default function ProfilePage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [share, setShare] = useState<{ url: string; name: string } | null>(null);
+  const [needsSetup, setNeedsSetup] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -316,8 +317,12 @@ export default function ProfilePage() {
           ok: boolean;
           data?: { ready: boolean; url?: string; name?: string };
         };
-        if (!cancelled && json.ok && json.data?.ready && json.data.url) {
+        if (cancelled || !json.ok) return;
+        if (json.data?.ready && json.data.url) {
           setShare({ url: json.data.url, name: json.data.name ?? "Caregiver" });
+        } else {
+          // Not publish-ready → profile is incomplete; offer to resume the wizard.
+          setNeedsSetup(true);
         }
       } catch {
         /* ignore — CTA simply stays hidden */
@@ -380,6 +385,14 @@ export default function ProfilePage() {
                 className="inline-flex h-9 items-center rounded-pill bg-muted px-4 text-[13px] font-semibold text-heading"
               >
                 Preview public profile
+              </Link>
+            )}
+            {role === "caregiver" && needsSetup && (
+              <Link
+                href="/m/onboarding/carer"
+                className="inline-flex h-9 items-center rounded-pill bg-brand-teal px-4 text-[13px] font-semibold text-white"
+              >
+                Resume setup
               </Link>
             )}
           </div>
