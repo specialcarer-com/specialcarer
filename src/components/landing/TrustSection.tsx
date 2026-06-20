@@ -6,11 +6,11 @@
 const pillars = [
   {
     title: "DBS-checked community",
-    body: "Every carer completes an Enhanced DBS check and identity verification, so families and carers alike know who they are working with.",
+    body: "Every carer completes an Enhanced DBS check and identity verification, so families and providers alike know who they are working with.",
   },
   {
     title: "Secure, on-time payments",
-    body: "Family payments are held securely and released to you after each completed visit. You never have to chase an invoice.",
+    body: "Family payments are held securely and released to you after each completed visit. Providers payments are released to you monthly. You never have to chase an invoice.",
   },
   {
     title: "Support when it matters",
@@ -18,7 +18,7 @@ const pillars = [
   },
   {
     title: "Fair two-way reviews",
-    body: "You review families just as they review you. Good carers are protected and recognised.",
+    body: "You review families and providers just as they review you. Good carers are protected and recognised.",
   },
 ];
 
