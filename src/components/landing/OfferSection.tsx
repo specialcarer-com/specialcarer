@@ -20,12 +20,12 @@ const perks = [
     body: "Families pay through the app and SpecialCarer takes a flat 30% from the carer's side. No hidden add-ons, no surprise deductions.",
   },
   {
-    title: "Founding-carer badge",
-    body: "Stand out to families with a badge that marks you as one of the carers who helped build the platform.",
+    title: "Two sources of work",
+    body: "Get booked directly by families and picked up by care providers (agencies, care homes, supported-living) who need extra hands. More visibility, more bookings.",
   },
   {
-    title: "Get paid reliably",
-    body: "Payments are held securely and released after each completed visit, so you always know when your money is coming.",
+    title: "Founding-carer badge",
+    body: "Stand out to families and providers with a badge that marks you as one of the carers who helped build the platform.",
   },
 ];
 

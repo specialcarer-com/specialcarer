@@ -13,6 +13,10 @@ const faqs = [
     a: "A flat 30% is deducted from the carer's side of each booking to cover payments, insurance, and platform costs. There is no separate membership fee for founding carers.",
   },
   {
+    q: "Who will find my profile?",
+    a: "Both families looking for trusted carers and care providers (agencies, care homes, supported-living services) who need flexible cover. You stay in control of who you work with and which bookings you accept.",
+  },
+  {
     q: "Do I need to be available at set times?",
     a: "No. You set your own availability, travel radius, and the care types you offer. You only ever accept the bookings that suit you.",
   },
