@@ -1,12 +1,12 @@
 import Link from "next/link";
 
 /**
- * Founder pricing card. Highlights the £4.99/mo locked-for-life rate vs the
- * standard price. Pure Server Component — checkout wiring lands in a later PR.
+ * Founder spot card. Highlights the free founding-carer cohort and what is
+ * included. Pure Server Component.
  */
 
 const founderIncludes = [
-  "£4.99/month, locked for life",
+  "Free to join — no subscription",
   "First 100 carers only",
   "Founding-carer profile badge",
   "Priority founder support",
@@ -20,11 +20,11 @@ export default function PricingSection() {
       <div className="mx-auto max-w-3xl px-6 py-20">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-extrabold tracking-tight text-[#0F1416] sm:text-4xl">
-            The Founder rate
+            The Founding 100
           </h2>
           <p className="mt-4 text-lg text-[#0F1416]/70">
-            Reserved for the first 100 carers to join. Once they are gone, the
-            price goes up — but yours never will.
+            Reserved for the first 100 carers to join. Free to join while spots
+            remain. Once they are gone, they are gone.
           </p>
         </div>
 
@@ -35,12 +35,12 @@ export default function PricingSection() {
           <div className="px-8 py-10 text-center">
             <p className="flex items-baseline justify-center gap-1">
               <span className="text-5xl font-extrabold text-[#0F1416]">
-                £4.99
+                Free
               </span>
-              <span className="text-lg text-[#0F1416]/60">/month</span>
+              <span className="text-lg text-[#0F1416]/60">to join</span>
             </p>
             <p className="mt-2 text-sm font-medium text-[#F4A261]">
-              Locked for life · standard rate will be higher
+              First 100 carers · limited spots
             </p>
 
             <ul className="mx-auto mt-8 max-w-sm space-y-3 text-left">
@@ -64,11 +64,11 @@ export default function PricingSection() {
               href="/become-a-caregiver"
               className="mt-10 inline-flex w-full items-center justify-center rounded-[12px] bg-[#039EA0] px-8 py-4 text-base font-semibold text-white shadow-sm transition hover:bg-[#039EA0]/90 focus:outline-none focus:ring-2 focus:ring-[#039EA0] focus:ring-offset-2"
             >
-              Claim your Founder rate
+              Claim your founder spot
             </Link>
             <p className="mt-4 text-xs text-[#0F1416]/50">
-              You will not be charged until you complete verification and go
-              live.
+              No card required to sign up. Platform fee only applies once you
+              complete a booking.
             </p>
           </div>
         </div>
