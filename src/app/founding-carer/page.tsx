@@ -20,7 +20,7 @@ const jakarta = Plus_Jakarta_Sans({
 
 const TITLE = "Become a Founding Carer — SpecialCarer";
 const DESCRIPTION =
-  "Join the first 100 carers on SpecialCarer — free to join, with a Founding-carer badge, priority placement, and a direct line to the team. Set your own hours, choose your families, and keep more of what you earn.";
+  "Join the first 100 carers on SpecialCarer — free to join, get found by families and care providers across the UK. Work when you want, earn on your terms, and keep more of what you earn.";
 const PATH = "/founding-carer";
 
 export const metadata: Metadata = {

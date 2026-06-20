@@ -21,13 +21,13 @@ export const metadata: Metadata = {
   title:
     "Special Carers — Vetted UK Carers, Babysitters & Nannies | specialcarers.com",
   description:
-    "Find a Special Carer — DBS-checked RSWs, HCAs, babysitters and nannies in London and across the UK. Book vetted care in minutes.",
+    "SpecialCarers connects families and care providers with vetted UK carers. DBS-checked RSWs, HCAs, babysitters and nannies in London and across the UK. Book vetted care in minutes.",
   alternates: { canonical: "https://www.specialcarers.com/" },
   openGraph: {
     title:
       "Special Carers — Vetted UK Carers, Babysitters & Nannies | specialcarers.com",
     description:
-      "Find a Special Carer — DBS-checked RSWs, HCAs, babysitters and nannies in London and across the UK. Book vetted care in minutes.",
+      "SpecialCarers connects families and care providers with vetted UK carers. DBS-checked RSWs, HCAs, babysitters and nannies in London and across the UK. Book vetted care in minutes.",
     url: "https://www.specialcarers.com/",
     siteName: "SpecialCarers",
     type: "website",
@@ -131,12 +131,16 @@ export default async function Home() {
 
       {/* Hero */}
       <section className="px-6 pt-12 pb-20 sm:pt-16 sm:pb-28 max-w-5xl mx-auto text-center">
+        <p className="mb-4 text-sm font-semibold uppercase tracking-wide text-teal-700">
+          For families &middot; For care providers &middot; For carers
+        </p>
         <h1 className="text-4xl sm:text-6xl font-semibold tracking-tight text-slate-900">
           Trusted care, on your schedule.
         </h1>
         <p className="mt-6 text-lg sm:text-xl text-slate-600 max-w-2xl mx-auto">
-          On-demand and scheduled childcare, elder care, and special-needs
-          support from vetted, DBS-checked caregivers. Book in minutes. Track,
+          SpecialCarers connects families and care providers with vetted,
+          DBS-checked carers across the UK. On-demand and scheduled childcare,
+          elder care, and special-needs support. Book in minutes. Track,
           message, and pay in one place.
         </p>
 
@@ -174,6 +178,13 @@ export default async function Home() {
             className="inline-flex items-center min-h-[44px] px-3 py-2.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition"
           >
             Apply as a caregiver
+          </Link>
+          <span className="hidden sm:inline text-slate-300" aria-hidden>·</span>
+          <Link
+            href="/organisations"
+            className="inline-flex items-center min-h-[44px] px-3 py-2.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition"
+          >
+            For care providers
           </Link>
         </div>
         <p className="mt-4 text-xs text-slate-500">

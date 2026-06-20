@@ -23,8 +23,8 @@ export default function PricingSection() {
             The Founding 100
           </h2>
           <p className="mt-4 text-lg text-[#0F1416]/70">
-            Reserved for the first 100 carers to join. Free to join while spots
-            remain. Once they are gone, they are gone.
+            Reserved for the first 100 carers to join. Free while spots
+            remain. Get seen by families and care providers across the UK.
           </p>
         </div>
 
