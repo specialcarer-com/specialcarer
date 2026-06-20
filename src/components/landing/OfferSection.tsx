@@ -13,11 +13,11 @@ const perks = [
   },
   {
     title: "Earn on your terms",
-    body: "Choose the families you work with and the hourly rate you charge. You stay in control of what you accept and what you earn.",
+    body: "Choose the families you work with and the hourly rate you charge. As well as the providers you choose to work with. You stay in control of what you accept and what you earn.",
   },
   {
     title: "Keep more of every booking",
-    body: "Families pay through the app and SpecialCarer takes a flat 30% from the carer's side. No hidden add-ons, no surprise deductions.",
+    body: "Providers pay by invoice and Families pay through the app and SpecialCarer takes a flat 30% from the carer's side. No hidden add-ons, no surprise deductions.",
   },
   {
     title: "Two sources of work",
