@@ -15,9 +15,8 @@ export default function HeroSection() {
           Be a founding carer on SpecialCarer
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-[#0F1416]/80 sm:text-xl">
-          Build your care business on your own terms. Set your hours, choose
-          your families, and keep more of what you earn — as one of the first
-          100 carers to join.
+          Work when you want to work. Earn on your terms. Join free as one of
+          the first 100 carers and build your care business your way.
         </p>
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Link
