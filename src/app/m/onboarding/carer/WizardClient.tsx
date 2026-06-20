@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button, Input, TextArea, Dots } from "../../_components/ui";
 import { SERVICES } from "@/lib/care/services";
+import { CARE_FORMATS } from "@/lib/care/formats";
 import type { ProfileReadiness } from "@/lib/care/profile";
 import { pickInitialStep } from "./initial-step";
 
@@ -16,7 +17,9 @@ type WizardState = {
   postcode: string;
   country: "GB" | "US";
   services: string[];
+  care_formats: string[];
   hourly_rate_cents: number | null;
+  weekly_rate_cents: number | null;
   years_experience: number;
   languages: string[];
   is_published: boolean;
@@ -31,9 +34,10 @@ type Props = {
 const STEPS = [
   { id: 1, label: "About you" },
   { id: 2, label: "Services" },
-  { id: 3, label: "Rates & location" },
-  { id: 4, label: "Vetting" },
-  { id: 5, label: "Publish" },
+  { id: 3, label: "How you work" },
+  { id: 4, label: "Rates & location" },
+  { id: 5, label: "Vetting" },
+  { id: 6, label: "Publish" },
 ] as const;
 
 export function CarerOnboardingWizardClient({ initial, readiness }: Props) {
@@ -169,27 +173,20 @@ export function CarerOnboardingWizardClient({ initial, readiness }: Props) {
       )}
 
       {step === 3 && (
-        <Step3
+        <StepFormats
           state={state}
           set={set}
           saving={saving}
           error={error}
+          setError={setError}
           onBack={() => setStep(2)}
           onNext={async () => {
-            if (!state.hourly_rate_cents || state.hourly_rate_cents < 1000) {
-              setError("Set an hourly rate of at least £10/hr.");
-              return;
-            }
-            if (!state.postcode.trim()) {
-              setError("We need your postcode to match nearby families.");
+            if (state.care_formats.length === 0) {
+              setError("Choose at least one way you work.");
               return;
             }
             const ok = await savePartial({
-              hourly_rate_cents: state.hourly_rate_cents,
-              currency: state.country === "US" ? "USD" : "GBP",
-              city: state.city.trim() || null,
-              postcode: state.postcode.trim(),
-              country: state.country,
+              care_formats: state.care_formats,
             });
             if (ok) setStep(4);
           }}
@@ -197,22 +194,63 @@ export function CarerOnboardingWizardClient({ initial, readiness }: Props) {
       )}
 
       {step === 4 && (
-        <Step4
-          readiness={readinessState}
+        <StepRates
+          state={state}
+          set={set}
           saving={saving}
           error={error}
           onBack={() => setStep(3)}
-          onNext={() => setStep(5)}
+          onNext={async () => {
+            const offersVisiting = state.care_formats.includes("visiting");
+            const offersLiveIn = state.care_formats.includes("live_in");
+            if (
+              offersVisiting &&
+              (!state.hourly_rate_cents || state.hourly_rate_cents < 1000)
+            ) {
+              setError("Set an hourly rate of at least £10/hr.");
+              return;
+            }
+            if (
+              offersLiveIn &&
+              (!state.weekly_rate_cents || state.weekly_rate_cents < 10000)
+            ) {
+              setError("Set a weekly rate of at least £100/week.");
+              return;
+            }
+            if (!state.postcode.trim()) {
+              setError("We need your postcode to match nearby families.");
+              return;
+            }
+            const ok = await savePartial({
+              hourly_rate_cents: offersVisiting ? state.hourly_rate_cents : null,
+              weekly_rate_cents: offersLiveIn ? state.weekly_rate_cents : null,
+              currency: state.country === "US" ? "USD" : "GBP",
+              city: state.city.trim() || null,
+              postcode: state.postcode.trim(),
+              country: state.country,
+            });
+            if (ok) setStep(5);
+          }}
         />
       )}
 
       {step === 5 && (
-        <Step5
-          state={state}
+        <StepVetting
           readiness={readinessState}
           saving={saving}
           error={error}
           onBack={() => setStep(4)}
+          onNext={() => setStep(6)}
+        />
+      )}
+
+      {step === 6 && (
+        <StepPublish
+          state={state}
+          readiness={readinessState}
+          saving={saving}
+          error={error}
+          onBack={() => setStep(5)}
           onPublish={publish}
         />
       )}
@@ -355,8 +393,84 @@ function Step2({
   );
 }
 
-/* ───────────────────────── Step 3: Rates & location ───────────────────────── */
-function Step3({
+/* ───────────────────────── Step 3: How you work (care formats) ───────────────────────── */
+function StepFormats({
+  state,
+  set,
+  saving,
+  error,
+  setError,
+  onBack,
+  onNext,
+}: {
+  state: WizardState;
+  set: <K extends keyof WizardState>(k: K, v: WizardState[K]) => void;
+  saving: boolean;
+  error: string | null;
+  setError: (e: string | null) => void;
+  onBack: () => void;
+  onNext: () => void;
+}) {
+  function toggleFormat(key: string) {
+    setError(null);
+    set(
+      "care_formats",
+      state.care_formats.includes(key)
+        ? state.care_formats.filter((f) => f !== key)
+        : [...state.care_formats, key],
+    );
+  }
+  return (
+    <div className="flex-1 flex flex-col gap-4">
+      <h1 className="text-[22px] font-bold text-heading">How do you work?</h1>
+      <p className="text-[13px] text-subheading">
+        Pick the kinds of work you take on. You can offer both — choose at least
+        one.
+      </p>
+      <div className="grid grid-cols-1 gap-3">
+        {CARE_FORMATS.map((fmt) => {
+          const selected = state.care_formats.includes(fmt.key);
+          return (
+            <button
+              key={fmt.key}
+              type="button"
+              onClick={() => toggleFormat(fmt.key)}
+              className={`w-full text-left rounded-btn border px-4 py-4 transition sc-no-select ${
+                selected ? "border-primary bg-primary-50" : "border-line bg-white"
+              }`}
+              aria-pressed={selected}
+            >
+              <span
+                className={`block text-[16px] font-bold ${
+                  selected ? "text-primary" : "text-heading"
+                }`}
+              >
+                {fmt.label}
+              </span>
+              <span className="mt-1 block text-[13px] text-subheading">
+                {fmt.key === "live_in"
+                  ? "Round-the-clock support, living in the home. Paid a weekly rate."
+                  : "Scheduled visits, from an hour upwards. Paid an hourly rate."}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {error && <p className="text-[13px] text-[#C22]">{error}</p>}
+      <div className="mt-auto pt-4 flex gap-3">
+        <Button variant="outline" onClick={onBack} disabled={saving}>
+          Back
+        </Button>
+        <Button block onClick={onNext} disabled={saving}>
+          {saving ? "Saving…" : "Continue"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/* ───────────────────────── Step 4: Rates & location ───────────────────────── */
+function StepRates({
   state,
   set,
   saving,
@@ -371,30 +485,54 @@ function Step3({
   onBack: () => void;
   onNext: () => void;
 }) {
-  const rateDisplay =
+  const offersVisiting = state.care_formats.includes("visiting");
+  const offersLiveIn = state.care_formats.includes("live_in");
+  const hourlyDisplay =
     state.hourly_rate_cents != null
       ? (state.hourly_rate_cents / 100).toFixed(2)
       : "";
+  const weeklyDisplay =
+    state.weekly_rate_cents != null
+      ? (state.weekly_rate_cents / 100).toFixed(2)
+      : "";
   return (
     <div className="flex-1 flex flex-col gap-4">
-      <h1 className="text-[22px] font-bold text-heading">Your rate & where you work</h1>
+      <h1 className="text-[22px] font-bold text-heading">Your rates & where you work</h1>
       <p className="text-[13px] text-subheading">
-        Most UK carers set £15–£25/hr. You can adjust this later.
+        Set a rate for each way you work. You can adjust these later.
       </p>
-      <Input
-        label="Hourly rate (£)"
-        type="number"
-        inputMode="decimal"
-        min={10}
-        max={150}
-        step={0.5}
-        value={rateDisplay}
-        onChange={(e) => {
-          const v = parseFloat(e.target.value);
-          set("hourly_rate_cents", Number.isFinite(v) ? Math.round(v * 100) : null);
-        }}
-        hint="In pounds per hour. Minimum £10/hr."
-      />
+      {offersVisiting && (
+        <Input
+          label="Hourly rate — visiting care (£)"
+          type="number"
+          inputMode="decimal"
+          min={10}
+          max={150}
+          step={0.5}
+          value={hourlyDisplay}
+          onChange={(e) => {
+            const v = parseFloat(e.target.value);
+            set("hourly_rate_cents", Number.isFinite(v) ? Math.round(v * 100) : null);
+          }}
+          hint="In pounds per hour. Most UK carers set £15–£25/hr. Minimum £10/hr."
+        />
+      )}
+      {offersLiveIn && (
+        <Input
+          label="Weekly rate — live-in care (£)"
+          type="number"
+          inputMode="decimal"
+          min={100}
+          max={5000}
+          step={5}
+          value={weeklyDisplay}
+          onChange={(e) => {
+            const v = parseFloat(e.target.value);
+            set("weekly_rate_cents", Number.isFinite(v) ? Math.round(v * 100) : null);
+          }}
+          hint="In pounds per week for a live-in placement. Minimum £100/week."
+        />
+      )}
       <Input
         label="City"
         placeholder="e.g. London"
@@ -422,8 +560,8 @@ function Step3({
   );
 }
 
-/* ───────────────────────── Step 4: Vetting ───────────────────────── */
-function Step4({
+/* ───────────────────────── Step 5: Vetting ───────────────────────── */
+function StepVetting({
   readiness,
   saving,
   error,
@@ -514,8 +652,8 @@ function VettingRow({
   );
 }
 
-/* ───────────────────────── Step 5: Publish ───────────────────────── */
-function Step5({
+/* ───────────────────────── Step 6: Publish ───────────────────────── */
+function StepPublish({
   state,
   readiness,
   saving,

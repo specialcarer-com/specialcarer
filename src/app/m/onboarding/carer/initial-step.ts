@@ -15,7 +15,8 @@ export function pickInitialStep(
 ): number {
   if (!initial.display_name.trim() || !readiness.hasBio) return 1;
   if (!readiness.hasService) return 2;
-  if (!readiness.hasRate || !readiness.hasLocation) return 3;
-  if (!readiness.bgChecksCleared) return 4;
-  return 5;
+  if (!readiness.hasFormat) return 3;
+  if (!readiness.hasRate || !readiness.hasLocation) return 4;
+  if (!readiness.bgChecksCleared) return 5;
+  return 6;
 }

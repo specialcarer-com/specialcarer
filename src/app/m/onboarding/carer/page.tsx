@@ -46,7 +46,7 @@ export default async function CarerOnboardingWizardPage() {
   const { data: cp, error: cpError } = await admin
     .from("caregiver_profiles")
     .select(
-      "display_name, headline, bio, city, postcode, country, services, hourly_rate_cents, years_experience, languages, is_published, public_slug",
+      "display_name, headline, bio, city, postcode, country, services, care_formats, hourly_rate_cents, weekly_rate_cents, years_experience, languages, is_published, public_slug",
     )
     .eq("user_id", user.id)
     .maybeSingle();
@@ -73,7 +73,9 @@ export default async function CarerOnboardingWizardPage() {
           postcode: cp?.postcode ?? "",
           country: (cp?.country as "GB" | "US" | undefined) ?? "GB",
           services: (cp?.services as string[] | null) ?? [],
+          care_formats: (cp?.care_formats as string[] | null) ?? [],
           hourly_rate_cents: cp?.hourly_rate_cents ?? null,
+          weekly_rate_cents: cp?.weekly_rate_cents ?? null,
           years_experience: cp?.years_experience ?? 0,
           languages: (cp?.languages as string[] | null) ?? ["English"],
           is_published: cp?.is_published ?? false,

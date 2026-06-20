@@ -50,66 +50,84 @@ describe("pickInitialStep", () => {
     );
   });
 
-  it("returns 3 when services are picked but rate/location are not set", () => {
+  it("returns 3 when services are picked but no care format is chosen", () => {
     assert.equal(
       pickInitialStep(
         { display_name: "Priya" },
         readiness({
           hasBio: true,
           hasService: true,
+          hasFormat: false,
+        }),
+      ),
+      3,
+    );
+  });
+
+  it("returns 4 when a care format is chosen but rate/location are not set", () => {
+    assert.equal(
+      pickInitialStep(
+        { display_name: "Priya" },
+        readiness({
+          hasBio: true,
+          hasService: true,
+          hasFormat: true,
           hasRate: false,
           hasLocation: false,
-        }),
-      ),
-      3,
-    );
-  });
-
-  it("returns 3 when rate is set but location is missing", () => {
-    assert.equal(
-      pickInitialStep(
-        { display_name: "Priya" },
-        readiness({
-          hasBio: true,
-          hasService: true,
-          hasRate: true,
-          hasLocation: false,
-        }),
-      ),
-      3,
-    );
-  });
-
-  it("returns 4 when rate + location are set but background checks aren't cleared", () => {
-    assert.equal(
-      pickInitialStep(
-        { display_name: "Priya" },
-        readiness({
-          hasBio: true,
-          hasService: true,
-          hasRate: true,
-          hasLocation: true,
-          bgChecksCleared: false,
         }),
       ),
       4,
     );
   });
 
-  it("returns 5 (publish) when everything is ready", () => {
+  it("returns 4 when rate is set but location is missing", () => {
     assert.equal(
       pickInitialStep(
         { display_name: "Priya" },
         readiness({
           hasBio: true,
           hasService: true,
+          hasFormat: true,
+          hasRate: true,
+          hasLocation: false,
+        }),
+      ),
+      4,
+    );
+  });
+
+  it("returns 5 when rate + location are set but background checks aren't cleared", () => {
+    assert.equal(
+      pickInitialStep(
+        { display_name: "Priya" },
+        readiness({
+          hasBio: true,
+          hasService: true,
+          hasFormat: true,
+          hasRate: true,
+          hasLocation: true,
+          bgChecksCleared: false,
+        }),
+      ),
+      5,
+    );
+  });
+
+  it("returns 6 (publish) when everything is ready", () => {
+    assert.equal(
+      pickInitialStep(
+        { display_name: "Priya" },
+        readiness({
+          hasBio: true,
+          hasService: true,
+          hasFormat: true,
           hasRate: true,
           hasLocation: true,
           bgChecksCleared: true,
           isPublishable: true,
         }),
       ),
-      5,
+      6,
     );
   });
 });
