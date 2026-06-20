@@ -22,7 +22,7 @@ const faqs = [
   },
   {
     q: "What checks do I need to complete?",
-    a: "You will complete identity verification and an Enhanced DBS check before going live. We guide you through each step inside the app.",
+    a: "You will complete identity verification, Right to Work confirmation, and an Enhanced DBS check before going live. We guide you through each step inside the app.",
   },
   {
     q: "When and how do I get paid?",
