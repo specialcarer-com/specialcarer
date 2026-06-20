@@ -8,20 +8,20 @@ const perks = [
     body: "Founding-carer membership is free for the first 100 carers. No subscription, no signup fee — you only pay a platform fee when you complete a booking.",
   },
   {
+    title: "Work when you want to work",
+    body: "Set your own availability, travel radius, and the care types you offer. Pick up bookings around your life — no minimum hours, no fixed rota.",
+  },
+  {
+    title: "Earn on your terms",
+    body: "Choose the families you work with and the hourly rate you charge. You stay in control of what you accept and what you earn.",
+  },
+  {
     title: "Keep more of every booking",
     body: "Families pay through the app and SpecialCarer takes a flat 30% from the carer's side. No hidden add-ons, no surprise deductions.",
   },
   {
-    title: "Your schedule, your rules",
-    body: "Set your availability, your travel radius, and the care types you offer. Accept only the work that fits your life.",
-  },
-  {
     title: "Founding-carer badge",
     body: "Stand out to families with a badge that marks you as one of the carers who helped build the platform.",
-  },
-  {
-    title: "Direct line to the team",
-    body: "Founders get a priority support channel and a real say in the features we ship next.",
   },
   {
     title: "Get paid reliably",
