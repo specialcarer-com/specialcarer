@@ -7,12 +7,12 @@ const steps = [
   {
     step: "1",
     title: "Create your profile",
-    body: "Tell families about your experience, the care you offer, and where you work. It takes about ten minutes.",
+    body: "Tell families and providers about your experience, the care you offer, and where you work. It takes about ten minutes.",
   },
   {
     step: "2",
     title: "Get verified",
-    body: "Complete identity and DBS checks so families know they can trust you. We guide you through every step.",
+    body: "Complete identity and DBS checks so families and providers know they can trust you. We guide you through every step.",
   },
   {
     step: "3",
