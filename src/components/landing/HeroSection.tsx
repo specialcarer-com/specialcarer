@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 /**
- * Founding-carer hero. Targets UK carers with the £4.99/mo Founder rate.
+ * Founding-carer hero. Targets UK carers for the free founding cohort.
  * Pure Server Component — no client-side interactivity.
  */
 export default function HeroSection() {
@@ -16,15 +16,15 @@ export default function HeroSection() {
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-[#0F1416]/80 sm:text-xl">
           Build your care business on your own terms. Set your hours, choose
-          your families, and keep more of what you earn — with a Founder rate
-          locked in for life.
+          your families, and keep more of what you earn — as one of the first
+          100 carers to join.
         </p>
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Link
-            href="#pricing"
+            href="/become-a-caregiver"
             className="inline-flex items-center justify-center rounded-[12px] bg-[#039EA0] px-8 py-4 text-base font-semibold text-white shadow-sm transition hover:bg-[#039EA0]/90 focus:outline-none focus:ring-2 focus:ring-[#039EA0] focus:ring-offset-2"
           >
-            Claim your Founder rate
+            Claim your founder spot
           </Link>
           <Link
             href="#how-it-works"
@@ -34,7 +34,7 @@ export default function HeroSection() {
           </Link>
         </div>
         <p className="mt-6 text-sm text-[#0F1416]/60">
-          £4.99/month, locked for life · No long-term contract · Cancel anytime
+          Free to join · No long-term contract · Cancel anytime
         </p>
       </div>
     </section>

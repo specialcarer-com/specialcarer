@@ -5,12 +5,12 @@
 
 const faqs = [
   {
-    q: "What does “locked for life” actually mean?",
-    a: "If you join as one of the first 100 carers, you keep the £4.99/month membership rate for as long as you stay subscribed — even after we raise the standard price for everyone who joins later.",
+    q: "How much does it cost to join as a founding carer?",
+    a: "Nothing. Founding-carer membership is free for the first 100 carers. There is no subscription and no signup fee — we only earn when you do a booking.",
   },
   {
     q: "How much does SpecialCarer take from my bookings?",
-    a: "A flat 30% is deducted from the carer's side of each booking to cover payments, insurance, and platform costs. The £4.99 Founder rate is your membership and is separate from that.",
+    a: "A flat 30% is deducted from the carer's side of each booking to cover payments, insurance, and platform costs. There is no separate membership fee for founding carers.",
   },
   {
     q: "Do I need to be available at set times?",
@@ -25,8 +25,8 @@ const faqs = [
     a: "Family payments are held securely and released to you after each completed visit, so you always know when your money is arriving.",
   },
   {
-    q: "Can I cancel my membership?",
-    a: "Yes — there is no long-term contract. You can cancel anytime. If you later rejoin after the first 100 places are filled, the Founder rate may no longer be available.",
+    q: "Can I leave whenever I want?",
+    a: "Yes — there is no long-term contract. You can pause or close your profile anytime. If you later rejoin after the first 100 places are filled, founding-carer status may no longer be available.",
   },
 ];
 

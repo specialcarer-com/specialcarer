@@ -4,8 +4,8 @@
 
 const perks = [
   {
-    title: "Founder rate, locked for life",
-    body: "Join as one of the first 100 carers and pay £4.99/month forever — even when the standard price rises.",
+    title: "Free to join",
+    body: "Founding-carer membership is free for the first 100 carers. No subscription, no signup fee — you only pay a platform fee when you complete a booking.",
   },
   {
     title: "Keep more of every booking",
@@ -38,8 +38,8 @@ export default function OfferSection() {
             What founding carers get
           </h2>
           <p className="mt-4 text-lg text-[#0F1416]/70">
-            A membership built for carers who want to run their own show — at a
-            price that never changes.
+            A founding cohort for carers who want to run their own show — free
+            to join while the first 100 spots are open.
           </p>
         </div>
         <ul className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">

@@ -11,8 +11,8 @@ export default function FinalCtaSection() {
           Only 100 Founder places. Claim yours.
         </h2>
         <p className="mx-auto mt-5 max-w-2xl text-lg text-white/70">
-          Lock in £4.99/month for life and help shape the future of care in the
-          UK. When the places are gone, they are gone.
+          Join free as one of the first 100 carers and help shape the future of
+          care in the UK. When the places are gone, they are gone.
         </p>
         <div className="mt-10">
           <Link
