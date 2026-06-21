@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Button, Card, Tag } from "../_components/ui";
+import { Button, Card, IconCheck, Tag } from "../_components/ui";
 
 type Summary = {
   today_cents: number;
@@ -40,6 +40,33 @@ export default function EarningsClient() {
   const [period, setPeriod] = useState<Period>("week");
   const [buckets, setBuckets] = useState<Bucket[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  const [connecting, setConnecting] = useState(false);
+  const [connectErr, setConnectErr] = useState<string | null>(null);
+
+  async function startPayoutSetup() {
+    setConnecting(true);
+    setConnectErr(null);
+    try {
+      const res = await fetch("/api/stripe/onboard-caregiver", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ country: "GB" }),
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        url?: string;
+        error?: string;
+      };
+      if (!res.ok || !json.url) {
+        setConnectErr(json.error ?? "Couldn't start payout setup. Try again.");
+        setConnecting(false);
+        return;
+      }
+      window.location.href = json.url;
+    } catch {
+      setConnectErr("Network error. Try again.");
+      setConnecting(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -272,17 +299,45 @@ export default function EarningsClient() {
       </Card>
 
       {/* Stripe Connect status */}
+      {stripeStatus && stripeStatus.payouts_enabled && (
+        <Card className="p-4 bg-status-completed border border-[#A6DBB1]">
+          <div className="flex items-center gap-2 text-[#2C7A3F]">
+            <IconCheck />
+            <p className="text-[13px] font-bold">Payouts active</p>
+          </div>
+          <p className="mt-1 text-[12px] text-[#2C7A3F]/90">
+            You&rsquo;re all set up to be paid directly to your bank.
+          </p>
+        </Card>
+      )}
       {stripeStatus && !stripeStatus.payouts_enabled && (
         <Card className="p-4 bg-amber-50 border border-amber-200">
           <p className="text-[13px] font-bold text-amber-900">
-            Finish payout setup
+            {stripeStatus.has_account
+              ? "Continue payout setup"
+              : "Set up payouts"}
           </p>
           <p className="mt-1 text-[12px] text-amber-800">
-            Stripe still needs a few details before you can be paid.
+            {stripeStatus.has_account
+              ? "Stripe still needs a few details before you can be paid."
+              : "Connect your bank with Stripe so we can pay you directly."}
           </p>
-          <Link href="/dashboard/payouts" className="block mt-2">
-            <Button variant="outline">Open Stripe setup</Button>
-          </Link>
+          <Button
+            block
+            size="md"
+            className="mt-3"
+            onClick={startPayoutSetup}
+            disabled={connecting}
+          >
+            {connecting
+              ? "Opening Stripe…"
+              : stripeStatus.has_account
+                ? "Continue payout setup"
+                : "Set up payouts"}
+          </Button>
+          {connectErr && (
+            <p className="mt-2 text-[12px] text-rose-700">{connectErr}</p>
+          )}
         </Card>
       )}
 
