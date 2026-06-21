@@ -108,6 +108,12 @@ export default async function AdminCaregivers({
                       >
                         View public profile ↗
                       </Link>
+                      <Link
+                        href={`/admin/caregivers/${c.user_id}/checks`}
+                        className="mt-1 ml-3 inline-block text-xs text-slate-500 hover:text-slate-700 hover:underline"
+                      >
+                        Manage checks →
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-slate-700">
                       {c.city ?? "—"}
