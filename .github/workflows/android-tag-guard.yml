@@ -1,0 +1,79 @@
+# android-tag-guard
+# =================
+# Sister to ios-tag-guard.yml. Enforces that `android-v*` tags are only
+# cut for commits that touch native-Android paths. Web/CMS/marketing
+# changes ship via Vercel — they reach the Android app instantly via
+# the WebView at /m and never need a Play Store re-release.
+#
+# Keep NATIVE_PATTERN below in lock-step with scripts/cut-android-tag.sh.
+
+name: android-tag-guard
+
+on:
+  push:
+    tags:
+      - 'android-v*'
+
+jobs:
+  check-native-paths:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo with full history
+        uses: actions/checkout@v4
+        with:
+          # Need full history + all tags to find the predecessor tag.
+          fetch-depth: 0
+
+      - name: Verify native-relevant changes since previous android-v* tag
+        env:
+          NEW_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          NATIVE_PATTERN='^(android/|mobile/|expo-app/|capacitor\.config(\.[a-z]+)?$)|(^codemagic\.yaml$)|(^package(-lock)?\.json$)'
+
+          echo "🏷  Tag under inspection: $NEW_TAG"
+
+          PREV_TAG="$(
+            git tag --sort=-creatordate --list 'android-v*' \
+              | grep -v -x "$NEW_TAG" \
+              | head -1 || true
+          )"
+
+          if [ -z "$PREV_TAG" ]; then
+            echo "ℹ️  No prior android-v* tag — first Android tag. Skipping diff check."
+            exit 0
+          fi
+
+          echo "🔎 Comparing $PREV_TAG..$NEW_TAG"
+          CHANGED="$(git diff --name-only "$PREV_TAG..$NEW_TAG" || true)"
+
+          if [ -z "$CHANGED" ]; then
+            echo "❌ No file changes between $PREV_TAG and $NEW_TAG — empty tag."
+            exit 1
+          fi
+
+          echo "Files changed since $PREV_TAG:"
+          printf '  %s\n' $CHANGED
+
+          NATIVE="$(printf '%s\n' "$CHANGED" | grep -E "$NATIVE_PATTERN" || true)"
+
+          if [ -z "$NATIVE" ]; then
+            cat >&2 <<EOF
+
+          ❌ POLICY VIOLATION — android-v* tag cut for non-native changes.
+
+             None of the commits between $PREV_TAG and $NEW_TAG touched
+             native Android paths (android/, mobile/, expo-app/,
+             capacitor.config*, codemagic.yaml, package.json).
+
+             This tag will still trigger a Codemagic Play Internal upload
+             — please investigate and avoid repeating. Use
+             scripts/cut-android-tag.sh which performs the same check
+             before pushing.
+          EOF
+            exit 1
+          fi
+
+          echo "✅ Native-relevant changes detected:"
+          printf '  %s\n' $NATIVE
