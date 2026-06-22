@@ -31,8 +31,8 @@ TEMPLATES_DIR = Path(__file__).resolve().parent.parent.parent / "supabase" / "em
 # 5 Auth-mailer templates that Supabase actually renders on signup/recovery/etc.
 TEMPLATE_MAP = [
     ("recovery.html",     "recovery",     "Reset your SpecialCarer password"),
-    ("confirmation.html", "confirmation", "Confirm your SpecialCarer account"),
-    ("magic_link.html",   "magic_link",   "Your SpecialCarer sign-in link"),
+    ("confirmation.html", "confirmation", "Your SpecialCarer verification code: {{ .Token }}"),
+    ("magic_link.html",   "magic_link",   "Your SpecialCarer sign-in code: {{ .Token }}"),
     ("email_change.html", "email_change", "Confirm your new SpecialCarer email"),
     ("invite.html",       "invite",       "You're invited to SpecialCarer"),
 ]
