@@ -33,7 +33,7 @@ export default async function ReferralsPage() {
 
   const origin =
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
-    "https://specialcarer.com";
+    "https://specialcarers.com";
 
   const { data: claimsRaw } = await admin
     .from("referral_claims")

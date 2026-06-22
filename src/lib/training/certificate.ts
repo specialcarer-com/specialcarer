@@ -137,7 +137,7 @@ export async function generateCertificatePdf(
 
   // Footer right
   const verifyLine = `Verification: ${input.verificationCode}`;
-  const verifyUrl = `Verify at specialcarer.com/verify/${input.verificationCode}`;
+  const verifyUrl = `Verify at specialcarers.com/verify/${input.verificationCode}`;
   const verifySize = 9;
   const verifyW = helv.widthOfTextAtSize(verifyUrl, verifySize);
   page.drawText(verifyLine, {

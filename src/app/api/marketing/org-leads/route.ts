@@ -7,7 +7,7 @@ import { rateLimit, getRequestIp } from "@/lib/rate-limit";
 export const dynamic = "force-dynamic";
 
 const ADMIN_EMAIL =
-  process.env.ORG_LEADS_EMAIL ?? process.env.ORG_ADMIN_EMAIL ?? "hello@specialcarer.com";
+  process.env.ORG_LEADS_EMAIL ?? process.env.ORG_ADMIN_EMAIL ?? "hello@specialcarers.com";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type Body = {

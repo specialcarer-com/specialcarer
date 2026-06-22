@@ -26,7 +26,7 @@ export async function getSupportConfig(): Promise<SupportConfig> {
     hotline_phone_uk: envUk || dbUk,
     hotline_phone_us: envUs || dbUs,
     hotline_hours: data?.hotline_hours ?? "24/7",
-    support_email: data?.support_email ?? "support@specialcarer.com",
+    support_email: data?.support_email ?? "support@specialcarers.com",
     chat_enabled: data?.chat_enabled ?? false,
     chat_url: data?.chat_url ?? null,
     insurance_summary_md: data?.insurance_summary_md ?? "",

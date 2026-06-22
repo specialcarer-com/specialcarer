@@ -100,10 +100,10 @@ export default function Page() {
           <p className="mt-3 text-slate-600">
             For press, partnerships, or interviews, please contact{" "}
             <a
-              href="mailto:press@specialcarer.com"
+              href="mailto:press@specialcarers.com"
               className="text-brand-700 hover:underline"
             >
-              press@specialcarer.com
+              press@specialcarers.com
             </a>
             .
           </p>
@@ -115,10 +115,10 @@ export default function Page() {
             We&rsquo;re a small, fast-moving team. If you care about care, get
             in touch:{" "}
             <a
-              href="mailto:careers@specialcarer.com"
+              href="mailto:careers@specialcarers.com"
               className="text-brand-700 hover:underline"
             >
-              careers@specialcarer.com
+              careers@specialcarers.com
             </a>
             .
           </p>

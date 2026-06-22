@@ -77,7 +77,7 @@ export async function GET(req: Request) {
     <p>Please make sure your £16/year DBS Update Service subscription is <strong>still active</strong> — if it lapses, your Channel B gate will go red and we&apos;ll have to arrange a fresh DBS.</p>
     <p>You can check your subscription status here: <a href="https://www.gov.uk/dbs-update-service" style="color:#0E7C7B">gov.uk/dbs-update-service</a></p>
     <p style="margin:24px 0">
-      <a href="https://specialcarer.com/dashboard/agency-optin" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
+      <a href="https://specialcarers.com/dashboard/agency-optin" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
         Open my dashboard
       </a>
     </p>

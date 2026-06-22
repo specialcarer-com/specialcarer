@@ -14,7 +14,7 @@
  * Run manually:
  *   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/seed-agency-optin-courses.mjs
  *
- * Also pre-flights the UK smoke-test carer (test.carer.uk@specialcarer.com,
+ * Also pre-flights the UK smoke-test carer (test.carer.uk@specialcarers.com,
  * "Priya") with: a countersigned worker_b contract, cleared DBS, cleared
  * RTW, and 3 passed training enrollments (manual handling, infection
  * control, safeguarding adults). Per the v2 grace policy, Priya is
@@ -117,7 +117,7 @@ const POPULATION_REQUIREMENTS = [
 ];
 
 const CURRENT_WORKER_B_VERSION = "wkr-v1.0-2026-05";
-const TEST_CARER_EMAIL = "test.carer.uk@specialcarer.com";
+const TEST_CARER_EMAIL = "test.carer.uk@specialcarers.com";
 
 async function seedCourses() {
   console.log("→ Seeding/updating 6 mandatory courses…");

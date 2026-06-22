@@ -49,7 +49,7 @@ export async function sendResumePaymentEmail(args: {
 
   const link =
     (process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
-      "https://specialcarer.com") +
+      "https://specialcarers.com") +
     `/m/bookings/${bookingId}?resume_payment=1`;
 
   // In-app notification — fires even when SMTP fails.

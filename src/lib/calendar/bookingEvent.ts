@@ -25,7 +25,7 @@ export type BookingEventRow = {
 export function siteOrigin(): string {
   return (
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
-    "https://specialcarer.com"
+    "https://specialcarers.com"
   );
 }
 

@@ -24,7 +24,7 @@ const baseEvent: CalendarEvent = {
   summary: "Elderly care — SpecialCarer",
   location: "London, SW1A 1AA",
   description: "Care booking",
-  url: "https://specialcarer.com/m/bookings/abc-123",
+  url: "https://specialcarers.com/m/bookings/abc-123",
   status: "CONFIRMED",
   sequence: 2,
 };

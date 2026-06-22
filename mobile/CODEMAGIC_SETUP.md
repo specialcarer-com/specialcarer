@@ -126,7 +126,7 @@ When the build appears in TestFlight (you'll get a "TestFlight: Special Carer wa
 2. Open the email on the phone, tap **View in TestFlight**
 3. Tap **Accept** → **Install**
 
-The app will install. Open it — Capacitor loads `https://www.specialcarer.com` inside the native shell, with push notifications, geolocation, and biometric login wired up.
+The app will install. Open it — Capacitor loads `https://www.specialcarers.com` inside the native shell, with push notifications, geolocation, and biometric login wired up.
 
 ---
 

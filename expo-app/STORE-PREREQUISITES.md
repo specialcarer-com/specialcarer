@@ -23,7 +23,7 @@ Generated for SpecialCarer (All Care 4 U Group Ltd). Items marked **YOU** requir
   - Contact info (name, email, phone) — *App Functionality*.
   - Identifiers (User ID) — *App Functionality, Analytics*.
   - Financial info (collected by Stripe, not us) — *App Functionality*.
-- [ ] Under **App Privacy → Account Deletion**, link to `https://specialcarer.com/account/delete` (already shipped).
+- [ ] Under **App Privacy → Account Deletion**, link to `https://specialcarers.com/account/delete` (already shipped).
 
 ## 3. Google Play Console enrollment — **YOU**
 
@@ -40,7 +40,7 @@ Generated for SpecialCarer (All Care 4 U Group Ltd). Items marked **YOU** requir
 - [ ] App or game: App.
 - [ ] Free or paid: Free.
 - [ ] Package name: `co.uk.allcare4u.specialcarer` (matches `app.json`).
-- [ ] **Account deletion URL**: `https://specialcarer.com/account/delete` (Play Console requires this; already shipped).
+- [ ] **Account deletion URL**: `https://specialcarers.com/account/delete` (Play Console requires this; already shipped).
 - [ ] Generate a **service account JSON** in Google Cloud Console for EAS to upload builds:
   1. Cloud Console → IAM → Service Accounts → Create.
   2. Grant role **Service Account User**.
@@ -50,9 +50,9 @@ Generated for SpecialCarer (All Care 4 U Group Ltd). Items marked **YOU** requir
 
 ## 5. Privacy policy + terms — **YOU + DEV**
 
-- [ ] **Privacy policy** — required by both stores. Hosted at `https://specialcarer.com/privacy`. *Status: not yet built — recommend a generated baseline (Termly / iubenda) reviewed by counsel.*
-- [ ] **Terms of service** — `https://specialcarer.com/terms`. *Status: not yet built.*
-- [ ] **Account deletion page** — `https://specialcarer.com/account/delete`. ✅ Shipped.
+- [ ] **Privacy policy** — required by both stores. Hosted at `https://specialcarers.com/privacy`. *Status: not yet built — recommend a generated baseline (Termly / iubenda) reviewed by counsel.*
+- [ ] **Terms of service** — `https://specialcarers.com/terms`. *Status: not yet built.*
+- [ ] **Account deletion page** — `https://specialcarers.com/account/delete`. ✅ Shipped.
 - [ ] **Background location justification** — Apple now flags background location aggressively. The submission must explain *why* in plain language. Recommended copy is in `app.json` `infoPlist` strings already; mirror in the App Store Connect "App Privacy" section under each location key.
 
 ## 6. Store assets — **YOU**
@@ -77,7 +77,7 @@ Apple rejects ~30% of first-time submissions that request background location. M
 - **DEV done**: Window is hard-clamped server-side to `shift_start - 15min … shift_end + 15min`.
 - **DEV done**: Foreground service notification on Android.
 - **YOU**: In App Store Connect "App Review" notes, paste:
-  > SpecialCarer is a marketplace for in-home caregivers. Background location is only requested for the caregiver role, only after a paid booking is confirmed, and is automatically clamped to the booking's scheduled hours plus 15 minutes. Test caregiver account: caregiver-test@specialcarer.com / TestCare!2026. Test booking ID is pre-confirmed for review.
+  > SpecialCarer is a marketplace for in-home caregivers. Background location is only requested for the caregiver role, only after a paid booking is confirmed, and is automatically clamped to the booking's scheduled hours plus 15 minutes. Test caregiver account: caregiver-test@specialcarers.com / TestCare!2026. Test booking ID is pre-confirmed for review.
 
 ## 8. EAS submit credentials — **DEV + YOU**
 

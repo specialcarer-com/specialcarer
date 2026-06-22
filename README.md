@@ -50,7 +50,7 @@ supabase/
 
 ## Deployment
 
-Pushed to `main` → auto-deploys to Vercel → live at `specialcarer.com`.
+Pushed to `main` → auto-deploys to Vercel → live at `specialcarers.com`.
 
 ### Cutting an iOS TestFlight build
 
@@ -83,6 +83,6 @@ Error and performance monitoring for the web app is wired through
 
 - [ ] Apply `0001_init.sql` migration in Supabase
 - [ ] Add Supabase env vars in Vercel
-- [ ] Point `specialcarer.com` from IONOS to Vercel
+- [ ] Point `specialcarers.com` from IONOS to Vercel
 - [ ] Build seeker / caregiver auth flows
 - [ ] Wire up Stripe Connect, Mapbox, Twilio (post-launch checklist)

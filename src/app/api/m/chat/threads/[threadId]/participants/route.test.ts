@@ -95,7 +95,7 @@ describe("POST /api/m/chat/threads/[id]/participants (handleInviteFamily)", () =
       thread_id: "thread-1",
       body: { email: "nan@example.com", role: "family" },
       inviter_id: "seeker-1",
-      site_url: "https://specialcarer.com",
+      site_url: "https://specialcarers.com",
       client,
       tokenFactory: () => "fixed-token",
     });
@@ -122,7 +122,7 @@ describe("POST /api/m/chat/threads/[id]/participants (handleInviteFamily)", () =
       thread_id: "t-1",
       body: { email: "  Family@Example.COM  ", role: "family" },
       inviter_id: "seeker-1",
-      site_url: "https://specialcarer.com",
+      site_url: "https://specialcarers.com",
       client,
       tokenFactory: () => "t",
     });
@@ -136,7 +136,7 @@ describe("POST /api/m/chat/threads/[id]/participants (handleInviteFamily)", () =
       thread_id: "t-1",
       body: "nope",
       inviter_id: "seeker-1",
-      site_url: "https://specialcarer.com",
+      site_url: "https://specialcarers.com",
       client,
     });
     assert.equal(res.status, 400);
@@ -148,7 +148,7 @@ describe("POST /api/m/chat/threads/[id]/participants (handleInviteFamily)", () =
       thread_id: "t-1",
       body: { role: "family" },
       inviter_id: "seeker-1",
-      site_url: "https://specialcarer.com",
+      site_url: "https://specialcarers.com",
       client,
     });
     assert.equal(r1.status, 400);
@@ -156,7 +156,7 @@ describe("POST /api/m/chat/threads/[id]/participants (handleInviteFamily)", () =
       thread_id: "t-1",
       body: { email: "not-an-email", role: "family" },
       inviter_id: "seeker-1",
-      site_url: "https://specialcarer.com",
+      site_url: "https://specialcarers.com",
       client,
     });
     assert.equal(r2.status, 400);
@@ -168,7 +168,7 @@ describe("POST /api/m/chat/threads/[id]/participants (handleInviteFamily)", () =
       thread_id: "t-1",
       body: { email: "x@y.com", role: "admin" },
       inviter_id: "seeker-1",
-      site_url: "https://specialcarer.com",
+      site_url: "https://specialcarers.com",
       client,
     });
     assert.equal(res.status, 400);
@@ -180,7 +180,7 @@ describe("POST /api/m/chat/threads/[id]/participants (handleInviteFamily)", () =
       thread_id: "t-1",
       body: { email: "x@y.com", role: "family" },
       inviter_id: "seeker-1",
-      site_url: "https://specialcarer.com",
+      site_url: "https://specialcarers.com",
       client,
     });
     assert.equal(res.status, 500);
@@ -192,7 +192,7 @@ describe("POST /api/m/chat/threads/[id]/participants (handleInviteFamily)", () =
       thread_id: "t-1",
       body: { email: "x@y.com", role: "family" },
       inviter_id: "seeker-1",
-      site_url: "https://specialcarer.com",
+      site_url: "https://specialcarers.com",
       client,
       tokenFactory: () => "tk",
     });

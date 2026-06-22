@@ -17,7 +17,7 @@ truth** for what is configured in the live Supabase project.
 
 - **Font:** Plus Jakarta Sans → Inter → Arial fallback
 - **Colours:** teal `#039EA0` · accent `#F4A261` · cream `#F4EFE6` · ink `#0F1416` · soft-grey `#6B7280`
-- **Logo:** `https://specialcarer.com/brand/logo-wordmark-email.png` (960×721 PNG, displayed at 200×150)
+- **Logo:** `https://specialcarers.com/brand/logo-wordmark-email.png` (960×721 PNG, displayed at 200×150)
 - **Max width:** 560px
 
 ## Supabase template variables used

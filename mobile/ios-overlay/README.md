@@ -26,7 +26,7 @@ Then in Xcode:
 2. Open **App ▸ Signing & Capabilities** and add:
    - **Push Notifications**
    - **Sign in with Apple**
-   - **Associated Domains** (`applinks:specialcarer.com`, `applinks:www.specialcarer.com`)
+   - **Associated Domains** (`applinks:specialcarers.com`, `applinks:www.specialcarers.com`)
    - **Background Modes** → tick *Remote notifications*, *Background fetch*, *Location updates*
 
 ## What's covered

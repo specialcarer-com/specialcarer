@@ -22,7 +22,7 @@ if (!email) { console.error("usage: node mint-magic-link.mjs <email>"); process.
 const { data, error } = await admin.auth.admin.generateLink({
   type: "magiclink",
   email,
-  options: { redirectTo: "https://specialcarer.com/dashboard" },
+  options: { redirectTo: "https://specialcarers.com/dashboard" },
 });
 
 if (error) { console.error("ERROR:", error.message); process.exit(1); }

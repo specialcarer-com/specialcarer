@@ -38,7 +38,7 @@ try {
 const SECRET = process.env.STRIPE_SECRET_KEY;
 const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPA_SVC = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://specialcarer.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://specialcarers.com";
 
 if (!SECRET || !SECRET.startsWith("sk_test_")) {
   console.error("✖ STRIPE_SECRET_KEY missing or not a test-mode key.");
@@ -58,7 +58,7 @@ const CARERS = [
   {
     label: "Priya Sharma (UK)",
     user_id: "7a6dc3e0-8bac-4874-bf48-250575a685e5",
-    email: "test.carer.uk@specialcarer.com",
+    email: "test.carer.uk@specialcarers.com",
     country: "GB",
     currency: "gbp",
     bg_checks: ["enhanced_dbs_barred", "right_to_work", "digital_id"],
@@ -67,7 +67,7 @@ const CARERS = [
   {
     label: "Marcus Johnson (US)",
     user_id: "aa4aa4e3-2c25-4b79-91fe-cb4004f80a0e",
-    email: "test.carer.us@specialcarer.com",
+    email: "test.carer.us@specialcarers.com",
     country: "US",
     currency: "usd",
     bg_checks: ["us_criminal", "us_healthcare_sanctions"],

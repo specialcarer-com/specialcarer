@@ -66,7 +66,7 @@ function renderHtml(i: GracePeriodBlastInput): string {
             <span style="color:${TEXT};font-weight:600">${COURSE_LABEL[slug] ?? slug}</span>
           </td>
           <td style="padding:10px 12px;border-top:1px solid #E5E9E9;text-align:right">
-            <a href="https://specialcarer.com/dashboard/training/${slug}" style="color:${TEAL};text-decoration:none;font-weight:600">Start &rsaquo;</a>
+            <a href="https://specialcarers.com/dashboard/training/${slug}" style="color:${TEAL};text-decoration:none;font-weight:600">Start &rsaquo;</a>
           </td>
         </tr>`,
     )
@@ -96,12 +96,12 @@ function renderHtml(i: GracePeriodBlastInput): string {
     <p style="margin:0 0 20px;color:${MUTED};font-size:14px">If you don't complete these by your deadline, your Channel B (organisation) bookings will be paused until you do. Your individual-client (marketplace) work is unaffected.</p>
 
     <p style="margin:32px 0">
-      <a href="https://specialcarer.com/dashboard/agency-optin" style="display:inline-block;background:${TEAL};color:#FFFFFF;text-decoration:none;padding:14px 24px;border-radius:9999px;font-weight:700">
+      <a href="https://specialcarers.com/dashboard/agency-optin" style="display:inline-block;background:${TEAL};color:#FFFFFF;text-decoration:none;padding:14px 24px;border-radius:9999px;font-weight:700">
         Go to training dashboard
       </a>
     </p>
 
-    <p style="margin:24px 0 0;color:${MUTED};font-size:13px">Questions? Reply to this email or contact compliance@specialcarer.com.</p>
+    <p style="margin:24px 0 0;color:${MUTED};font-size:13px">Questions? Reply to this email or contact compliance@specialcarers.com.</p>
     <p style="margin:8px 0 0;color:${MUTED};font-size:13px">— The SpecialCarers team</p>
   </div>
 </body></html>`;
@@ -118,15 +118,15 @@ function renderText(i: GracePeriodBlastInput): string {
     "Courses you still need to pass:",
     ...i.missingCourses.map(
       (slug) =>
-        `  • ${COURSE_LABEL[slug] ?? slug} — https://specialcarer.com/dashboard/training/${slug}`,
+        `  • ${COURSE_LABEL[slug] ?? slug} — https://specialcarers.com/dashboard/training/${slug}`,
     ),
     "",
     "If you don't complete these by your deadline, your Channel B (organisation) bookings will be paused. Your individual-client work is unaffected.",
     "",
     "Go to your training dashboard:",
-    "https://specialcarer.com/dashboard/agency-optin",
+    "https://specialcarers.com/dashboard/agency-optin",
     "",
-    "Questions? Reply to this email or contact compliance@specialcarer.com.",
+    "Questions? Reply to this email or contact compliance@specialcarers.com.",
     "— The SpecialCarers team",
   ];
   return lines.join("\n");

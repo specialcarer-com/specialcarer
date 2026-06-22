@@ -28,12 +28,12 @@ describe("siteOrigin / publicProfileUrl fallback", () => {
   });
 
   it("falls back to the production origin when no base URL is set", () => {
-    assert.equal(siteOrigin(), "https://specialcarer.com");
+    assert.equal(siteOrigin(), "https://specialcarers.com");
   });
 
   it("treats a blank/whitespace base URL as unset", () => {
     process.env.NEXT_PUBLIC_SITE_URL = "   ";
-    assert.equal(siteOrigin(), "https://specialcarer.com");
+    assert.equal(siteOrigin(), "https://specialcarers.com");
   });
 
   it("never emits an empty or relative public profile url", () => {

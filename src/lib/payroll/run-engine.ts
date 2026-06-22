@@ -684,24 +684,24 @@ function previewEmailHtml(name: string, run: PayrollRun, netCents: number): stri
   <p>Net pay (pending review): <strong>${gbp(netCents)}</strong>.</p>
   <p>Please log in and check the details. Payroll runs on <strong>${run.scheduled_run_date}</strong>.</p>
   <p>If anything looks wrong — a missing shift, an incorrect rate — please flag a dispute now so we can investigate before the money moves.</p>
-  <p><a href="https://specialcarer.com/dashboard/payslips" style="background:#0E7C7B;color:white;padding:10px 16px;border-radius:8px;text-decoration:none;">View draft payslip</a></p>
+  <p><a href="https://specialcarers.com/dashboard/payslips" style="background:#0E7C7B;color:white;padding:10px 16px;border-radius:8px;text-decoration:none;">View draft payslip</a></p>
   <p style="color:#6b7280;font-size:12px;">SpecialCarers · All Care 4 U Group Ltd</p>
   </body></html>`;
 }
 
 function previewEmailText(name: string, run: PayrollRun, netCents: number): string {
-  return `Hi ${name},\n\nYour draft payslip for ${periodLabel(run.period_start)} is ready (net ${gbp(netCents)}). Payroll runs on ${run.scheduled_run_date}.\n\nReview it here: https://specialcarer.com/dashboard/payslips\n\nIf anything looks wrong, flag a dispute before the run.\n\nSpecialCarer · All Care 4 U Group Ltd`;
+  return `Hi ${name},\n\nYour draft payslip for ${periodLabel(run.period_start)} is ready (net ${gbp(netCents)}). Payroll runs on ${run.scheduled_run_date}.\n\nReview it here: https://specialcarers.com/dashboard/payslips\n\nIf anything looks wrong, flag a dispute before the run.\n\nSpecialCarer · All Care 4 U Group Ltd`;
 }
 
 function payslipReadyEmailHtml(name: string, netCents: number): string {
   return `<!doctype html><html><body style="font-family:'Plus Jakarta Sans',sans-serif;color:#1f2937;">
   <h2 style="color:#0E7C7B;">Hi ${name},</h2>
   <p>Your payslip is ready and net pay of <strong>${gbp(netCents)}</strong> will be transferred to your bank shortly.</p>
-  <p><a href="https://specialcarer.com/dashboard/payslips" style="background:#0E7C7B;color:white;padding:10px 16px;border-radius:8px;text-decoration:none;">View payslip</a></p>
+  <p><a href="https://specialcarers.com/dashboard/payslips" style="background:#0E7C7B;color:white;padding:10px 16px;border-radius:8px;text-decoration:none;">View payslip</a></p>
   <p style="color:#6b7280;font-size:12px;">SpecialCarers · All Care 4 U Group Ltd</p>
   </body></html>`;
 }
 
 function payslipReadyEmailText(name: string, netCents: number): string {
-  return `Hi ${name},\n\nYour payslip is ready — net pay ${gbp(netCents)} will be transferred to your bank shortly.\n\nView it: https://specialcarer.com/dashboard/payslips\n\nSpecialCarer · All Care 4 U Group Ltd`;
+  return `Hi ${name},\n\nYour payslip is ready — net pay ${gbp(netCents)} will be transferred to your bank shortly.\n\nView it: https://specialcarers.com/dashboard/payslips\n\nSpecialCarer · All Care 4 U Group Ltd`;
 }

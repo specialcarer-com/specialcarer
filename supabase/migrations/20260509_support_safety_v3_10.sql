@@ -15,7 +15,7 @@ create table if not exists public.support_settings (
   hotline_phone_uk text not null default '+44 800 000 0000',
   hotline_phone_us text not null default '+1 800-000-0000',
   hotline_hours text not null default '24/7',
-  support_email text not null default 'support@specialcarer.com',
+  support_email text not null default 'support@specialcarers.com',
   chat_enabled boolean not null default false,
   chat_url text,
   insurance_summary_md text not null default '',
@@ -79,8 +79,8 @@ This page summarises the insurance position of All Care 4 U Group Ltd (trading a
 - **Public liability** — All Care 4 U Group Ltd holds a £5,000,000 Public Liability policy that responds to third-party injury or property damage caused by the negligent acts or omissions of the company and its directly-engaged staff.
 - **Employer's liability** — Where carers are engaged by All Care 4 U Group Ltd as employees rather than as independent contractors, an Employer's Liability policy of £10,000,000 is in place as required by the Employers' Liability (Compulsory Insurance) Act 1969.
 - **Professional indemnity** — A £1,000,000 Professional Indemnity policy responds to claims arising from professional advice given by the company. Care services delivered by independent carer-contractors fall outside this cover.
-- **Carer recommendation** — Independent carer-contractors are strongly recommended to carry their own Public Liability and Professional Indemnity insurance. The platform fee already incorporates a contribution towards a group insurance arrangement; details of opt-in cover are available from support@specialcarer.com.
-- **Complaints process** — Complaints relating to insurance matters should be addressed in writing to support@specialcarer.com. The Complaints Officer will acknowledge within 5 business days and aim to resolve within 8 weeks. If you remain dissatisfied, you may refer the matter to the Financial Ombudsman Service (FOS) provided you fall within the FOS's jurisdiction.
+- **Carer recommendation** — Independent carer-contractors are strongly recommended to carry their own Public Liability and Professional Indemnity insurance. The platform fee already incorporates a contribution towards a group insurance arrangement; details of opt-in cover are available from support@specialcarers.com.
+- **Complaints process** — Complaints relating to insurance matters should be addressed in writing to support@specialcarers.com. The Complaints Officer will acknowledge within 5 business days and aim to resolve within 8 weeks. If you remain dissatisfied, you may refer the matter to the Financial Ombudsman Service (FOS) provided you fall within the FOS's jurisdiction.
 
 ## United States
 
@@ -93,7 +93,7 @@ This page summarises the insurance position of All Care 4 U Group Ltd (trading a
 
 ## Reporting and contact
 
-For any insurance-related question, claim or complaint, please email **support@specialcarer.com** with the subject line "Insurance enquiry" and include your booking reference where applicable. Urgent matters during an active shift should be raised via the in-app SOS button followed by emergency-services contact (999 in the UK, 911 in the US) where life or limb is at risk.
+For any insurance-related question, claim or complaint, please email **support@specialcarers.com** with the subject line "Insurance enquiry" and include your booking reference where applicable. Urgent matters during an active shift should be raised via the in-app SOS button followed by emergency-services contact (999 in the UK, 911 in the US) where life or limb is at risk.
 
 This summary is updated periodically. The version published in-platform supersedes any earlier copy.
 $ins$,
@@ -121,7 +121,7 @@ You are not required to wait for our response before stepping back from immediat
 If you have a concern that does not warrant SOS but is not being resolved at the booking level, you can escalate at any time:
 
 - **Hotline:** the numbers and hours are listed on the in-app Support &amp; Safety page.
-- **Email:** support@specialcarer.com — Trust &amp; Safety acknowledges within 4 business hours.
+- **Email:** support@specialcarers.com — Trust &amp; Safety acknowledges within 4 business hours.
 
 You will not be removed from the platform, marked down on the matching algorithm, or otherwise penalised for raising a concern in good faith.
 
@@ -141,7 +141,7 @@ The SpecialCarer platform does not tolerate discrimination on the basis of race,
 
 ## Reporting
 
-Use the **Report unsafe client** or **Report community post** flow in the app, or email support@specialcarer.com. We aim to acknowledge every report within 4 business hours and provide a substantive update within 5 business days. Where a safeguarding referral or law-enforcement referral is required, we make that referral as well as updating you on the status.
+Use the **Report unsafe client** or **Report community post** flow in the app, or email support@specialcarers.com. We aim to acknowledge every report within 4 business hours and provide a substantive update within 5 business days. Where a safeguarding referral or law-enforcement referral is required, we make that referral as well as updating you on the status.
 
 This page is reviewed at least annually and is updated whenever the protections it describes change.
 $wp$

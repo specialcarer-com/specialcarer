@@ -14,7 +14,7 @@ const BRAND_PRIMARY = "#039EA0";
 const BRAND_HEADING = "#171E54";
 const BRAND_SUBHEAD = "#575757";
 const BG_PALE = "#F7FAFA";
-const BRAND_LOGO_URL = "https://specialcarer.com/brand/logo-wordmark-email.png";
+const BRAND_LOGO_URL = "https://specialcarers.com/brand/logo-wordmark-email.png";
 // Full SpecialCarers wordmark logo (icon + "Special Carers" text, all teal,
 // transparent background). Source 960x721, rendered at 240x180 in email
 // (@4x retina). Aspect ratio 161:121.
@@ -138,7 +138,7 @@ export function renderFamilyInviteEmail(args: {
           <tr>
             <td style="padding:18px 32px;background:#C2E5E4;color:#2F2E31;font-size:12px;line-height:1.5;text-align:center;">
               SpecialCarers · A product of All Care 4 U Group Ltd<br>
-              <a href="https://specialcarer.com" style="color:#2F2E31;">specialcarer.com</a>
+              <a href="https://specialcarers.com" style="color:#2F2E31;">specialcarers.com</a>
             </td>
           </tr>
         </table>
@@ -161,7 +161,7 @@ This link expires on ${expires}. If you weren't expecting this email you can saf
 
 — SpecialCarers
 A product of All Care 4 U Group Ltd
-https://specialcarer.com
+https://specialcarers.com
 `;
 
   return { subject, html, text };
@@ -240,7 +240,7 @@ export function renderLiveInAdminEmail(args: {
   const totalLabel = fmtMoney(args.totalCents, args.currency);
   const dailyLabel = fmtMoney(args.dailyRateCents, args.currency);
   const startLabel = fmtDate(args.startDate);
-  const adminUrl = args.adminUrl ?? "https://specialcarer.com/admin/live-in";
+  const adminUrl = args.adminUrl ?? "https://specialcarers.com/admin/live-in";
 
   const html = `<!DOCTYPE html>
 <html>
@@ -313,7 +313,7 @@ export function renderLiveInAdminEmail(args: {
           <tr>
             <td class="sc-pad-x" style="padding:16px 28px;background:#C2E5E4;color:#2F2E31;font-size:12px;line-height:1.5;text-align:center;">
               SpecialCarers · A product of All Care 4 U Group Ltd<br>
-              <a href="https://specialcarer.com" style="color:#2F2E31;">specialcarer.com</a>
+              <a href="https://specialcarers.com" style="color:#2F2E31;">specialcarers.com</a>
             </td>
           </tr>
         </table>
@@ -345,7 +345,7 @@ Privacy: the family’s full address, phone, and email are masked until a carer 
 
 — SpecialCarers
 A product of All Care 4 U Group Ltd
-https://specialcarer.com
+https://specialcarers.com
 `;
 
   return { subject, html, text };
@@ -406,7 +406,7 @@ export function renderReferenceInviteEmail(args: ReferenceInviteEmail): {
   </p>
   <p style="font-size:11px;color:#575757;margin-top:24px">
     SpecialCarers · A product of All Care 4 U Group Ltd<br>
-    <a href="https://specialcarer.com" style="color:#0E7C7B">specialcarer.com</a>
+    <a href="https://specialcarers.com" style="color:#0E7C7B">specialcarers.com</a>
   </p>
 </div></body></html>`;
 
@@ -454,7 +454,7 @@ function orgShell(title: string, bodyHtml: string): string {
   ${bodyHtml}
   <p style="font-size:11px;color:#575757;margin-top:24px">
     SpecialCarers · A product of All Care 4 U Group Ltd<br>
-    <a href="https://specialcarer.com" style="color:#0E7C7B">specialcarer.com</a>
+    <a href="https://specialcarers.com" style="color:#0E7C7B">specialcarers.com</a>
   </p>
 </div></body></html>`;
 }
@@ -482,7 +482,7 @@ export function renderOrgSubmittedEmail(args: {
     ${contractsLine}
     <p>We aim to verify within <strong>2 business days</strong>. In the meantime you can browse carers and save shortlists from your dashboard; bookings unlock the moment we confirm your documents.</p>
     <p style="margin:24px 0">
-      <a href="https://specialcarer.com/m/org" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
+      <a href="https://specialcarers.com/m/org" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
         Open your dashboard
       </a>
     </p>`,
@@ -502,7 +502,7 @@ export function renderOrgSubmittedEmail(args: {
     "",
     "We aim to verify within 2 business days.",
     "",
-    "Dashboard: https://specialcarer.com/m/org",
+    "Dashboard: https://specialcarers.com/m/org",
     "",
     "— SpecialCarers",
   );
@@ -516,7 +516,7 @@ export function renderOrgApprovedEmail(args: {
 }): { subject: string; html: string; text: string } {
   const subject = `Your SpecialCarers organisation account is verified`;
   const downloads =
-    args.contractDownloadsUrl ?? "https://specialcarer.com/m/org/documents";
+    args.contractDownloadsUrl ?? "https://specialcarers.com/m/org/documents";
   const html = orgShell(
     "You're verified — start booking",
     `<p>Hi ${escOrgHtml(args.bookerName)},</p>
@@ -524,7 +524,7 @@ export function renderOrgApprovedEmail(args: {
     <p>Your countersigned MSA and DPA are now available on your dashboard — open the Documents tab to download.</p>
     <p>You can book any of our DBS-checked carers directly from your dashboard. Pricing stays at our standard UK rates — no setup fees.</p>
     <p style="margin:24px 0">
-      <a href="https://specialcarer.com/m/org/carers" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
+      <a href="https://specialcarers.com/m/org/carers" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
         Browse carers
       </a>
       &nbsp;
@@ -540,7 +540,7 @@ export function renderOrgApprovedEmail(args: {
     "",
     `Your countersigned MSA and DPA: ${downloads}`,
     "",
-    "Browse carers: https://specialcarer.com/m/org/carers",
+    "Browse carers: https://specialcarers.com/m/org/carers",
     "",
     "— SpecialCarers",
   ].join("\n");
@@ -570,7 +570,7 @@ export function renderOrgContractAmendmentEmail(args: {
     "",
     `We've updated the SpecialCarers ${args.contractType.toUpperCase()} (${args.newVersion}) and would like you to re-sign for ${args.legalName}.`,
     "",
-    "Dashboard: https://specialcarer.com/m/org/documents",
+    "Dashboard: https://specialcarers.com/m/org/documents",
     "",
     "— SpecialCarers",
   ].join("\n");
@@ -590,7 +590,7 @@ export function renderOrgRejectedEmail(args: {
     <blockquote style="margin:16px 0;padding:12px 16px;background:#F7FAFA;border-left:4px solid #0E7C7B;color:#2F2E31;white-space:pre-wrap">${escOrgHtml(args.reason)}</blockquote>
     <p>Once you've updated your details and re-uploaded any missing documents, we'll review again within 2 business days.</p>
     <p style="margin:24px 0">
-      <a href="https://specialcarer.com/m/org/documents" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
+      <a href="https://specialcarers.com/m/org/documents" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
         Re-upload documents
       </a>
     </p>`,
@@ -602,7 +602,7 @@ export function renderOrgRejectedEmail(args: {
     "",
     args.reason,
     "",
-    "Re-upload: https://specialcarer.com/m/org/documents",
+    "Re-upload: https://specialcarers.com/m/org/documents",
     "",
     "— SpecialCarers",
   ].join("\n");
@@ -629,7 +629,7 @@ export function renderOrgRequestInfoEmail(args: {
     "",
     args.message,
     "",
-    "Dashboard: https://specialcarer.com/m/org/documents",
+    "Dashboard: https://specialcarers.com/m/org/documents",
     "",
     "— SpecialCarers",
   ].join("\n");
@@ -644,7 +644,7 @@ export function renderOrgAdminNotifyEmail(args: {
   orgId: string;
 }): { subject: string; html: string; text: string } {
   const subject = `🆕 Org submission: ${args.legalName} (${args.country})`;
-  const adminUrl = `https://specialcarer.com/admin/orgs/${args.orgId}`;
+  const adminUrl = `https://specialcarers.com/admin/orgs/${args.orgId}`;
   const html = orgShell(
     "New organisation submission",
     `<ul style="line-height:1.6;color:#2F2E31">

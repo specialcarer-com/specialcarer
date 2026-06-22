@@ -60,7 +60,7 @@ export default function InvoicesPage() {
       </ul>
 
       <p className="mt-6 px-5 text-center text-[11.5px] text-subheading">
-        Need a copy? Contact <a className="text-primary" href="mailto:billing@specialcarer.com">billing@specialcarer.com</a>
+        Need a copy? Contact <a className="text-primary" href="mailto:billing@specialcarers.com">billing@specialcarers.com</a>
       </p>
     </div>
   );

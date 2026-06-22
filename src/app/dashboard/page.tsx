@@ -293,7 +293,7 @@ export default async function DashboardPage() {
     );
     const origin =
       process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
-      "https://specialcarer.com";
+      "https://specialcarers.com";
     const { data: claims } = await admin
       .from("referral_claims")
       .select("status")
