@@ -11,7 +11,7 @@ import { getMyOrgMembership } from "@/lib/org/server";
 export const dynamic = "force-dynamic";
 
 const ADMIN_EMAIL =
-  process.env.ORG_ADMIN_EMAIL ?? "hello@specialcarer.com";
+  process.env.ORG_ADMIN_EMAIL ?? "hello@specialcarers.com";
 
 /**
  * POST /api/m/org/register/submit

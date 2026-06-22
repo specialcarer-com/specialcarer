@@ -1,6 +1,6 @@
 # SpecialCarer — Native (Expo)
 
-WebView-shell native app that wraps **specialcarer.com** for iOS + Android, with native background location for live shift tracking.
+WebView-shell native app that wraps **specialcarers.com** for iOS + Android, with native background location for live shift tracking.
 
 Architecture chosen: **WebView + native location** — fastest path to App Store review (≈2 weeks) while keeping a single product codebase moving forward.
 
@@ -63,7 +63,7 @@ Every push event delivered to the device — produced by `src/lib/push/notify.ts
 | `data.deeplink` shape | Behaviour |
 |---|---|
 | `"/m/chat/<id>"` (any in-app path starting with `/`) | `webRef.injectJavaScript("window.location.href = …; true;")` — escaped with `JSON.stringify` so apostrophes/quotes in the path can't break out of the JS string |
-| `"https://specialcarer.com/m/track/xyz"` (absolute URL on the configured `webOrigin`) | Same as above — origin stripped, navigated in-WebView |
+| `"https://specialcarers.com/m/track/xyz"` (absolute URL on the configured `webOrigin`) | Same as above — origin stripped, navigated in-WebView |
 | `"tel:+44…"`, `"mailto:…"`, `"sms:…"` | `Linking.openURL` → system handler |
 | any other `http(s)://` host | `Linking.openURL` → system browser |
 | missing / non-string / `"javascript:…"` | dropped |
@@ -87,7 +87,7 @@ npm run android
 npm start
 ```
 
-Local dev points the WebView at `https://specialcarer.com` by default. To point at a local Next dev server, set the `webOrigin` in `app.json` → `extra` to `http://localhost:3000` (and run `npx expo start --tunnel` if testing on a real device).
+Local dev points the WebView at `https://specialcarers.com` by default. To point at a local Next dev server, set the `webOrigin` in `app.json` → `extra` to `http://localhost:3000` (and run `npx expo start --tunnel` if testing on a real device).
 
 ## EAS build + submit
 

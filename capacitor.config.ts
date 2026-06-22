@@ -23,7 +23,7 @@ const config: CapacitorConfig = {
   server: {
     // Live web app — Capacitor loads this URL inside the native WebView.
     // Canonical production hostname is www.specialcarers.com (plural).
-    // The singular specialcarer.com 308-redirects here; pointing the
+    // The singular specialcarers.com 308-redirects here; pointing the
     // WebView directly at the canonical host avoids a cross-domain
     // bounce that would be blocked by allowNavigation.
     url: "https://www.specialcarers.com/m",
@@ -37,8 +37,8 @@ const config: CapacitorConfig = {
     allowNavigation: [
       "specialcarers.com",
       "*.specialcarers.com",
-      "specialcarer.com",
-      "*.specialcarer.com",
+      "specialcarers.com",
+      "*.specialcarers.com",
       "checkout.stripe.com",
       "*.stripe.com",
       "appleid.apple.com",

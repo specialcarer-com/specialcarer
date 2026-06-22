@@ -22,12 +22,12 @@ function shell(title: string, bodyHtml: string): string {
   ${bodyHtml}
   <p style="font-size:11px;color:#575757;margin-top:24px">
     SpecialCarers · A product of All Care 4 U Group Ltd<br>
-    <a href="https://specialcarer.com" style="color:#0E7C7B">specialcarer.com</a>
+    <a href="https://specialcarers.com" style="color:#0E7C7B">specialcarers.com</a>
   </p>
 </div></body></html>`;
 }
 
-const DASHBOARD_URL = "https://specialcarer.com/dashboard/agency-optin";
+const DASHBOARD_URL = "https://specialcarers.com/dashboard/agency-optin";
 
 export type EmailContent = { subject: string; html: string; text: string };
 
@@ -126,7 +126,7 @@ export function renderOptInApprovedEmail(args: { name: string }): EmailContent {
     <p>Great news — your agency opt-in has been approved. You're now eligible to receive Channel B shifts dispatched by organisational clients.</p>
     <p>Shifts will appear in your usual jobs feed alongside marketplace bookings, tagged "Agency".</p>
     <p style="margin:24px 0">
-      <a href="https://specialcarer.com/m/jobs" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
+      <a href="https://specialcarers.com/m/jobs" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
         Open jobs feed
       </a>
     </p>`,
@@ -136,7 +136,7 @@ export function renderOptInApprovedEmail(args: { name: string }): EmailContent {
     "",
     "Your agency opt-in has been approved. Channel B shifts will appear in your jobs feed.",
     "",
-    "https://specialcarer.com/m/jobs",
+    "https://specialcarers.com/m/jobs",
     "",
     "— SpecialCarers",
   ].join("\n");
@@ -268,7 +268,7 @@ export function renderOptInResumedEmail(args: { name: string }): EmailContent {
     `<p>Hi ${esc(args.name)},</p>
     <p>Your eligibility for Channel B shifts has been restored. You'll start receiving agency offers again from now on.</p>
     <p style="margin:24px 0">
-      <a href="https://specialcarer.com/m/jobs" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
+      <a href="https://specialcarers.com/m/jobs" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
         Open jobs feed
       </a>
     </p>`,

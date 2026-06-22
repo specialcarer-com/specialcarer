@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
  * Mobile vs desktop routing
  * -------------------------
  * Supabase's confirmation email button always lands on the configured
- * Site URL (https://specialcarer.com/auth/callback). When a user signed
+ * Site URL (https://specialcarers.com/auth/callback). When a user signed
  * up through the mobile app they expect to be returned to the mobile
  * surface, not the web dashboard. We detect this in two ways:
  *

@@ -96,7 +96,7 @@ function StatusBanner({
           Account suspended
         </p>
         <p className="mt-1 text-[12px] text-rose-800">
-          Reach out to hello@specialcarer.com to discuss next steps.
+          Reach out to hello@specialcarers.com to discuss next steps.
         </p>
       </div>
     );

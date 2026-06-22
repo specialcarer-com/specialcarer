@@ -78,13 +78,13 @@ PRIVACY AND TRUST
 
 Special Carer never tracks you across other apps or websites. Live location is shared only during an active booking, and stops when the shift ends. Payments are handled by Stripe — we never see or store your card details. Background checks are run by uCheck (UK) and Checkr (US), both regulated providers.
 
-Read our privacy policy at https://www.specialcarer.com/privacy and our terms at https://www.specialcarer.com/terms.
+Read our privacy policy at https://www.specialcarers.com/privacy and our terms at https://www.specialcarers.com/terms.
 
 ABOUT US
 
 Special Carer is operated by All Care 4 U Group Ltd, a UK company building a fairer care economy.
 
-Questions? Email office@allcare4u.co.uk or visit https://www.specialcarer.com/contact.
+Questions? Email office@allcare4u.co.uk or visit https://www.specialcarers.com/contact.
 ```
 
 (approx. 3,000 chars — well within Apple's 4,000 limit)
@@ -124,7 +124,7 @@ Words ALREADY in the app name/subtitle do **not** need to go here — Apple alre
 ## ▸ Support URL (required)
 
 ```
-https://www.specialcarer.com/contact
+https://www.specialcarers.com/contact
 ```
 
 ---
@@ -132,7 +132,7 @@ https://www.specialcarer.com/contact
 ## ▸ Marketing URL (optional but recommended)
 
 ```
-https://www.specialcarer.com
+https://www.specialcarers.com
 ```
 
 ---
@@ -140,7 +140,7 @@ https://www.specialcarer.com
 ## ▸ Privacy Policy URL (required)
 
 ```
-https://www.specialcarer.com/privacy
+https://www.specialcarers.com/privacy
 ```
 
 ---
@@ -174,7 +174,7 @@ Apple shows ~12 questions about content. Answer **all of them "None"** except wh
 - Simulated Gambling — None
 - Sexual Content or Nudity — None
 - Graphic Sexual Content and Nudity — None
-- Unrestricted Web Access — **No** *(WKWebView is restricted to specialcarer.com via allowNavigation)*
+- Unrestricted Web Access — **No** *(WKWebView is restricted to specialcarers.com via allowNavigation)*
 - Gambling and Contests — None
 
 **Final age rating**: 4+

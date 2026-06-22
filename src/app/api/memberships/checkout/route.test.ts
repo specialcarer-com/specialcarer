@@ -19,7 +19,7 @@ const USER: CheckoutUser = {
   email: "carer@example.com",
 };
 
-const SITE = "https://specialcarer.com";
+const SITE = "https://specialcarers.com";
 
 const ENV = {
   STRIPE_PRICE_PLUS_MONTHLY: "price_plus_monthly",

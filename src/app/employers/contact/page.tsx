@@ -38,10 +38,10 @@ export default async function Page({
           <div className="mt-6 bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-900">
             Something went wrong submitting that form. Please email{" "}
             <a
-              href="mailto:employers@specialcarer.com"
+              href="mailto:employers@specialcarers.com"
               className="underline"
             >
-              employers@specialcarer.com
+              employers@specialcarers.com
             </a>{" "}
             instead.
           </div>
@@ -59,10 +59,10 @@ export default async function Page({
             You’ve submitted this form a few times in the last hour. Please
             wait a little while before trying again, or email{" "}
             <a
-              href="mailto:employers@specialcarer.com"
+              href="mailto:employers@specialcarers.com"
               className="underline"
             >
-              employers@specialcarer.com
+              employers@specialcarers.com
             </a>{" "}
             directly.
           </div>

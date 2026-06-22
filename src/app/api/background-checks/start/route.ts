@@ -56,7 +56,7 @@ export async function POST() {
   const first_name = parts[0] || "Caregiver";
   const last_name = parts.slice(1).join(" ") || "User";
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://specialcarer.com";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://specialcarers.com";
   const redirect_to = `${siteUrl}/dashboard/verification`;
 
   if (country === "GB") {

@@ -67,7 +67,7 @@ PAYE and NI compute on it correctly.
 ## Commit
 
 - Branch: `main`
-- Author: `SpecialCarer Bot <bot@specialcarer.com>`
+- Author: `SpecialCarer Bot <bot@specialcarers.com>`
 - Commit SHA: see commit log (recorded after push)
 
 ## Manual steps for the parent agent

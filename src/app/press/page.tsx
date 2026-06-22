@@ -96,7 +96,7 @@ export default function Page() {
       contactPoint: {
         "@type": "ContactPoint",
         contactType: "press",
-        email: "press@specialcarer.com",
+        email: "press@specialcarers.com",
         availableLanguage: ["English"],
       },
     },
@@ -126,10 +126,10 @@ export default function Page() {
         </p>
         <div className="mt-8 flex flex-col sm:flex-row gap-3">
           <a
-            href="mailto:press@specialcarer.com"
+            href="mailto:press@specialcarers.com"
             className="px-6 py-3 rounded-xl bg-brand text-white font-medium hover:bg-brand-600 transition text-center"
           >
-            Email press@specialcarer.com
+            Email press@specialcarers.com
           </a>
           <Link
             href="/about"
@@ -152,10 +152,10 @@ export default function Page() {
             </p>
             <p className="text-slate-600 text-sm mt-1">
               <a
-                href="mailto:press@specialcarer.com"
+                href="mailto:press@specialcarers.com"
                 className="text-brand-700 hover:underline"
               >
-                press@specialcarer.com
+                press@specialcarers.com
               </a>
             </p>
             <p className="mt-2 text-sm text-slate-600">
@@ -374,10 +374,10 @@ export default function Page() {
             We&rsquo;re happy to help with quotes, briefings, or background.
           </p>
           <a
-            href="mailto:press@specialcarer.com"
+            href="mailto:press@specialcarers.com"
             className="mt-6 inline-block px-6 py-3 rounded-xl bg-white text-slate-900 font-medium hover:bg-slate-100 transition"
           >
-            press@specialcarer.com
+            press@specialcarers.com
           </a>
         </div>
       </section>

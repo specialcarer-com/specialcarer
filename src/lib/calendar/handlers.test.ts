@@ -101,12 +101,12 @@ describe("isValidCalendarToken", () => {
 
 describe("feedUrlFor", () => {
   it("builds a webcal:// URL from an https origin", () => {
-    const url = feedUrlFor("https://specialcarer.com", "tok-123");
-    assert.equal(url, "webcal://specialcarer.com/api/calendar/feed/tok-123.ics");
+    const url = feedUrlFor("https://specialcarers.com", "tok-123");
+    assert.equal(url, "webcal://specialcarers.com/api/calendar/feed/tok-123.ics");
   });
   it("strips a trailing slash from the origin", () => {
-    const url = feedUrlFor("https://specialcarer.com/", "tok");
-    assert.equal(url, "webcal://specialcarer.com/api/calendar/feed/tok.ics");
+    const url = feedUrlFor("https://specialcarers.com/", "tok");
+    assert.equal(url, "webcal://specialcarers.com/api/calendar/feed/tok.ics");
   });
 });
 

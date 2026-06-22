@@ -30,7 +30,7 @@ const SERVICE_KEYS = new Set<string>([
 ]);
 
 const ADMIN_EMAIL =
-  process.env.LIVE_IN_ADMIN_EMAIL ?? "hello@specialcarer.com";
+  process.env.LIVE_IN_ADMIN_EMAIL ?? "hello@specialcarers.com";
 
 type Body = {
   service?: string;

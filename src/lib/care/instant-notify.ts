@@ -92,7 +92,7 @@ export async function notifyCarerInstantBooking(args: Args) {
     const subject = `⚡ Instant booking request — ${service}, ${when}`;
     const link =
       (process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
-        "https://specialcarer.com") +
+        "https://specialcarers.com") +
       `/dashboard/bookings/${args.bookingId}`;
 
     const text = [

@@ -14,7 +14,7 @@ Then it shows two fields:
 
 ### Username
 ```
-test-family@specialcarer.com
+test-family@specialcarers.com
 ```
 
 ### Password
@@ -47,7 +47,7 @@ The app is operated by All Care 4 U Group Ltd
 (Company No. UK Companies House — Steve Gisanrin,
 Account Holder).
 
-The web product (www.specialcarer.com) is live; this
+The web product (www.specialcarers.com) is live; this
 iOS app is a Capacitor-based native shell wrapping
 the same product, plus push notifications, secure
 biometric login, and live shift-tracking.
@@ -59,14 +59,14 @@ We've provided two pre-seeded demo accounts so you
 can experience both sides of the marketplace:
 
 1. FAMILY (SEEKER) — primary login above
-   Email:    test-family@specialcarer.com
+   Email:    test-family@specialcarers.com
    Password: DemoPassword!2026
    Country:  United Kingdom (London)
    Use this to: search for caregivers, view profiles,
    start a booking, see Stripe checkout.
 
 2. CAREGIVER
-   Email:    demo-aisha@specialcarer.com
+   Email:    demo-aisha@specialcarers.com
    Password: DemoPassword!2026
    Country:  United States (Los Angeles)
    Use this to: see the caregiver dashboard, an
@@ -95,7 +95,7 @@ SUGGESTED REVIEW PATH (≈10 minutes)
    authorised but NOT charged (we use manual capture
    with a 24-hour escrow hold post-shift).
 8. To see the caregiver side, sign out and sign in
-   with demo-aisha@specialcarer.com.
+   with demo-aisha@specialcarers.com.
 
 ────────────────────────────────────────────
 PERMISSIONS REQUESTED
@@ -147,7 +147,7 @@ GUIDELINE-SPECIFIC NOTES
 • 4.0 (Design): the app uses native iOS UI
   components via WKWebView with adaptive layout.
 • 5.1.1 (Privacy/Data Collection): privacy policy
-  at https://www.specialcarer.com/privacy.
+  at https://www.specialcarers.com/privacy.
   We collect only what's declared in the App
   Privacy section and PrivacyInfo.xcprivacy.
 • 5.1.2 (Permission): each permission has a clear,
@@ -215,7 +215,7 @@ Apple App Review usually replies within 24–48 hours. If they reject, here are 
 
 ### "Sign-in not working"
 Reviewers sometimes can't log in. Reply with:
-> "We've re-verified the demo account `test-family@specialcarer.com` / `DemoPassword!2026` and it works as expected. Could you confirm whether you saw an error message? If location is being detected as outside our supported regions (UK/US), please test with a UK or US VPN."
+> "We've re-verified the demo account `test-family@specialcarers.com` / `DemoPassword!2026` and it works as expected. Could you confirm whether you saw an error message? If location is being detected as outside our supported regions (UK/US), please test with a UK or US VPN."
 
 (We don't actually geo-block, but it's a polite framing if the reviewer is in a region we haven't tested.)
 
@@ -224,7 +224,7 @@ This means the App Privacy questionnaire doesn't match what's actually collected
 
 ### "Guideline 4.2 — Minimum Functionality"
 Reviewers might say the app feels like a website wrapper. Reply with:
-> "Thank you for the feedback. The app provides native functionality not available in the mobile web experience: (1) APNs push notifications for booking updates, (2) Face ID biometric login, (3) background location tracking during active shifts using CoreLocation, (4) native deep links via Universal Links to specialcarer.com bookings. The hybrid architecture is industry-standard for marketplace apps (Uber, Airbnb early versions, Stripe Atlas)."
+> "Thank you for the feedback. The app provides native functionality not available in the mobile web experience: (1) APNs push notifications for booking updates, (2) Face ID biometric login, (3) background location tracking during active shifts using CoreLocation, (4) native deep links via Universal Links to specialcarers.com bookings. The hybrid architecture is industry-standard for marketplace apps (Uber, Airbnb early versions, Stripe Atlas)."
 
 ### "Guideline 5.1.5 — Location Services"
 If they question background location, reply with:

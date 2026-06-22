@@ -19,7 +19,7 @@ const USER: CarerCheckoutUser = {
   id: "11111111-2222-3333-4444-555555555555",
   email: "carer@example.com",
 };
-const SITE = "https://specialcarer.com";
+const SITE = "https://specialcarers.com";
 
 type StripeCalls = {
   priceLists: Array<Record<string, unknown>>;

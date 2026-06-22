@@ -421,7 +421,7 @@ workflows:
       cancel_previous_builds: true
 
     # Skip iOS builds for web-only changes — WebView app serves
-    # https://www.specialcarer.com/m so web/marketing commits reach the
+    # https://www.specialcarers.com/m so web/marketing commits reach the
     # app instantly. Manual ios-v* tags and UI-started builds always
     # trigger regardless of the changeset filter below.
     when:
@@ -475,7 +475,7 @@ workflows:
           include: true
 
     # Skip iOS builds for web-only changes — WebView app serves
-    # https://www.specialcarer.com/m so web/marketing commits reach the
+    # https://www.specialcarers.com/m so web/marketing commits reach the
     # app instantly. Manual ios-v* tags always trigger regardless of paths.
     when:
       changeset:

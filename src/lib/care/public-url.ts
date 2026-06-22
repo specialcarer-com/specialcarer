@@ -9,7 +9,7 @@ export function siteOrigin(): string {
   const configured =
     process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
     process.env.NEXT_PUBLIC_APP_URL?.trim();
-  return (configured || "https://specialcarer.com").replace(/\/$/, "");
+  return (configured || "https://specialcarers.com").replace(/\/$/, "");
 }
 
 /** Canonical public path for a carer — friendly /c/<slug> when available. */

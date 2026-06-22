@@ -33,7 +33,7 @@
 ### Commits
 - Use Conventional Commit prefixes: `feat:`, `fix:`, `chore:`, `docs:`, `test:`, `refactor:`.
 - Scope: lower-case feature area in parens, e.g. `feat(dbs): ...`, `fix(reviews): ...`.
-- Bot identity for automated commits: `bot@specialcarer.com` / `SpecialCarer Bot`.
+- Bot identity for automated commits: `bot@specialcarers.com` / `SpecialCarer Bot`.
 
 ### Migrations
 - Place in `supabase/migrations/<unix_timestamp>_<slug>.sql`.

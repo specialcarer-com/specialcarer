@@ -19,7 +19,7 @@ for (const envPath of envCandidates) {
   }
 }
 
-const BASE = "https://specialcarer.com";
+const BASE = "https://specialcarers.com";
 const URL_SUPA = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -133,10 +133,10 @@ async function main() {
   }
 
   console.log("[setup] Minting sessions…");
-  const family = await mintCookie("test.family@specialcarer.com");
-  const carerUk = await mintCookie("test.carer.uk@specialcarer.com");
-  const admin_user = await mintCookie("test.admin@specialcarer.com");
-  const org = await mintCookie("test.org@specialcarer.com");
+  const family = await mintCookie("test.family@specialcarers.com");
+  const carerUk = await mintCookie("test.carer.uk@specialcarers.com");
+  const admin_user = await mintCookie("test.admin@specialcarers.com");
+  const org = await mintCookie("test.org@specialcarers.com");
   console.log(`  family=${family.user_id}\n  carer=${carerUk.user_id}\n  admin=${admin_user.user_id}\n  org=${org.user_id}\n`);
 
   // ─── Phase 1: Auth + role basics ───────────────────────────────────────

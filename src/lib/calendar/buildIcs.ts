@@ -36,7 +36,7 @@ export type CalendarEvent = {
 
 export type BuildIcsOptions = {
   method: IcsMethod;
-  /** Defaults to specialcarer.com — the UID/PRODID domain. */
+  /** Defaults to specialcarers.com — the UID/PRODID domain. */
   domain?: string;
   /** DTSTAMP override (testing). Defaults to now. */
   now?: Date;
@@ -116,7 +116,7 @@ export function buildIcs(
   events: CalendarEvent[],
   options: BuildIcsOptions,
 ): string {
-  const domain = options.domain ?? "specialcarer.com";
+  const domain = options.domain ?? "specialcarers.com";
   const dtstamp = formatUtc(options.now ?? new Date());
 
   const lines: string[] = [

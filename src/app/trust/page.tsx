@@ -187,9 +187,9 @@ export default function Page() {
               <strong className="text-slate-900">Trust &amp; safety:</strong>{" "}
               <a
                 className="text-brand-700 hover:underline"
-                href="mailto:safety@specialcarer.com"
+                href="mailto:safety@specialcarers.com"
               >
-                safety@specialcarer.com
+                safety@specialcarers.com
               </a>
             </li>
             <li>
@@ -198,9 +198,9 @@ export default function Page() {
               </strong>{" "}
               <a
                 className="text-brand-700 hover:underline"
-                href="mailto:disputes@specialcarer.com"
+                href="mailto:disputes@specialcarers.com"
               >
-                disputes@specialcarer.com
+                disputes@specialcarers.com
               </a>
             </li>
             <li>

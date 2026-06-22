@@ -28,12 +28,12 @@ import { buildNavigationScript, classifyDeeplink } from "./deeplink";
 
 const WEB_ORIGIN: string =
   (Constants.expoConfig?.extra as { webOrigin?: string } | undefined)?.webOrigin ||
-  "https://specialcarer.com";
+  "https://specialcarers.com";
 
 /**
  * Root WebView shell.
  *
- * Renders specialcarer.com inside a WebView and listens for postMessage events
+ * Renders specialcarers.com inside a WebView and listens for postMessage events
  * from the web app. Native runtime owns:
  *   - Session storage (mirror of web auth state, pulled via bridge)
  *   - Background location (expo-location + TaskManager — survives app suspend)
