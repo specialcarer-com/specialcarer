@@ -1,4 +1,11 @@
 import LegalLayout, { type LegalSection } from "@/components/legal-layout";
+import LegalTable, {
+  THead,
+  TH,
+  TBody,
+  TR,
+  TD,
+} from "@/components/legal-table";
 
 export const metadata = {
   title: "Privacy Policy — SpecialCarers",
@@ -16,7 +23,6 @@ const sections: LegalSection[] = [
   { id: "international", title: "International transfers" },
   { id: "retention", title: "How long we keep it" },
   { id: "rights", title: "Your rights" },
-  { id: "ccpa", title: "California (CCPA/CPRA) rights" },
   { id: "security", title: "Security" },
   { id: "children", title: "Children" },
   { id: "background-checks", title: "Background checks" },
@@ -32,7 +38,7 @@ export default function PrivacyPage() {
       title="Privacy Policy"
       updated="3 May 2026"
       sections={sections}
-      jurisdictionNote="This policy applies to users of SpecialCarers in the United Kingdom, the European Economic Area, and the United States. California residents should also read the dedicated CCPA/CPRA section below."
+      jurisdictionNote="This policy applies to users of SpecialCarers in the United Kingdom."
     >
       <h2 id="summary">At a glance</h2>
       <p>
@@ -236,62 +242,62 @@ export default function PrivacyPage() {
         categories of recipients, all under written data-processing
         agreements:
       </p>
-      <table>
-        <thead>
-          <tr>
-            <th>Recipient</th>
-            <th>Why</th>
-            <th>Where</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Stripe Payments Europe / Stripe, Inc.</td>
-            <td>Card processing, payouts to caregivers</td>
-            <td>Ireland, USA</td>
-          </tr>
-          <tr>
-            <td>uCheck Holdings Ltd</td>
-            <td>UK Enhanced DBS, Right to Work, Digital ID</td>
-            <td>UK</td>
-          </tr>
-          <tr>
-            <td>Checkr, Inc.</td>
-            <td>US criminal &amp; healthcare-sanctions checks</td>
-            <td>USA</td>
-          </tr>
-          <tr>
-            <td>Supabase, Inc.</td>
-            <td>Database, authentication, file storage</td>
-            <td>USA / EU</td>
-          </tr>
-          <tr>
-            <td>Vercel, Inc.</td>
-            <td>Web hosting, edge network</td>
-            <td>USA</td>
-          </tr>
-          <tr>
-            <td>Mapbox, Inc.</td>
-            <td>Map rendering during live tracking</td>
-            <td>USA</td>
-          </tr>
-          <tr>
-            <td>IONOS SE</td>
-            <td>Email infrastructure for office@ accounts</td>
-            <td>Germany</td>
-          </tr>
-          <tr>
-            <td>Apple Inc. / Google LLC</td>
-            <td>App distribution, push notifications</td>
-            <td>USA</td>
-          </tr>
-          <tr>
-            <td>Other counterparties to your booking</td>
-            <td>The matched family or caregiver receives the booking-relevant subset of your profile</td>
-            <td>UK / USA</td>
-          </tr>
-        </tbody>
-      </table>
+      <LegalTable>
+        <THead>
+          <TR>
+            <TH>Recipient</TH>
+            <TH>Why</TH>
+            <TH>Where</TH>
+          </TR>
+        </THead>
+        <TBody>
+          <TR>
+            <TD>Stripe Payments Europe / Stripe, Inc.</TD>
+            <TD>Card processing, payouts to caregivers</TD>
+            <TD>Ireland, USA</TD>
+          </TR>
+          <TR>
+            <TD>uCheck Holdings Ltd</TD>
+            <TD>UK Enhanced DBS, Right to Work, Digital ID</TD>
+            <TD>UK</TD>
+          </TR>
+          <TR>
+            <TD>Checkr, Inc.</TD>
+            <TD>US criminal &amp; healthcare-sanctions checks</TD>
+            <TD>USA</TD>
+          </TR>
+          <TR>
+            <TD>Supabase, Inc.</TD>
+            <TD>Database, authentication, file storage</TD>
+            <TD>USA / EU</TD>
+          </TR>
+          <TR>
+            <TD>Vercel, Inc.</TD>
+            <TD>Web hosting, edge network</TD>
+            <TD>USA</TD>
+          </TR>
+          <TR>
+            <TD>Mapbox, Inc.</TD>
+            <TD>Map rendering during live tracking</TD>
+            <TD>USA</TD>
+          </TR>
+          <TR>
+            <TD>IONOS SE</TD>
+            <TD>Email infrastructure for office@ accounts</TD>
+            <TD>Germany</TD>
+          </TR>
+          <TR>
+            <TD>Apple Inc. / Google LLC</TD>
+            <TD>App distribution, push notifications</TD>
+            <TD>USA</TD>
+          </TR>
+          <TR>
+            <TD>Other counterparties to your booking</TD>
+            <TD>The matched family or caregiver receives the booking-relevant subset of your profile</TD>
+            <TD>UK / USA</TD>
+          </TR>
+        </TBody>
+      </LegalTable>
       <p>
         We will also disclose data where required by law (court order,
         regulator), in connection with a corporate sale or restructure, or
@@ -366,34 +372,6 @@ export default function PrivacyPage() {
         <a href="/account/delete">/account/delete</a>. For other rights,
         email <a href="mailto:privacy@allcare4u.co.uk">privacy@allcare4u.co.uk</a>{" "}
         and we will respond within one calendar month.
-      </p>
-
-      <h2 id="ccpa">California (CCPA / CPRA) rights</h2>
-      <p>
-        If you are a California resident, you have the right to:
-      </p>
-      <ul>
-        <li>
-          Know what personal information we collect, use, disclose, and
-          retain about you.
-        </li>
-        <li>Delete personal information.</li>
-        <li>Correct inaccurate personal information.</li>
-        <li>
-          Opt out of the &quot;sale&quot; or &quot;sharing&quot; of personal
-          information for cross-context behavioural advertising. We do not
-          sell or share for that purpose, and we do not knowingly collect
-          personal information from anyone under 16.
-        </li>
-        <li>Limit the use of sensitive personal information.</li>
-        <li>Be free from discrimination for exercising these rights.</li>
-      </ul>
-      <p>
-        To exercise CCPA rights email{" "}
-        <a href="mailto:privacy@allcare4u.co.uk">privacy@allcare4u.co.uk</a>{" "}
-        with the subject &quot;CCPA request&quot;. We will verify your
-        identity by matching the email address on your SpecialCarers account
-        and respond within 45 days.
       </p>
 
       <h2 id="security">Security</h2>

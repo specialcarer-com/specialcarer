@@ -1,4 +1,11 @@
 import LegalLayout, { type LegalSection } from "@/components/legal-layout";
+import LegalTable, {
+  THead,
+  TH,
+  TBody,
+  TR,
+  TD,
+} from "@/components/legal-table";
 
 export const metadata = {
   title: "Cookie Notice — SpecialCarers",
@@ -19,7 +26,7 @@ export default function CookiesPage() {
   return (
     <LegalLayout
       title="Cookie Notice"
-      updated="3 May 2026"
+      updated="25 June 2026"
       sections={sections}
     >
       <h2 id="summary">Summary</h2>
@@ -47,42 +54,42 @@ export default function CookiesPage() {
         required for these under the UK Privacy and Electronic
         Communications Regulations (PECR) or EU ePrivacy Directive.
       </p>
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Set by</th>
-            <th>Purpose</th>
-            <th>Lifetime</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>sb-access-token, sb-refresh-token</td>
-            <td>specialcarers.com (via Supabase Auth)</td>
-            <td>Keeps you signed in</td>
-            <td>Session / 7 days</td>
-          </tr>
-          <tr>
-            <td>__stripe_mid, __stripe_sid</td>
-            <td>js.stripe.com</td>
-            <td>Stripe fraud prevention on the checkout flow</td>
-            <td>Session / 1 year</td>
-          </tr>
-          <tr>
-            <td>sc_csrf</td>
-            <td>specialcarers.com</td>
-            <td>CSRF protection on form submissions</td>
-            <td>Session</td>
-          </tr>
-          <tr>
-            <td>sc_consent</td>
-            <td>specialcarers.com</td>
-            <td>Remembers your cookie-consent choice</td>
-            <td>1 year</td>
-          </tr>
-        </tbody>
-      </table>
+      <LegalTable>
+        <THead>
+          <TR>
+            <TH>Name</TH>
+            <TH>Set by</TH>
+            <TH>Purpose</TH>
+            <TH>Lifetime</TH>
+          </TR>
+        </THead>
+        <TBody>
+          <TR>
+            <TD>Authentication tokens</TD>
+            <TD>specialcarers.com</TD>
+            <TD>Keeps you signed in</TD>
+            <TD>Session / 7 days</TD>
+          </TR>
+          <TR>
+            <TD>__stripe_mid, __stripe_sid</TD>
+            <TD>js.stripe.com</TD>
+            <TD>Stripe fraud prevention on the checkout flow</TD>
+            <TD>Session / 1 year</TD>
+          </TR>
+          <TR>
+            <TD>sc_csrf</TD>
+            <TD>specialcarers.com</TD>
+            <TD>CSRF protection on form submissions</TD>
+            <TD>Session</TD>
+          </TR>
+          <TR>
+            <TD>sc_consent</TD>
+            <TD>specialcarers.com</TD>
+            <TD>Remembers your cookie-consent choice</TD>
+            <TD>1 year</TD>
+          </TR>
+        </TBody>
+      </LegalTable>
 
       <h2 id="analytics">Analytics cookies (consent required)</h2>
       <p>
@@ -90,28 +97,28 @@ export default function CookiesPage() {
         which features are used. We do not use this data to build a
         profile of you and we do not share it with advertisers.
       </p>
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Set by</th>
-            <th>Purpose</th>
-            <th>Lifetime</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>sc_anon</td>
-            <td>specialcarers.com</td>
-            <td>
+      <LegalTable>
+        <THead>
+          <TR>
+            <TH>Name</TH>
+            <TH>Set by</TH>
+            <TH>Purpose</TH>
+            <TH>Lifetime</TH>
+          </TR>
+        </THead>
+        <TBody>
+          <TR>
+            <TD>sc_anon</TD>
+            <TD>specialcarers.com</TD>
+            <TD>
               Anonymous device identifier for product analytics
               (page views, conversion funnel). No name, email, or IP is
               attached.
-            </td>
-            <td>13 months</td>
-          </tr>
-        </tbody>
-      </table>
+            </TD>
+            <TD>13 months</TD>
+          </TR>
+        </TBody>
+      </LegalTable>
       <p className="text-sm text-slate-500">
         We may add a third-party analytics provider in future (such as
         PostHog or Plausible). When we do, we will update this table and
