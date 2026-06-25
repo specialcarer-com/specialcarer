@@ -8,7 +8,7 @@
  * on the booking_tasks table — we don't need to .send() anything; the
  * UPDATE row event is delivered to every subscriber whose RLS lets them
  * see the row (carer + seeker + admins). See migration
- * 20260527_booking_tasks.sql for the publication grant.
+ * 20260527131100_booking_tasks.sql for the publication grant.
  */
 import { NextResponse } from "next/server";
 import type { BookingTaskRow, ApiBookingTaskResponse } from "./types";

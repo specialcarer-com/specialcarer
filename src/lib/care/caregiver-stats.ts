@@ -1,7 +1,7 @@
 /**
  * Caregiver track-record stats — repeat-client rate, response time,
  * on-time rate. Sourced from the public.caregiver_stats materialized
- * view (see supabase/migrations/20260509_caregiver_stats.sql).
+ * view (see supabase/migrations/20260508235921_caregiver_stats.sql).
  *
  * The view holds raw counts; this module wraps them with the
  * 5-completed-bookings privacy threshold and rounds to display values.

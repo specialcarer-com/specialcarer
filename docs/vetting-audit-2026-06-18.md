@@ -39,7 +39,7 @@ So for the brief's question 6 ("is this path read by `computeReadiness()`?") the
 - Referee landing page: `src/app/r/[token]/page.tsx` + `RefereeForm.tsx`
 - Admin API: `src/app/api/admin/vetting/references/route.ts` (verify / reject)
 - Admin UI: `src/app/admin/trust-safety/references/page.tsx` + `RefRowActions.tsx`
-- DB migration: `supabase/migrations/20260509_carer_vetting_v1.sql` → `public.carer_references`
+- DB migration: `supabase/migrations/20260509011208_carer_vetting_v1.sql` → `public.carer_references`
 
 ### What works
 - Carer adds up to `MAX_REFERENCES` (3) referees; POST validates name/email, enforces the cap, generates a unique token, and emails the referee via `sendEmail` + `renderReferenceInviteEmail`. Email failure is best-effort (logged, doesn't fail the request).
@@ -71,13 +71,13 @@ None shipped (no critical breakage). For a follow-up PR: split reject metadata f
 - Carer API: `src/app/api/carer/certifications/route.ts` (GET / POST / DELETE)
 - Admin API: `src/app/api/admin/vetting/certifications/route.ts`
 - Admin UI: `src/app/admin/trust-safety/certifications/page.tsx` + `CertRowActions.tsx`
-- DB: `carer_certifications` + private `certifications` storage bucket (migration `20260509_carer_vetting_v1.sql`)
+- DB: `carer_certifications` + private `certifications` storage bucket (migration `20260509011208_carer_vetting_v1.sql`)
 
 **Skills**
 - Entry: `src/app/dashboard/vetting/skills/page.tsx` + `SkillsQuizClient.tsx`
 - API: `src/app/api/carer/skills-quiz/route.ts` (GET questions / POST submit)
 - Question bank: `src/lib/vetting/quiz-bank.ts` (50 questions = 10 × 5 verticals, verified)
-- DB: `carer_skills_attempts` (migration `20260509_carer_vetting_v1.sql`)
+- DB: `carer_skills_attempts` (migration `20260509011208_carer_vetting_v1.sql`)
 
 ### What works
 **Certifications**
@@ -109,7 +109,7 @@ None shipped. Follow-up PR: tighten the skills answer bound to `mod`/bank option
 - Carer API: `src/app/api/carer/interview/route.ts` (GET / POST upsert)
 - Admin API: `src/app/api/admin/vetting/interviews/route.ts` (approve / reject + signed-URL GET)
 - Admin UI: `src/app/admin/trust-safety/interviews/page.tsx` + `InterviewRowActions.tsx`
-- DB: `carer_interview_submissions` + private `interview-videos` bucket (migration `20260509_carer_vetting_v1.sql`)
+- DB: `carer_interview_submissions` + private `interview-videos` bucket (migration `20260509011208_carer_vetting_v1.sql`)
 
 ### External vendor / webhook?
 **None.** Video is recorded **on-device** via the browser `MediaRecorder` API and uploaded straight to the private Supabase `interview-videos` bucket. There is no Whereby / Daily / ElevenLabs dependency and therefore no webhook to wire — the brief's question 7 is N/A for this implementation. (Note: a separate `interview_rooms` table exists from migration `20260615153600_interview_rooms_v1.sql` and `/api/m/interviews/[id]/room`, but that is a *live video room* feature unrelated to this async 3-prompt vetting flow; not part of this path.)
@@ -138,7 +138,7 @@ None shipped. Follow-up: optional server-side content-type allowlist on the path
 - Entry: `src/app/dashboard/vetting/course/page.tsx` (module list) → `src/app/dashboard/vetting/course/[module]/page.tsx` + `CourseModuleClient.tsx`
 - API: `src/app/api/carer/course/route.ts` (GET list+progress), `…/course/[module]/read/route.ts` (POST mark read), `…/course/[module]/check/route.ts` (POST knowledge check)
 - Content: `src/lib/vetting/course-content.ts` (6 modules, verified)
-- DB: `carer_course_progress` (composite PK `(carer_id, module_key)`, migration `20260509_carer_vetting_v1.sql`)
+- DB: `carer_course_progress` (composite PK `(carer_id, module_key)`, migration `20260509011208_carer_vetting_v1.sql`)
 
 ### What works
 - Six modules (`COURSE_MODULE_KEYS`), each with body + a single knowledge-check question.
