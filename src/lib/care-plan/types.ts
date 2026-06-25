@@ -1,7 +1,7 @@
 /**
  * Shared row shapes for the care-plan PDF endpoint.
  *
- * These mirror the columns in supabase/migrations/20260527_care_plan_schema.sql
+ * These mirror the columns in supabase/migrations/20260527135259_care_plan_schema.sql
  * (care_plans, medications, allergies) plus the bits of bookings / profiles /
  * emergency_contacts we read for the cover page and emergency-contacts table.
  */

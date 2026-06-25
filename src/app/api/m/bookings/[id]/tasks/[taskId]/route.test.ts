@@ -5,7 +5,7 @@
  * authorisation (seekers blocked, only the assigned carer toggles), and
  * the done_at / done_by stamping invariants. Realtime emit is implicit —
  * the UPDATE on the booking_tasks row is fanned out by supabase_realtime
- * publication (see 20260527_booking_tasks.sql); we don't .send() in the
+ * publication (see 20260527131100_booking_tasks.sql); we don't .send() in the
  * handler so there's no extra emit to mock.
  */
 import { describe, it } from "node:test";
