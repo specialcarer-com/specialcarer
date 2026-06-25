@@ -101,3 +101,11 @@ To rewrite history cleanly, run `repair.sh` once — it issues the
 `supabase migration repair` commands that re-stamp each manual entry
 under its repo filename version. This is one-shot cleanup; it is not
 required for the workflow to function.
+
+## Baseline
+
+`20260625080000_baseline_schema_verified.sql` captures three `public` tables
+(`caregiver_profiles`, `reviews`, `background_checks`) that were created
+out-of-band in the Supabase dashboard and never had a `CREATE TABLE` in the
+repo. It is verified against the live schema as of 2026-06-25 and is fully
+idempotent (pure no-op on production).
