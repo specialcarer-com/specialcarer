@@ -88,10 +88,10 @@ export default function LegalLayout({
                 <span className="font-semibold">Working draft.</span> This
                 document is the launch baseline for SpecialCarers (operated by
                 All Care 4 U Group Limited, company number 09428739). It is
-                offered in good faith and follows current UK GDPR / Data
-                Protection Act 2018 / California Consumer Privacy Act
-                guidance, but it has not yet been reviewed by qualified legal
-                counsel. We will publish a counsel-reviewed version before
+                offered in good faith and follows current UK GDPR and the
+                UK Data Protection Act 2018, but it has not yet been reviewed
+                by qualified legal counsel. We will publish a counsel-reviewed
+                version before
                 launch promotion. If you spot anything inaccurate, please
                 email{" "}
                 <a
