@@ -58,7 +58,51 @@ export function shouldLock(args: {
   if (!hasSession) return false;
   if (!preferenceEnabled) return false;
   if (!capability.available) return false;
+  // Belt-and-suspenders: native mapping should never emit available+none,
+  // but treat that inconsistent state as "do not lock".
+  if (capability.kind === "none") return false;
   return true;
+}
+
+/** Numeric biometry enum values from @capgo/capacitor-native-biometric. */
+export type BiometryTypeValues = {
+  NONE: number;
+  FACE_ID: number;
+  FACE_AUTHENTICATION: number;
+  TOUCH_ID: number;
+  FINGERPRINT: number;
+  IRIS_AUTHENTICATION: number;
+};
+
+/**
+ * Map the native plugin's `isAvailable()` payload into our capability shape.
+ * Kept pure so unit tests can cover BiometryType.NONE without Capacitor.
+ */
+export function capabilityFromPluginResult(
+  result: { isAvailable: boolean; biometryType: number },
+  types: BiometryTypeValues,
+): BiometricCapability {
+  if (!result.isAvailable || result.biometryType === types.NONE) {
+    return { available: false, kind: "none" };
+  }
+
+  let kind: BiometricCapability["kind"] = "fingerprint";
+  switch (result.biometryType) {
+    case types.FACE_ID:
+    case types.FACE_AUTHENTICATION:
+      kind = "face";
+      break;
+    case types.TOUCH_ID:
+    case types.FINGERPRINT:
+      kind = "fingerprint";
+      break;
+    case types.IRIS_AUTHENTICATION:
+      kind = "iris";
+      break;
+    default:
+      kind = "fingerprint";
+  }
+  return { available: true, kind };
 }
 
 /**

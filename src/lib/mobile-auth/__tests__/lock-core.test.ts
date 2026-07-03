@@ -11,6 +11,7 @@ import {
   defaultPreference,
   biometricLabel,
   classifyAuthError,
+  capabilityFromPluginResult,
   RESUME_RELOCK_AFTER_MS,
   type BiometricCapability,
 } from "../lock-core";
@@ -58,6 +59,17 @@ describe("shouldLock", () => {
         hasSession: true,
         preferenceEnabled: true,
         capability: NOT_CAPABLE,
+      }),
+      false,
+    );
+  });
+
+  it("does not lock when kind is none even if available is true", () => {
+    assert.equal(
+      shouldLock({
+        hasSession: true,
+        preferenceEnabled: true,
+        capability: { available: true, kind: "none" },
       }),
       false,
     );
@@ -125,6 +137,37 @@ describe("biometricLabel", () => {
   });
   it("uses generic copy on web", () => {
     assert.equal(biometricLabel("face", "web"), "biometric unlock");
+  });
+});
+
+describe("capabilityFromPluginResult", () => {
+  const TYPES = {
+    NONE: 0,
+    TOUCH_ID: 1,
+    FACE_ID: 2,
+    FINGERPRINT: 3,
+    FACE_AUTHENTICATION: 4,
+    IRIS_AUTHENTICATION: 5,
+  };
+
+  it("returns available:false when biometryType is NONE even if isAvailable is true", () => {
+    assert.deepEqual(
+      capabilityFromPluginResult(
+        { isAvailable: true, biometryType: TYPES.NONE },
+        TYPES,
+      ),
+      { available: false, kind: "none" },
+    );
+  });
+
+  it("maps Face ID to face kind", () => {
+    assert.deepEqual(
+      capabilityFromPluginResult(
+        { isAvailable: true, biometryType: TYPES.FACE_ID },
+        TYPES,
+      ),
+      { available: true, kind: "face" },
+    );
   });
 });
 

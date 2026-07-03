@@ -136,15 +136,18 @@ definitions:
             sys.exit(1)
         PYEOF
 
+    - name: Capacitor sync (copies plugins + web assets into iOS project)
+      script: |
+        npx cap sync ios
+
     - name: Apply iOS overlay (PrivacyInfo + Info.plist usage strings)
       script: |
         set -e
-        # Drop the privacy manifest into the app target.
+        # Run AFTER `npx cap sync ios` — cap sync regenerates Info.plist and
+        # would otherwise wipe NSFaceIDUsageDescription and other usage keys.
         cp mobile/ios-overlay/App/App/PrivacyInfo.xcprivacy ios/App/App/PrivacyInfo.xcprivacy
 
         # Merge required usage-description keys into the generated Info.plist.
-        # `plutil -insert` is idempotent: re-inserting an existing key is a no-op
-        # only if -replace is used, so we use `plutil -replace` with `|| -insert`.
         INFO_PLIST="ios/App/App/Info.plist"
 
         merge_string () {
@@ -175,24 +178,17 @@ definitions:
         merge_string "NSUserTrackingUsageDescription" \
           "Special Carer does not track you across apps or websites. This permission would only be requested if a future feature needs it, and you can decline at any time."
 
-        # Export-compliance exemption — declares we use only standard
-        # encryption (HTTPS) which is exempt under US export rules.
-        # This stops App Store Connect from prompting for compliance
-        # info on every TestFlight upload. Equivalent to selecting
-        # "None of the algorithms / standard exempt encryption" in the UI.
         /usr/libexec/PlistBuddy -c "Delete :ITSAppUsesNonExemptEncryption" "${INFO_PLIST}" 2>/dev/null || true
         /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "${INFO_PLIST}"
 
-        # Background modes (remote-notification, fetch, location)
         /usr/libexec/PlistBuddy -c "Delete :UIBackgroundModes" "${INFO_PLIST}" 2>/dev/null || true
         /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "${INFO_PLIST}"
         /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string remote-notification" "${INFO_PLIST}"
         /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:1 string fetch" "${INFO_PLIST}"
         /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:2 string location" "${INFO_PLIST}"
 
-    - name: Capacitor sync (copies plugins + web assets into iOS project)
-      script: |
-        npx cap sync ios
+        /usr/libexec/PlistBuddy -c "Print :NSFaceIDUsageDescription" "${INFO_PLIST}" \
+          || { echo "❌ NSFaceIDUsageDescription missing from Info.plist after overlay"; exit 1; }
 
     - name: Apply hands-open splash overlay (LaunchScreen + SplashScreen imageset)
       script: |
