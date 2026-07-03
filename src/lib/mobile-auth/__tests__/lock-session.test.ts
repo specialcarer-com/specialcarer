@@ -38,6 +38,18 @@ describe("waitForHydratedSession", () => {
     assert.equal(getCalls, 1);
   });
 
+  it("handles subscribeInitialSession calling onResolved synchronously", async () => {
+    const result = await waitForHydratedSession({
+      getSession: async () => false,
+      subscribeInitialSession: (onResolved) => {
+        onResolved(true);
+        return () => {};
+      },
+      timeoutMs: 500,
+    });
+    assert.equal(result, true);
+  });
+
   it("falls back to false when hydration never arrives", async () => {
     const result = await waitForHydratedSession({
       getSession: async () => false,

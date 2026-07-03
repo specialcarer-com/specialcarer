@@ -31,18 +31,21 @@ export async function waitForHydratedSession(
 
   return new Promise<boolean>((resolve) => {
     let settled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let unsubscribe: (() => void) | undefined;
+
     const finish = (value: boolean) => {
       if (settled) return;
       settled = true;
-      clearTimeout(timer);
-      unsubscribe();
+      if (timer !== undefined) clearTimeout(timer);
+      if (unsubscribe !== undefined) unsubscribe();
       resolve(value);
     };
 
-    const unsubscribe = deps.subscribeInitialSession((hydrated) => {
+    unsubscribe = deps.subscribeInitialSession((hydrated) => {
       finish(hydrated);
     });
 
-    const timer = setTimeout(() => finish(false), timeoutMs);
+    timer = setTimeout(() => finish(false), timeoutMs);
   });
 }
