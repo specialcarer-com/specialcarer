@@ -9,7 +9,7 @@
  */
 
 import type { BiometricCapability } from "./lock-core";
-import { classifyAuthError } from "./lock-core";
+import { capabilityFromPluginResult, classifyAuthError } from "./lock-core";
 
 const PREF_KEY = "biometric_lock_enabled";
 // Logical "server" namespace the credential is filed under by the biometric
@@ -48,25 +48,7 @@ export async function getBiometricCapability(): Promise<BiometricCapability> {
       "@capgo/capacitor-native-biometric"
     );
     const result = await NativeBiometric.isAvailable();
-    if (!result.isAvailable) return { available: false, kind: "none" };
-
-    let kind: BiometricCapability["kind"] = "fingerprint";
-    switch (result.biometryType) {
-      case BiometryType.FACE_ID:
-      case BiometryType.FACE_AUTHENTICATION:
-        kind = "face";
-        break;
-      case BiometryType.TOUCH_ID:
-      case BiometryType.FINGERPRINT:
-        kind = "fingerprint";
-        break;
-      case BiometryType.IRIS_AUTHENTICATION:
-        kind = "iris";
-        break;
-      default:
-        kind = "fingerprint";
-    }
-    return { available: true, kind };
+    return capabilityFromPluginResult(result, BiometryType);
   } catch {
     // Plugin not installed in this build → behave as no biometric.
     return { available: false, kind: "none" };

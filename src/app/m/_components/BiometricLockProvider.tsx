@@ -39,6 +39,7 @@ import {
   readLockPreference,
   writeLockPreference,
 } from "@/lib/mobile-auth/lock-native";
+import { waitForHydratedSession } from "@/lib/mobile-auth/lock-session";
 import LockScreen from "./LockScreen";
 
 export default function BiometricLockProvider({
@@ -83,10 +84,22 @@ export default function BiometricLockProvider({
     let cancelled = false;
     (async () => {
       const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const hasSession = !!session;
+      const hasSession = await waitForHydratedSession({
+        getSession: async () => {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          return !!session;
+        },
+        subscribeInitialSession: (onResolved) => {
+          const { data } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === "INITIAL_SESSION") {
+              onResolved(!!session);
+            }
+          });
+          return () => data.subscription.unsubscribe();
+        },
+      });
 
       const capability = await getBiometricCapability();
       capabilityRef.current = capability;
