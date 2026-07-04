@@ -52,6 +52,7 @@ definitions:
       XCODE_SCHEME: "App"
       APP_STORE_APP_ID: 6766242271
       BUNDLE_ID: "com.allcare4ugroup.specialcarer"
+      NEXT_PUBLIC_MOBILE_PERSISTENT_AUTH_ENABLED: "true"
     node: 22
     xcode: latest
 
