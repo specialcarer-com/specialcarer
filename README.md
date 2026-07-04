@@ -24,7 +24,9 @@ Factors are stored in Supabase Auth — not in custom Postgres tables.
 1. Enable **TOTP MFA** for the project: Authentication → Providers → MFA.
 2. No extra redirect URLs are needed beyond your existing auth callback (`/auth/callback`).
 
-**Support recovery:** lost authenticator devices are reset by staff via identity verification — see `POST /api/admin/users/[id]/mfa-reset` (requires admin AAL2 + audit reason). There are no self-service recovery codes for admin forced reset.
+**API responses:** unauthenticated → `401`; non-admin → `403`; admin without TOTP or AAL2 → `428` with `error: mfa_setup_required` or `mfa_challenge_required`.
+
+**Support recovery:** lost authenticator devices are reset by staff via identity verification — see `POST /api/admin/users/[id]/mfa-reset` (requires admin AAL2 + audit reason).
 
 **Sprint 2.2 (planned):** SMS OTP as a second factor type using the same Supabase MFA enrol/challenge/verify flow with `factorType: 'phone'`.
 
