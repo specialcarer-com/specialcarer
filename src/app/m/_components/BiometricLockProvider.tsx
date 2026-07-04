@@ -57,12 +57,17 @@ export default function BiometricLockProvider({
   // Capability is resolved once per process and reused on resume.
   const capabilityRef = useRef<BiometricCapability | null>(null);
   const backgroundedAtRef = useRef<number | null>(null);
+  const promptInFlightRef = useRef(false);
 
-  const runPrompt = useCallback(async (lockReason: LockReason) => {
+  const runPrompt = useCallback(async (_lockReason: LockReason) => {
+    // Guard against double-taps and any accidental re-invocation.
+    if (promptInFlightRef.current) return;
+    promptInFlightRef.current = true;
     setPrompting(true);
     setFailed(false);
     const outcome = await promptBiometric("Unlock to continue");
     setPrompting(false);
+    promptInFlightRef.current = false;
 
     if (outcome === "ok") {
       setStatus("unlocked");
@@ -122,8 +127,12 @@ export default function BiometricLockProvider({
 
       if (shouldLock({ hasSession, preferenceEnabled, capability })) {
         setReason("cold-start");
+        setFailed(false);
         setStatus("locked");
-        void runPrompt("cold-start");
+        // Do NOT auto-prompt. Wait for the user to tap "Unlock with Face ID"
+        // on the LockScreen. Auto-prompting on mount races with the OS's
+        // device-unlock coalescing, causing the LockScreen to flash for one
+        // frame before it silently unlocks.
       } else {
         setStatus("unlocked");
       }
@@ -166,7 +175,8 @@ export default function BiometricLockProvider({
           setReason("resumed-after-timeout");
           setFailed(false);
           setStatus("locked");
-          void runPrompt("resumed-after-timeout");
+          // Do NOT auto-prompt on resume either — same coalescing risk.
+          // The user taps "Unlock with Face ID" on the visible LockScreen.
         })();
       });
       remove = () => {
