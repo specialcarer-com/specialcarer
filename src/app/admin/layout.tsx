@@ -89,7 +89,10 @@ export default async function AdminLayout({
   // redirect anonymous visitors away before they could ever sign in). The
   // page enforces admin-only access itself after OTP verification.
   const pathname = (await headers()).get("x-pathname") ?? "";
-  if (pathname.startsWith("/admin/login")) {
+  if (
+    pathname.startsWith("/admin/login") ||
+    pathname.startsWith("/admin/mfa/")
+  ) {
     return <>{children}</>;
   }
 
