@@ -73,6 +73,15 @@ export function AppLockToggle() {
     };
   }, []);
 
+  // TEMP DEBUG — remove after diagnosis. Always renders regardless of gates.
+  return (
+    <li className="border-t border-line px-4 py-3.5 text-[11px] font-mono text-heading">
+      DBG · platform={String(platform)} · available={String(available)} · label=
+      {label} · enabled={String(enabled)}
+    </li>
+  );
+
+  /* restore after diagnosis
   if (available === null || platform === null) return null;
   if (platform !== "ios" && !available) return null;
 
@@ -131,4 +140,5 @@ export function AppLockToggle() {
       </button>
     </li>
   );
+  */
 }
