@@ -8,11 +8,12 @@ type CookieToSet = { name: string; value: string; options?: CookieOptions };
 // Routes that require an authenticated user
 const PROTECTED_PREFIXES = ["/dashboard", "/onboarding", "/admin"];
 // Routes that require an admin role on top of being signed in
-const ADMIN_PREFIXES = ["/admin"];
-// Admin auth flow — must be reachable by unauthenticated visitors so admins
-// can sign in. Exempt from the /admin auth + role gates below (the page itself
-// enforces admin-only access after OTP verification).
-const ADMIN_PUBLIC_PREFIXES = ["/admin/login"];
+// Admin login — unauthenticated visitors must reach OTP sign-in.
+const ADMIN_LOGIN_PREFIX = "/admin/login";
+// Admin MFA setup/challenge — authenticated admins only; AAL2 not required yet.
+const ADMIN_MFA_PREFIX = "/admin/mfa";
+// Sign-in MFA step-up — requires a session but not AAL2 yet.
+const MFA_CHALLENGE_PREFIXES = ["/sign-in/2fa"];
 
 // Mobile app role isolation. Each user's account is permanently bound to a
 // role at sign-up; carers and care receivers must not be able to access each
@@ -79,22 +80,26 @@ export async function middleware(req: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = req.nextUrl;
-  const isAdminPublic = ADMIN_PUBLIC_PREFIXES.some((p) =>
+  const isAdminLogin = pathname.startsWith(ADMIN_LOGIN_PREFIX);
+  const isAdminMfa = pathname.startsWith(ADMIN_MFA_PREFIX);
+  const isMfaChallenge = MFA_CHALLENGE_PREFIXES.some((p) =>
     pathname.startsWith(p),
   );
-  const isProtected =
-    !isAdminPublic && PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
+  const needsAuth =
+    isMfaChallenge ||
+    isAdminMfa ||
+    (!isAdminLogin &&
+      PROTECTED_PREFIXES.some((p) => pathname.startsWith(p)));
 
-  if (isProtected && !user) {
+  if (needsAuth && !user) {
     const url = req.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = isAdminMfa ? "/admin/login" : "/login";
     url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
 
-  // Admin-only routes — verify role on profiles
-  const isAdminRoute =
-    !isAdminPublic && ADMIN_PREFIXES.some((p) => pathname.startsWith(p));
+  // Admin-only routes — verify role on profiles (includes /admin/mfa/*)
+  const isAdminRoute = pathname.startsWith("/admin") && !isAdminLogin;
   if (isAdminRoute && user) {
     const { data: profile } = await supabase
       .from("profiles")

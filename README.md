@@ -9,6 +9,25 @@ Trusted care, on your schedule. On-demand and scheduled childcare, elder care, a
 - **Supabase** for Postgres, auth, and realtime
 - **Vercel** for hosting
 
+## Security — TOTP two-factor authentication (Sprint 2.1)
+
+Sprint 2.1 implements TOTP 2FA via **Supabase Auth native MFA** (`supabase.auth.mfa.*`).
+Factors are stored in Supabase Auth — not in custom Postgres tables.
+
+| Audience | Policy |
+|----------|--------|
+| **Admins** (`profiles.role = admin`) | TOTP is **required**. Admin routes and `/api/admin/**` enforce **AAL2** (session must complete MFA challenge). |
+| **Everyone else** | TOTP is **optional**, self-service at `/dashboard/security` (web) or `/m/profile/security` (mobile). |
+
+**Manual setup (Supabase dashboard):**
+
+1. Enable **TOTP MFA** for the project: Authentication → Providers → MFA.
+2. No extra redirect URLs are needed beyond your existing auth callback (`/auth/callback`).
+
+**Support recovery:** lost authenticator devices are reset by staff via identity verification — see `POST /api/admin/users/[id]/mfa-reset` (requires admin AAL2 + audit reason). There are no self-service recovery codes for admin forced reset.
+
+**Sprint 2.2 (planned):** SMS OTP as a second factor type using the same Supabase MFA enrol/challenge/verify flow with `factorType: 'phone'`.
+
 ## Local development
 
 ```bash

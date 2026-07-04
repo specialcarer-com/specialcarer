@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { resolvePostAuthRedirect } from "@/lib/security/mfa-client";
 
 type Stage = "enter-email" | "enter-code";
 
@@ -106,7 +107,8 @@ export function AdminLoginForm() {
         return;
       }
 
-      router.push(ADMIN_HOME);
+      const target = await resolvePostAuthRedirect(ADMIN_HOME);
+      router.push(target);
       router.refresh();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Invalid code.";

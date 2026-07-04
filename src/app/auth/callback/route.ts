@@ -1,5 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { resolveAdminMfaGate, needsMfaChallenge } from "@/lib/security/mfa-gate";
+import {
+  getAalLevels,
+  hasVerifiedTotpFactor,
+} from "@/lib/security/mfa-server";
 
 /**
  * Auth callback handler. Two payload shapes arrive here:
@@ -87,7 +92,39 @@ export async function GET(req: NextRequest) {
       const adminTarget = explicitNext?.startsWith("/admin/")
         ? explicitNext
         : "/admin/countries";
+      const [aal, hasTotp] = await Promise.all([
+        getAalLevels(supabase),
+        hasVerifiedTotpFactor(supabase),
+      ]);
+      const gate = resolveAdminMfaGate({
+        isAdmin: true,
+        hasVerifiedTotp: hasTotp,
+        aal,
+      });
+      if (gate.status === "setup_required") {
+        return NextResponse.redirect(
+          new URL(
+            `/admin/mfa/setup?next=${encodeURIComponent(adminTarget)}`,
+            req.url,
+          ),
+        );
+      }
+      if (gate.status === "challenge_required") {
+        return NextResponse.redirect(
+          new URL(
+            `/admin/mfa/challenge?next=${encodeURIComponent(adminTarget)}`,
+            req.url,
+          ),
+        );
+      }
       return NextResponse.redirect(new URL(adminTarget, req.url));
+    }
+
+    const aal = await getAalLevels(supabase);
+    if (needsMfaChallenge(aal)) {
+      return NextResponse.redirect(
+        new URL(`/sign-in/2fa?next=${encodeURIComponent(next)}`, req.url),
+      );
     }
 
     if (!profile?.full_name || !profile?.country) {
