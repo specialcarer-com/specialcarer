@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/server";
+import { requireAdminApi } from "@/lib/admin/auth";
 import { approveTimesheet } from "@/lib/timesheet/approve";
 import {
   ceilToRoundedMinutes,
@@ -38,23 +38,11 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: timesheetId } = await params;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
+  const guard = await requireAdminApi();
+  if (!guard.ok) return guard.response;
+  const actor = guard.admin;
 
   const admin = createAdminClient();
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle<{ role: string }>();
-  if (!profile || profile.role !== "admin") {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
 
   let body: Body;
   try {
@@ -186,7 +174,7 @@ export async function POST(
         overage_minutes: 0,
         overage_cents: 0,
         overage_requires_approval: false,
-        approver_user_id: user.id,
+        approver_user_id: actor.id,
         approver_typed_reason: `admin_resolution_accept_seeker: ${notes.slice(0, 200)}`,
         updated_at: nowIso,
       })
@@ -196,7 +184,7 @@ export async function POST(
     // supplemental PIs / leaves the org draft invoice for the finalise cron.
     const result = await approveTimesheet(admin, {
       timesheetId: ts.id,
-      approverUserId: user.id,
+      approverUserId: actor.id,
       approverIp: null,
       typedReason: `admin_resolution_${resolution}: ${notes.slice(0, 200)}`,
       tipCents: 0,

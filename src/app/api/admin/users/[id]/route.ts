@@ -1,49 +1,14 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { logAdminAction, type AdminUser } from "@/lib/admin/auth";
+import { logAdminAction, requireAdminApi } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
-
-/**
- * Shared admin gate. Returns the admin user or a NextResponse error.
- */
-async function gateAdmin(): Promise<
-  { ok: true; admin: AdminUser } | { ok: false; res: NextResponse }
-> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return {
-      ok: false,
-      res: NextResponse.json({ error: "Not authenticated" }, { status: 401 }),
-    };
-  }
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (!profile || profile.role !== "admin") {
-    return {
-      ok: false,
-      res: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
-    };
-  }
-  return { ok: true, admin: { id: user.id, email: user.email ?? null } };
-}
 
 /**
  * PATCH /api/admin/users/[id]
  * Body: { email?: string, full_name?: string, phone?: string, country?: string, reason: string }
  *
- * Admin-only. Edits a user's profile and (optionally) auth email.
- * - Email change is applied to auth.users via the admin client.
- *   email_confirm:true keeps the account verified.
- * - full_name / phone / country are written to public.profiles.
- * - All edits require a reason and are recorded in the audit log.
+ * Admin-only (AAL2). Edits a user's profile and (optionally) auth email.
  */
 export async function PATCH(
   req: Request,
@@ -51,9 +16,9 @@ export async function PATCH(
 ) {
   const { id: targetId } = await params;
 
-  const gate = await gateAdmin();
-  if (!gate.ok) return gate.res;
-  const { admin: actor } = gate;
+  const guard = await requireAdminApi();
+  if (!guard.ok) return guard.response;
+  const actor = guard.admin;
 
   const body = (await req.json().catch(() => ({}))) as {
     email?: string;
@@ -100,7 +65,6 @@ export async function PATCH(
 
   const adminClient = createAdminClient();
 
-  // Load current state for audit + to detect no-op.
   const { data: existingAuth } =
     await adminClient.auth.admin.getUserById(targetId);
   if (!existingAuth?.user) {
@@ -119,7 +83,6 @@ export async function PATCH(
 
   const changes: Record<string, { from: unknown; to: unknown }> = {};
 
-  // Apply auth.users changes
   if (newEmail !== undefined && newEmail !== priorEmail) {
     const { error: emailErr } = await adminClient.auth.admin.updateUserById(
       targetId,
@@ -137,7 +100,6 @@ export async function PATCH(
     changes.email = { from: priorEmail, to: newEmail };
   }
 
-  // Apply profile changes
   const profilePatch: Record<string, string | null> = {};
   if (newName !== undefined && newName !== (priorName ?? "")) {
     profilePatch.full_name = newName === "" ? null : newName;
@@ -182,18 +144,16 @@ export async function PATCH(
 /**
  * DELETE /api/admin/users/[id]?reason=...
  *
- * Admin-only. Permanently removes the auth user. Related rows in public
- * schema cascade via FK ON DELETE CASCADE / set null. Self-deletion is
- * rejected to prevent accidental lockout.
+ * Admin-only (AAL2). Permanently removes the auth user.
  */
 export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: targetId } = await params;
-  const gate = await gateAdmin();
-  if (!gate.ok) return gate.res;
-  const { admin: actor } = gate;
+  const guard = await requireAdminApi();
+  if (!guard.ok) return guard.response;
+  const actor = guard.admin;
 
   const url = new URL(req.url);
   const reason = (url.searchParams.get("reason") ?? "").trim();

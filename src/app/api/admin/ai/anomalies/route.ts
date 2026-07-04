@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdminApi } from "@/lib/admin/auth";
 import { ANOMALY_STATUSES } from "@/lib/ai/types";
 
 export const dynamic = "force-dynamic";
@@ -11,22 +11,10 @@ export const runtime = "nodejs";
  * Admin-only listing across the anomaly queue view.
  */
 export async function GET(req: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "not_authenticated" }, { status: 401 });
-  }
+  const guard = await requireAdminApi();
+  if (!guard.ok) return guard.response;
+
   const admin = createAdminClient();
-  const { data: prof } = await admin
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle<{ role: string }>();
-  if (prof?.role !== "admin") {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
 
   const url = new URL(req.url);
   const status = url.searchParams.get("status");

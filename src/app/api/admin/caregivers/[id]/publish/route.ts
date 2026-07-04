@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { logAdminAction, type AdminUser } from "@/lib/admin/auth";
+import { logAdminAction, requireAdminApi } from "@/lib/admin/auth";
 import { getVettingSummary } from "@/lib/vetting/server";
 import { ensurePublicSlug } from "@/lib/care/profile";
 
@@ -21,24 +20,9 @@ export async function POST(
 ) {
   const { id: userId } = await params;
 
-  // --- Auth: must be admin ---
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (!profile || profile.role !== "admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-  const adminUser: AdminUser = { id: user.id, email: user.email ?? null };
+  const guard = await requireAdminApi();
+  if (!guard.ok) return guard.response;
+  const adminUser = guard.admin;
 
   // --- Body ---
   const body = (await req.json().catch(() => ({}))) as {

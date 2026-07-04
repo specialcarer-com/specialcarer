@@ -150,7 +150,7 @@ export async function requireAdminApi(): Promise<AdminApiGuardResult> {
           error: "mfa_setup_required",
           message: "Admin accounts must enrol TOTP before accessing this API.",
         },
-        { status: 403 },
+        { status: 428 },
       ),
     };
   }
@@ -162,7 +162,7 @@ export async function requireAdminApi(): Promise<AdminApiGuardResult> {
           error: "mfa_challenge_required",
           message: "Complete the TOTP challenge to access this API.",
         },
-        { status: 403 },
+        { status: 428 },
       ),
     };
   }
