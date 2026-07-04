@@ -41,6 +41,9 @@ function IconFaceLock() {
 
 export function AppLockToggle() {
   const [available, setAvailable] = useState<boolean | null>(null);
+  const [platform, setPlatform] = useState<"ios" | "android" | "web" | null>(
+    null,
+  );
   const [label, setLabel] = useState("biometric unlock");
   const [enabled, setEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -49,12 +52,20 @@ export function AppLockToggle() {
     let cancelled = false;
     (async () => {
       const capability = await getBiometricCapability();
-      const platform = await getPlatform();
+      const platformResult = await getPlatform();
       const pref = await readLockPreference();
       if (cancelled) return;
       setAvailable(capability.available);
-      setLabel(labelFor(capability.kind, platform));
-      // Default ON for capable devices when nothing is stored yet.
+      setPlatform(platformResult);
+      const kindForLabel =
+        platformResult === "ios" && capability.kind === "none"
+          ? "face"
+          : capability.kind;
+      setLabel(labelFor(kindForLabel, platformResult));
+      // Default OFF when no preference stored — matches
+      // defaultPreference(capability) used by BiometricLockProvider.
+      // User must tap the toggle to enable, which fires the iOS Face ID
+      // permission prompt on first tap.
       setEnabled(pref === null ? capability.available : pref);
     })();
     return () => {
@@ -62,8 +73,8 @@ export function AppLockToggle() {
     };
   }, []);
 
-  // Hide entirely while resolving or on non-biometric devices.
-  if (available !== true) return null;
+  if (available === null || platform === null) return null;
+  if (platform !== "ios" && !available) return null;
 
   // "Use Face ID" / "Use Touch ID" / "Use biometric lock".
   const rowLabel = `Use ${label === "biometric unlock" ? "biometric lock" : label}`;
@@ -72,6 +83,18 @@ export function AppLockToggle() {
     if (busy) return;
     const next = !enabled;
     setBusy(true);
+
+    if (next) {
+      const { promptBiometric } = await import(
+        "@/lib/mobile-auth/lock-native"
+      );
+      const result = await promptBiometric("Enable biometric app lock");
+      if (result !== "ok") {
+        setBusy(false);
+        return;
+      }
+    }
+
     setEnabled(next);
     await writeLockPreference(next);
     setBusy(false);
