@@ -62,9 +62,11 @@ export function AppLockToggle() {
           ? "face"
           : capability.kind;
       setLabel(labelFor(kindForLabel, platformResult));
-      setEnabled(
-        pref === null ? capability.available || platformResult === "ios" : pref,
-      );
+      // Default OFF when no preference stored — matches
+      // defaultPreference(capability) used by BiometricLockProvider.
+      // User must tap the toggle to enable, which fires the iOS Face ID
+      // permission prompt on first tap.
+      setEnabled(pref === null ? capability.available : pref);
     })();
     return () => {
       cancelled = true;
