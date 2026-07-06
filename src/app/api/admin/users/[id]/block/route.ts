@@ -1,55 +1,23 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { logAdminAction, type AdminUser } from "@/lib/admin/auth";
+import { logAdminAction, requireAdminApi } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
-
-async function gateAdmin(): Promise<
-  { ok: true; admin: AdminUser } | { ok: false; res: NextResponse }
-> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return {
-      ok: false,
-      res: NextResponse.json({ error: "Not authenticated" }, { status: 401 }),
-    };
-  }
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (!profile || profile.role !== "admin") {
-    return {
-      ok: false,
-      res: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
-    };
-  }
-  return { ok: true, admin: { id: user.id, email: user.email ?? null } };
-}
 
 /**
  * POST /api/admin/users/[id]/block
  * Body: { action: "block" | "unblock", reason: string }
  *
- * Block uses Supabase's native ban_duration set to "876000h" (~100 years)
- * which makes the user unable to obtain new sessions and revokes existing
- * ones. Unblock sets ban_duration to "none".
- *
- * Self-block is rejected.
+ * Admin-only (AAL2). Block uses Supabase ban_duration; unblock sets "none".
  */
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: targetId } = await params;
-  const gate = await gateAdmin();
-  if (!gate.ok) return gate.res;
-  const { admin: actor } = gate;
+  const guard = await requireAdminApi();
+  if (!guard.ok) return guard.response;
+  const actor = guard.admin;
 
   const body = (await req.json().catch(() => ({}))) as {
     action?: string;
@@ -83,9 +51,6 @@ export async function POST(
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  // banDuration: "876000h" ≈ 100 years (effectively forever); "none" lifts.
-  // Casting via unknown because the Supabase admin SDK types omit ban_duration
-  // even though the runtime API accepts it.
   const banDuration = action === "block" ? "876000h" : "none";
   const { error } = await adminClient.auth.admin.updateUserById(targetId, {
     ban_duration: banDuration,
