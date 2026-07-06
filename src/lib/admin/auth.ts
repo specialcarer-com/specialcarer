@@ -115,7 +115,7 @@ export async function requireAdminApi(): Promise<AdminApiGuardResult> {
     return {
       ok: false,
       response: NextResponse.json(
-        { error: "Not authenticated" },
+        { ok: false, error: "unauthenticated" },
         { status: 401 },
       ),
     };

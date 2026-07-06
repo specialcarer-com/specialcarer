@@ -38,18 +38,34 @@ export async function POST(
     );
   }
 
-  // --- Apply update ---
   const admin = createAdminClient();
+  const { data: existing, error: loadErr } = await admin
+    .from("sos_alerts")
+    .select("id, acknowledged_by, acknowledged_at")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (loadErr || !existing) {
+    return NextResponse.json(
+      { error: loadErr?.message ?? "SOS alert not found" },
+      { status: loadErr ? 400 : 404 },
+    );
+  }
+
   const now = new Date().toISOString();
   const update: Record<string, unknown> = { status: next };
+
   if (next === "acknowledged") {
-    update.acknowledged_by = adminUser.id;
-    update.acknowledged_at = now;
+    if (existing.acknowledged_at == null) {
+      update.acknowledged_by = adminUser.id;
+      update.acknowledged_at = now;
+    }
   } else {
-    // resolved — also stamp acknowledged_* if not already set
     update.resolved_at = now;
-    update.acknowledged_by = adminUser.id;
-    update.acknowledged_at = now; // safe to re-stamp; first ack still preserved by audit log
+    if (existing.acknowledged_at == null) {
+      update.acknowledged_by = adminUser.id;
+      update.acknowledged_at = now;
+    }
   }
 
   const { data, error } = await admin
