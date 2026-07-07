@@ -232,13 +232,36 @@ export async function handleSetDesignatedPayer(
     return NextResponse.json(base, { status: 200 });
   }
 
-  const result = await reissueIntentForPayer({
-    bookingId: booking_id,
-    seekerId: user_id,
-    payerUserId: payer,
-    adapter: reissue!,
-    logger,
-  });
+  let result;
+  try {
+    result = await reissueIntentForPayer({
+      bookingId: booking_id,
+      seekerId: user_id,
+      payerUserId: payer,
+      adapter: reissue!,
+      logger,
+    });
+  } catch (err) {
+    await client.setDesignatedPayer(booking_id, previousPayer);
+    const phase =
+      err && typeof err === "object" && "phase" in err &&
+      typeof (err as { phase: unknown }).phase === "string"
+        ? (err as { phase: string }).phase
+        : "unknown";
+    const code =
+      err && typeof err === "object" && "code" in err &&
+      typeof (err as { code: unknown }).code === "string"
+        ? (err as { code: string }).code
+        : "unknown";
+    return NextResponse.json(
+      {
+        error: "Failed to re-issue payment intent",
+        phase,
+        code,
+      },
+      { status: 500 },
+    );
+  }
 
   if (result.kind === "failed") {
     // Roll back the column so the booking's stored payer matches its intent.

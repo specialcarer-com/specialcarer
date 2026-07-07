@@ -284,11 +284,19 @@ function reissueAdapter(opts: {
   hasPm?: boolean;
   cancelThrows?: boolean;
   createThrows?: boolean;
+  getCurrentIntentThrows?: boolean;
+  persistThrows?: boolean;
   calls?: Calls;
 }): ReissueAdapter {
   const calls = opts.calls;
   return {
     async getCurrentIntent() {
+      if (opts.getCurrentIntentThrows) {
+        throw Object.assign(new Error("retrieve boom"), {
+          phase: "retrieve",
+          code: "rate_limit",
+        });
+      }
       return opts.current;
     },
     async getSavedPaymentMethod() {
@@ -310,6 +318,12 @@ function reissueAdapter(opts: {
       return { id: "pi_new" };
     },
     async persistNewIntent({ oldPaymentIntentId, newPaymentIntentId }) {
+      if (opts.persistThrows) {
+        throw Object.assign(new Error("persist boom"), {
+          phase: "persist",
+          code: "db_insert_failed",
+        });
+      }
       calls?.persisted.push({
         oldId: oldPaymentIntentId,
         newId: newPaymentIntentId,
@@ -452,6 +466,65 @@ describe("handleSetDesignatedPayer — PaymentIntent re-issue", () => {
     const body = (await res.json()) as { phase: string; code: string };
     assert.equal(body.phase, "cancel");
     // Column set to PAYER then rolled back to the previous value (null).
+    assert.deepEqual(setCalls, [PAYER, null]);
+  });
+
+  it("rolls back the column + returns 500 when getCurrentIntent throws (retrieve failure)", async () => {
+    const setCalls: (string | null)[] = [];
+    const res = await handleSetDesignatedPayer({
+      user_id: SEEKER,
+      booking_id: BOOKING,
+      payerUserId: PAYER,
+      flagEnabled: true,
+      client: client({
+        payer: null,
+        async setDesignatedPayer(_id, payer) {
+          setCalls.push(payer);
+          return { error: null };
+        },
+      }),
+      reissue: reissueAdapter({
+        current: intent("requires_payment_method"),
+        hasPm: true,
+        getCurrentIntentThrows: true,
+      }),
+    });
+    assert.equal(res.status, 500);
+    const body = (await res.json()) as { phase: string; code: string };
+    assert.equal(body.phase, "retrieve");
+    assert.equal(body.code, "rate_limit");
+    assert.deepEqual(setCalls, [PAYER, null]);
+  });
+
+  it("rolls back the column + returns 500 when persistNewIntent throws", async () => {
+    const calls: Calls = { cancelled: [], created: 0, persisted: [] };
+    const setCalls: (string | null)[] = [];
+    const res = await handleSetDesignatedPayer({
+      user_id: SEEKER,
+      booking_id: BOOKING,
+      payerUserId: PAYER,
+      flagEnabled: true,
+      client: client({
+        payer: null,
+        async setDesignatedPayer(_id, payer) {
+          setCalls.push(payer);
+          return { error: null };
+        },
+      }),
+      reissue: reissueAdapter({
+        current: intent("requires_payment_method"),
+        hasPm: true,
+        persistThrows: true,
+        calls,
+      }),
+    });
+    assert.equal(res.status, 500);
+    const body = (await res.json()) as { phase: string; code: string };
+    assert.equal(body.phase, "persist");
+    assert.equal(body.code, "db_insert_failed");
+    assert.deepEqual(calls.cancelled, ["pi_old"]);
+    assert.equal(calls.created, 1);
+    assert.deepEqual(calls.persisted, []);
     assert.deepEqual(setCalls, [PAYER, null]);
   });
 

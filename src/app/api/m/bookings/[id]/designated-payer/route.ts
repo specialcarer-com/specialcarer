@@ -114,15 +114,25 @@ function buildReissueAdapter(): ReissueAdapter {
         liveStatus = pi.status;
         liveMetadata = (pi.metadata ?? {}) as Record<string, string>;
       } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        const code =
+          err && typeof err === "object" && "code" in err &&
+          typeof (err as { code: unknown }).code === "string"
+            ? (err as { code: string }).code
+            : "stripe_retrieve_failed";
         console.warn(
           JSON.stringify({
             event: "designated_payer_intent_retrieve_failed",
             bookingId,
             paymentIntentId: data.stripe_payment_intent_id,
-            message: err instanceof Error ? err.message : String(err),
+            message,
+            code,
           }),
         );
-        return null;
+        throw Object.assign(
+          new Error(`Stripe PaymentIntent retrieve failed: ${message}`),
+          { phase: "retrieve", code },
+        );
       }
 
       return {
@@ -190,12 +200,20 @@ function buildReissueAdapter(): ReissueAdapter {
     }) {
       const now = new Date().toISOString();
       // Mark the cancelled intent's row, then point the booking at the new PI.
-      await admin
+      const { error: updateError } = await admin
         .from("payments")
         .update({ status: "cancelled", updated_at: now })
         .eq("booking_id", bookingId)
         .eq("stripe_payment_intent_id", oldPaymentIntentId);
-      await admin.from("payments").insert({
+      if (updateError) {
+        throw Object.assign(
+          new Error(
+            `Failed to mark old payment cancelled: ${updateError.message}`,
+          ),
+          { phase: "persist", code: updateError.code ?? "db_update_failed" },
+        );
+      }
+      const { error: insertError } = await admin.from("payments").insert({
         booking_id: bookingId,
         stripe_payment_intent_id: newPaymentIntentId,
         status: "requires_payment_method",
@@ -204,6 +222,12 @@ function buildReissueAdapter(): ReissueAdapter {
         currency,
         destination_account_id: destinationAccountId,
       });
+      if (insertError) {
+        throw Object.assign(
+          new Error(`Failed to insert new payment row: ${insertError.message}`),
+          { phase: "persist", code: insertError.code ?? "db_insert_failed" },
+        );
+      }
     },
   };
 }

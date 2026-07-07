@@ -41,11 +41,19 @@ function adapter(opts: {
   hasPm?: boolean;
   cancelThrows?: boolean;
   createThrows?: boolean;
+  getCurrentIntentThrows?: boolean;
+  persistThrows?: boolean;
   calls?: Calls;
 }): ReissueAdapter {
   const calls = opts.calls;
   return {
     async getCurrentIntent() {
+      if (opts.getCurrentIntentThrows) {
+        throw Object.assign(new Error("retrieve boom"), {
+          phase: "retrieve",
+          code: "rate_limit",
+        });
+      }
       return opts.current;
     },
     async getSavedPaymentMethod() {
@@ -63,6 +71,12 @@ function adapter(opts: {
       return { id: "pi_new" };
     },
     async persistNewIntent({ oldPaymentIntentId, newPaymentIntentId }) {
+      if (opts.persistThrows) {
+        throw Object.assign(new Error("persist boom"), {
+          phase: "persist",
+          code: "db_insert_failed",
+        });
+      }
       calls?.persisted.push({
         oldId: oldPaymentIntentId,
         newId: newPaymentIntentId,
@@ -191,5 +205,55 @@ describe("reissueIntentForPayer", () => {
     if (res.kind === "failed") assert.equal(res.phase, "create");
     assert.deepEqual(calls.cancelled, ["pi_old"]);
     assert.deepEqual(calls.persisted, []);
+  });
+
+  it("propagates when getCurrentIntent throws (e.g. Stripe retrieve failure)", async () => {
+    await assert.rejects(
+      () =>
+        reissueIntentForPayer({
+          bookingId: BOOKING,
+          seekerId: SEEKER,
+          payerUserId: PAYER,
+          adapter: adapter({
+            current: intent("requires_payment_method"),
+            hasPm: true,
+            getCurrentIntentThrows: true,
+          }),
+          logger: silentLogger(),
+        }),
+      (err: unknown) => {
+        assert.ok(err instanceof Error);
+        assert.equal((err as { phase?: string }).phase, "retrieve");
+        assert.equal((err as { code?: string }).code, "rate_limit");
+        return true;
+      },
+    );
+  });
+
+  it("propagates when persistNewIntent throws (DB write failure)", async () => {
+    const calls: Calls = { cancelled: [], created: [], persisted: [] };
+    await assert.rejects(
+      () =>
+        reissueIntentForPayer({
+          bookingId: BOOKING,
+          seekerId: SEEKER,
+          payerUserId: PAYER,
+          adapter: adapter({
+            current: intent("requires_payment_method"),
+            hasPm: true,
+            persistThrows: true,
+            calls,
+          }),
+          logger: silentLogger(),
+        }),
+      (err: unknown) => {
+        assert.ok(err instanceof Error);
+        assert.equal((err as { phase?: string }).phase, "persist");
+        assert.deepEqual(calls.cancelled, ["pi_old"]);
+        assert.equal(calls.created.length, 1);
+        assert.deepEqual(calls.persisted, []);
+        return true;
+      },
+    );
   });
 });
