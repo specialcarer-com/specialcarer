@@ -85,7 +85,7 @@ function buildReissueAdapter(): ReissueAdapter {
       // The booking's most recent payment row carries the live PI. Terminal
       // rows (refunded/failed) are not re-issuable; the pure layer guards on
       // the live Stripe status regardless, so we just hand it the latest.
-      const { data } = await admin
+      const { data, error } = await admin
         .from("payments")
         .select(
           "stripe_payment_intent_id, status, amount_cents, application_fee_cents, currency, destination_account_id, raw",
@@ -101,6 +101,12 @@ function buildReissueAdapter(): ReissueAdapter {
           destination_account_id: string;
           raw: Record<string, unknown> | null;
         }>();
+      if (error) {
+        throw Object.assign(
+          new Error(`Failed to load booking payment: ${error.message}`),
+          { phase: "read_intent", code: error.code ?? "db_read_failed" },
+        );
+      }
       if (!data?.stripe_payment_intent_id) return null;
 
       // Read the authoritative status live from Stripe (the payments row only
@@ -146,13 +152,19 @@ function buildReissueAdapter(): ReissueAdapter {
       };
     },
     async getSavedPaymentMethod(payerUserId) {
-      const { data: sub } = await admin
+      const { data: sub, error } = await admin
         .from("subscriptions")
         .select("stripe_customer_id")
         .eq("user_id", payerUserId)
         .not("stripe_customer_id", "is", null)
         .limit(1)
         .maybeSingle<{ stripe_customer_id: string | null }>();
+      if (error) {
+        throw Object.assign(
+          new Error(`Failed to load payer subscription: ${error.message}`),
+          { phase: "read_pm", code: error.code ?? "db_read_failed" },
+        );
+      }
       const customerId = sub?.stripe_customer_id;
       if (!customerId) return null;
       try {

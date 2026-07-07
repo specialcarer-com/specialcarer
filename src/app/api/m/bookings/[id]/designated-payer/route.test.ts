@@ -285,12 +285,20 @@ function reissueAdapter(opts: {
   cancelThrows?: boolean;
   createThrows?: boolean;
   getCurrentIntentThrows?: boolean;
+  readIntentThrows?: boolean;
+  readPmThrows?: boolean;
   persistThrows?: boolean;
   calls?: Calls;
 }): ReissueAdapter {
   const calls = opts.calls;
   return {
     async getCurrentIntent() {
+      if (opts.readIntentThrows) {
+        throw Object.assign(new Error("payments read boom"), {
+          phase: "read_intent",
+          code: "db_read_failed",
+        });
+      }
       if (opts.getCurrentIntentThrows) {
         throw Object.assign(new Error("retrieve boom"), {
           phase: "retrieve",
@@ -300,6 +308,12 @@ function reissueAdapter(opts: {
       return opts.current;
     },
     async getSavedPaymentMethod() {
+      if (opts.readPmThrows) {
+        throw Object.assign(new Error("subscriptions read boom"), {
+          phase: "read_pm",
+          code: "db_read_failed",
+        });
+      }
       return opts.hasPm
         ? { stripeCustomerId: "cus_payer", paymentMethodId: "pm_payer" }
         : null;
@@ -556,6 +570,64 @@ describe("handleSetDesignatedPayer — PaymentIntent re-issue", () => {
     // Old intent was cancelled, new one never persisted, column rolled back.
     assert.deepEqual(calls.cancelled, ["pi_old"]);
     assert.deepEqual(calls.persisted, []);
+    assert.deepEqual(setCalls, [PAYER, null]);
+  });
+
+  it("rolls back the column + returns 500 when payments read fails (read_intent)", async () => {
+    const setCalls: (string | null)[] = [];
+    const res = await handleSetDesignatedPayer({
+      user_id: SEEKER,
+      booking_id: BOOKING,
+      payerUserId: PAYER,
+      flagEnabled: true,
+      client: client({
+        payer: null,
+        async setDesignatedPayer(_id, payer) {
+          setCalls.push(payer);
+          return { error: null };
+        },
+      }),
+      reissue: reissueAdapter({
+        current: intent("requires_payment_method"),
+        hasPm: true,
+        readIntentThrows: true,
+      }),
+    });
+    assert.equal(res.status, 500);
+    const body = (await res.json()) as { phase: string; code: string };
+    assert.equal(body.phase, "read_intent");
+    assert.equal(body.code, "db_read_failed");
+    assert.deepEqual(setCalls, [PAYER, null]);
+  });
+
+  it("rolls back the column + returns 500 when subscriptions read fails (read_pm)", async () => {
+    const calls: Calls = { cancelled: [], created: 0, persisted: [] };
+    const setCalls: (string | null)[] = [];
+    const res = await handleSetDesignatedPayer({
+      user_id: SEEKER,
+      booking_id: BOOKING,
+      payerUserId: PAYER,
+      flagEnabled: true,
+      client: client({
+        payer: null,
+        async setDesignatedPayer(_id, payer) {
+          setCalls.push(payer);
+          return { error: null };
+        },
+      }),
+      reissue: reissueAdapter({
+        current: intent("requires_payment_method"),
+        hasPm: true,
+        readPmThrows: true,
+        calls,
+      }),
+    });
+    assert.equal(res.status, 500);
+    const body = (await res.json()) as { phase: string; code: string };
+    assert.equal(body.phase, "read_pm");
+    assert.equal(body.code, "db_read_failed");
+    assert.deepEqual(calls.cancelled, []);
+    assert.equal(calls.created, 0);
     assert.deepEqual(setCalls, [PAYER, null]);
   });
 
