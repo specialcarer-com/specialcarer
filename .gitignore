@@ -48,6 +48,9 @@ AuthKey_*.p8
 /secrets/
 
 # Capacitor / native build artefacts
+# Native projects are generated locally or in CI — do not commit.
+/android/
+/ios/
 /ios/App/Pods/
 /ios/App/build/
 /ios/DerivedData/

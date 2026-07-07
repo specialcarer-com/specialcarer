@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- SpecialCarer brand teal — must match capacitor.config.ts #039EA0 -->
+    <color name="colorPrimary">#039EA0</color>
+    <color name="colorPrimaryDark">#028789</color>
+    <color name="colorAccent">#F4A261</color>
+</resources>
