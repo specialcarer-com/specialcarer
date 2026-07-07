@@ -74,7 +74,7 @@ export default function CaregiverCard({
   c: CaregiverCardData;
   bookable?: boolean;
 }) {
-  const country = c.country === "GB" ? "UK" : "US";
+  const country = c.country === "GB" ? "GB" : "US";
   const location = [c.city, country].filter(Boolean).join(", ");
   const rate = formatRate(c);
 
