@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "../globals.css";
 import "./mobile.css";
+import CapacitorShell from "@/components/native/CapacitorShell";
 import StatusBarController from "@/components/native/StatusBarController";
 import { AccessibilityProvider } from "./_components/AccessibilityProvider";
 import BiometricLockProvider from "./_components/BiometricLockProvider";
@@ -56,6 +57,8 @@ export default function MobileLayout({
         >
           Skip to main content
         </a>
+        {/* Native shell: push, deep links, external checkout (no-op on web). */}
+        <CapacitorShell />
         {/* Runtime status-bar glyph controller (no-op on web). */}
         <StatusBarController />
         <AccessibilityProvider>
