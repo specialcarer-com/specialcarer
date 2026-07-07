@@ -41,7 +41,8 @@ export function verifyWherebySignature(
   // Replay protection: reject timestamps too far from now in either direction.
   const ts = Number.parseInt(t, 10);
   if (!Number.isFinite(ts)) return false;
-  if (Math.abs(now / 1000 - ts) > MAX_TIMESTAMP_SKEW_SECONDS) return false;
+  const nowSeconds = Math.floor(now / 1000);
+  if (Math.abs(nowSeconds - ts) > MAX_TIMESTAMP_SKEW_SECONDS) return false;
 
   const signedPayload = `${t}.${rawBody}`;
   const computed = crypto

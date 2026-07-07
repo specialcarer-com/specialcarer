@@ -56,6 +56,18 @@ describe("verifyWherebySignature", () => {
     assert.equal(verifyWherebySignature(body, header(NOW_S + 300, body), NOW_MS), true);
   });
 
+  it("accepts a timestamp exactly 300s old when now has sub-second ms", () => {
+    const nowWithMs = NOW_MS + 999;
+    const t = NOW_S - 300;
+    assert.equal(verifyWherebySignature(body, header(t, body), nowWithMs), true);
+  });
+
+  it("rejects a timestamp 301s old even when now has sub-second ms", () => {
+    const nowWithMs = NOW_MS + 999;
+    const t = NOW_S - 301;
+    assert.equal(verifyWherebySignature(body, header(t, body), nowWithMs), false);
+  });
+
   it("returns false for a missing header", () => {
     assert.equal(verifyWherebySignature(body, null, NOW_MS), false);
   });
