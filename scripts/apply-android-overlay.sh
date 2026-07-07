@@ -39,4 +39,11 @@ if [[ -f "$OVERLAY/ic_launcher_background.xml" ]]; then
   echo "✅ Applied ic_launcher_background overlay"
 fi
 
+if [[ -f "$OVERLAY/network_security_config.xml" ]]; then
+  mkdir -p "$ROOT/android/app/src/main/res/xml"
+  cp "$OVERLAY/network_security_config.xml" \
+    "$ROOT/android/app/src/main/res/xml/network_security_config.xml"
+  echo "✅ Applied network_security_config overlay"
+fi
+
 echo "Done. Run: npx cap open android"

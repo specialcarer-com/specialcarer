@@ -18,8 +18,9 @@
     "cap:assets": "capacitor-assets generate --ios",
     "cap:assets:android": "capacitor-assets generate --android --assetPath mobile/resources",
     "cap:assets:all": "capacitor-assets generate --ios --android --assetPath mobile/resources",
+    "mobile:bootstrap:android": "bash mobile/scripts/bootstrap-android.sh",
     "mobile:build": "echo \"v1 uses remote web; webDir is offline shell only\"",
-    "mobile:android:setup": "npm ci && npx cap add android && npm run cap:assets:android && npm run cap:sync:android",
+    "mobile:android:setup": "npm run mobile:bootstrap:android",
     "analyze": "ANALYZE=true next build"
   },
   "dependencies": {

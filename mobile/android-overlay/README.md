@@ -5,6 +5,8 @@ These files are merged into the Capacitor Android project **after** `npx cap add
 Run:
 
 ```bash
+npm run mobile:bootstrap:android
+# or after cap sync only:
 npx cap sync android && ./scripts/apply-android-overlay.sh
 ```
 
@@ -12,9 +14,10 @@ npx cap sync android && ./scripts/apply-android-overlay.sh
 
 | File | Purpose |
 |------|---------|
-| `AndroidManifest.xml` | Permissions, deep-link intent filters (`specialcarer://` + App Links), `singleTask` launch mode |
+| `AndroidManifest.xml` | Permissions, deep-link intent filters (`specialcarer://` + App Links), `singleTask` launch mode, network security config reference |
 | `colors.xml` | Brand teal `#039EA0` primary colour for native chrome |
 | `ic_launcher_background.xml` | Adaptive icon background — brand teal |
+| `network_security_config.xml` | HTTPS-only in prod; cleartext allowed for `10.0.2.2` / `localhost` local dev |
 
 ## What's covered
 

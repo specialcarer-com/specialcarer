@@ -33,20 +33,15 @@ export PATH="$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator"
 ## First-time setup
 
 ```bash
-# From repo root
+# From repo root — one command: cap add (if needed), assets, sync, overlay
 npm ci
+npm run mobile:bootstrap:android
+```
 
-# Generate android/ if missing (already committed after foundation slice)
-npx cap add android   # idempotent — skips if android/ exists
+Or step-by-step:
 
-# Brand icons + splash from mobile/resources/
-npx capacitor-assets generate --android --assetPath mobile/resources
-
-# Sync Capacitor plugins + offline fallback bundle
-npx cap sync android
-
-# Re-apply permissions, deep links, brand colours
-./scripts/apply-android-overlay.sh
+```bash
+npm run cap:sync:android   # cap sync + apply-android-overlay.sh
 ```
 
 ### Firebase / push (optional for local dev)
@@ -92,28 +87,33 @@ The WebView loads `https://www.specialcarers.com/m`. Sign in with a test account
 
 ### Point at a local Next.js dev server (optional)
 
-Edit `capacitor.config.ts` temporarily:
+```bash
+# Terminal 1
+npm run dev
 
-```ts
-server: {
-  url: "http://10.0.2.2:3000/m",  // Android emulator → host machine
-  cleartext: true,
-  androidScheme: "http",
-},
+# Terminal 2 — bake local URL into capacitor.config.json at sync time
+CAPACITOR_SERVER_URL=http://10.0.2.2:3000/m npm run mobile:bootstrap:android
+npx cap run android
 ```
 
-Run `npm run dev` on the host, then `npx cap sync android` and rebuild.
+| Target | `CAPACITOR_SERVER_URL` |
+|--------|------------------------|
+| Android emulator | `http://10.0.2.2:3000/m` (host loopback alias) |
+| Physical device (USB) | `http://<LAN-IP>:3000/m` |
+
+Cleartext HTTP is permitted **only** for `10.0.2.2`, `localhost`, and `127.0.0.1` via `network_security_config.xml`. Production remains HTTPS-only.
 
 ## npm scripts
 
 | Script | Action |
 |--------|--------|
+| `npm run mobile:bootstrap:android` | Full bootstrap: `cap add` (if needed), assets, sync, overlay |
+| `npm run mobile:android:setup` | Alias for `mobile:bootstrap:android` |
 | `npm run cap:add:android` | `cap add android` (first time) |
 | `npm run cap:sync:android` | `cap sync android` + overlay |
 | `npm run cap:open:android` | Open project in Android Studio |
 | `npm run cap:run:android` | Build and deploy to device/emulator |
 | `npm run cap:assets:android` | Regenerate icons/splash |
-| `npm run mobile:android:setup` | Full setup chain (deps → assets → sync → overlay) |
 
 ## Debug signing
 
@@ -125,6 +125,7 @@ Release signing (Play Store) uses a dedicated upload keystore — see Phase 4 in
 
 | Variable | Where | Purpose |
 |----------|-------|---------|
+| `CAPACITOR_SERVER_URL` | Shell at `cap sync` time | Local emulator/simulator WebView URL (default: production `/m`) |
 | `NEXT_PUBLIC_MOBILE_PERSISTENT_AUTH_ENABLED` | Vercel + Codemagic (future) | Biometric app-lock on `/m` |
 | `ANDROID_APP_LINKS_SHA256` | Vercel | App Links `assetlinks.json` fingerprints |
 | `FCM_SERVER_KEY` / Firebase Admin | Vercel (Phase 3) | Server-side FCM push delivery |

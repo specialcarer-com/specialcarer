@@ -1,6 +1,17 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 /**
+ * Optional override for local Android/iOS emulator dev.
+ * Production builds leave this unset so the WebView loads live Vercel.
+ *
+ * Android emulator → host machine:  CAPACITOR_SERVER_URL=http://10.0.2.2:3000/m
+ * iOS simulator → host machine:     CAPACITOR_SERVER_URL=http://localhost:3000/m
+ */
+const serverUrl =
+  process.env.CAPACITOR_SERVER_URL ?? "https://www.specialcarers.com/m";
+const cleartext = serverUrl.startsWith("http://");
+
+/**
  * SpecialCarer iOS / Android shell.
  *
  * v1 strategy: thin Capacitor wrapper that loads the live Next.js site
@@ -26,11 +37,11 @@ const config: CapacitorConfig = {
     // The singular specialcarers.com 308-redirects here; pointing the
     // WebView directly at the canonical host avoids a cross-domain
     // bounce that would be blocked by allowNavigation.
-    url: "https://www.specialcarers.com/m",
-    // Allow https everywhere; reject mixed content.
-    androidScheme: "https",
-    iosScheme: "https",
-    cleartext: false,
+    url: serverUrl,
+    // Allow https everywhere; permit http only when CAPACITOR_SERVER_URL is http (local dev).
+    androidScheme: cleartext ? "http" : "https",
+    iosScheme: cleartext ? "http" : "https",
+    cleartext,
     // Domains the WebView is allowed to navigate to without bouncing
     // out to Safari. Stripe Checkout / OAuth redirects need to stay
     // inside the app for the success callback to work.
