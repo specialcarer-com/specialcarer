@@ -53,5 +53,6 @@ AuthKey_*.p8
 /ios/DerivedData/
 /android/.gradle/
 /android/app/build/
+/android/app/signing.release.gradle
 /android/build/
 /android/local.properties
