@@ -403,7 +403,8 @@ definitions:
     vars:
       PACKAGE_NAME: "com.allcare4ugroup.specialcarer"
     node: 22
-    java: 17
+    # Capacitor 8 capacitor.build.gradle sets sourceCompatibility VERSION_21.
+    java: 21
 
   env_android_release: &env_android_release
     <<: *env_android
