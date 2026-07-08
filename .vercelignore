@@ -1,0 +1,21 @@
+# Vercel deployment exclusions — paths not needed for the Next.js web preview/build.
+# Native Android/iOS assets are built on Codemagic; the Vercel app serves /m via Next.js.
+# See PR #163 — keeps preview uploads lean and under the 45-minute build step limit.
+
+# Committed Capacitor Android project (Gradle, generated mipmaps/splashes, wrapper JAR).
+android/
+
+# Source icon/splash PNGs for capacitor-assets — consumed by native CI, not Next.js.
+mobile/resources/
+
+# Android manifest/colour overlay templates — applied during cap sync on Codemagic only.
+mobile/android-overlay/
+
+# Native asset/dev helper scripts (bootstrap, icon/splash generators).
+mobile/scripts/
+
+# Android overlay merge script — Codemagic / local cap sync only.
+scripts/apply-android-overlay.sh
+
+# Android developer documentation — not part of the web bundle.
+docs/android-development.md
