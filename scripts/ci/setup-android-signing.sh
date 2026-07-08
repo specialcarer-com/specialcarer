@@ -10,8 +10,9 @@
 #   scripts/ci/setup-android-signing.sh              # android-build: skip if no CM_KEYSTORE
 #   scripts/ci/setup-android-signing.sh --require-release   # android-internal: fail or bootstrap
 #
-# Bootstrap (one-time only):
-#   Set ALLOW_KEYSTORE_BOOTSTRAP=true on a single manual Codemagic build.
+# Bootstrap (one-time only, android-internal manual builds):
+#   Set ALLOW_KEYSTORE_BOOTSTRAP=true on a single manual android-internal build
+#   (--require-release). android-build on main must never bootstrap.
 #   Copy the printed CM_KEYSTORE / password values into the android_keystore
 #   group, then unset ALLOW_KEYSTORE_BOOTSTRAP.
 set -euo pipefail
@@ -56,7 +57,8 @@ bootstrap_keystore() {
   local keystore_password key_password local_keystore cm_keystore_b64
 
   keystore_password="$(openssl rand -hex 16)"
-  key_password="$(openssl rand -hex 16)"
+  # PKCS12 keystores (default for modern keytool) use one password for store + key.
+  key_password="$keystore_password"
   local_keystore="$(mktemp /tmp/specialcarer-upload-XXXXXX.jks)"
   rm -f "$local_keystore"
 
@@ -98,7 +100,7 @@ bootstrap_keystore() {
   CM_KEYSTORE            = (base64 block below — mark as secure)
   CM_KEYSTORE_PASSWORD   = $keystore_password
   CM_KEY_ALIAS           = $key_alias
-  CM_KEY_PASSWORD        = $key_password
+  CM_KEY_PASSWORD        = $keystore_password  (same as store — PKCS12 requires identical)
 
 After saving, unset ALLOW_KEYSTORE_BOOTSTRAP. Future builds reuse CM_KEYSTORE.
 =================================================================
@@ -159,7 +161,12 @@ if [ -n "${CM_KEYSTORE:-}" ]; then
   exit 0
 fi
 
-if [ "${ALLOW_KEYSTORE_BOOTSTRAP:-}" = "true" ]; then
+if [ "${ALLOW_KEYSTORE_BOOTSTRAP:-}" = "true" ] && [ "$REQUIRE_RELEASE" -ne 1 ]; then
+  echo "⚠️  ALLOW_KEYSTORE_BOOTSTRAP is set but this is not a release-required build — ignoring."
+  echo "    android-build on main never bootstraps. Use a manual android-internal build only."
+fi
+
+if [ "${ALLOW_KEYSTORE_BOOTSTRAP:-}" = "true" ] && [ "$REQUIRE_RELEASE" -eq 1 ]; then
   echo "⚠️  ALLOW_KEYSTORE_BOOTSTRAP=true — generating one-time upload keystore"
   bootstrap_keystore
   write_signing_gradle
