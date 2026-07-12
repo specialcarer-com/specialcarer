@@ -93,21 +93,29 @@ Sprints are **2 weeks**, starting Mondays. Each sprint has a **theme**, **must-s
 
 ---
 
-### Sprint 6 (placeholder): "Payroll & BACS"
-**Dates:** Mon 24 Aug → Fri 4 Sep (proposed)
-**Theme:** First real payroll run. Depends on Lloyds BACS SUN outcome + Gusto Embedded decision.
-
-<!-- TBD: founder to specify concrete deliverables. Candidates:
-     - Lloyds BACS SUN application status milestone
-     - Gusto Embedded go/no-go decision
-     - First live payroll run for 3-carer pilot
-     - HMRC PAYE / RTI submission automation
-     See workspace briefs: lloyds_bacs_sun_brief, gusto_embedded_brief.
--->
+### Sprint 6: "Payroll & BACS"
+**Dates:** Mon 24 Aug → Fri 4 Sep
+**Theme:** Two-channel payroll automation live. Weekly Stripe Connect payouts remain stable for Marketplace; monthly BACS18 payroll cycle goes live for Channel B carers, aligned to net-14 org invoice clearing. HMRC RTI compliant.
 
 | # | Item | Source | Effort | Acceptance |
 |---|------|--------|--------|------------|
-| 6.x | *TBD — see comment above* | — | — | — |
+| 6.1 | **Lloyds BACS SUN application submitted + tracking** | `lloyds_bacs_sun_brief` | ~½ day | Application filed with Lloyds Commercial Banking. Case reference captured in `docs/operations/bacs-sun-status.md`. Weekly chase cron templated for follow-up until decision. |
+| 6.2 | **BACS18 export format generator** | Phase 4 gap | ~2 days | `payroll.generateBacs18(runId)` produces a compliant BACS18 file (fixed-width layout, correct VOL1/HDR1/UHL1 headers, EOF1/UTL1 trailers) from `payroll_runs`. Golden-file tests against Lloyds sample. Manual upload path via Lloyds Commercial Banking Online documented in `docs/operations/bacs-manual-upload.md` for use pre-SUN. |
+| 6.3 | **Monthly payroll run cycle — Channel B carers** | Phase 4 gap | ~2 days | Cron fires on 25th of each month, runs payroll for prior calendar month's Channel B hours. Aggregates timesheets → applies £14/£21/£28 rate matrix (weekday / BH-standard / BH-premium) → generates payslip PDFs → writes `payroll_runs` + `payslips` rows → emits BACS18 file. Uses `payroll_apr26_draft_payslip_priya.pdf` template as reference. |
+| 6.4 | **Holiday pot accrual & draw-down** | Phase 4 gap | ~1 day | 12.07% holiday accrual auto-added to each Channel B carer's holiday pot per hour worked (rate to be confirmed with employment counsel before first live run — see risks). Draw-down flow in carer app: request → RM approval → payout in next payroll cycle. Balance visible on carer earnings dashboard. |
+| 6.5 | **Payslip PDF template + carer portal delivery** | Phase 4 gap | ~1 day | Payslip PDF compliant with s.8 Employment Rights Act 1996: gross pay, deductions itemised (PAYE, NI, pension, student loan if applicable), net pay, pay period, employer name/address, tax code, YTD figures. Delivered via email + in-app `/m/payslips` view. HMRC-compliant format. |
+| 6.6 | **HMRC RTI submission via BrightPay API** | Statutory | ~1 day | Full Payment Submission + Employer Payment Summary filed with HMRC per pay cycle. BrightPay chosen as primary (HMRC-recognised, documented API, standalone UK). Filed within 3 working days of pay date. Manual fallback via HMRC Basic PAYE Tools documented in `docs/operations/rti-manual-filing.md`. |
+| 6.7 | **Stripe Connect Marketplace payout monitoring + carer "when am I paid?" dashboard** | Operational | ~1 day | Weekly admin digest: Marketplace payouts sent, failed, disputed. Failed-payout alert within 2h via push + email + `safeguarding@` mirror. New carer-facing `/m/earnings/schedule` view: next payout date, amount pending, historical payouts, holiday pot balance (from 6.4). |
+
+**Demo at end of sprint (staging, 25 Aug run):** Test carer Priya has 82 hours in July 2026, mix of weekday and August summer BH hours. Monthly payroll cron fires → produces payslip PDF showing £14/£21 rate rows, gross £1,254.40, itemised PAYE + NI + pension deductions, holiday accrual £151.31 (12.07% × £1,254.40), net pay figure. BACS18 file generated, validated against Lloyds sample layout. Priya receives payslip email + in-app notification and can see the next payout date on her earnings dashboard. Admin dashboard shows the run as "Ready to submit" pending Lloyds SUN approval. RTI FPS filed via BrightPay sandbox.
+
+**Total committed effort:** ~8.5 dev-days across 10 working days.
+
+**Dependencies / risks:**
+- **6.1** — Lloyds SUN approval timeline unknown (~4-6 weeks typical). If not approved by sprint end, upload BACS18 files manually via Lloyds Commercial Banking Online (supported natively). No dev block.
+- **6.4 (statutory risk)** — 12.07% holiday accrual assumes standard 5.6-weeks statutory entitlement for zero-hours workers. Must be confirmed in writing with employment counsel before the first live payroll run. Getting holiday accrual wrong is a tribunal risk. Cheap paper check, non-negotiable.
+- **6.6** — HMRC RTI is legally required within pay date + 3 working days; non-negotiable. Must ship even if BrightPay integration slips — manual fallback via HMRC Basic PAYE Tools is documented.
+- **US W-2 payroll (Gusto Embedded)** — explicitly OUT OF SCOPE for Sprint 6. Deferred to Sprint 7+ when US expansion becomes concrete. Workspace brief `gusto_embedded_brief` remains available.
 
 ---
 
