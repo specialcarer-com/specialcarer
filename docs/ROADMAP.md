@@ -62,6 +62,7 @@ Sprints are **2 weeks**, starting Mondays. Each sprint has a **theme**, **must-s
 | 4.2 | **Overnight + respite + emergency journeys** | Competitor (Elder) | ~2 days | Three new booking templates with appropriate scheduling rules |
 | 4.3 | **Gap 36 — Carer earnings dashboard** (week/month/year, fees, BACS payout schedule, tax summary export) | Internal (Gap 36) | ~1 day | Carer can view + download CSV/PDF for accountant |
 | 4.4 | **Gap 41 — Family timeline (shared activity feed)** | Internal (Gap 41) | ~2 days | All family-circle members see chronological feed of visits, notes, SOS, payments |
+| 4.5 | **GPS clock-in scaffold shipped (schema + API + minimal UI)** — self-attesting visit verification ported from CareLinx (US) audit | Competitor (CareLinx) | shipped | Carer clocks in/out with a GPS fix on the active-job screen; events recorded to `visit_events`; ops sees a read-only events card. Geofence policy, photo verification and payroll auto-generation deferred to a follow-up. |
 
 **Demo:** A family books an emergency live-in carer for 2 weeks while mum recovers from surgery. The carer sees the booking on their earnings dashboard with the BACS payout date. The wider family (3 siblings) all see the live timeline including last night's shift notes.
 

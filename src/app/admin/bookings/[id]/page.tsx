@@ -8,6 +8,7 @@ import {
   type BookingStatus,
 } from "@/lib/admin/bookings";
 import BookingActions from "./_components/BookingActions";
+import VisitEventsCard from "./_components/VisitEventsCard";
 import { CLIENT_FEE_PERCENT, CARER_FEE_PERCENT } from "@/lib/fees/config";
 
 export const dynamic = "force-dynamic";
@@ -255,6 +256,8 @@ export default async function AdminBookingDetail({
           ))}
         </ol>
       </div>
+
+      <VisitEventsCard bookingId={booking.id} scheduledStartIso={booking.starts_at} />
 
       <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3">
         <h2 className="text-xs uppercase tracking-wider text-slate-500">

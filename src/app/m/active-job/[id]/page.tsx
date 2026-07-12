@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TopBar } from "../../_components/ui";
 import ActiveJobClient from "./ActiveJobClient";
+import GpsClockCard from "./_components/GpsClockCard";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,9 @@ export default async function ActiveJobPage({
   return (
     <div className="min-h-screen bg-bg-screen">
       <TopBar title="Active job" back={`/m/jobs/${id}`} />
+      <div className="px-5 pt-3">
+        <GpsClockCard bookingId={id} />
+      </div>
       <ActiveJobClient bookingId={id} />
     </div>
   );
