@@ -15,30 +15,13 @@ import {
   handleClock,
   type ClockClient,
   type ClockBookingRow,
-  type ClockEventType,
   type VisitEventRow,
 } from "./clock-handler";
+import { readPostcodeHint } from "./postcode-hint";
 
 export const dynamic = "force-dynamic";
 
 const VISIT_PHOTO_BUCKET = "visit-photos";
-
-/**
- * Load the coarse postcode hint without letting a failure sink the clock-in.
- * The hint only ever decorates a geofence-failure message, so a read error
- * degrades to `null` rather than bubbling to a 500 (#6).
- */
-export async function readPostcodeHint(
-  fetchPostcode: () => Promise<string | null>,
-): Promise<string | null> {
-  try {
-    return await fetchPostcode();
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.warn("[clock] postcode hint unavailable", msg);
-    return null;
-  }
-}
 
 const EVENT_COLS =
   "id, visit_id, carer_id, event_type, event_at, latitude, longitude, accuracy_metres, client_reported_at, server_recorded_at, device_info, notes, photo_url, photo_verification_status, photo_similarity_score, photo_verification_checked_at, geofence_status, distance_from_client_metres, admin_override_by, admin_override_reason, admin_override_at, verified_by_admin_id, created_at";
@@ -155,5 +138,3 @@ export async function POST(
     return NextResponse.json({ error: "clock_failed" }, { status: 500 });
   }
 }
-
-export type { ClockEventType };
