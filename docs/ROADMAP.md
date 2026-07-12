@@ -1,6 +1,6 @@
 # SpecialCarer Roadmap
 
-**Last updated:** 10 June 2026
+**Last updated:** 12 July 2026
 **Owner:** @BYHomeOwner
 **Status:** Living document — update at the end of each sprint
 
@@ -11,6 +11,8 @@
 SpecialCarer is a UK-first home-care marketplace. As of 10 Jun 2026 the **end-to-end matching loop is live**: a seeker submits a booking → 5 carers are auto-matched and pushed → first-accept-wins (Now) or seeker-picks (Scheduled) → booking confirms → stale offers expire every 2 minutes. AI summarisation of carer shift notes, 9-locale UI (next-intl), in-app Stripe Checkout, push notifications, family chat, SOS, and care-plan PDF export are all shipped.
 
 The next 8 weeks are about **closing the trust gap with Curam/Elder**, **adding the AI moat Cera owns**, and **opening the high-ticket live-in vertical**.
+
+Sprints 1 & 2 (15 Jun – 10 Jul) have completed; see §4 for shipped items. Sprints 3 & 4 are re-scoped below.
 
 ### Three strategic themes for Q3 2026
 
@@ -29,44 +31,11 @@ The next 8 weeks are about **closing the trust gap with Curam/Elder**, **adding 
 
 ---
 
-## 2. The Sprint Plan (4 × 2-week sprints, 15 Jun – 9 Aug)
+## 2. The Sprint Plan (2-week sprints, 15 Jun – 7 Aug committed)
 
 Sprints are **2 weeks**, starting Mondays. Each sprint has a **theme**, **must-ship items**, **stretch items**, and **acceptance criteria**. Effort estimates assume one engineer (you) + coding subagents.
 
-### Sprint 1: "Housekeeping + Conversion Quick Wins"
-**Dates:** Mon 15 Jun → Fri 26 Jun
-**Theme:** Pay down the deferred follow-ups from the matching-loop sprint, then ship the smallest competitor-parity items.
-
-| # | Item | Source | Effort | Acceptance |
-|---|------|--------|--------|------------|
-| 1.1 | **PR C — Legacy `LocaleContext` → next-intl migration** for `/m` accessibility routes | Internal (deferred) | ~½ day | Single i18n source of truth; `/m/*` reads same JSON files as marketing |
-| 1.2 | **Backfill `response_rate` + `completion_rate`** (DB view + daily job + one-time backfill) | Internal (deferred) | ~½ day | Scorer no longer falls back; values visible on carer profiles |
-| 1.3 | **Offer-expired push event** (refactor `DispatchEvent` union, then add event) | Internal (deferred) | ~½ day | Carer gets push when their pending offer auto-expires |
-| 1.4 | **Visit recap push** (extends PR #78) — auto-send "Key points" summary to seeker as push after each shift note save | Competitor (Honor) | ~2-3 hrs | Family receives push within 60s of carer saving note; opens to timeline |
-| 1.5 | **Cron + calendar sync (.ics export)** — Gap 40. `/api/m/bookings/[id]/ics`, "Add to calendar" button | Internal (Gap 40) | ~1 day | Apple Calendar, Google Calendar, Outlook all import correctly |
-| 1.6 | **CQC ratings on carer profiles** — fetch from CQC public API, cache, display with explainer | Competitor (Lottie, Care UK) | ~1 day | Rating badge + last inspection date on every regulated carer profile |
-| **Stretch 1.7** | **Funding calculator** — UK weekly cost estimate + LA funding indicator | Competitor (Lottie) | ~1 day | Public page `/funding`, lead-gen form |
-
-**Demo at end of sprint:** Live family receives a push the moment a carer ends a shift, opens the app, sees a teal "Key points" summary, taps "Add to calendar" for the next confirmed visit.
-
----
-
-### Sprint 2: "Trust Hardening"
-**Dates:** Mon 29 Jun → Fri 10 Jul
-**Theme:** Close the trust gap with Curam. Every item here addresses an objection a first-time family raises.
-
-| # | Item | Source | Effort | Acceptance |
-|---|------|--------|--------|------------|
-| 2.1 | **Gap 13 — 2FA on sensitive accounts** (TOTP via authenticator app) | Internal (Gap 13) | ~1 day | Carer & admin accounts can enable; required for admin |
-| 2.2 | **Gap 14 — SMS OTP login** (alternative to email magic link) | Internal (Gap 14) | ~1 day | Twilio Verify integration; carers can sign in with mobile only |
-| 2.3 | **Gap 15 + biometric ID** — selfie liveness check on carer onboarding (passive, e.g. Onfido / Veriff) | Internal + Competitor (Curam) | ~2 days | Carer onboarding requires liveness pass; admin sees ✓ on profile |
-| 2.4 | **Right-to-work verification** on carer onboarding (Home Office API or manual document upload + admin review) | Competitor (Curam) | ~1 day | RTW status surfaced on every carer profile; expiry tracked |
-| 2.5 | **Verified reviews on carer profiles** — display review module wired to existing rating data | Competitor (all) | ~½ day | Profile page shows last 5 reviews with date + booking type |
-| **Stretch 2.6** | **Pet-friendly / dementia-trained / language-spoken filters** on search | Competitor (Lottie) | ~½ day | Filter chips on `/m/search`; backed by carer-side skills tags |
-
-**Demo:** A new carer goes through onboarding: selfie liveness, RTW upload, DBS upload, profile goes live with all three ✓ badges. Family searches and filters for "speaks Polish + dementia-trained + pet-friendly", sees verified reviews on each result.
-
----
+> **Sprints 1 & 2 (15 Jun – 10 Jul 2026) completed** — see §4 for shipped items and PR references.
 
 ### Sprint 3: "AI Moat + In-App Calling"
 **Dates:** Mon 13 Jul → Fri 24 Jul
@@ -74,7 +43,7 @@ Sprints are **2 weeks**, starting Mondays. Each sprint has a **theme**, **must-s
 
 | # | Item | Source | Effort | Acceptance |
 |---|------|--------|--------|------------|
-| 3.1 | **Gap 32 — In-app video calling** (Twilio Video or LiveKit) before booking | Internal + Competitor (Curam "CuramMeet") | ~3 days | Seeker can request a video call from carer profile; carer accepts; 10-min capped call in-app |
+| 3.1 | **Whereby video calling — reliability + observability** | Internal follow-up on #104/#105/#106 | ~1 day | Signature validation logs; failed-webhook alerting via Sentry; retry policy documented |
 | 3.2 | **Predictive risk scoring V1** — daily job on `care_journal_entries` + booking outcomes; flag carer/recipient pairs needing review | Competitor (Cera "Predict & Prevent") | ~3 days | Admin dashboard shows top-20 flagged cases; precision/recall baseline measured |
 | 3.3 | **eMAR — medication administration record** module on active job | Competitor (Cera) | ~2 days | Carer ticks each scheduled medication; family + admin see audit log |
 | 3.4 | **Smarter ML matching V2** — extend Gap 19 rerank with retention/commute features | Competitor (Honor) | ~1 day | A/B test shows ≥10% lift in accept rate vs current rerank |
@@ -84,7 +53,7 @@ Sprints are **2 weeks**, starting Mondays. Each sprint has a **theme**, **must-s
 ---
 
 ### Sprint 4: "Live-in Vertical"
-**Dates:** Mon 27 Jul → Fri 9 Aug
+**Dates:** Mon 27 Jul → Fri 7 Aug
 **Theme:** Open the £1,150/week ticket segment. Same supply, very different journey.
 
 | # | Item | Source | Effort | Acceptance |
@@ -95,6 +64,42 @@ Sprints are **2 weeks**, starting Mondays. Each sprint has a **theme**, **must-s
 | 4.4 | **Gap 41 — Family timeline (shared activity feed)** | Internal (Gap 41) | ~2 days | All family-circle members see chronological feed of visits, notes, SOS, payments |
 
 **Demo:** A family books an emergency live-in carer for 2 weeks while mum recovers from surgery. The carer sees the booking on their earnings dashboard with the BACS payout date. The wider family (3 siblings) all see the live timeline including last night's shift notes.
+
+---
+
+### Sprint 5 (placeholder): "Compliance & Safeguarding"
+**Dates:** Mon 10 Aug → Fri 21 Aug (proposed)
+**Theme:** UK regulator readiness. This lane needs founder input before committing items.
+
+<!-- TBD: founder to specify concrete deliverables. Candidates flagged by review:
+     - CQC registration deliverables (RI application, statement of purpose finalisation)
+     - ICO / GDPR data-mapping (Article 30 records, DPIA for AI features)
+     - Safeguarding incident reporting flow (in-app + LADO escalation)
+     - DBS expiry tracking + automated renewal reminders
+     Add rows to the table below when scoped.
+-->
+
+| # | Item | Source | Effort | Acceptance |
+|---|------|--------|--------|------------|
+| 5.x | *TBD — see comment above* | — | — | — |
+
+---
+
+### Sprint 6 (placeholder): "Payroll & BACS"
+**Dates:** Mon 24 Aug → Fri 4 Sep (proposed)
+**Theme:** First real payroll run. Depends on Lloyds BACS SUN outcome + Gusto Embedded decision.
+
+<!-- TBD: founder to specify concrete deliverables. Candidates:
+     - Lloyds BACS SUN application status milestone
+     - Gusto Embedded go/no-go decision
+     - First live payroll run for 3-carer pilot
+     - HMRC PAYE / RTI submission automation
+     See workspace briefs: lloyds_bacs_sun_brief, gusto_embedded_brief.
+-->
+
+| # | Item | Source | Effort | Acceptance |
+|---|------|--------|--------|------------|
+| 6.x | *TBD — see comment above* | — | — | — |
 
 ---
 
@@ -114,13 +119,31 @@ Not committed; reviewed at end of each sprint.
 | B8 | **Free expert concierge** (chat + phone) for first-time families | Competitor (Lottie, Elder) | Ongoing | Conversion-critical but hard to scale; consider AI-first version |
 | B9 | **Funding guidance hub** (NHS CHC, council assessments, attendance allowance) | Competitor (Lottie) | ~1 week | SEO + first-touch trust |
 | B10 | **Virtual tours / video profiles** of carers | Competitor (Lottie style, applied to carers) | ~3 days | Conversion lift on profile views |
-| B11 | **PR #66 finish — Android Play Internal Testing release** | Internal (open PR) | ~1 day | Unblocks Android testers |
+| B11 | **Play Store — Internal Testing track first upload** | Internal (follow-up on #163–#165) | ~1 day | Play Console app registered, signed AAB uploaded, at least 1 tester group invited |
 
 ---
 
 ## 4. Already shipped (reference)
 
 Cumulative as of 10 Jun 2026 — 80 PRs merged.
+
+### Sprint 15 Jun – 10 Jul (Sprints 1 & 2)
+- **Sprint 1 — Housekeeping + Conversion Quick Wins:**
+  - PR C legacy LocaleContext migration for `/m` accessibility routes
+  - Backfill `response_rate` + `completion_rate` (DB view + daily job)
+  - Offer-expired push event (DispatchEvent union refactor + event)
+  - Visit recap push extending [#78](https://github.com/specialcarer-com/specialcarer/pull/78)
+  - Calendar sync (.ics export) — Gap 40
+  - CQC ratings on carer profiles (public API + explainer)
+- **Sprint 2 — Trust Hardening:**
+  - **TOTP 2FA + AAL2 admin enforcement** ([#156](https://github.com/specialcarer-com/specialcarer/pull/156), [#158](https://github.com/specialcarer-com/specialcarer/pull/158))
+  - SMS OTP login (Gap 14)
+  - **Veriff liveness on carer onboarding** ([#107](https://github.com/specialcarer-com/specialcarer/pull/107), [#140](https://github.com/specialcarer-com/specialcarer/pull/140))
+  - **Right-to-work verification** ([#133](https://github.com/specialcarer-com/specialcarer/pull/133), [#134](https://github.com/specialcarer-com/specialcarer/pull/134))
+  - Verified reviews module on carer profiles
+- **Biometric persistent sign-in (Face ID) via Capacitor Native Biometric** ([#108](https://github.com/specialcarer-com/specialcarer/pull/108), [#149](https://github.com/specialcarer-com/specialcarer/pull/149), [#150](https://github.com/specialcarer-com/specialcarer/pull/150), [#151](https://github.com/specialcarer-com/specialcarer/pull/151), [#152](https://github.com/specialcarer-com/specialcarer/pull/152), [#153](https://github.com/specialcarer-com/specialcarer/pull/153), [#154](https://github.com/specialcarer-com/specialcarer/pull/154), [#155](https://github.com/specialcarer-com/specialcarer/pull/155)) — confirmed working in production on iPhone 17 Pro Max
+- **Whereby video calling — Embedded video-interview flow live** ([#104](https://github.com/specialcarer-com/specialcarer/pull/104), [#105](https://github.com/specialcarer-com/specialcarer/pull/105), [#106](https://github.com/specialcarer-com/specialcarer/pull/106))
+- **Android Capacitor foundation** ([#163](https://github.com/specialcarer-com/specialcarer/pull/163), [#164](https://github.com/specialcarer-com/specialcarer/pull/164), [#165](https://github.com/specialcarer-com/specialcarer/pull/165)) — Java 21 Codemagic pipeline, CI signing bootstrap, Play upload workflows
 
 ### Sprint 8–10 Jun (recent)
 - **Matching loop end-to-end** (PRs [#71](https://github.com/specialcarer-com/specialcarer/pull/71), [#72](https://github.com/specialcarer-com/specialcarer/pull/72), [#73](https://github.com/specialcarer-com/specialcarer/pull/73), [#74](https://github.com/specialcarer-com/specialcarer/pull/74), [#75](https://github.com/specialcarer-com/specialcarer/pull/75), [#76](https://github.com/specialcarer-com/specialcarer/pull/76), [#77](https://github.com/specialcarer-com/specialcarer/pull/77)) — Gap 17/18/19 + hybrid accept + expiry cron + geocode
@@ -151,7 +174,7 @@ Cumulative as of 10 Jun 2026 — 80 PRs merged.
 - **Perplexity Max** renewal — 27 Jun 2026 (£200/mo) — reminder cron set
 - **Standup brief cron** — weekdays 7:30am London — active
 - **TikTok display name** — updated to `SpecialCarers` (done 10 Jun)
-- **PR #66 (Android)** — still open since 8 Jun, finish in Sprint 1 housekeeping
+- **Android** — Capacitor foundation + CI signing + Play workflows shipped (#163/#164/#165); Play Console Internal Testing track upload pending (see B11)
 
 ---
 
