@@ -43,17 +43,21 @@ earliest `clock_in` to latest `clock_out`, or null if either bookend is missing.
 ### `POST /api/bookings/[id]/clock`
 Auth: must be the booking's assigned carer.
 
+`event_type` is one of the two string values `clock_in` or `clock_out`.
+
 Body:
-```jsonc
+```json
 {
-  "event_type": "clock_in" | "clock_out",
+  "event_type": "clock_in",
   "latitude": 51.5074,
   "longitude": -0.1278,
   "accuracy_metres": 12,
   "client_reported_at": "2026-07-12T09:00:00.000Z",
-  "notes": "At the front door"   // optional, ≤ 1000 chars
+  "notes": "At the front door"
 }
 ```
+
+`notes` is optional (≤ 1000 chars).
 
 Responses:
 - `201` — `{ event }` (the created row)
@@ -61,14 +65,24 @@ Responses:
 - `401` — unauthenticated
 - `403` — not the assigned carer
 - `404` — visit not found
-- `409` — non-clockable visit status, or a duplicate event of the same type
-  within 30 seconds
+- `409` — `{ error }`, one of:
+  - `already_clocked_in` — the latest event is already a `clock_in`
+  - `no_open_clock_in` — a `clock_out` with no open `clock_in` to close
+  - `duplicate_event` — a repeat submit within 30 seconds of the last event
+  - a non-clockable visit status message (e.g. a cancelled visit)
+- `500` — `{ "error": "clock_failed" }` (unexpected server/DB error)
+
+Events must strictly alternate `clock_in` → `clock_out` → `clock_in` …; the
+server rejects out-of-order events with the `409` codes above.
 
 Geofence radius is **not** enforced — the device reading is recorded as-is.
 
 ### `GET /api/bookings/[id]/events`
 Auth: booking party (carer or seeker/family) or admin. Returns
 `{ events }` ordered by `event_at` ascending.
+
+Responses: `200` `{ events }`, `401` unauthenticated, `403` forbidden,
+`404` visit not found, `500` `{ "error": "load_failed" }` on a read error.
 
 ## Carer UI
 
@@ -83,7 +97,7 @@ existing selfie + geofence check-in flow is untouched.
 
 State handling:
 - Permission denied / unavailable → "GPS permission required to clock in.
-  Enable location for SpecialCarers in device settings." The action is blocked —
+  Enable location for Special Carer in device settings." The action is blocked —
   a location fix is required (that is the point of the feature).
 - Timeout → retry.
 - Network / server error → retry with "Try again — your clock-in has not been

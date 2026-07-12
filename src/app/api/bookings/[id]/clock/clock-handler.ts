@@ -124,11 +124,8 @@ export type VisitEventRow = {
 
 export type ClockClient = {
   getBooking: (visitId: string) => Promise<ClockBookingRow | null>;
-  /** Most recent event of this type on this visit, or null. */
-  latestEventOfType: (
-    visitId: string,
-    eventType: ClockEventType,
-  ) => Promise<VisitEventRow | null>;
+  /** Most recent event of any type on this visit, or null. */
+  latestEvent: (visitId: string) => Promise<VisitEventRow | null>;
   insertEvent: (row: {
     visit_id: string;
     carer_id: string;
@@ -185,16 +182,25 @@ export async function handleClock(
     };
   }
 
-  // Rate limit: reject a second event of the same type within the window.
   const now = args.now ?? Date.now();
-  const recent = await client.latestEventOfType(args.visitId, input.event_type);
-  if (recent) {
-    const since = now - new Date(recent.event_at).getTime();
+  const latest = await client.latestEvent(args.visitId);
+
+  // Events must strictly alternate clock_in → clock_out → clock_in … A carer
+  // cannot clock out without an open clock-in, nor clock in twice in a row.
+  if (input.event_type === "clock_in" && latest?.event_type === "clock_in") {
+    return { status: 409, body: { error: "already_clocked_in" } };
+  }
+  if (input.event_type === "clock_out" && latest?.event_type !== "clock_in") {
+    return { status: 409, body: { error: "no_open_clock_in" } };
+  }
+
+  // Rate limit: reject a rapid repeat submit within the window. Guards against a
+  // double-tap firing two requests before the first event is visible. The DB
+  // also has a per-minute unique index as defence in depth against a race.
+  if (latest) {
+    const since = now - new Date(latest.event_at).getTime();
     if (since >= 0 && since < DUPLICATE_WINDOW_MS) {
-      return {
-        status: 409,
-        body: { error: `already clocked ${input.event_type} moments ago` },
-      };
+      return { status: 409, body: { error: "duplicate_event" } };
     }
   }
 

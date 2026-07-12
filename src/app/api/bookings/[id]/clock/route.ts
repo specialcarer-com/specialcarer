@@ -47,22 +47,23 @@ export async function POST(
   const admin = createAdminClient();
   const client: ClockClient = {
     async getBooking(id) {
-      const { data } = await admin
+      const { data, error } = await admin
         .from("bookings")
         .select("id, caregiver_id, status")
         .eq("id", id)
         .maybeSingle<ClockBookingRow>();
+      if (error) throw new Error(`booking read failed: ${error.message}`);
       return data ?? null;
     },
-    async latestEventOfType(id, eventType) {
-      const { data } = await admin
+    async latestEvent(id) {
+      const { data, error } = await admin
         .from("visit_events")
         .select(EVENT_COLS)
         .eq("visit_id", id)
-        .eq("event_type", eventType)
         .order("event_at", { ascending: false })
         .limit(1)
         .maybeSingle<VisitEventRow>();
+      if (error) throw new Error(`visit_events read failed: ${error.message}`);
       return data ?? null;
     },
     async insertEvent(row) {

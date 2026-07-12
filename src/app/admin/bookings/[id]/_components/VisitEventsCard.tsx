@@ -18,7 +18,21 @@ export default async function VisitEventsCard({
   bookingId: string;
   scheduledStartIso: string;
 }) {
-  const events = await getVisitEventsForAdmin(bookingId);
+  let events;
+  try {
+    events = await getVisitEventsForAdmin(bookingId);
+  } catch {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <h2 className="text-xs uppercase tracking-wider text-slate-500 mb-3">
+          Visit events (GPS clock-in/out)
+        </h2>
+        <p className="text-sm text-[#B9651A]">
+          Couldn&apos;t load visit events. Refresh to try again.
+        </p>
+      </div>
+    );
+  }
   const durationMs = durationMsFromEvents(events);
   const deltaMin = clockInDeltaMinutes(scheduledStartIso, events);
 
@@ -38,8 +52,8 @@ export default async function VisitEventsCard({
             <span
               className={`inline-flex items-center rounded-md px-2 py-1 font-medium ${
                 deltaMin > 5
-                  ? "bg-rose-50 text-rose-700"
-                  : "bg-emerald-50 text-emerald-700"
+                  ? "bg-[#FBEEDF] text-[#B9651A]"
+                  : "bg-[#E6F5F5] text-[#016E70]"
               }`}
             >
               Clock-in {fmtDelta(deltaMin)}
@@ -77,7 +91,7 @@ export default async function VisitEventsCard({
                     <span
                       className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${
                         e.event_type === "clock_in"
-                          ? "bg-emerald-50 text-emerald-700"
+                          ? "bg-[#E6F5F5] text-[#016E70]"
                           : "bg-slate-100 text-slate-700"
                       }`}
                     >

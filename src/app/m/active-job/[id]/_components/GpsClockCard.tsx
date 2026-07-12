@@ -62,23 +62,28 @@ function fmtTime(iso: string): string {
 
 export default function GpsClockCard({ bookingId }: { bookingId: string }) {
   const [events, setEvents] = useState<VisitEvent[] | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState<ClockEventType | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    setLoadFailed(false);
     try {
       const res = await fetch(`/api/bookings/${bookingId}/events`, {
         cache: "no-store",
       });
       if (!res.ok) {
-        setEvents([]);
+        // Distinguish "failed to load" from "no events yet": leaving events as
+        // null and flagging the failure prevents showing "Clock in" (and risking
+        // a double-clock) when we simply couldn't read the current state.
+        setLoadFailed(true);
         return;
       }
       const json = (await res.json()) as { events?: VisitEvent[] };
       setEvents(json.events ?? []);
     } catch {
-      setEvents([]);
+      setLoadFailed(true);
     }
   }, [bookingId]);
 
@@ -104,7 +109,7 @@ export default function GpsClockCard({ bookingId }: { bookingId: string }) {
     if (!geo.ok) {
       if (geo.reason === "denied" || geo.reason === "unavailable") {
         setError(
-          "GPS permission required to clock in. Enable location for SpecialCarers in device settings.",
+          "GPS permission required to clock in. Enable location for Special Carer in device settings.",
         );
       } else {
         setError("Couldn't get a GPS fix in time. Please try again.");
@@ -146,6 +151,20 @@ export default function GpsClockCard({ bookingId }: { bookingId: string }) {
     } finally {
       setBusy(null);
     }
+  }
+
+  if (loadFailed) {
+    return (
+      <Card className="p-4 space-y-3">
+        <p className="text-[12px] text-[#0F1416] leading-relaxed">
+          Couldn&apos;t load your clock status. Check your connection and retry —
+          this won&apos;t clock you in or out.
+        </p>
+        <Button variant="outline" block onClick={() => void load()}>
+          Retry
+        </Button>
+      </Card>
+    );
   }
 
   if (events === null) {
@@ -204,7 +223,7 @@ export default function GpsClockCard({ bookingId }: { bookingId: string }) {
       )}
       {error && (
         <div className="space-y-2">
-          <p className="text-[12px] text-rose-700 leading-relaxed">{error}</p>
+          <p className="text-[12px] text-[#0F1416] leading-relaxed">{error}</p>
           <Button
             variant="outline"
             block

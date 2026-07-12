@@ -52,7 +52,7 @@ function makeEvent(
 
 function makeClient(opts: {
   booking?: ClockBookingRow | null;
-  latest?: Partial<Record<ClockEventType, VisitEventRow | null>>;
+  latest?: VisitEventRow | null;
 }): { client: ClockClient; inserts: VisitEventRow[] } {
   const inserts: VisitEventRow[] = [];
   const booking =
@@ -63,8 +63,8 @@ function makeClient(opts: {
     async getBooking() {
       return booking;
     },
-    async latestEventOfType(_id, type) {
-      return opts.latest?.[type] ?? null;
+    async latestEvent() {
+      return opts.latest ?? null;
     },
     async insertEvent(row) {
       const created = makeEvent(row.event_type, row.event_at);
@@ -120,13 +120,20 @@ describe("handleClock", () => {
     assert.equal(inserts[0].event_type, "clock_in");
   });
 
-  it("201 on a clock_out", async () => {
-    const { client } = makeClient({});
+  it("201 on a clock_out that closes an open clock_in", async () => {
+    const openedAt = "2026-07-12T08:00:00.000Z";
+    const now = Date.parse(openedAt) + 60 * 60_000; // 1h later
+    const { client, inserts } = makeClient({
+      latest: makeEvent("clock_in", openedAt),
+    });
     const res = await handleClock(client, {
       ...base,
       body: validBody({ event_type: "clock_out" }),
+      now,
     });
     assert.equal(res.status, 201);
+    assert.equal(inserts.length, 1);
+    assert.equal(inserts[0].event_type, "clock_out");
   });
 
   it("400 on an invalid body", async () => {
@@ -157,30 +164,67 @@ describe("handleClock", () => {
     assert.equal(res.status, 409);
   });
 
-  it("409 on a duplicate event within the 30s window", async () => {
-    const now = Date.parse("2026-07-12T09:00:30.000Z");
-    const recentIso = "2026-07-12T09:00:10.000Z"; // 20s earlier
+  it("409 already_clocked_in when the latest event is a clock_in", async () => {
+    const openedAt = "2026-07-12T08:00:00.000Z";
+    const now = Date.parse(openedAt) + 60 * 60_000; // well past the window
     const { client, inserts } = makeClient({
-      latest: { clock_in: makeEvent("clock_in", recentIso) },
+      latest: makeEvent("clock_in", openedAt),
     });
-    const res = await handleClock(client, {
-      ...base,
-      body: validBody(),
-      now,
-    });
+    const res = await handleClock(client, { ...base, body: validBody(), now });
     assert.equal(res.status, 409);
+    assert.ok("error" in res.body && res.body.error === "already_clocked_in");
     assert.equal(inserts.length, 0);
   });
 
-  it("allows a new event once the window has elapsed", async () => {
-    const recentIso = "2026-07-12T09:00:00.000Z";
-    const now = Date.parse(recentIso) + DUPLICATE_WINDOW_MS + 1;
-    const { client, inserts } = makeClient({
-      latest: { clock_in: makeEvent("clock_in", recentIso) },
+  it("409 no_open_clock_in on a clock_out with no open clock_in", async () => {
+    const { client, inserts } = makeClient({ latest: null });
+    const res = await handleClock(client, {
+      ...base,
+      body: validBody({ event_type: "clock_out" }),
+    });
+    assert.equal(res.status, 409);
+    assert.ok("error" in res.body && res.body.error === "no_open_clock_in");
+    assert.equal(inserts.length, 0);
+  });
+
+  it("409 no_open_clock_in on a clock_out after a clock_out", async () => {
+    const { client } = makeClient({
+      latest: makeEvent("clock_out", "2026-07-12T10:00:00.000Z"),
     });
     const res = await handleClock(client, {
       ...base,
-      body: validBody(),
+      body: validBody({ event_type: "clock_out" }),
+      now: Date.parse("2026-07-12T11:00:00.000Z"),
+    });
+    assert.equal(res.status, 409);
+    assert.ok("error" in res.body && res.body.error === "no_open_clock_in");
+  });
+
+  it("409 duplicate_event on a valid transition within the 30s window", async () => {
+    const openedAt = "2026-07-12T09:00:10.000Z";
+    const now = Date.parse(openedAt) + 20_000; // 20s later, still in window
+    const { client, inserts } = makeClient({
+      latest: makeEvent("clock_in", openedAt),
+    });
+    const res = await handleClock(client, {
+      ...base,
+      body: validBody({ event_type: "clock_out" }),
+      now,
+    });
+    assert.equal(res.status, 409);
+    assert.ok("error" in res.body && res.body.error === "duplicate_event");
+    assert.equal(inserts.length, 0);
+  });
+
+  it("allows the next event once the window has elapsed", async () => {
+    const openedAt = "2026-07-12T09:00:00.000Z";
+    const now = Date.parse(openedAt) + DUPLICATE_WINDOW_MS + 1;
+    const { client, inserts } = makeClient({
+      latest: makeEvent("clock_in", openedAt),
+    });
+    const res = await handleClock(client, {
+      ...base,
+      body: validBody({ event_type: "clock_out" }),
       now,
     });
     assert.equal(res.status, 201);

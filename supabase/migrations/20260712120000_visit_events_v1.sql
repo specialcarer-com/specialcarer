@@ -57,10 +57,27 @@ create table if not exists public.visit_events (
   created_at timestamptz not null default now()
 );
 
-create index if not exists visit_events_visit_idx
-  on public.visit_events (visit_id);
+-- Serves visit-scoped reads: the "latest event on this visit" lookup and the
+-- per-type min/max the duration helper needs. Leads with visit_id so it also
+-- covers plain visit_id filters (replaces a standalone (visit_id) index).
+create index if not exists visit_events_visit_type_event_at_idx
+  on public.visit_events (visit_id, event_type, event_at desc);
 create index if not exists visit_events_carer_event_at_idx
   on public.visit_events (carer_id, event_at desc);
+
+-- DB-level dedup as defence in depth beside the 30s app-layer window: at most
+-- one event of a given type per visit per clock-minute, so two concurrent
+-- requests from a double-tap cannot both insert. event_at is normalised to UTC
+-- because a bare date_trunc() over timestamptz is only STABLE — the AT TIME
+-- ZONE form is IMMUTABLE, which an index expression requires. Minute
+-- granularity is a deliberately coarse guard for this scaffold; a stricter
+-- "one open clock-in at a time" constraint is a follow-up.
+create unique index if not exists visit_events_no_dup_per_minute
+  on public.visit_events (
+    visit_id,
+    event_type,
+    (date_trunc('minute', event_at at time zone 'UTC'))
+  );
 
 -- ── RLS ──────────────────────────────────────────────────────────────────────
 alter table public.visit_events enable row level security;

@@ -22,12 +22,15 @@ export async function getVisitEventsForAdmin(
   visitId: string,
 ): Promise<VisitEvent[]> {
   const admin = createAdminClient();
-  const { data } = await admin
+  const { data, error } = await admin
     .from("visit_events")
     .select(COLS)
     .eq("visit_id", visitId)
     .order("event_at", { ascending: true })
     .returns<VisitEvent[]>();
+  // Never fail-open: a silent error would show an empty log to ops when events
+  // actually exist. Surface it so the caller can render an error state.
+  if (error) throw new Error(`visit_events read failed: ${error.message}`);
   return data ?? [];
 }
 

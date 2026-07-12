@@ -30,11 +30,14 @@ export async function GET(
   }
 
   const admin = createAdminClient();
-  const { data: booking } = await admin
+  const { data: booking, error: bookingErr } = await admin
     .from("bookings")
     .select("id, seeker_id, caregiver_id")
     .eq("id", visitId)
     .maybeSingle<{ id: string; seeker_id: string; caregiver_id: string | null }>();
+  if (bookingErr) {
+    return NextResponse.json({ error: "load_failed" }, { status: 500 });
+  }
   if (!booking) {
     return NextResponse.json({ error: "visit not found" }, { status: 404 });
   }
@@ -43,11 +46,14 @@ export async function GET(
     booking.seeker_id === user.id || booking.caregiver_id === user.id;
   let allowed = isParty;
   if (!allowed) {
-    const { data: prof } = await admin
+    const { data: prof, error: profErr } = await admin
       .from("profiles")
       .select("role")
       .eq("id", user.id)
       .maybeSingle<{ role: string | null }>();
+    if (profErr) {
+      return NextResponse.json({ error: "load_failed" }, { status: 500 });
+    }
     allowed = prof?.role === "admin";
   }
   if (!allowed) {
