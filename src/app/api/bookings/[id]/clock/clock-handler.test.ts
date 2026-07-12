@@ -11,11 +11,20 @@ import {
   type ClockClient,
   type ClockBookingRow,
   type VisitEventRow,
+  type InsertEventRow,
   type ClockEventType,
 } from "./clock-handler";
+import type { Coords } from "@/lib/geo/geofence";
 
 const CARER = "carer-1";
 const VISIT = "visit-1";
+
+// A client address ~5 m north of the carer's fixed test coords — inside the 50 m
+// geofence. 1° latitude ≈ 111320 m, so 0.000045° ≈ 5 m.
+const CARER_COORDS: Coords = { lat: 51.5074, lng: -0.1278 };
+const CLIENT_NEAR: Coords = { lat: 51.5074 + 0.000045, lng: -0.1278 };
+// ~500 m north — well outside the radius.
+const CLIENT_FAR: Coords = { lat: 51.5074 + 0.0045, lng: -0.1278 };
 
 function validBody(overrides: Record<string, unknown> = {}) {
   return {
@@ -46,6 +55,15 @@ function makeEvent(
     device_info: null,
     notes: null,
     photo_url: null,
+    photo_verification_status: "pending",
+    photo_similarity_score: null,
+    photo_verification_checked_at: null,
+    geofence_status: null,
+    distance_from_client_metres: null,
+    admin_override_by: null,
+    admin_override_reason: null,
+    admin_override_at: null,
+    verified_by_admin_id: null,
     created_at: eventAt,
   };
 }
@@ -53,8 +71,10 @@ function makeEvent(
 function makeClient(opts: {
   booking?: ClockBookingRow | null;
   latest?: VisitEventRow | null;
-}): { client: ClockClient; inserts: VisitEventRow[] } {
-  const inserts: VisitEventRow[] = [];
+  clientCoords?: Coords | null;
+  clientPostcode?: string | null;
+}): { client: ClockClient; inserts: InsertEventRow[] } {
+  const inserts: InsertEventRow[] = [];
   const booking =
     opts.booking === undefined
       ? { id: VISIT, caregiver_id: CARER, status: "in_progress" }
@@ -66,10 +86,20 @@ function makeClient(opts: {
     async latestEvent() {
       return opts.latest ?? null;
     },
+    async getClientLocation() {
+      return {
+        coords: opts.clientCoords === undefined ? CLIENT_NEAR : opts.clientCoords,
+        postcode: opts.clientPostcode ?? null,
+      };
+    },
     async insertEvent(row) {
+      inserts.push(row);
       const created = makeEvent(row.event_type, row.event_at);
       created.notes = row.notes;
-      inserts.push(created);
+      created.photo_url = row.photo_url;
+      created.photo_verification_status = row.photo_verification_status;
+      created.geofence_status = row.geofence_status;
+      created.distance_from_client_metres = row.distance_from_client_metres;
       return created;
     },
   };
@@ -229,5 +259,89 @@ describe("handleClock", () => {
     });
     assert.equal(res.status, 201);
     assert.equal(inserts.length, 1);
+  });
+});
+
+describe("handleClock geofence (clock_in hard block)", () => {
+  const base = { visitId: VISIT, carerId: CARER };
+
+  it("201 and records geofence_status=passed when inside the radius", async () => {
+    const { client, inserts } = makeClient({ clientCoords: CLIENT_NEAR });
+    const res = await handleClock(client, { ...base, body: validBody() });
+    assert.equal(res.status, 201);
+    assert.equal(inserts.length, 1);
+    assert.equal(inserts[0].geofence_status, "passed");
+    assert.equal(inserts[0].photo_verification_status, "pending");
+    assert.ok(
+      inserts[0].distance_from_client_metres != null &&
+        inserts[0].distance_from_client_metres < 50,
+    );
+  });
+
+  it("409 geofence_failed and does NOT insert when outside the radius", async () => {
+    const { client, inserts } = makeClient({ clientCoords: CLIENT_FAR });
+    const res = await handleClock(client, { ...base, body: validBody() });
+    assert.equal(res.status, 409);
+    assert.ok("error" in res.body && res.body.error === "geofence_failed");
+    assert.equal(inserts.length, 0);
+    assert.ok(
+      "distance_metres" in res.body &&
+        typeof res.body.distance_metres === "number" &&
+        res.body.distance_metres > 50,
+    );
+  });
+
+  it("surfaces the outward postcode as address_hint on failure", async () => {
+    const { client } = makeClient({
+      clientCoords: CLIENT_FAR,
+      clientPostcode: "sw1a 1aa",
+    });
+    const res = await handleClock(client, { ...base, body: validBody() });
+    assert.equal(res.status, 409);
+    assert.ok(
+      "address_hint" in res.body && res.body.address_hint === "SW1A",
+    );
+  });
+
+  it("201 with geofence_status=no_client_address when address is not geocoded", async () => {
+    const { client, inserts } = makeClient({ clientCoords: null });
+    const res = await handleClock(client, { ...base, body: validBody() });
+    assert.equal(res.status, 201);
+    assert.equal(inserts.length, 1);
+    assert.equal(inserts[0].geofence_status, "no_client_address");
+  });
+
+  it("does not fence a clock_out (geofence_status stays null)", async () => {
+    const openedAt = "2026-07-12T08:00:00.000Z";
+    const now = Date.parse(openedAt) + 60 * 60_000;
+    const { client, inserts } = makeClient({
+      latest: makeEvent("clock_in", openedAt),
+      clientCoords: CLIENT_FAR,
+    });
+    const res = await handleClock(client, {
+      ...base,
+      body: validBody({ event_type: "clock_out" }),
+      now,
+    });
+    assert.equal(res.status, 201);
+    assert.equal(inserts.length, 1);
+    assert.equal(inserts[0].geofence_status, null);
+  });
+
+  it("carries the photo path and pending status onto the insert", async () => {
+    const { client, inserts } = makeClient({ clientCoords: CLIENT_NEAR });
+    const eventId = "11111111-2222-3333-4444-555555555555";
+    const res = await handleClock(client, {
+      ...base,
+      body: validBody({
+        event_id: eventId,
+        photo_url: `${CARER}/${VISIT}/${eventId}.jpg`,
+        photo_verification_status: "pending",
+      }),
+    });
+    assert.equal(res.status, 201);
+    assert.equal(inserts[0].id, eventId);
+    assert.equal(inserts[0].photo_url, `${CARER}/${VISIT}/${eventId}.jpg`);
+    assert.equal(inserts[0].photo_verification_status, "pending");
   });
 });
