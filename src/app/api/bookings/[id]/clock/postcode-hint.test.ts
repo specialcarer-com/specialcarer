@@ -4,7 +4,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { readPostcodeHint } from "./route";
+import { readPostcodeHint } from "./postcode-hint";
 
 describe("readPostcodeHint", () => {
   it("returns the postcode when the fetch succeeds", async () => {
