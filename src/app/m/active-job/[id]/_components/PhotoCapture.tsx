@@ -148,7 +148,7 @@ export default function PhotoCapture({
     >
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-4">
         {phase === "denied" ? (
-          <div className="space-y-3 rounded-2xl bg-white p-5">
+          <div className="space-y-3 rounded-2xl bg-[#F4EFE6] p-5">
             <p className="text-[15px] font-bold text-heading">
               Camera access required
             </p>
@@ -161,7 +161,7 @@ export default function PhotoCapture({
             </Button>
           </div>
         ) : phase === "unavailable" ? (
-          <div className="space-y-3 rounded-2xl bg-white p-5">
+          <div className="space-y-3 rounded-2xl bg-[#F4EFE6] p-5">
             <p className="text-[15px] font-bold text-heading">
               Camera unavailable
             </p>
@@ -178,15 +178,19 @@ export default function PhotoCapture({
           </div>
         ) : (
           <>
-            <div className="relative mx-auto aspect-square w-full max-w-[320px] overflow-hidden rounded-full border-4 border-white/80 bg-black">
+            <div
+              className="relative mx-auto aspect-square w-full max-w-[320px] overflow-hidden rounded-full border-4 border-[#F4EFE6]/80 bg-[#0F1416]"
+              data-ph-no-capture
+            >
               <video
                 ref={videoRef}
                 playsInline
                 muted
                 className="h-full w-full object-cover"
+                data-ph-no-capture
               />
             </div>
-            <p className="text-center text-[13px] font-semibold text-white">
+            <p className="text-center text-[13px] font-semibold text-[#F4EFE6]">
               Position your face in the circle
             </p>
             <Button
@@ -202,14 +206,7 @@ export default function PhotoCapture({
             </Button>
             <button
               type="button"
-              className="text-center text-[13px] font-semibold text-white/80 underline"
-              onClick={() => finish({ kind: "skipped" })}
-            >
-              Skip photo (ops review required)
-            </button>
-            <button
-              type="button"
-              className="text-center text-[12px] text-white/60"
+              className="text-center text-[12px] text-[#F4EFE6]/60"
               onClick={() => finish({ kind: "cancelled" })}
             >
               Cancel

@@ -21,6 +21,25 @@ import {
 
 export const dynamic = "force-dynamic";
 
+const VISIT_PHOTO_BUCKET = "visit-photos";
+
+/**
+ * Load the coarse postcode hint without letting a failure sink the clock-in.
+ * The hint only ever decorates a geofence-failure message, so a read error
+ * degrades to `null` rather than bubbling to a 500 (#6).
+ */
+export async function readPostcodeHint(
+  fetchPostcode: () => Promise<string | null>,
+): Promise<string | null> {
+  try {
+    return await fetchPostcode();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn("[clock] postcode hint unavailable", msg);
+    return null;
+  }
+}
+
 const EVENT_COLS =
   "id, visit_id, carer_id, event_type, event_at, latitude, longitude, accuracy_metres, client_reported_at, server_recorded_at, device_info, notes, photo_url, photo_verification_status, photo_similarity_score, photo_verification_checked_at, geofence_status, distance_from_client_metres, admin_override_by, admin_override_reason, admin_override_at, verified_by_admin_id, created_at";
 
@@ -82,15 +101,26 @@ export async function POST(
           ? { lat: Number(row.lat), lng: Number(row.lng) }
           : null;
 
-      const { data: bookingRow, error: pcErr } = await admin
-        .from("bookings")
-        .select("location_postcode")
-        .eq("id", id)
-        .maybeSingle<{ location_postcode: string | null }>();
-      if (pcErr) {
-        throw new Error(`client postcode read failed: ${pcErr.message}`);
+      const postcode = await readPostcodeHint(async () => {
+        const { data: bookingRow, error: pcErr } = await admin
+          .from("bookings")
+          .select("location_postcode")
+          .eq("id", id)
+          .maybeSingle<{ location_postcode: string | null }>();
+        if (pcErr) {
+          throw new Error(`client postcode read failed: ${pcErr.message}`);
+        }
+        return bookingRow?.location_postcode ?? null;
+      });
+      return { coords, postcode };
+    },
+    async deletePhoto(path) {
+      const { error } = await admin.storage
+        .from(VISIT_PHOTO_BUCKET)
+        .remove([path]);
+      if (error) {
+        throw new Error(`selfie cleanup failed: ${error.message}`);
       }
-      return { coords, postcode: bookingRow?.location_postcode ?? null };
     },
     async insertEvent(row) {
       const { data, error } = await admin

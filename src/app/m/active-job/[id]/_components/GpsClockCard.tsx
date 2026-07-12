@@ -182,6 +182,7 @@ export default function GpsClockCard({ bookingId }: { bookingId: string }) {
     if (result.kind === "skipped") {
       await submitClock("clock_in", coords, {
         photoStatus: "skipped",
+        verificationNote: "camera unavailable",
         flaggedNote: "Photo skipped — this shift is flagged for ops review.",
       });
       setBusy(null);
@@ -202,6 +203,7 @@ export default function GpsClockCard({ bookingId }: { bookingId: string }) {
       await submitClock("clock_in", coords, {
         eventId,
         photoStatus: "error",
+        verificationNote: "upload failed",
         flaggedNote:
           "Photo upload failed — clocked in, but the shift is flagged for ops review.",
       });
@@ -237,9 +239,14 @@ export default function GpsClockCard({ bookingId }: { bookingId: string }) {
       eventId?: string;
       photoUrl?: string;
       photoStatus?: CarerPhotoStatus;
+      verificationNote?: string;
       flaggedNote?: string;
     },
   ) {
+    const failCopy =
+      eventType === "clock_in"
+        ? "Try again — your clock-in has not been recorded."
+        : "Try again — your clock-out has not been recorded.";
     try {
       const res = await fetch(`/api/bookings/${bookingId}/clock`, {
         method: "POST",
@@ -254,6 +261,9 @@ export default function GpsClockCard({ bookingId }: { bookingId: string }) {
           ...(opts.photoUrl ? { photo_url: opts.photoUrl } : {}),
           ...(opts.photoStatus
             ? { photo_verification_status: opts.photoStatus }
+            : {}),
+          ...(opts.verificationNote
+            ? { verification_note: opts.verificationNote }
             : {}),
         }),
       });
@@ -271,11 +281,7 @@ export default function GpsClockCard({ bookingId }: { bookingId: string }) {
             `You appear to be ${dist} from the client's address (must be within 50m). Move closer and try again, or contact ops for an override.`,
           );
         } else {
-          setError(
-            j.error === undefined
-              ? "Try again — your clock-in has not been recorded."
-              : j.error,
-          );
+          setError(j.error === undefined ? failCopy : j.error);
         }
         return;
       }
@@ -287,7 +293,7 @@ export default function GpsClockCard({ bookingId }: { bookingId: string }) {
       );
       await load();
     } catch {
-      setError("Try again — your clock-in has not been recorded.");
+      setError(failCopy);
     }
   }
 

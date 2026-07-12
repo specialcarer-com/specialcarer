@@ -10,12 +10,11 @@
  * decision (manual or, later, automated) is recorded.
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { PhotoVerificationStatus } from "@/lib/admin/visit-events";
 
-type Status = "pending" | "passed" | "failed" | "skipped" | "error";
-
-const BADGE: Record<Status, { label: string; cls: string }> = {
+const BADGE: Record<PhotoVerificationStatus, { label: string; cls: string }> = {
   // passed = brand teal, failed = brand peach, skipped/error/pending = muted.
   passed: { label: "Match verified", cls: "bg-[#E6F5F5] text-[#016E70]" },
   failed: { label: "Match failed", cls: "bg-[#FBEEDF] text-[#B9651A]" },
@@ -33,7 +32,7 @@ export default function VisitPhotoCell({
 }: {
   eventId: string;
   signedUrl: string | null;
-  status: Status;
+  status: PhotoVerificationStatus;
   similarityPct: string | null;
   verifiedByName: string | null;
 }) {
@@ -41,8 +40,28 @@ export default function VisitPhotoCell({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const closeRef = useRef<HTMLButtonElement | null>(null);
 
   const badge = BADGE[status];
+
+  // Modal a11y: close on ESC, trap focus on the close control while open, and
+  // return focus to the thumbnail trigger on close.
+  useEffect(() => {
+    if (!open) return;
+    closeRef.current?.focus();
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setOpen(false);
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      triggerRef.current?.focus();
+    };
+  }, [open]);
 
   async function review(next: "passed" | "failed") {
     setBusy(true);
@@ -69,9 +88,10 @@ export default function VisitPhotoCell({
   }
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5" data-ph-no-capture>
       {signedUrl ? (
         <button
+          ref={triggerRef}
           type="button"
           onClick={() => setOpen(true)}
           className="block h-14 w-14 overflow-hidden rounded-lg border border-slate-200"
@@ -82,6 +102,7 @@ export default function VisitPhotoCell({
             src={signedUrl}
             alt="Clock-in selfie"
             className="h-full w-full object-cover"
+            data-ph-no-capture
           />
         </button>
       ) : (
@@ -130,13 +151,28 @@ export default function VisitPhotoCell({
           className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F1416]/80 p-6"
           role="dialog"
           aria-modal="true"
+          aria-label="Clock-in photo (full size)"
           onClick={() => setOpen(false)}
         >
+          <button
+            ref={closeRef}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpen(false);
+            }}
+            className="absolute right-4 top-4 rounded-md bg-[#F4EFE6] px-3 py-1 text-sm font-medium text-[#0F1416]"
+            aria-label="Close photo"
+          >
+            Close
+          </button>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={signedUrl}
             alt="Clock-in selfie (full size)"
             className="max-h-[85vh] max-w-[90vw] rounded-xl object-contain"
+            data-ph-no-capture
+            onClick={(e) => e.stopPropagation()}
           />
         </div>
       )}

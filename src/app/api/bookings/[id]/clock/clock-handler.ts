@@ -40,6 +40,7 @@ export type ParsedClockBody = {
   event_id?: string;
   photo_url?: string | null;
   photo_verification_status?: CarerPhotoStatus;
+  verification_note?: string | null;
 };
 
 export type ParseClockResult =
@@ -47,6 +48,7 @@ export type ParseClockResult =
   | { ok: false; error: string };
 
 const NOTES_MAX = 1000;
+const VERIFICATION_NOTE_MAX = 200;
 const PHOTO_URL_MAX = 512;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -141,6 +143,23 @@ export function parseClockBody(body: unknown): ParseClockResult {
     photoStatus = b.photo_verification_status as CarerPhotoStatus;
   }
 
+  // Short ops-facing reason the device attaches when it downgrades the photo
+  // status (e.g. "camera unavailable", "upload failed") so review has context.
+  let verificationNote: string | null | undefined;
+  if (b.verification_note != null) {
+    if (typeof b.verification_note !== "string") {
+      return { ok: false, error: "verification_note must be a string" };
+    }
+    const trimmed = b.verification_note.trim();
+    if (trimmed.length > VERIFICATION_NOTE_MAX) {
+      return {
+        ok: false,
+        error: `verification_note must be ${VERIFICATION_NOTE_MAX} characters or fewer`,
+      };
+    }
+    verificationNote = trimmed.length > 0 ? trimmed : null;
+  }
+
   return {
     ok: true,
     value: {
@@ -153,8 +172,27 @@ export function parseClockBody(body: unknown): ParseClockResult {
       event_id: eventId,
       photo_url: photoUrl,
       photo_verification_status: photoStatus,
+      verification_note: verificationNote,
     },
   };
+}
+
+/**
+ * True when a selfie storage path provably belongs to this carer + visit.
+ *
+ * Stored paths are bucket-relative `{carerId}/{visitId}/{eventId}.jpg`; we also
+ * tolerate a leading `visit-photos/` bucket segment. A tampered prefix (another
+ * carer, wrong visit) or any `..` traversal fails closed.
+ */
+export function photoPathBelongsTo(
+  photoUrl: string,
+  carerId: string,
+  visitId: string,
+): boolean {
+  if (photoUrl.includes("..")) return false;
+  const path = photoUrl.replace(/^visit-photos\//, "");
+  const prefix = `${carerId}/${visitId}/`;
+  return path.startsWith(prefix) && path.length > prefix.length;
 }
 
 /** Minimum gap between two events of the same type on the same visit. */
@@ -220,6 +258,7 @@ export type InsertEventRow = {
   notes: string | null;
   photo_url: string | null;
   photo_verification_status: PhotoVerificationStatusValue;
+  verification_note: string | null;
   geofence_status: GeofenceStatusValue | null;
   distance_from_client_metres: number | null;
 };
@@ -237,6 +276,11 @@ export type ClockClient = {
     visitId: string,
   ) => Promise<{ coords: Coords | null; postcode: string | null }>;
   insertEvent: (row: InsertEventRow) => Promise<VisitEventRow>;
+  /**
+   * Best-effort removal of a carer's just-uploaded selfie when the clock event
+   * is rejected (see #8). Optional so unit stubs that never upload can omit it.
+   */
+  deletePhoto?: (path: string) => Promise<void>;
 };
 
 export type GeofenceFailedBody = {
@@ -275,18 +319,48 @@ export async function handleClock(
   }
   const input = parsed.value;
 
+  // #5: bind the selfie path to THIS carer + visit before anything else. A
+  // tampered path (another carer's prefix, wrong visit, `..` traversal) is
+  // rejected outright — never stored, and never deleted, since we must not
+  // touch a storage path we cannot prove belongs to the caller.
+  let photoPath: string | null = null;
+  if (input.photo_url) {
+    if (!photoPathBelongsTo(input.photo_url, args.carerId, args.visitId)) {
+      return {
+        status: 400,
+        body: { error: "photo_url does not belong to this carer and visit" },
+      };
+    }
+    photoPath = input.photo_url;
+  }
+
+  // #8: any non-201 outcome from here on would orphan the selfie the carer
+  // already uploaded (GDPR + storage cost). Delete it best-effort on the way
+  // out. Only the path validated above is ever removed; a reaper job sweeps
+  // survivors of a failed delete.
+  const abort = async (result: ClockResult): Promise<ClockResult> => {
+    if (photoPath && client.deletePhoto) {
+      try {
+        await client.deletePhoto(photoPath);
+      } catch {
+        // best-effort; reaper follow-up cleans anything left behind.
+      }
+    }
+    return result;
+  };
+
   const booking = await client.getBooking(args.visitId);
   if (!booking) {
-    return { status: 404, body: { error: "visit not found" } };
+    return abort({ status: 404, body: { error: "visit not found" } });
   }
   if (booking.caregiver_id !== args.carerId) {
-    return { status: 403, body: { error: "not the assigned carer" } };
+    return abort({ status: 403, body: { error: "not the assigned carer" } });
   }
   if (!CLOCKABLE_STATUSES.has(booking.status)) {
-    return {
+    return abort({
       status: 409,
       body: { error: `cannot clock a ${booking.status} visit` },
-    };
+    });
   }
 
   const now = args.now ?? Date.now();
@@ -295,10 +369,10 @@ export async function handleClock(
   // Events must strictly alternate clock_in → clock_out → clock_in … A carer
   // cannot clock out without an open clock-in, nor clock in twice in a row.
   if (input.event_type === "clock_in" && latest?.event_type === "clock_in") {
-    return { status: 409, body: { error: "already_clocked_in" } };
+    return abort({ status: 409, body: { error: "already_clocked_in" } });
   }
   if (input.event_type === "clock_out" && latest?.event_type !== "clock_in") {
-    return { status: 409, body: { error: "no_open_clock_in" } };
+    return abort({ status: 409, body: { error: "no_open_clock_in" } });
   }
 
   // Rate limit: reject a rapid repeat submit within the window. Guards against a
@@ -307,7 +381,7 @@ export async function handleClock(
   if (latest) {
     const since = now - new Date(latest.event_at).getTime();
     if (since >= 0 && since < DUPLICATE_WINDOW_MS) {
-      return { status: 409, body: { error: "duplicate_event" } };
+      return abort({ status: 409, body: { error: "duplicate_event" } });
     }
   }
 
@@ -329,7 +403,7 @@ export async function handleClock(
     if (geo.status === "failed") {
       // Outside the radius → do NOT insert. The carer is genuinely elsewhere;
       // an ops override endpoint exists for the auditable exception path.
-      return {
+      return abort({
         status: 409,
         body: {
           error: "geofence_failed",
@@ -337,7 +411,7 @@ export async function handleClock(
           threshold_metres: geo.thresholdMetres,
           address_hint: outwardCode(location.postcode),
         },
-      };
+      });
     }
     // passed / no_client_address / no_carer_location → allow the insert. The
     // last two are data-quality flags surfaced to ops, not security failures.
@@ -358,6 +432,7 @@ export async function handleClock(
     photo_url: input.photo_url ?? null,
     // Default to pending; the carer's device may downgrade to skipped/error.
     photo_verification_status: input.photo_verification_status ?? "pending",
+    verification_note: input.verification_note ?? null,
     geofence_status: geofenceStatus,
     distance_from_client_metres: distanceMetres,
   });

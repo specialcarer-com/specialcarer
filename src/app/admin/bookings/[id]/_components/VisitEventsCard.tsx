@@ -160,7 +160,7 @@ export default async function VisitEventsCard({
                         <span className="text-slate-400">—</span>
                       )}
                     </td>
-                    <td className="py-2 pr-4 align-top">
+                    <td className="py-2 pr-4 align-top" data-ph-no-capture>
                       {geoBadge ? (
                         <div className="flex flex-col gap-1">
                           <span
@@ -184,7 +184,10 @@ export default async function VisitEventsCard({
                         <span className="text-slate-400">—</span>
                       )}
                     </td>
-                    <td className="py-2 pr-4 whitespace-nowrap">
+                    <td
+                      className="py-2 pr-4 whitespace-nowrap"
+                      data-ph-no-capture
+                    >
                       {e.latitude != null && e.longitude != null ? (
                         <a
                           href={`https://www.google.com/maps?q=${e.latitude},${e.longitude}`}

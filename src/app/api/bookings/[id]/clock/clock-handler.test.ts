@@ -73,8 +73,9 @@ function makeClient(opts: {
   latest?: VisitEventRow | null;
   clientCoords?: Coords | null;
   clientPostcode?: string | null;
-}): { client: ClockClient; inserts: InsertEventRow[] } {
+}): { client: ClockClient; inserts: InsertEventRow[]; deletes: string[] } {
   const inserts: InsertEventRow[] = [];
+  const deletes: string[] = [];
   const booking =
     opts.booking === undefined
       ? { id: VISIT, caregiver_id: CARER, status: "in_progress" }
@@ -102,8 +103,11 @@ function makeClient(opts: {
       created.distance_from_client_metres = row.distance_from_client_metres;
       return created;
     },
+    async deletePhoto(path) {
+      deletes.push(path);
+    },
   };
-  return { client, inserts };
+  return { client, inserts, deletes };
 }
 
 describe("parseClockBody", () => {
@@ -343,5 +347,127 @@ describe("handleClock geofence (clock_in hard block)", () => {
     assert.equal(inserts[0].id, eventId);
     assert.equal(inserts[0].photo_url, `${CARER}/${VISIT}/${eventId}.jpg`);
     assert.equal(inserts[0].photo_verification_status, "pending");
+  });
+});
+
+describe("handleClock photo path binding (#5) and orphan cleanup (#8)", () => {
+  const base = { visitId: VISIT, carerId: CARER };
+  const evt = "11111111-2222-3333-4444-555555555555";
+
+  it("400 and no insert/delete when photo_url is another carer's prefix", async () => {
+    const { client, inserts, deletes } = makeClient({ clientCoords: CLIENT_NEAR });
+    const res = await handleClock(client, {
+      ...base,
+      body: validBody({ photo_url: `carer-999/${VISIT}/${evt}.jpg` }),
+    });
+    assert.equal(res.status, 400);
+    assert.equal(inserts.length, 0);
+    // Must NOT touch a path we can't prove belongs to the caller.
+    assert.equal(deletes.length, 0);
+  });
+
+  it("400 when photo_url is for a different visit", async () => {
+    const { client } = makeClient({ clientCoords: CLIENT_NEAR });
+    const res = await handleClock(client, {
+      ...base,
+      body: validBody({ photo_url: `${CARER}/visit-999/${evt}.jpg` }),
+    });
+    assert.equal(res.status, 400);
+  });
+
+  it("400 when photo_url attempts path traversal", async () => {
+    const { client, deletes } = makeClient({ clientCoords: CLIENT_NEAR });
+    const res = await handleClock(client, {
+      ...base,
+      body: validBody({ photo_url: `${CARER}/${VISIT}/../../secrets.jpg` }),
+    });
+    assert.equal(res.status, 400);
+    assert.equal(deletes.length, 0);
+  });
+
+  it("accepts a bucket-prefixed path that still binds to carer/visit", async () => {
+    const { client, inserts } = makeClient({ clientCoords: CLIENT_NEAR });
+    const res = await handleClock(client, {
+      ...base,
+      body: validBody({
+        event_id: evt,
+        photo_url: `visit-photos/${CARER}/${VISIT}/${evt}.jpg`,
+      }),
+    });
+    assert.equal(res.status, 201);
+    assert.equal(inserts.length, 1);
+  });
+
+  it("deletes the validated selfie when clock-in is geofence-rejected", async () => {
+    const path = `${CARER}/${VISIT}/${evt}.jpg`;
+    const { client, inserts, deletes } = makeClient({ clientCoords: CLIENT_FAR });
+    const res = await handleClock(client, {
+      ...base,
+      body: validBody({ event_id: evt, photo_url: path }),
+    });
+    assert.equal(res.status, 409);
+    assert.equal(inserts.length, 0);
+    assert.deepEqual(deletes, [path]);
+  });
+
+  it("deletes the validated selfie on a duplicate/already-clocked-in reject", async () => {
+    const path = `${CARER}/${VISIT}/${evt}.jpg`;
+    const openedAt = "2026-07-12T08:00:00.000Z";
+    const now = Date.parse(openedAt) + 60 * 60_000;
+    const { client, deletes } = makeClient({
+      latest: makeEvent("clock_in", openedAt),
+      clientCoords: CLIENT_NEAR,
+    });
+    const res = await handleClock(client, {
+      ...base,
+      body: validBody({ event_id: evt, photo_url: path }),
+      now,
+    });
+    assert.equal(res.status, 409);
+    assert.deepEqual(deletes, [path]);
+  });
+
+  it("does NOT delete on a successful clock-in", async () => {
+    const path = `${CARER}/${VISIT}/${evt}.jpg`;
+    const { client, inserts, deletes } = makeClient({ clientCoords: CLIENT_NEAR });
+    const res = await handleClock(client, {
+      ...base,
+      body: validBody({ event_id: evt, photo_url: path }),
+    });
+    assert.equal(res.status, 201);
+    assert.equal(inserts.length, 1);
+    assert.equal(deletes.length, 0);
+  });
+});
+
+describe("handleClock verification_note (#11)", () => {
+  const base = { visitId: VISIT, carerId: CARER };
+
+  it("carries a skip/error verification_note onto the insert", async () => {
+    const { client, inserts } = makeClient({ clientCoords: CLIENT_NEAR });
+    const res = await handleClock(client, {
+      ...base,
+      body: validBody({
+        photo_verification_status: "skipped",
+        verification_note: "camera unavailable",
+      }),
+    });
+    assert.equal(res.status, 201);
+    assert.equal(inserts[0].verification_note, "camera unavailable");
+  });
+
+  it("defaults verification_note to null when absent", async () => {
+    const { client, inserts } = makeClient({ clientCoords: CLIENT_NEAR });
+    const res = await handleClock(client, { ...base, body: validBody() });
+    assert.equal(res.status, 201);
+    assert.equal(inserts[0].verification_note, null);
+  });
+
+  it("rejects an over-long verification_note", () => {
+    const long = "x".repeat(201);
+    assert.equal(
+      parseClockBody(validBody({ verification_note: long })).ok,
+      false,
+    );
   });
 });
