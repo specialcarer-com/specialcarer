@@ -67,21 +67,29 @@ Sprints are **2 weeks**, starting Mondays. Each sprint has a **theme**, **must-s
 
 ---
 
-### Sprint 5 (placeholder): "Compliance & Safeguarding"
-**Dates:** Mon 10 Aug → Fri 21 Aug (proposed)
-**Theme:** UK regulator readiness. This lane needs founder input before committing items.
-
-<!-- TBD: founder to specify concrete deliverables. Candidates flagged by review:
-     - CQC registration deliverables (RI application, statement of purpose finalisation)
-     - ICO / GDPR data-mapping (Article 30 records, DPIA for AI features)
-     - Safeguarding incident reporting flow (in-app + LADO escalation)
-     - DBS expiry tracking + automated renewal reminders
-     Add rows to the table below when scoped.
--->
+### Sprint 5: "Compliance & Safeguarding"
+**Dates:** Mon 10 Aug → Fri 21 Aug
+**Theme:** UK regulator readiness. CQC submission-ready evidence pack, ICO Article 30 record + AI DPIA published, live in-app safeguarding incident flow with escalation rota, and DBS operational continuity while uCheck RO approval is pending.
 
 | # | Item | Source | Effort | Acceptance |
 |---|------|--------|--------|------------|
-| 5.x | *TBD — see comment above* | — | — | — |
+| 5.1 | **CQC next-tranche pack — draft + internal review** | Internal (CQC prep) | ~2 days | Four new documents drafted using existing `build_*.py` helpers: Duty of Candour (SC-POL-10), Freedom to Speak Up / Whistleblowing (SC-POL-11), Risk Assessment register (SC-DOC-06), Person-Centred Care policy. All cross-consistent on carer pay (£14/£21/£28), SE-London launch area, £200K opening capital, three-tier clinical workforce. Bundled as `specialcarer_cqc_pack_v1_5.zip`. Reviewed and approved by RM Victoria Oluwaseun. |
+| 5.2 | **CQC submission-ready checklist + evidence pack finalisation** | Internal (CQC prep) | ~1 day | Written checklist covering: v1.x + v1.5 pack merged, Statement of Purpose finalised, RI Fit Person interview prep notes, insurance evidence attached, financial forecast attached, Safeguarding Lead named, DBS/RTW/references for RM and NI attached. Each row ticked or explicitly deferred with owner + date. Portal submission moves to stretch (5.8) once checklist is 100% ticked. |
+| 5.3 | **DBS operational continuity — manual path documented, uCheck chase automated** | Internal (Gap: DBS-1 manual) | ~1 day | Runbook `docs/operations/dbs-manual-recheck.md` describes end-to-end manual admin flow via secure.crbonline.gov.uk with screenshots. Weekly cron chases uCheck RO team via templated email until approval or rejection. Existing `DbsProvider` automation code untouched; ready to flip on approval. |
+| 5.4 | **Safeguarding incident reporting flow (in-app) with escalation rota** | Internal (Gap: safeguarding) | ~2 days | New `/m/report` route: form captures type / severity / subject / narrative / LADO-required flag. Writes to `safeguarding_incidents` table with immutable audit log. Notification rota: (1) push + email to RM Victoria immediately, (2) auto-escalate to NI Steve if no acknowledgement within 15 min, (3) tertiary alert to `safeguarding@` shared inbox. LADO 24-hour reminder queued when flag is set. Test incident → all three tiers verified in staging. |
+| 5.5 | **DBS expiry tracking + automated renewal reminders** | Internal | ~1 day | Nightly cron flags carers whose DBS certificate expires in ≤60 days. Carer receives push + email at 60/30/14/7 days. Admin dashboard has "Expiring DBS" view with sort by days-remaining. Independent of uCheck outcome — works with the current manual path. |
+| 5.6 | **ICO Article 30 records + AI DPIA** | Internal (ICO/GDPR) | ~1 day | Article 30 register published to `docs/compliance/records-of-processing.md` covering all data flows. Separate DPIA covering AI features (care-note summarisation #78, planned predictive risk V1 in 3.2, planned ML matching V2 in 3.4): legal basis, necessity + proportionality test, data minimisation, retention, subject-rights process, DPO contact. Both documents versioned and dated. |
+| 5.7 | **Safeguarding poster ack on carer sign-in** | Internal | ~½ day | Modal on next carer sign-in requires acknowledgement of the current `specialcarer_safeguarding_poster` version. Ack stored with `carer_id`, `poster_version`, timestamp. Blocks app usage until acknowledged. Coverage report available in admin dashboard. |
+| **Stretch 5.8** | **CQC portal submission** | Internal | ~½ day | If checklist 5.2 comes back 100% ticked with time to spare, submit to CQC portal. Reference number captured, RM interview date booked. Otherwise carries to Sprint 6 opening. |
+
+**Demo at end of sprint:** RM Victoria receives a test safeguarding push within 60 seconds of a mock incident being submitted; the LADO 24-hour reminder is visible in her admin dashboard queue; the CQC pack v1.5 zip is generated and attached to the submission-ready checklist which shows every row ticked; a carer with a DBS expiring in 55 days sees the renewal banner on next app open; the Article 30 register and AI DPIA are live under `/docs/compliance/`.
+
+**Total committed effort:** ~8.5 dev-days (5.1–5.7) across 10 working days. Stretch 5.8 depends on 5.2 outcome.
+
+**Dependencies / risks:**
+- 5.3 depends on uCheck responding; if no response by end of sprint, dev impact is zero (manual path continues) — pure operational risk.
+- 5.4 requires push infrastructure (already live) and a shared `safeguarding@` inbox — create in Resend if not already present.
+- 5.6 AI DPIA requires clarity on care-note summarisation training data usage — confirm with model provider (Anthropic / OpenAI) before finalising retention section.
 
 ---
 
