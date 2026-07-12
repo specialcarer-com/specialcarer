@@ -12,7 +12,7 @@
  * tested without spinning up the RN bridge. The wiring into `Notifications`
  * lives in `WebShell.tsx`.
  */
-export const WEB_DEEPLINK_ORIGIN_DEFAULT = "https://specialcarer.com";
+export const WEB_DEEPLINK_ORIGIN_DEFAULT = "https://specialcarers.com";
 
 export type DeeplinkRoute =
   | { kind: "web"; path: string }

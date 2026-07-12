@@ -7,6 +7,7 @@ import MessagesPanel from "./messages-panel";
 import BookingActions from "./booking-actions";
 import ReviewPanel from "./review-panel";
 import { CARER_FEE_PERCENT } from "@/lib/fees/config";
+import { formatGBP } from "@/lib/pricing";
 import Image from "next/image";
 import CareSummaryCard from "@/components/CareSummaryCard";
 
@@ -103,14 +104,13 @@ export default async function BookingDetailPage({
     now.getTime() >= startsAt.getTime() - 15 * 60_000 &&
     now.getTime() <= trackingWindowEnd.getTime();
 
-  const currencySymbol = booking.currency?.toLowerCase() === "usd" ? "$" : "£";
-  const total = (booking.total_cents ?? 0) / 100;
   // Carer take-home: subtotal − carer-side deduction (CARER_FEE_PERCENT).
   const carerPayoutCents =
     (booking.subtotal_cents ?? 0) -
     Math.round(((booking.subtotal_cents ?? 0) * CARER_FEE_PERCENT) / 100);
-  const carerPayout = carerPayoutCents / 100;
-  const displayAmount = isCaregiver ? carerPayout : total;
+  const displayCents = isCaregiver
+    ? carerPayoutCents
+    : booking.total_cents ?? 0;
   const displayLabel = isCaregiver ? "take-home" : "";
 
   const role = isCaregiver ? "caregiver" : "seeker";
@@ -165,8 +165,7 @@ export default async function BookingDetailPage({
               hour: "2-digit",
               minute: "2-digit",
             })}{" "}
-            · {booking.hours} hours · {currencySymbol}
-            {displayAmount.toFixed(2)}
+            · {booking.hours} hours · {formatGBP(displayCents)}
             {displayLabel && (
               <span className="ml-1 text-xs text-slate-500">{displayLabel}</span>
             )}
@@ -228,9 +227,7 @@ export default async function BookingDetailPage({
               bookingId={booking.id}
               caregiverName={otherProfile?.full_name ?? "your caregiver"}
               existing={existingReview}
-              currency={
-                booking.currency?.toLowerCase() === "usd" ? "USD" : "GBP"
-              }
+              currency="GBP"
             />
           )}
 

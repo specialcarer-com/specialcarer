@@ -4,64 +4,61 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
-<title>Confirm your SpecialCarers account</title>
+<title>Your SpecialCarers verification code</title>
 <!--[if mso]>
 <style>* { font-family: Arial, sans-serif !important; }</style>
 <![endif]-->
 </head>
 <body style="margin:0;padding:0;background:#F4EFE6;font-family:'Plus Jakarta Sans','Inter',Arial,sans-serif;color:#0F1416;-webkit-font-smoothing:antialiased;">
-<div style="display:none;max-height:0;overflow:hidden;opacity:0">Welcome to SpecialCarers. Confirm your email to activate your account.</div>
+<div style="display:none;max-height:0;overflow:hidden;opacity:0">Welcome to SpecialCarers. Your verification code: {{ .Token }}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F4EFE6;padding:32px 16px;">
   <tr>
     <td align="center">
       <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background:#FFFFFF;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(15,20,22,0.06);">
         <tr>
           <td align="center" style="padding:32px 24px 16px 24px;">
-            <img src="https://specialcarer.com/brand/logo-wordmark-email.png" alt="SpecialCarers" width="200" height="150" style="display:block;border:0;outline:none;width:200px;height:150px;max-width:200px;">
+            <img src="https://specialcarers.com/brand/logo-wordmark-email.png" alt="SpecialCarers" width="200" height="150" style="display:block;border:0;outline:none;width:200px;height:150px;max-width:200px;">
           </td>
         </tr>
         <tr>
           <td style="padding:8px 40px 0 40px;">
             <h1 style="margin:0 0 12px 0;font-size:24px;line-height:32px;font-weight:700;color:#0F1416;letter-spacing:-0.01em;">Welcome to SpecialCarers</h1>
-            <p style="margin:0 0 16px 0;font-size:16px;line-height:24px;color:#0F1416;">
-              Thanks for signing up. To activate your account and start booking trusted carers, please confirm your email address.
-            </p>
-            <p style="margin:0 0 28px 0;font-size:16px;line-height:24px;color:#0F1416;">
-              This link expires in 24 hours.
+            <p style="margin:0 0 24px 0;font-size:16px;line-height:24px;color:#0F1416;">
+              Thanks for signing up. Enter the verification code below to activate your account.
             </p>
           </td>
         </tr>
         <tr>
           <td align="center" style="padding:0 40px 8px 40px;">
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-              <tr>
-                <td align="center" bgcolor="#039EA0" style="border-radius:9999px;mso-padding-alt:14px 28px;">
-                  <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup" style="display:inline-block;padding:14px 28px;font-family:'Plus Jakarta Sans','Inter',Arial,sans-serif;font-size:16px;font-weight:700;color:#FFFFFF;text-decoration:none;border-radius:9999px;background:#039EA0;line-height:20px;">
-                    Confirm email
-                  </a>
-                </td>
-              </tr>
-            </table>
+            <div style="display:inline-block;padding:20px 32px;background:#F4EFE6;border-radius:12px;font-family:'SFMono-Regular','Consolas','Liberation Mono',Menlo,monospace;font-size:34px;font-weight:700;letter-spacing:0.18em;color:#039EA0;line-height:1;">
+              {{ .Token }}
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:20px 40px 0 40px;">
+            <p style="margin:0 0 8px 0;font-size:14px;line-height:22px;color:#6B7280;">
+              This code expires in 1 hour and can only be used once. Go back to the SpecialCarers tab where you signed up and paste it in.
+            </p>
           </td>
         </tr>
         <tr>
           <td style="padding:24px 40px 8px 40px;">
-            <p style="margin:0 0 8px 0;font-size:13px;line-height:20px;color:#6B7280;">
-              If the button doesn't work, copy and paste this link into your browser:
-            </p>
-            <p style="margin:0;font-size:13px;line-height:20px;word-break:break-all;">
-              <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup" style="color:#039EA0;text-decoration:underline;">{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup</a>
-            </p>
+            <div style="border-top:1px solid #F4EFE6;padding-top:20px;">
+              <p style="margin:0 0 10px 0;font-size:13px;line-height:20px;color:#6B7280;">
+                Prefer a one-tap link? <a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=signup" style="color:#039EA0;text-decoration:underline;">Confirm your account here</a>.
+              </p>
+            </div>
           </td>
         </tr>
         <tr>
-          <td style="padding:24px 40px 0 40px;">
+          <td style="padding:16px 40px 0 40px;">
             <div style="border-top:1px solid #F4EFE6;padding-top:20px;">
               <p style="margin:0 0 8px 0;font-size:13px;line-height:20px;color:#6B7280;">
                 <strong style="color:#0F1416;">Didn't sign up?</strong> Someone may have used your email by mistake. You can safely ignore this email.
               </p>
               <p style="margin:0;font-size:13px;line-height:20px;color:#6B7280;">
-                Need help? Email <a href="mailto:support@specialcarer.com" style="color:#039EA0;text-decoration:none;">support@specialcarer.com</a>.
+                Need help? Email <a href="mailto:hello@specialcarers.com" style="color:#039EA0;text-decoration:none;">hello@specialcarers.com</a>.
               </p>
             </div>
           </td>
@@ -69,7 +66,7 @@
         <tr>
           <td align="center" style="padding:28px 40px 32px 40px;">
             <p style="margin:0;font-size:12px;line-height:18px;color:#6B7280;">
-              SpecialCarers · A product of <a href="https://specialcarer.com" style="color:#6B7280;text-decoration:underline;">All Care 4 U Group Ltd</a><br>
+              SpecialCarers · A product of <a href="https://specialcarers.com" style="color:#6B7280;text-decoration:underline;">All Care 4 U Group Ltd</a><br>
               Registered in England &amp; Wales · Company no. 09428739
             </p>
           </td>

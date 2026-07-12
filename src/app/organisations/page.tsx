@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: "For organisations — SpecialCarers",
   description:
     "Vetted carers for councils, NHS trusts, fostering agencies, residential homes, schools, and charities. Master Services Agreement and DPA in place. Strict verification of every buyer.",
-  alternates: { canonical: "https://specialcarer.com/organisations" },
+  alternates: { canonical: "https://www.specialcarers.com/organisations" },
   robots: { index: true, follow: true },
   keywords: [
     "hire vetted carers organisation",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     title: "SpecialCarers for organisations",
     description:
       "Vetted carers for councils, NHS, fostering agencies, residential homes, schools and charities. MSA + DPA in place.",
-    url: "https://specialcarer.com/organisations",
+    url: "https://www.specialcarers.com/organisations",
     siteName: "SpecialCarers",
     type: "website",
     images: [
@@ -176,7 +176,7 @@ export default function OrganisationsPage() {
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link
-            href="/m/org/register/step-1"
+            href="/signup/organisation"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-pill bg-slate-900 text-white text-sm font-semibold shadow-sm hover:bg-slate-800 transition"
           >
             Get started
@@ -398,7 +398,7 @@ export default function OrganisationsPage() {
               days.
             </p>
             <Link
-              href="/m/org/register/step-1"
+              href="/signup/organisation"
               className="mt-5 inline-block px-6 py-3 rounded-pill bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition"
             >
               Get started

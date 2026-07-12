@@ -3,6 +3,7 @@ import type { CaregiverCardData } from "@/components/caregiver-card";
 import { isServiceKey } from "@/lib/care/services";
 import { isCareFormatKey, type CareFormatKey } from "@/lib/care/formats";
 import { isGenderKey, type GenderKey } from "@/lib/care/attributes";
+import { isDbsEnabled } from "@/lib/dbs/flag";
 
 export type CareSearchFilters = {
   service?: string;
@@ -70,6 +71,13 @@ export async function searchCaregivers(
       "user_id, display_name, headline, bio, city, region, country, services, care_formats, hourly_rate_cents, weekly_rate_cents, currency, years_experience, languages, rating_avg, rating_count, is_published, gender, has_drivers_license, has_own_vehicle, tags, certifications, hide_precise_location",
     )
     .eq("is_published", true);
+
+  // DBS gating (PR-DBS-1): when NEXT_PUBLIC_DBS_ENABLED is on, only carers
+  // with both Adult + Child DBS approved (dbs_search_eligible) appear in
+  // search. No-op when the flag is off.
+  if (isDbsEnabled()) {
+    query = query.eq("dbs_search_eligible", true);
+  }
 
   // Restrict to the geo-pre-filtered set when applicable.
   if (nearById) {

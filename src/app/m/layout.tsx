@@ -2,8 +2,11 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "../globals.css";
 import "./mobile.css";
+import CapacitorShell from "@/components/native/CapacitorShell";
 import StatusBarController from "@/components/native/StatusBarController";
-import { LocaleProvider } from "@/lib/i18n/LocaleContext";
+import { AccessibilityProvider } from "./_components/AccessibilityProvider";
+import BiometricLockProvider from "./_components/BiometricLockProvider";
+import { MOBILE_PERSISTENT_AUTH_ENABLED } from "@/lib/mobile-auth/flag";
 
 /**
  * Mobile app shell — Capacitor loads /m/* directly.
@@ -16,7 +19,8 @@ import { LocaleProvider } from "@/lib/i18n/LocaleContext";
  *    so the splash overlay reaches edge-to-edge. StatusBarController flips
  *    glyph colour from LIGHT (splash) → DARK (app chrome) at runtime.
  *  - Bottom safe-area padding is applied per-screen via .sc-safe-bottom.
- *  - LocaleProvider wraps children to provide i18n + accessibility context.
+ *  - AccessibilityProvider supplies large-text + voice-booking prefs. The UI
+ *    locale (and lang/dir) is owned by next-intl via the root layout.
  */
 
 const jakarta = Plus_Jakarta_Sans({
@@ -53,13 +57,21 @@ export default function MobileLayout({
         >
           Skip to main content
         </a>
+        {/* Native shell: push, deep links, external checkout (no-op on web). */}
+        <CapacitorShell />
         {/* Runtime status-bar glyph controller (no-op on web). */}
         <StatusBarController />
-        <LocaleProvider>
+        <AccessibilityProvider>
           <main id="sc-main" tabIndex={-1}>
-            {children}
+            {/* Biometric app-lock wraps the app only when the flag is on.
+                When off, children render directly — no behaviour change. */}
+            {MOBILE_PERSISTENT_AUTH_ENABLED ? (
+              <BiometricLockProvider>{children}</BiometricLockProvider>
+            ) : (
+              children
+            )}
           </main>
-        </LocaleProvider>
+        </AccessibilityProvider>
       </div>
     </div>
   );

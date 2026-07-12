@@ -40,7 +40,7 @@ const LEGAL_LINKS: FooterLinkDef[] = [
   { href: "/terms", labelKey: "terms" },
   { href: "/cookies", labelKey: "cookies" },
   { href: "/account/delete", labelKey: "deleteAccount" },
-  { href: "mailto:privacy@specialcarer.com", label: "privacy@specialcarer.com", external: true },
+  { href: "mailto:privacy@specialcarers.com", label: "privacy@specialcarers.com", external: true },
 ];
 
 type FooterGroupDef = { id: string; headingKey: string; links: FooterLinkDef[] };

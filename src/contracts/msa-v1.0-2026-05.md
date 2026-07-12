@@ -121,7 +121,7 @@ This Master Services Agreement ("**MSA**" or "**Agreement**") sets out the terms
 ## 15. Anti-bribery and modern slavery
 
 15.1 Each party will comply with the **Bribery Act 2010** (or equivalent local law) and the **Modern Slavery Act 2015**.
-15.2 SpecialCarer's Modern Slavery statement is available at specialcarer.com/legal.
+15.2 SpecialCarer's Modern Slavery statement is available at specialcarers.com/legal.
 
 ## 16. Notices
 

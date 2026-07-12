@@ -46,8 +46,8 @@ function distanceLabel(m: number | null): string {
 }
 
 function rateLabel(m: Marker): string {
-  if (!m.currency || m.hourly_rate_cents == null) return "Rate on request";
-  return `${formatMoney(m.hourly_rate_cents, m.currency)}/hr`;
+  if (m.hourly_rate_cents == null) return "Rate on request";
+  return `${formatMoney(m.hourly_rate_cents)}/hr`;
 }
 
 export default function FindCareMapClient({
@@ -239,9 +239,9 @@ function youPopup(): string {
 }
 
 function carerPopup(m: Marker): string {
-  const country = m.country === "GB" ? "UK" : "US";
-  const location = [m.city, country].filter(Boolean).join(", ");
-  const rating =
+  const country = m.country === "GB" ? "GB" : "US";
+    const location = [m.city, country].filter(Boolean).join(", ");  
+    const rating =
     m.rating_count > 0 && m.rating_avg != null
       ? `★ ${m.rating_avg.toFixed(1)} (${m.rating_count})`
       : "New";

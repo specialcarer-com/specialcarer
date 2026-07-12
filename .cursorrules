@@ -1,0 +1,85 @@
+# SpecialCarer — Cursor rules
+# These rules apply to every AI-assisted edit in this repository.
+
+## Project identity
+- Domain: UK on-demand and scheduled care marketplace (SpecialCarer.com).
+- Stack: Next.js 15 App Router, TypeScript strict, Supabase (Postgres + RLS + Auth + Storage), Tailwind, Vercel.
+- Mobile: Capacitor iOS overlay served from the same Next.js app.
+
+## Hard policies (CodeRabbit blocks PRs that violate these)
+
+### UK-only regional gating
+- Every Supabase query against `caregivers`, `cities`, or `coverage` MUST filter `country = "GB"` OR be gated on `process.env.US_REGION_ENABLED === "true"`.
+- Public profile routes 404 non-GB carers.
+- Default `country` value in new migrations is `'GB'`.
+
+### Vendor naming
+- The DBS check vendor must be referred to as "DBS" in code, comments, and JSDoc.
+- The strings "Checkr" and "uCheck" MUST NOT appear as a vendor reference anywhere in source. Inner URLs (`https://api.ucheck.co.uk/v1`) are permitted as default values only.
+- Env vars: prefer `DBS_*` names. `UCHECK_*` legacy env vars are accepted as fallback only.
+
+### Brand
+- Colors: teal `#039EA0` (primary), peach `#F4A261` (accent), cream `#F4EFE6` (surface), ink `#0F1416` (text). No other brand colors in UI code.
+- DO NOT use `text-emerald-*`, `text-rose-*`, or any non-brand Tailwind palette class. Use arbitrary values: `text-[#039EA0]` or tokens.
+- Font: Plus Jakarta Sans only. No other web fonts.
+- Buttons: primary action uses teal background or teal border.
+
+### Privacy & PII
+- NEVER log DOB, NI number, DBS certificate number, full postcode, address line 1/2, bank account details, or passport number to console or Sentry.
+- All Sentry events go through `beforeSend` scrub in `sentry.client.config.ts` — extend that list if adding new sensitive fields.
+- PostHog session replay is denylisted on `/dashboard/vetting/*`, `/m/dbs/*`, `/m/profile/vetting/*`. Don't add capture on those routes.
+- Add `data-ph-no-capture` to any new element rendering sensitive data.
+
+### Commits
+- Use Conventional Commit prefixes: `feat:`, `fix:`, `chore:`, `docs:`, `test:`, `refactor:`.
+- Scope: lower-case feature area in parens, e.g. `feat(dbs): ...`, `fix(reviews): ...`.
+- Bot identity for automated commits: `bot@specialcarers.com` / `SpecialCarer Bot`.
+
+### Migrations
+- Place in `supabase/migrations/<unix_timestamp>_<slug>.sql`.
+- All policies must include RLS.
+- Reversible where possible.
+- Backfill data inside the migration when adding NOT NULL columns.
+
+### Testing
+- Test files live next to source as `*.test.ts` or under `__tests__/`.
+- Add every new test file path to the `test` script in `package.json` (the project does not auto-discover).
+- Run: `npm test` after every meaningful change.
+
+### Type safety
+- TypeScript strict. No `any` without an inline justification comment.
+- Prefer Zod for runtime validation on API route inputs.
+- Supabase responses always check `error` field — never fail-open.
+
+## Patterns to follow
+
+### Carer readiness
+- `src/lib/care/profile.ts:computeReadiness()` is the canonical "publishable" check. Don't duplicate it inline.
+- `getVettingSummary()` returns the admin-side vetting state (References / Skills / Video / Course / DBS).
+- Carer self-publish is intentionally separate from admin "is_fully_vetted" — don't conflate them.
+
+### API route conventions
+- All `src/app/api/m/**` routes return JSON `{ ok: true, data }` on success, `{ ok: false, error: "<short stable string>" }` on error. NEVER return raw `e.message` to the client.
+- Auth: get user via `supabaseServer.auth.getUser()`. Return 401 with `{ ok: false, error: "unauthenticated" }` if no user.
+- Admin routes: `src/app/api/admin/**` additionally check `profiles.role === 'admin'`.
+
+### Mobile vs web
+- `/m/*` routes are the Capacitor-served mobile flow.
+- `/dashboard/*` is the desktop web flow.
+- They share components from `src/components/`.
+- When changing one, consider whether the other needs the same change.
+
+### Stripe
+- Test mode keys for dev. Production keys only via Vercel env vars.
+- Seeker memberships: `STRIPE_PRODUCT_*` env-var pattern in `src/lib/memberships/types.ts`. Carer memberships will follow the same pattern.
+
+## Don'ts
+- DO NOT auto-merge PRs.
+- DO NOT modify `.coderabbit.yaml` without explicit user approval.
+- DO NOT add new top-level routes without checking the existing route map.
+- DO NOT bypass RLS by using the service-role key in client code.
+- DO NOT add billing/payment fields to a user-facing form without a Stripe Element.
+
+## When in doubt
+- Surgical PRs > bundled. One concern per PR.
+- If a request would violate any rule above, push back and ask for clarification before implementing.

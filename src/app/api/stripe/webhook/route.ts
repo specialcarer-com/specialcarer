@@ -4,6 +4,12 @@ import { stripe } from "@/lib/stripe/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { unredeemCreditsForBooking } from "@/lib/referrals/redemption";
 import { dispatch } from "@/lib/push/notify";
+import {
+  isCarerSubscription,
+  resolveCarerUserId,
+  upsertCarerMembershipFromSubscription,
+  type CarerWebhookSupabase,
+} from "@/lib/carer-membership/webhook-core";
 
 export const runtime = "nodejs";
 
@@ -316,6 +322,9 @@ export async function POST(req: Request) {
               ? session.subscription
               : session.subscription.id;
           const sub = await stripe.subscriptions.retrieve(subId);
+          // Carer founder memberships have their own table; route them away
+          // from the consumer subscriptions upsert.
+          if (await routeCarerMembershipEvent(admin, sub)) break;
           await upsertMembershipFromStripeSubscription(admin, sub);
         }
         break;
@@ -326,6 +335,14 @@ export async function POST(req: Request) {
       case "customer.subscription.paused":
       case "customer.subscription.resumed": {
         const sub = event.data.object as Stripe.Subscription;
+        // Carer founder memberships have their own table. deleted → canceled.
+        if (
+          await routeCarerMembershipEvent(admin, sub, {
+            forceCanceled: event.type === "customer.subscription.deleted",
+          })
+        ) {
+          break;
+        }
         await upsertMembershipFromStripeSubscription(admin, sub);
         break;
       }
@@ -349,6 +366,67 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ received: true });
+}
+
+// ---------------------------------------------------------------------------
+// Carer founder membership routing
+// ---------------------------------------------------------------------------
+
+/**
+ * If `sub` is a carer founder membership, reconcile it into carer_memberships
+ * and return true (so the caller skips the consumer subscriptions upsert).
+ * Returns false for non-carer subscriptions.
+ *
+ * carer_user_id is resolved from the subscription metadata, falling back to the
+ * Stripe customer's metadata (set when we create the customer at checkout).
+ */
+async function routeCarerMembershipEvent(
+  admin: ReturnType<typeof createAdminClient>,
+  sub: Stripe.Subscription,
+  opts: { forceCanceled?: boolean } = {}
+): Promise<boolean> {
+  if (!isCarerSubscription(sub)) return false;
+
+  let carerUserId = resolveCarerUserId(sub, null);
+  if (!carerUserId) {
+    const customerId =
+      typeof sub.customer === "string" ? sub.customer : sub.customer.id;
+    try {
+      const customer = await stripe.customers.retrieve(customerId);
+      if (!("deleted" in customer && customer.deleted)) {
+        carerUserId = resolveCarerUserId(sub, customer as Stripe.Customer);
+      }
+    } catch (err) {
+      console.error(
+        "[carer-membership] customer lookup failed for subscription",
+        sub.id
+      );
+      // Re-throw so Stripe retries — a transient lookup failure must not be
+      // recorded as processed.
+      throw err instanceof Error
+        ? err
+        : new Error("Stripe customer lookup failed");
+    }
+  }
+
+  if (!carerUserId) {
+    // It IS a carer sub (lookup_key matched) but we can't attribute it yet.
+    // Throw instead of returning true: returning true would let the caller mark
+    // processed_at without writing carer_memberships, so a paid carer could
+    // lose entitlement with no Stripe retry. Throwing keeps it retryable while
+    // still never reaching the consumer-subscription upsert below.
+    const message = `Could not resolve carer_user_id for carer subscription ${sub.id}`;
+    console.warn("[carer-membership]", message);
+    throw new Error(message);
+  }
+
+  await upsertCarerMembershipFromSubscription({
+    supabase: admin as unknown as CarerWebhookSupabase,
+    sub,
+    carerUserId,
+    forceCanceled: opts.forceCanceled,
+  });
+  return true;
 }
 
 // ---------------------------------------------------------------------------

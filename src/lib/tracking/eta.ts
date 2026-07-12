@@ -163,7 +163,7 @@ async function destinationPoint(
   }
   // Read the booking's service_point geometry via the
   // `booking_service_point_lnglat` RPC (declared in
-  // 20260509_tracker_v2.sql). Returns 0 rows if service_point is null.
+  // 20260509004605_tracker_v2.sql). Returns 0 rows if service_point is null.
   const { data } = await admin
     .rpc("booking_service_point_lnglat", { p_booking_id: bookingId })
     .returns<{ lng: number; lat: number }[]>();

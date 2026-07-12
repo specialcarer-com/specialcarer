@@ -47,15 +47,42 @@ export function isExpiryEligible(offer: OfferLike, now: number): boolean {
   return Number.isFinite(expiresAt) && expiresAt < now;
 }
 
+/**
+ * One affected booking from the sweep: the booking whose offers just expired,
+ * its seeker (the push recipient), how many offers flipped, and the carers who
+ * were shortlisted (offers that just expired) — carried for downstream use.
+ */
+export type ExpiredBooking = {
+  bookingId: string;
+  seekerId: string;
+  expiredCount: number;
+  shortlistedCaregiverIds: string[];
+};
+
 /** Narrow client surface; tests pass a stub, route.ts wraps the real RPC. */
 export type ExpireClient = {
-  expireStale: () => Promise<{ expiredCount: number; error: string | null }>;
+  expireStale: () => Promise<{
+    bookings: ExpiredBooking[];
+    error: string | null;
+  }>;
+  /**
+   * Fire-and-forget push fan-out for the affected bookings. Best-effort — it
+   * must never block or fail the sweep response (mirrors pick-offer's
+   * onConfirmed). Optional so tests can omit it.
+   */
+  onExpired?: (bookings: ExpiredBooking[]) => Promise<void> | void;
 };
 
 export async function handleExpire(client: ExpireClient): Promise<ExpireResult> {
-  const { expiredCount, error } = await client.expireStale();
+  const { bookings, error } = await client.expireStale();
   if (error) {
     return { status: 500, body: { ok: false, error } };
   }
+
+  if (client.onExpired && bookings.length > 0) {
+    await client.onExpired(bookings);
+  }
+
+  const expiredCount = bookings.reduce((sum, b) => sum + b.expiredCount, 0);
   return { status: 200, body: { ok: true, expired_count: expiredCount } };
 }

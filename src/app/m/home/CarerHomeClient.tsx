@@ -17,19 +17,18 @@
  */
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Avatar,
   BottomNav,
   Card,
-  IconAward,
   IconBag,
   IconCal,
-  IconCert,
   IconChevronRight,
   IconClock,
   IconPin,
   IconPlus,
+  IconUser,
   NotificationBell,
   SectionTitle,
   Tag,
@@ -37,6 +36,9 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { serviceLabel } from "@/lib/care/services";
 import GoOnlineCard from "./GoOnlineCard";
+import TipOfTheDay from "./TipOfTheDay";
+import VerifyIdentityCard from "@/components/identity/VerifyIdentityCard";
+import DbsBanner from "@/components/dbs/DbsBanner";
 
 type EarningsSummary = {
   today_cents: number;
@@ -106,7 +108,11 @@ function fmtTimeRange(startsAt: string, endsAt: string): string {
   }
 }
 
-export default function CarerHomeClient() {
+export default function CarerHomeClient({
+  needsSetup = false,
+}: {
+  needsSetup?: boolean;
+}) {
   const [name, setName] = useState("there");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [earnings, setEarnings] = useState<EarningsSummary | null>(null);
@@ -237,8 +243,6 @@ export default function CarerHomeClient() {
     };
   }, []);
 
-  const tip = useMemo(() => pickTip(), []);
-
   return (
     <main className="min-h-[100dvh] bg-bg-screen sc-with-bottom-nav">
       {/* Teal hero header — distinct from seeker home (white) */}
@@ -333,8 +337,46 @@ export default function CarerHomeClient() {
         )}
       </header>
 
+      {/* Finish-setup banner — only for carers whose profile isn't yet
+          publishable. Routes into the guided onboarding wizard, which is
+          otherwise unlinked. Hidden once the profile is publish-ready. */}
+      {needsSetup && (
+        <div className="px-4 pt-4">
+          <Link href="/m/onboarding/carer" className="block sc-no-select">
+            <div className="rounded-card border border-brand-peach/40 bg-brand-cream p-4">
+              <div className="flex items-start gap-3">
+                <div
+                  className="grid h-11 w-11 flex-none place-items-center rounded-full"
+                  style={{ background: "rgba(244,162,97,0.20)", color: "#B5651D" }}
+                  aria-hidden
+                >
+                  <IconUser />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[15px] font-bold text-brand-ink">
+                    Finish setting up your profile
+                  </p>
+                  <p className="mt-0.5 text-[12.5px] text-subheading">
+                    Add the missing details so families can find you
+                  </p>
+                  <span className="mt-3 inline-flex h-9 items-center rounded-pill bg-brand-teal px-4 text-[13px] font-semibold text-white">
+                    Continue setup
+                  </span>
+                </div>
+                <span className="text-brand-ink/60" aria-hidden>
+                  <IconChevronRight />
+                </span>
+              </div>
+            </div>
+          </Link>
+        </div>
+      )}
+
       {/* Go online toggle (gap 18) — availability presence for seekers */}
       <GoOnlineCard />
+
+      {/* Tip of the day (gap 46) — rotating daily strip */}
+      <TipOfTheDay />
 
       {/* Next shift card */}
       {activeJob && (
@@ -421,6 +463,16 @@ export default function CarerHomeClient() {
           </div>
         </>
       )}
+
+      {/* Identity verification (Veriff). Renders nothing while the
+          IDENTITY_VERIFICATION_ENABLED flag is off. */}
+      <div className="px-4 mt-4">
+        <VerifyIdentityCard />
+      </div>
+
+      {/* DBS prompt (PR-DBS-1). Renders nothing while NEXT_PUBLIC_DBS_ENABLED
+          is off or the carer's DBS is already approved. */}
+      <DbsBanner />
 
       {/* Find work — always visible, primary CTA */}
       <SectionTitle title="Find work" />
@@ -561,38 +613,6 @@ export default function CarerHomeClient() {
         </>
       )}
 
-      {/* Tip of the day */}
-      <SectionTitle title="Tip of the day" />
-      <div className="px-4 pb-6">
-        <Card>
-          <div className="flex items-start gap-3">
-            <span
-              className="grid h-11 w-11 flex-none place-items-center rounded-full"
-              style={{
-                background: "rgba(3,158,160,0.10)",
-                color: "#039EA0",
-              }}
-              aria-hidden
-            >
-              {tip.icon === "award" ? <IconAward /> : <IconCert />}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-bold text-heading">{tip.title}</p>
-              <p className="mt-0.5 text-[12px] text-subheading">{tip.body}</p>
-              {tip.cta && tip.href && (
-                <Link
-                  href={tip.href}
-                  className="mt-2 inline-flex items-center gap-1 text-[13px] font-bold text-primary"
-                >
-                  {tip.cta}
-                  <IconChevronRight />
-                </Link>
-              )}
-            </div>
-          </div>
-        </Card>
-      </div>
-
       <BottomNav active="home" role="carer" />
     </main>
   );
@@ -650,61 +670,4 @@ function QuickAction({
       </div>
     </Link>
   );
-}
-
-/* ──────────────────────────────────────────────────────────────────
-   Tip of the day — rotates by date so it feels fresh without
-   needing a backend for now.
-   ────────────────────────────────────────────────────────────────── */
-type Tip = {
-  icon: "award" | "cert";
-  title: string;
-  body: string;
-  cta?: string;
-  href?: string;
-};
-
-const TIPS: Tip[] = [
-  {
-    icon: "award",
-    title: "Carers with a photo get 2× more bookings",
-    body: "A clear, friendly headshot helps families pick you faster.",
-    cta: "Update profile",
-    href: "/m/profile",
-  },
-  {
-    icon: "cert",
-    title: "Add an extra certification",
-    body: "First-aid, dementia, or moving-and-handling certs unlock higher-paying shifts.",
-    cta: "Add certification",
-    href: "/m/profile",
-  },
-  {
-    icon: "award",
-    title: "Open your weekend availability",
-    body: "Saturday and Sunday shifts pay up to 30% more on SpecialCarers.",
-    cta: "Set availability",
-    href: "/m/schedule",
-  },
-  {
-    icon: "cert",
-    title: "Reply within 30 minutes",
-    body: "Carers who reply quickly get priority on new invites.",
-  },
-  {
-    icon: "award",
-    title: "Refer a fellow carer",
-    body: "Earn a bonus when someone you refer completes their first shift.",
-    cta: "View referrals",
-    href: "/m/profile",
-  },
-];
-
-function pickTip(): Tip {
-  // Day-of-year rotation
-  const now = new Date();
-  const start = new Date(now.getFullYear(), 0, 0);
-  const diff = now.getTime() - start.getTime();
-  const day = Math.floor(diff / 86_400_000);
-  return TIPS[day % TIPS.length];
 }

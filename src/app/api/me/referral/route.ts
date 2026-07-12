@@ -49,7 +49,7 @@ export async function GET() {
 
   const origin =
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
-    "https://specialcarer.com";
+    "https://specialcarers.com";
 
   return NextResponse.json({
     code,

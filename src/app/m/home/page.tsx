@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { computeReadiness } from "@/lib/care/profile";
 import SeekerHomeClient from "./SeekerHomeClient";
 import CarerHomeClient from "./CarerHomeClient";
 
@@ -30,7 +31,16 @@ export default async function HomeRouter() {
     .maybeSingle();
 
   if (profile?.role === "caregiver") {
-    return <CarerHomeClient />;
+    // Carers whose profile isn't yet publishable get pushed into the guided
+    // onboarding wizard via a home banner. Best-effort: a transient readiness
+    // read error must not break the dashboard, so default to hiding the banner.
+    let needsSetup = false;
+    try {
+      needsSetup = !(await computeReadiness(user.id)).isPublishable;
+    } catch {
+      needsSetup = false;
+    }
+    return <CarerHomeClient needsSetup={needsSetup} />;
   }
   return <SeekerHomeClient />;
 }

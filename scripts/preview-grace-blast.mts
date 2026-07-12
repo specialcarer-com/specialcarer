@@ -10,7 +10,7 @@ import {
 
 const html = _renderGracePeriodBlastHtml({
   fullName: "Priya Sharma",
-  email: "test.carer.uk@specialcarer.com",
+  email: "test.carer.uk@specialcarers.com",
   missingCourses: ["food-hygiene", "medication-administration"],
   graceEndsAt: "2026-06-11T01:12:06.832Z",
   worksWithAdults: true,
@@ -24,7 +24,7 @@ console.log("--- TEXT VERSION ---");
 console.log(
   _renderGracePeriodBlastText({
     fullName: "Priya Sharma",
-    email: "test.carer.uk@specialcarer.com",
+    email: "test.carer.uk@specialcarers.com",
     missingCourses: ["food-hygiene", "medication-administration"],
     graceEndsAt: "2026-06-11T01:12:06.832Z",
     worksWithAdults: true,

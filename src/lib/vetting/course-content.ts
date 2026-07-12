@@ -23,7 +23,7 @@ Adult abuse takes many forms: **physical** (unexplained bruises, frequent injuri
 
 Listen carefully if a client tries to tell you something. Do not promise confidentiality — you may have to share what you've been told. Do not investigate yourself, and do not confront a suspected abuser. Keep the person safe right now, and report.
 
-In the **UK**, report concerns to your local authority's Adult Safeguarding hub (every council has one) and to SpecialCarers' trust and safety team via the in-app SOS or by emailing hello@specialcarer.com. If the person is in immediate danger, call **999**.
+In the **UK**, report concerns to your local authority's Adult Safeguarding hub (every council has one) and to SpecialCarers' trust and safety team via the in-app SOS or by emailing hello@specialcarers.com. If the person is in immediate danger, call **999**.
 
 In the **US**, report to the relevant state's Adult Protective Services (APS) and to SpecialCarers. If the person is in immediate danger, call **911**.
 
@@ -171,7 +171,7 @@ Breaches of the code are reviewed individually. Honesty about a slip-up is alway
 
 **Clinical sharing.** If a GP / NP / nurse needs information, ask the family to share it via formal channels rather than forwarding screenshots from your phone. If trust and safety asks for a copy of an entry, that's appropriate — we have a controller agreement that makes this lawful.
 
-**Right to erasure.** Clients can ask for their data to be deleted. Forward those requests to hello@specialcarer.com — we handle them.
+**Right to erasure.** Clients can ask for their data to be deleted. Forward those requests to hello@specialcarers.com — we handle them.
 
 **A breach.** If you lose a phone with the SpecialCarers app on it, or you accidentally email information to the wrong person, tell trust and safety **within 24 hours**. UK GDPR requires us to notify the ICO within 72 hours of certain breaches; we can only do that if you tell us first.`,
     question:

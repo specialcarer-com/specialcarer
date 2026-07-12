@@ -5,6 +5,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getVettingSummary } from "@/lib/vetting/server";
 import type { VettingSummary } from "@/lib/vetting/types";
 import { TopBar } from "../../_components/ui";
+import VerifyIdentityCard from "@/components/identity/VerifyIdentityCard";
+import { isIdentityVerificationEnabled } from "@/lib/identity/flag";
 
 export const dynamic = "force-dynamic";
 
@@ -76,14 +78,17 @@ export default async function MobileVettingHubPage() {
   const summary = await getVettingSummary(createAdminClient(), user.id);
   const steps = buildSteps(summary);
 
+  const identityEnabled = isIdentityVerificationEnabled();
+
   return (
     <div className="min-h-screen bg-bg-screen pb-12">
       <TopBar title="Get vetted" back="/m/profile" />
       <div className="px-5 pt-3 space-y-3">
         <p className="text-[13px] text-subheading">
-          Each step lives on the web dashboard — tap to open. Once you&rsquo;ve
-          finished every step, your profile becomes publishable.
+          Complete every step to make your profile publishable. Some steps run
+          in our secure web dashboard — tap &ldquo;Open&rdquo; to continue.
         </p>
+        {identityEnabled && <VerifyIdentityCard />}
         <ul className="space-y-3">
           {steps.map((s) => (
             <li

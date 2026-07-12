@@ -3,7 +3,10 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { computeReadiness } from "@/lib/care/profile";
+import { publicProfileUrl } from "@/lib/care/public-url";
+import ShareProfileButton from "@/components/profile/ShareProfileButton";
 import { CARER_FEE_PERCENT } from "@/lib/fees/config";
+import { formatGBP } from "@/lib/pricing";
 import Image from "next/image";
 import RecurringSuggestionBanner from "@/components/RecurringSuggestionBanner";
 import UpcomingBookingsWidget, {
@@ -50,10 +53,9 @@ const STATUS_TONE: Record<string, string> = {
   disputed: "bg-rose-50 text-rose-700",
 };
 
-function fmtMoney(cents: number | null | undefined, currency: string | null | undefined) {
+function fmtMoney(cents: number | null | undefined) {
   if (cents == null) return "—";
-  const sym = (currency ?? "gbp").toLowerCase() === "usd" ? "$" : "£";
-  return `${sym}${(cents / 100).toFixed(2)}`;
+  return formatGBP(cents);
 }
 
 export default async function DashboardPage() {
@@ -110,6 +112,25 @@ export default async function DashboardPage() {
 
   // Caregiver-only: readiness + earnings
   const readiness = isCaregiver ? await computeReadiness(user.id) : null;
+
+  // Caregiver-only: public share link (shown once publish-ready).
+  let shareUrl: string | null = null;
+  let shareName = profile.full_name;
+  if (isCaregiver && readiness?.isPublishable) {
+    const { data: cgShare } = await admin
+      .from("caregiver_profiles")
+      .select("public_slug, display_name")
+      .eq("user_id", user.id)
+      .eq("country", "GB")
+      .maybeSingle();
+    const slug = (cgShare?.public_slug as string | null) ?? null;
+    // Slugs are GB-only (UK region policy); a null slug means the public
+    // surface is unavailable, so don't expose a dead share link.
+    if (slug) {
+      shareUrl = publicProfileUrl({ user_id: user.id, public_slug: slug });
+      shareName = (cgShare?.display_name as string | null) ?? profile.full_name;
+    }
+  }
 
   // ── Widget data (Phase 5: 5 widgets on the dashboard) ─────────────
   // Upcoming bookings (next 3 only — strict spec)
@@ -272,7 +293,7 @@ export default async function DashboardPage() {
     );
     const origin =
       process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
-      "https://specialcarer.com";
+      "https://specialcarers.com";
     const { data: claims } = await admin
       .from("referral_claims")
       .select("status")
@@ -365,6 +386,12 @@ export default async function DashboardPage() {
                   Saved
                 </Link>
               )}
+              <Link
+                href="/dashboard/security"
+                className="px-4 py-2 rounded-xl bg-white border border-slate-200 text-sm font-medium hover:bg-slate-50 transition"
+              >
+                Security
+              </Link>
               {isCaregiver && (
                 <Link
                   href="/dashboard/profile"
@@ -372,6 +399,9 @@ export default async function DashboardPage() {
                 >
                   Edit profile
                 </Link>
+              )}
+              {isCaregiver && shareUrl && (
+                <ShareProfileButton url={shareUrl} name={shareName} />
               )}
             </div>
           </div>
@@ -481,11 +511,11 @@ export default async function DashboardPage() {
             <div className="mt-6 grid sm:grid-cols-3 gap-3">
               <Stat
                 label="Lifetime payouts"
-                value={fmtMoney(totalEarnedCents, profile.country === "US" ? "usd" : "gbp")}
+                value={fmtMoney(totalEarnedCents)}
               />
               <Stat
                 label="Pending release"
-                value={fmtMoney(pendingPayoutCents, profile.country === "US" ? "usd" : "gbp")}
+                value={fmtMoney(pendingPayoutCents)}
                 hint="24h hold after each shift"
               />
               <Stat label="Bookings to date" value={String((bookings ?? []).length)} />
@@ -563,7 +593,6 @@ export default async function DashboardPage() {
                                 isCaregiver
                                   ? carerPayoutCents(b.subtotal_cents ?? 0)
                                   : b.total_cents,
-                                b.currency,
                               )}
                               {isCaregiver && (
                                 <span className="ml-1 text-[10px] font-normal text-slate-500">
@@ -616,7 +645,6 @@ export default async function DashboardPage() {
                                 isCaregiver
                                   ? carerPayoutCents(b.subtotal_cents ?? 0)
                                   : b.total_cents,
-                                b.currency,
                               )}
                               {isCaregiver && (
                                 <span className="ml-1 text-[10px] font-normal text-slate-500">

@@ -25,8 +25,21 @@ export async function POST(req: Request) {
   const email = typeof p.email === "string" ? p.email : "";
   const displayName =
     typeof p.displayName === "string" ? p.displayName : null;
+  const relationship =
+    typeof p.relationship === "string" ? p.relationship : null;
+  const timelineRole: "viewer" | "commenter" | undefined =
+    p.timelineRole === "viewer"
+      ? "viewer"
+      : p.timelineRole === "commenter"
+        ? "commenter"
+        : undefined;
 
-  const result = await inviteFamilyMember({ email, displayName });
+  const result = await inviteFamilyMember({
+    email,
+    displayName,
+    relationship,
+    timelineRole,
+  });
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }

@@ -145,32 +145,24 @@ export async function runAutoMatch(
 
   const eligibleIds = eligible.map((p) => p.user_id as string);
 
-  // 4. Track-record signals (response_rate, completion_rate, recency) from
-  //    caregiver_stats + offer history. Best-effort; missing → null signal.
-  const { data: stats } = await admin
-    .from("caregiver_stats")
-    .select("caregiver_id, completed_bookings, on_time_rate")
-    .in("caregiver_id", eligibleIds);
-  const statByCarer = new Map(
-    (stats ?? []).map((s) => [s.caregiver_id as string, s]),
-  );
-
-  const responseRateById = await loadResponseRates(admin, eligibleIds);
+  // 4. Track-record signals (response_rate, completion_rate) from the
+  //    daily-refreshed caregiver_rates_cache (see
+  //    supabase/migrations/20260611120000_caregiver_rates_v1.sql + the
+  //    refresh-caregiver-rates cron). A carer with no cache row (new, never
+  //    offered) keeps a null signal, which the scorer treats as neutral.
+  const ratesById = await loadCachedRates(admin, eligibleIds);
 
   const candidates: Candidate[] = eligible.map((p) => {
     const cid = p.user_id as string;
-    const st = statByCarer.get(cid);
+    const rates = ratesById.get(cid);
     return {
       carer_id: cid,
       distance_km: distanceById.has(cid) ? distanceById.get(cid)! : null,
       rating: p.rating_avg != null ? Number(p.rating_avg) : null,
-      response_rate: responseRateById.get(cid) ?? null,
+      response_rate: rates?.response_rate ?? null,
       // Online carers are "active now"; otherwise use last_online_at.
       last_active_at: (p.last_online_at as string | null) ?? null,
-      // Proxy completion via on_time_rate when present (completed shifts
-      // that started on time). Documented approximation for v1.
-      completion_rate:
-        st && st.on_time_rate != null ? Number(st.on_time_rate) : null,
+      completion_rate: rates?.completion_rate ?? null,
     };
   });
 
@@ -211,30 +203,31 @@ export async function runAutoMatch(
   return { offers, poolSize: poolIds.length };
 }
 
+type CachedRates = {
+  response_rate: number | null;
+  completion_rate: number | null;
+};
+
 /**
- * Response rate = accepted / (accepted + declined + expired) across a
- * carer's prior match offers. Carers with no history get null (neutral).
+ * Load the daily-refreshed response_rate (30d) + completion_rate (90d) for a
+ * set of carers from caregiver_rates_cache. A carer with no row is simply
+ * absent from the map; callers fall back to a null (neutral) signal.
  */
-async function loadResponseRates(
+async function loadCachedRates(
   admin: ReturnType<typeof createAdminClient>,
   carerIds: string[],
-): Promise<Map<string, number>> {
-  const out = new Map<string, number>();
+): Promise<Map<string, CachedRates>> {
+  const out = new Map<string, CachedRates>();
   const { data } = await admin
-    .from("booking_match_offers")
-    .select("carer_id, status")
-    .in("carer_id", carerIds)
-    .in("status", ["accepted", "declined", "expired"]);
-  const tally = new Map<string, { acc: number; total: number }>();
+    .from("caregiver_rates_cache")
+    .select("carer_id, response_rate, completion_rate")
+    .in("carer_id", carerIds);
   for (const r of data ?? []) {
-    const cid = r.carer_id as string;
-    const t = tally.get(cid) ?? { acc: 0, total: 0 };
-    t.total += 1;
-    if (r.status === "accepted") t.acc += 1;
-    tally.set(cid, t);
-  }
-  for (const [cid, t] of tally) {
-    if (t.total > 0) out.set(cid, t.acc / t.total);
+    out.set(r.carer_id as string, {
+      response_rate: r.response_rate != null ? Number(r.response_rate) : null,
+      completion_rate:
+        r.completion_rate != null ? Number(r.completion_rate) : null,
+    });
   }
   return out;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -13,6 +14,7 @@ import {
 } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useUnreadNotifications } from "@/lib/notifications/useUnreadNotifications";
+import { isMobileRedesignEnabled } from "@/lib/mobile-redesign/flag";
 
 /* ──────────────────────────────────────────────────────────────────
    Button
@@ -268,11 +270,78 @@ export function NotificationBell({
 /* ──────────────────────────────────────────────────────────────────
    Bottom navigation (5 tabs)
    ────────────────────────────────────────────────────────────────── */
+
+export type NavTabKey =
+  | "home"
+  | "bookings"
+  | "jobs"
+  | "chat"
+  | "profile"
+  | "review";
+
+export type NavTabSpec = { key: NavTabKey; label: string; href: string };
+
+/**
+ * Seeker bottom-tab set. The redesign flag switches the layout:
+ *   off → Home / Bookings / Post Job / Chat / Profile  (Post Job is a tab)
+ *   on  → Home / Bookings / Chat / Review / Profile     (Post Job → peach FAB
+ *         on the Bookings screen; Review is the new hub at /m/review)
+ * Each href is allowed for the seeker role in middleware.ts.
+ */
+export function seekerNavTabs(redesign: boolean): NavTabSpec[] {
+  if (redesign) {
+    return [
+      { key: "home", label: "Home", href: "/m/home" },
+      { key: "bookings", label: "Bookings", href: "/m/bookings" },
+      { key: "chat", label: "Chat", href: "/m/chat" },
+      { key: "review", label: "Review", href: "/m/review" },
+      { key: "profile", label: "Profile", href: "/m/profile" },
+    ];
+  }
+  return [
+    { key: "home", label: "Home", href: "/m/home" },
+    { key: "bookings", label: "Bookings", href: "/m/bookings" },
+    { key: "jobs", label: "Post Job", href: "/m/post-job" },
+    { key: "chat", label: "Chat", href: "/m/chat" },
+    { key: "profile", label: "Profile", href: "/m/profile" },
+  ];
+}
+
+/**
+ * Carer bottom-tab set (unchanged by the redesign). Carer Home is the
+ * dashboard, with Schedule and Earnings reached from there.
+ */
+export function carerNavTabs(): NavTabSpec[] {
+  return [
+    { key: "home", label: "Home", href: "/m/home" },
+    { key: "jobs", label: "Jobs", href: "/m/jobs" },
+    { key: "chat", label: "Chat", href: "/m/chat" },
+    { key: "profile", label: "Profile", href: "/m/profile" },
+  ];
+}
+
+function NAV_ICON_FOR(key: NavTabKey): ReactNode {
+  switch (key) {
+    case "home":
+      return <IconHome />;
+    case "bookings":
+      return <IconCal />;
+    case "jobs":
+      return <IconBag />;
+    case "chat":
+      return <IconChat />;
+    case "review":
+      return <IconStarOutline />;
+    case "profile":
+      return <IconUser />;
+  }
+}
+
 export function BottomNav({
   active,
   role: roleProp,
 }: {
-  active: "home" | "bookings" | "jobs" | "chat" | "profile";
+  active: "home" | "bookings" | "jobs" | "chat" | "profile" | "review";
   role?: "seeker" | "carer";
 }) {
   // If role is not passed in, auto-detect once from the signed-in profile so
@@ -328,25 +397,13 @@ export function BottomNav({
     };
   }, [role]);
 
-  // Tab sets per role. Carer Home is the dashboard (which contains shortcuts to
-  // Schedule and Earnings), so the bar focuses on Home / Jobs / Chat / Profile.
-  // Seeker keeps the standard 5-tab layout. Each href below is allowed for the
-  // respective role in middleware.ts.
-  const items =
-    role === "carer"
-      ? [
-          { key: "home", label: "Home", href: "/m/home", icon: <IconHome /> },
-          { key: "jobs", label: "Jobs", href: "/m/jobs", icon: <IconBag /> },
-          { key: "chat", label: "Chat", href: "/m/chat", icon: <IconChat /> },
-          { key: "profile", label: "Profile", href: "/m/profile", icon: <IconUser /> },
-        ]
-      : [
-          { key: "home", label: "Home", href: "/m/home", icon: <IconHome /> },
-          { key: "bookings", label: "Bookings", href: "/m/bookings", icon: <IconCal /> },
-          { key: "jobs", label: "Post Job", href: "/m/post-job", icon: <IconBag /> },
-          { key: "chat", label: "Chat", href: "/m/chat", icon: <IconChat /> },
-          { key: "profile", label: "Profile", href: "/m/profile", icon: <IconUser /> },
-        ];
+  // Tab sets per role come from the pure helpers below (testable without
+  // rendering). The flag value is read here so the seeker set switches between
+  // the original (Post Job tab) and redesigned (Review tab + Post Job FAB)
+  // layouts. Icons are attached from a key→icon map.
+  const redesign = isMobileRedesignEnabled();
+  const specs = role === "carer" ? carerNavTabs() : seekerNavTabs(redesign);
+  const items = specs.map((t) => ({ ...t, icon: NAV_ICON_FOR(t.key) }));
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-40 bg-white shadow-nav border-t border-line sc-safe-bottom sc-no-select"
@@ -728,6 +785,13 @@ export const IconAward = () => (
 );
 export const IconStar = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="#F5B400">
+    <path d="M12 2l2.9 6.9L22 9.7l-5.5 4.7L18.2 22 12 18.4 5.8 22l1.7-7.6L2 9.7l7.1-.8L12 2z" />
+  </svg>
+);
+// Outline star that inherits text colour (currentColor) so the bottom-nav
+// active/inactive tinting works the same as the other tab icons.
+export const IconStarOutline = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" {...stroke}>
     <path d="M12 2l2.9 6.9L22 9.7l-5.5 4.7L18.2 22 12 18.4 5.8 22l1.7-7.6L2 9.7l7.1-.8L12 2z" />
   </svg>
 );

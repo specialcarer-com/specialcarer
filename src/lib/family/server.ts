@@ -47,7 +47,7 @@ function getAppOrigin(): string {
   return (
     process.env.NEXT_PUBLIC_APP_URL ??
     process.env.NEXT_PUBLIC_SITE_URL ??
-    "https://specialcarer.com"
+    "https://specialcarers.com"
   );
 }
 
@@ -132,7 +132,7 @@ async function loadOverview(
     admin
       .from("family_members")
       .select(
-        "id, family_id, user_id, invited_email, display_name, role, status, joined_at, created_at"
+        "id, family_id, user_id, invited_email, display_name, role, status, joined_at, created_at, relationship, timeline_role"
       )
       .eq("family_id", family.id)
       .neq("status", "removed")
@@ -185,6 +185,10 @@ async function loadOverview(
 export type InviteFamilyMemberInput = {
   email: string;
   displayName?: string | null;
+  /** Gap 41: free-text relationship, e.g. "Daughter". */
+  relationship?: string | null;
+  /** Gap 41: timeline write capability (defaults to commenter). */
+  timelineRole?: "viewer" | "commenter";
 };
 
 export type InviteFamilyMemberResult =
@@ -200,6 +204,9 @@ export async function inviteFamilyMember(
 ): Promise<InviteFamilyMemberResult> {
   const email = input.email.trim().toLowerCase();
   const displayName = input.displayName?.trim() || null;
+  const relationship = input.relationship?.trim() || null;
+  const timelineRole: "viewer" | "commenter" =
+    input.timelineRole === "viewer" ? "viewer" : "commenter";
 
   if (!emailLooksValid(email)) {
     return { ok: false, error: "Please enter a valid email address." };
@@ -306,7 +313,11 @@ export async function inviteFamilyMember(
   if (existingPlaceholder?.id) {
     await admin
       .from("family_members")
-      .update({ display_name: displayName })
+      .update({
+        display_name: displayName,
+        relationship,
+        timeline_role: timelineRole,
+      })
       .eq("id", existingPlaceholder.id);
   } else {
     await admin
@@ -317,6 +328,8 @@ export async function inviteFamilyMember(
         display_name: displayName,
         role: "member",
         status: "invited",
+        relationship,
+        timeline_role: timelineRole,
       });
   }
 

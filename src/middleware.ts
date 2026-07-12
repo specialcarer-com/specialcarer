@@ -8,7 +8,12 @@ type CookieToSet = { name: string; value: string; options?: CookieOptions };
 // Routes that require an authenticated user
 const PROTECTED_PREFIXES = ["/dashboard", "/onboarding", "/admin"];
 // Routes that require an admin role on top of being signed in
-const ADMIN_PREFIXES = ["/admin"];
+// Admin login — unauthenticated visitors must reach OTP sign-in.
+const ADMIN_LOGIN_PREFIX = "/admin/login";
+// Admin MFA setup/challenge — authenticated admins only; AAL2 not required yet.
+const ADMIN_MFA_PREFIX = "/admin/mfa";
+// Sign-in MFA step-up — requires a session but not AAL2 yet.
+const MFA_CHALLENGE_PREFIXES = ["/sign-in/2fa"];
 
 // Mobile app role isolation. Each user's account is permanently bound to a
 // role at sign-up; carers and care receivers must not be able to access each
@@ -23,6 +28,7 @@ const MOBILE_SEEKER_ONLY_PREFIXES = [
   // /m/home now branches by role server-side (seeker vs carer dashboard)
   // so it is intentionally NOT in this list.
   "/m/bookings",  // mock data + UI is seeker-perspective only (carer side TBD)
+  "/m/review",    // seekers write reviews of carers (PR-R4 Review hub)
   "/m/search",
   "/m/book",
   "/m/post-job",
@@ -39,6 +45,12 @@ const MOBILE_CAREGIVER_ONLY_PREFIXES = [
 ];
 
 export async function middleware(req: NextRequest) {
+  // Expose the resolved pathname to server components via a request header.
+  // The /admin layout reads this to skip its requireAdmin() gate on the
+  // public /admin/login page. Set on the request (not response) so server
+  // components can read it through headers(), and set before createServerClient
+  // so it survives the NextResponse.next() rebuild inside the cookie setAll().
+  req.headers.set("x-pathname", req.nextUrl.pathname);
   let res = NextResponse.next({ request: req });
 
   const supabase = createServerClient(
@@ -68,17 +80,26 @@ export async function middleware(req: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = req.nextUrl;
-  const isProtected = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
+  const isAdminLogin = pathname.startsWith(ADMIN_LOGIN_PREFIX);
+  const isAdminMfa = pathname.startsWith(ADMIN_MFA_PREFIX);
+  const isMfaChallenge = MFA_CHALLENGE_PREFIXES.some((p) =>
+    pathname.startsWith(p),
+  );
+  const needsAuth =
+    isMfaChallenge ||
+    isAdminMfa ||
+    (!isAdminLogin &&
+      PROTECTED_PREFIXES.some((p) => pathname.startsWith(p)));
 
-  if (isProtected && !user) {
+  if (needsAuth && !user) {
     const url = req.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = isAdminMfa ? "/admin/login" : "/login";
     url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
 
-  // Admin-only routes — verify role on profiles
-  const isAdminRoute = ADMIN_PREFIXES.some((p) => pathname.startsWith(p));
+  // Admin-only routes — verify role on profiles (includes /admin/mfa/*)
+  const isAdminRoute = pathname.startsWith("/admin") && !isAdminLogin;
   if (isAdminRoute && user) {
     const { data: profile } = await supabase
       .from("profiles")

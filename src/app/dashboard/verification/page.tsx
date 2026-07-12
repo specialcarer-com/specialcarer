@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import VerificationClient from "./verification-client";
+import { isStubMode as isUCheckStubMode } from "@/lib/uchecks/server";
 
 export const dynamic = "force-dynamic";
 
@@ -205,6 +206,7 @@ export default async function VerificationPage() {
             inviteUrl={inviteUrl}
             allCleared={allCleared}
             country={country}
+            stubMode={country === "GB" && isUCheckStubMode()}
           />
         </div>
       </div>

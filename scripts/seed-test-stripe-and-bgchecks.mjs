@@ -64,7 +64,7 @@ const CARERS = [
   {
     label: "Priya Sharma (UK)",
     user_id: "7a6dc3e0-8bac-4874-bf48-250575a685e5",
-    email: "test.carer.uk@specialcarer.com",
+    email: "test.carer.uk@specialcarers.com",
     country: "GB",
     currency: "gbp",
     first_name: "Priya",
@@ -86,7 +86,7 @@ const CARERS = [
   {
     label: "Marcus Johnson (US)",
     user_id: "aa4aa4e3-2c25-4b79-91fe-cb4004f80a0e",
-    email: "test.carer.us@specialcarer.com",
+    email: "test.carer.us@specialcarers.com",
     country: "US",
     currency: "usd",
     first_name: "Marcus",
@@ -154,7 +154,7 @@ async function ensureStripeAccount(c) {
     business_profile: {
       mcc: "8099", // Medical services
       product_description: "Caregiving services via SpecialCarer platform",
-      url: "https://specialcarer.com",
+      url: "https://specialcarers.com",
     },
     individual: {
       first_name: c.first_name,

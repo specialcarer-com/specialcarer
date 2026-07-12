@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import {
   Avatar,
@@ -25,6 +26,7 @@ import { SosButton } from "../_components/SosButton";
 import { isSosButtonVisible } from "../_components/sos-visibility";
 import { TasksSection } from "@/lib/booking-tasks/TasksSection";
 import FindCarersCard from "./FindCarersCard";
+import DesignatedPayerCard from "./DesignatedPayerCard";
 import { serviceLabel, formatMoney } from "@/lib/care/services";
 import type { ApiBookingDetail } from "@/app/api/m/bookings/[id]/route";
 
@@ -132,6 +134,7 @@ function BookingDetailInner() {
   const params = useParams<{ id: string }>();
   const sp = useSearchParams();
   const id = params?.id ?? "";
+  const tc = useTranslations("calendar");
 
   const [data, setData] = useState<ApiBookingDetail | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -348,6 +351,12 @@ function BookingDetailInner() {
           />
         )}
 
+        {/* Designated payer (gap 31) — self-hides unless flag on + seeker. */}
+        <DesignatedPayerCard
+          bookingId={data.id}
+          isSeeker={data.as_role === "seeker"}
+        />
+
         {/* Payment status — visible only when a payment row exists. */}
         {data.payment && (
           <Card>
@@ -478,6 +487,38 @@ function BookingDetailInner() {
                 >
                   <Button size="sm" variant="outline" block>
                     Download care plan
+                  </Button>
+                </a>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Add to calendar — per-booking .ics download (gap 40). */}
+        <Card>
+          <div className="flex items-start gap-3">
+            <span
+              className="grid h-10 w-10 flex-none place-items-center rounded-full"
+              style={{ background: "rgba(3,158,160,0.10)", color: "#039EA0" }}
+              aria-hidden
+            >
+              <IconCal />
+            </span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] font-bold text-heading">
+                {tc("addToCalendar")}
+              </p>
+              <p className="text-[12px] text-subheading mt-0.5">
+                {tc("addToCalendarHelp")}
+              </p>
+              <div className="mt-3">
+                <a
+                  href={`/api/m/bookings/${data.id}/ics`}
+                  download={`specialcarer-${data.id}.ics`}
+                  className="block"
+                >
+                  <Button size="sm" variant="outline" block>
+                    {tc("addToCalendar")}
                   </Button>
                 </a>
               </div>

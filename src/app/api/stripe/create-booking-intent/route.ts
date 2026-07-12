@@ -13,6 +13,11 @@ import {
 } from "@/lib/care/postcode";
 import { geocodePostcode } from "@/lib/mapbox/server";
 import { applyCreditToBooking } from "@/lib/referrals/redemption";
+import { isDesignatedPayerEnabled } from "@/lib/family/designated-payer-flag";
+import {
+  resolveBookingPayer,
+  type PayerChargeAdapter,
+} from "@/lib/family/designated-payer-charge";
 
 /**
  * POST /api/stripe/create-booking-intent
@@ -122,6 +127,10 @@ export async function POST(req: Request) {
   if (body.currency !== "gbp" && body.currency !== "usd") {
     return NextResponse.json({ error: "Invalid currency" }, { status: 400 });
   }
+  // SpecialCarers is a single-currency UK business: every booking, payment
+  // intent and stored row settles in GBP regardless of any stale carer-side
+  // currency the client may forward.
+  const bookingCurrency = "gbp" as const;
   if (body.caregiver_id === user.id) {
     return NextResponse.json(
       { error: "You cannot book yourself" },
@@ -217,7 +226,7 @@ export async function POST(req: Request) {
       subtotal_cents: subtotalCents,
       platform_fee_cents: platformFeeCents,
       total_cents: totalCents,
-      currency: body.currency,
+      currency: bookingCurrency,
       service_type: body.service_type!,
       // Smart-default photo consent. Care for older / clinical /
       // postnatal recipients defaults ON (families want updates),
@@ -336,10 +345,53 @@ export async function POST(req: Request) {
     platformFeeCents - appliedCreditCents,
   );
 
+  // Designated Payer (gap 31): when the flag is on and the booking already
+  // names a designated payer in the seeker's household, charge that payer's
+  // saved payment method off-session instead of the seeker. With the flag off
+  // this resolves to a no-op and the legacy seeker-confirms flow is untouched.
+  const payerChargeAdapter: PayerChargeAdapter = {
+    async getSavedPaymentMethod(payerUserId) {
+      const { data: sub } = await admin
+        .from("subscriptions")
+        .select("stripe_customer_id")
+        .eq("user_id", payerUserId)
+        .not("stripe_customer_id", "is", null)
+        .limit(1)
+        .maybeSingle<{ stripe_customer_id: string | null }>();
+      const customerId = sub?.stripe_customer_id;
+      if (!customerId) return null;
+      try {
+        const customer = await stripe.customers.retrieve(customerId);
+        if (customer.deleted) return null;
+        const defaultPm =
+          customer.invoice_settings?.default_payment_method;
+        const paymentMethodId =
+          typeof defaultPm === "string" ? defaultPm : defaultPm?.id ?? null;
+        if (!paymentMethodId) return null;
+        return { stripeCustomerId: customerId, paymentMethodId };
+      } catch (err) {
+        console.warn(
+          "[designated-payer] failed to load payer payment method",
+          err,
+        );
+        return null;
+      }
+    },
+  };
+  const designatedPayerFlagOn = isDesignatedPayerEnabled();
+  const payerResolution = await resolveBookingPayer({
+    seekerId: user.id,
+    designatedPayerUserId:
+      (booking as { designated_payer_user_id?: string | null })
+        .designated_payer_user_id ?? null,
+    flagEnabled: designatedPayerFlagOn,
+    adapter: payerChargeAdapter,
+  });
+
   // Create PaymentIntent with manual capture — funds held in escrow
   const intent = await stripe.paymentIntents.create({
     amount: intentAmount,
-    currency: body.currency,
+    currency: bookingCurrency,
     capture_method: "manual",
     application_fee_amount: intentApplicationFee,
     transfer_data: {
@@ -349,8 +401,20 @@ export async function POST(req: Request) {
       booking_id: booking.id,
       seeker_id: user.id,
       caregiver_id: body.caregiver_id!,
+      // Only stamp the payer audit field when the feature is live so the
+      // PaymentIntent is byte-identical to legacy when the flag is off.
+      ...(designatedPayerFlagOn
+        ? { charged_user_id: payerResolution.chargedUserId }
+        : {}),
     },
-    automatic_payment_methods: { enabled: true },
+    ...(payerResolution.override
+      ? {
+          customer: payerResolution.override.customer,
+          payment_method: payerResolution.override.payment_method,
+          off_session: payerResolution.override.off_session,
+          confirm: payerResolution.override.confirm,
+        }
+      : { automatic_payment_methods: { enabled: true } }),
   });
 
   await admin.from("payments").insert({
@@ -359,7 +423,7 @@ export async function POST(req: Request) {
     status: "requires_payment_method",
     amount_cents: intentAmount,
     application_fee_cents: intentApplicationFee,
-    currency: body.currency,
+    currency: bookingCurrency,
     destination_account_id: caregiverStripe.stripe_account_id,
     raw: intent as unknown as Record<string, unknown>,
   });
@@ -382,7 +446,7 @@ export async function POST(req: Request) {
         serviceType: body.service_type!,
         locationCity: body.location_city,
         totalCents,
-        currency: body.currency,
+        currency: bookingCurrency,
       });
     } catch (err) {
       console.error("[instant-notify] failed", err);
@@ -396,6 +460,6 @@ export async function POST(req: Request) {
     platform_fee_cents: platformFeeCents,
     referral_credit_applied_cents: appliedCreditCents,
     amount_due_cents: intentAmount,
-    currency: body.currency,
+    currency: bookingCurrency,
   });
 }

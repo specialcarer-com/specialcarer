@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdminApi } from "@/lib/admin/auth";
 import { ANOMALY_STATUSES } from "@/lib/ai/types";
 
 export const dynamic = "force-dynamic";
@@ -14,22 +14,9 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "not_authenticated" }, { status: 401 });
-  }
-  const admin = createAdminClient();
-  const { data: prof } = await admin
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle<{ role: string }>();
-  if (prof?.role !== "admin") {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
+  const guard = await requireAdminApi();
+  if (!guard.ok) return guard.response;
+  const adminUser = guard.admin;
 
   const { id } = await params;
   let body: unknown = {};
@@ -48,13 +35,14 @@ export async function PATCH(
   }
   const update: Record<string, unknown> = {
     status,
-    triaged_by: user.id,
+    triaged_by: adminUser.id,
     triaged_at: new Date().toISOString(),
   };
   if (typeof p.resolution_notes === "string") {
     update.resolution_notes = p.resolution_notes.slice(0, 2000);
   }
 
+  const admin = createAdminClient();
   const { error } = await admin
     .from("ai_anomaly_signals")
     .update(update)

@@ -28,8 +28,13 @@ import {
   IconAward,
 } from "../_components/ui";
 import { createClient } from "@/lib/supabase/client";
+import ShareProfileButton from "@/components/profile/ShareProfileButton";
 import { MEMBERSHIPS_ENABLED } from "@/lib/memberships/flag";
-import { useAccessibility } from "@/lib/i18n/LocaleContext";
+import { DBS_ENABLED } from "@/lib/dbs/flag";
+import { MOBILE_PERSISTENT_AUTH_ENABLED } from "@/lib/mobile-auth/flag";
+import { clearLockPreference } from "@/lib/mobile-auth/lock-native";
+import { AppLockToggle } from "./_components/AppLockToggle";
+import { useTranslations } from "next-intl";
 import { LanguagePicker } from "./_components/LanguagePicker";
 
 type Row = {
@@ -61,6 +66,11 @@ const COMMON_ACCOUNT: Section = {
       label: "Change password",
     },
     {
+      href: "/m/profile/security",
+      icon: <IconShieldLock />,
+      label: "Two-factor authentication",
+    },
+    {
       href: "/m/profile/payment-method",
       icon: <IconCard />,
       label: "Payment method",
@@ -83,6 +93,16 @@ const CAREGIVER_SECTION: Section = {
       icon: <IconCert />,
       label: "Get vetted",
     },
+    // DBS Check — only visible when NEXT_PUBLIC_DBS_ENABLED is on.
+    ...(DBS_ENABLED
+      ? [
+          {
+            href: "/m/dbs",
+            icon: <IconCert />,
+            label: "DBS Check",
+          },
+        ]
+      : []),
     {
       href: "/m/profile/certifications",
       icon: <IconCert />,
@@ -148,6 +168,27 @@ function IconA11y() {
   );
 }
 
+/** Calendar-with-sync glyph for the Calendar sync menu row. */
+function IconCalSync() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="3" y="4" width="18" height="17" rx="2" />
+      <path d="M3 9h18M8 2v4M16 2v4" />
+      <path d="M9 15h3M12 15a2 2 0 1 1-1.7 1" />
+    </svg>
+  );
+}
+
 /** Inline shield glyph used for the Support & Safety menu row. */
 function IconShield() {
   return (
@@ -164,6 +205,27 @@ function IconShield() {
     >
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
       <path d="M9 12l2 2 4-4" />
+    </svg>
+  );
+}
+
+/** Shield-with-keyhole glyph for the two-factor authentication row. */
+function IconShieldLock() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <circle cx="12" cy="11" r="1.4" />
+      <path d="M12 12.4V15" />
     </svg>
   );
 }
@@ -203,13 +265,16 @@ function sectionsForRole(role: Role | null): Section[] {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { t } = useAccessibility();
+  const t = useTranslations("accessibility");
+  const tCal = useTranslations("calendar");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [role, setRole] = useState<Role | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [share, setShare] = useState<{ url: string; name: string } | null>(null);
+  const [needsSetup, setNeedsSetup] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -243,9 +308,43 @@ export default function ProfilePage() {
     })();
   }, []);
 
+  // Share CTA — only carers who are publish-ready get a shareable link.
+  useEffect(() => {
+    if (role !== "caregiver") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/m/profile/share", { cache: "no-store" });
+        if (!res.ok) return;
+        const json = (await res.json()) as {
+          ok: boolean;
+          data?: { ready: boolean; url?: string; name?: string };
+        };
+        if (cancelled || !json.ok) return;
+        if (json.data?.ready && json.data.url) {
+          setShare({ url: json.data.url, name: json.data.name ?? "Caregiver" });
+        } else {
+          // Not publish-ready → profile is incomplete; offer to resume the wizard.
+          setNeedsSetup(true);
+        }
+      } catch {
+        /* ignore — CTA simply stays hidden */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [role]);
+
   async function logout() {
     const supabase = createClient();
     await supabase.auth.signOut();
+    // Signing out wipes the biometric app-lock preference + stored credential
+    // so the next user on this device starts fresh (no behaviour change when
+    // the flag is off — clearLockPreference is a no-op on web / absent plugin).
+    if (MOBILE_PERSISTENT_AUTH_ENABLED) {
+      await clearLockPreference();
+    }
     router.replace("/m/login");
   }
 
@@ -297,7 +396,25 @@ export default function ProfilePage() {
                 Preview public profile
               </Link>
             )}
+            {role === "caregiver" && needsSetup && (
+              <Link
+                href="/m/onboarding/carer"
+                className="inline-flex h-9 items-center rounded-pill bg-brand-teal px-4 text-[13px] font-semibold text-white"
+              >
+                Resume setup
+              </Link>
+            )}
           </div>
+          {share && (
+            <div className="mt-3">
+              <ShareProfileButton
+                url={share.url}
+                name={share.name}
+                variant="primary"
+                className="w-full"
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -338,6 +455,21 @@ export default function ProfilePage() {
           <li>
             <LanguagePicker />
           </li>
+          {/* Calendar sync (gap 40) */}
+          <li className="border-t border-line">
+            <Link
+              href="/m/profile/calendar-sync"
+              className="flex items-center gap-3 px-4 py-3.5 active:bg-muted/60"
+            >
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-primary-50 text-primary">
+                <IconCalSync />
+              </span>
+              <span className="flex-1 text-[14.5px] font-medium text-heading">
+                {tCal("syncTitle")}
+              </span>
+              <IconChevronRight />
+            </Link>
+          </li>
           {/* Accessibility settings row */}
           <li className="border-t border-line">
             <Link
@@ -348,11 +480,16 @@ export default function ProfilePage() {
                 <IconA11y />
               </span>
               <span className="flex-1 text-[14.5px] font-medium text-heading">
-                {t("accessibility.settings")}
+                {t("settings")}
               </span>
               <IconChevronRight />
             </Link>
           </li>
+          {/* Biometric app-lock toggle — renders its own <li> (with a top
+              border) only on biometric-capable devices; otherwise nothing, so
+              there is no empty bordered row. Hidden entirely when the flag is
+              off. */}
+          {MOBILE_PERSISTENT_AUTH_ENABLED && <AppLockToggle />}
           <li className="border-t border-line">
             <button
               onClick={logout}

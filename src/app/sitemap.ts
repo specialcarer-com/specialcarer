@@ -4,7 +4,7 @@ import { CITIES } from "@/lib/care/cities";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = "https://specialcarer.com";
+  const base = "https://www.specialcarers.com";
   const now = new Date();
 
   const staticEntries: MetadataRoute.Sitemap = (

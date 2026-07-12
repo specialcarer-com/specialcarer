@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { resolvePostAuthRedirect } from "@/lib/security/mfa-client";
 
 type Props = { redirectTo: string };
 type Stage = "enter-email" | "enter-code";
@@ -89,10 +90,11 @@ export function LoginForm({ redirectTo }: Props) {
         lastErr = error;
       }
       if (!verified) throw lastErr ?? new Error(t("invalidCode"));
-      // Decide where to send them based on profile completeness
+      // Decide where to send them based on profile completeness + MFA step-up
       const {
         data: { user },
       } = await supabase.auth.getUser();
+      let dest = redirectTo;
       if (user) {
         const { data: profile } = await supabase
           .from("profiles")
@@ -100,13 +102,11 @@ export function LoginForm({ redirectTo }: Props) {
           .eq("id", user.id)
           .maybeSingle();
         if (!profile?.full_name || !profile?.country) {
-          router.push(`/onboarding?next=${encodeURIComponent(redirectTo)}`);
-        } else {
-          router.push(redirectTo);
+          dest = `/onboarding?next=${encodeURIComponent(redirectTo)}`;
         }
-      } else {
-        router.push(redirectTo);
       }
+      const target = await resolvePostAuthRedirect(dest);
+      router.push(target);
       router.refresh();
     } catch (err) {
       const msg = err instanceof Error ? err.message : t("invalidCode");

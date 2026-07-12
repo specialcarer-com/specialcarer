@@ -6,12 +6,19 @@ type Props = {
   inviteUrl: string | null;
   allCleared: boolean;
   country: "GB" | "US";
+  /**
+   * When true (GB + no real uCheck API key wired), the self-serve invite URL
+   * is a stub that resolves to a non-existent host. We hide the button and
+   * surface a clear message instead, so carers don't hit a broken page.
+   */
+  stubMode?: boolean;
 };
 
 export default function VerificationClient({
   inviteUrl,
   allCleared,
   country,
+  stubMode = false,
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +53,22 @@ export default function VerificationClient({
       <p className="text-sm text-emerald-700">
         Verification complete. Nothing more to do here.
       </p>
+    );
+  }
+
+  // Stub mode: real uCheck integration not yet live. Block the broken
+  // self-serve link and tell the carer what happens next.
+  if (stubMode) {
+    return (
+      <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900">
+        <p className="font-medium">Self-serve verification coming soon.</p>
+        <p className="mt-1">
+          We&rsquo;re finalising our integration with uCheck. In the meantime,
+          our team will clear your DBS and Right to Work checks manually after
+          we&rsquo;ve received your documents. We&rsquo;ll email you with next
+          steps within one working day.
+        </p>
+      </div>
     );
   }
 

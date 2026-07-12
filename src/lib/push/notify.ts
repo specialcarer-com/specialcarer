@@ -92,6 +92,32 @@ export type DispatchEvent =
       bookingId: string;
       seekerId: string;
       startsAt: string;
+    }
+  | {
+      type: "offer.expired";
+      bookingId: string;
+      seekerId: string;
+      // Carers who were shortlisted but didn't get picked. Cheap to grab in
+      // the expiry sweep; kept on the event for downstream use (e.g. a future
+      // "shift went unfilled" nudge to carers — see PR follow-up).
+      shortlistedCaregiverIds?: string[];
+    }
+  | {
+      // Family timeline (gap 41). One dispatch per recipient — the fan-out
+      // helper in src/lib/timeline/fanout.ts resolves the recipient list and
+      // emits one of these per person.
+      type: "timeline.event_created";
+      recipientId: string;
+      eventId: string;
+      actorName: string | null;
+      eventTitle: string;
+    }
+  | {
+      type: "timeline.comment_created";
+      recipientId: string;
+      eventId: string;
+      actorName: string | null;
+      commentPreview: string;
     };
 
 export type BuiltPayload = {
@@ -239,6 +265,40 @@ export function buildPayload(event: DispatchEvent): BuiltPayload {
         title: "Your carer is confirmed",
         body: `A carer is locked in — shift starts ${shortDate(event.startsAt)}.`,
         deeplink: `/m/bookings/${event.bookingId}`,
+        payload: { ...event },
+      };
+    // Copy is inline English-only here, matching every other variant above.
+    // TODO(i18n): push templates aren't localised yet — localise the whole
+    // dispatcher in one pass rather than special-casing this event.
+    case "offer.expired":
+      return {
+        recipientUserId: event.seekerId,
+        title: "Offer expired",
+        body: "No carer accepted in time. Re-post or adjust your search?",
+        deeplink: `/m/bookings/${event.bookingId}`,
+        payload: { ...event },
+      };
+    // Family timeline (gap 41). English-only copy with TODO(i18n) — matches
+    // every other variant in this dispatcher; localise the whole file in one
+    // pass rather than special-casing these.
+    case "timeline.event_created":
+      return {
+        recipientUserId: event.recipientId,
+        title: event.actorName
+          ? `New activity from ${event.actorName}`
+          : "New activity",
+        body: event.eventTitle,
+        deeplink: `/m/timeline?event=${event.eventId}`,
+        payload: { ...event },
+      };
+    case "timeline.comment_created":
+      return {
+        recipientUserId: event.recipientId,
+        title: event.actorName
+          ? `${event.actorName} commented`
+          : "New comment",
+        body: truncatePreview(event.commentPreview),
+        deeplink: `/m/timeline?event=${event.eventId}`,
         payload: { ...event },
       };
   }

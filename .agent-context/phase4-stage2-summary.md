@@ -46,7 +46,7 @@ PAYE and NI compute on it correctly.
 
 | Path | Change |
 | --- | --- |
-| `supabase/migrations/20260516_holiday_pot_disbursement_v1.sql` | NEW — adds `org_carer_payouts.holiday_payout_cents` (int, default 0), `org_carer_payouts.holiday_payout_request_ids` (uuid[], default '{}'), and partial unique index `holiday_pot_ledger_debited_leave_request_unique` on `holiday_pot_ledger(leave_request_id) WHERE entry_type='debited_paid_leave'`. Strictly additive. |
+| `supabase/migrations/20260513113254_holiday_pot_disbursement_v1.sql` | NEW — adds `org_carer_payouts.holiday_payout_cents` (int, default 0), `org_carer_payouts.holiday_payout_request_ids` (uuid[], default '{}'), and partial unique index `holiday_pot_ledger_debited_leave_request_unique` on `holiday_pot_ledger(leave_request_id) WHERE entry_type='debited_paid_leave'`. Strictly additive. |
 | `src/lib/payroll/holiday-pot.ts` | Added `computeHolidayDisbursementForCarer({ requests, balanceCents })` pure helper + types. Kept `computeHolidayLedgerEntry` for stage-1 accruals. |
 | `src/lib/payroll/__tests__/holiday-pot.test.ts` | Rewrote to `node:test` style, 15 tests covering: ledger accrual cases (5) and disbursement cases — empty, full-coverage, over-balance auto-reject, multi-request FIFO partial coverage, zero/negative amount handling, zero balance, negative balance, idempotency (reversed-input determinism), tiebreaker on id. |
 | `src/lib/payroll/run-engine.ts` | `openPreview` now unions batches with leave-only carers, fetches disbursement decision, applies rejections, includes payout in gross before `computePay`, snapshots payout fields. `executeRun` inserts ledger debits per snapshotted request id and marks requests paid — idempotent via unique index. |
@@ -67,7 +67,7 @@ PAYE and NI compute on it correctly.
 ## Commit
 
 - Branch: `main`
-- Author: `SpecialCarer Bot <bot@specialcarer.com>`
+- Author: `SpecialCarer Bot <bot@specialcarers.com>`
 - Commit SHA: see commit log (recorded after push)
 
 ## Manual steps for the parent agent
@@ -78,7 +78,7 @@ PAYE and NI compute on it correctly.
 mcp__supabase__apply_migration
   project_id = qupjaanyhnuvlexkwtpq
   name       = holiday_pot_disbursement_v1
-  query      = <contents of supabase/migrations/20260516_holiday_pot_disbursement_v1.sql>
+  query      = <contents of supabase/migrations/20260513113254_holiday_pot_disbursement_v1.sql>
 ```
 
 Nothing else needs to be done out-of-band — no env vars, no Vercel changes,

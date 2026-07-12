@@ -134,7 +134,27 @@
     "setNewPassword": "Set new password",
     "updating": "Updating…",
     "resetExpiredPrefix": "Your reset link has expired or is invalid. Please",
-    "requestNewLink": "request a new one"
+    "requestNewLink": "request a new one",
+    "displayName": "Your name",
+    "displayNamePlaceholder": "Jane Doe",
+    "contactName": "Your name",
+    "organisationName": "Organisation name",
+    "organisationNamePlaceholder": "Acme Care Ltd",
+    "alreadyHaveAccount": "Already have an account?",
+    "signInInstead": "Sign in instead",
+    "signupCaregiverHeadline": "Apply to caregive",
+    "signupCaregiverIntro": "Apply in 5 minutes. Background checks usually clear within 1–5 days. You can start booking shifts the moment they do.",
+    "signupCaregiverNote": "DBS and right-to-work checks happen after you sign up — you can complete your profile while they process.",
+    "signupFamilyHeadline": "Create your family account",
+    "signupFamilyIntro": "Find trusted, vetted carers near you and manage your care in one place.",
+    "signupFamilyNote": "Every carer is identity-checked and safer-recruited before they can be booked.",
+    "signupOrgHeadline": "Set up an organisation account",
+    "signupOrgIntro": "For care companies, councils, and agencies — multi-seat access, contract booking, and a team you manage.",
+    "signupOrgNote": "We verify your organisation before bookings go live, with an MSA and DPA in place.",
+    "signupLinkCaregiver": "Apply as a caregiver",
+    "signupLinkFamily": "Find care for your family",
+    "signupLinkOrg": "Set up an organisation account",
+    "newToSpecialCarers": "New to SpecialCarers?"
   },
   "search": {
     "badge": "Find care",
@@ -252,5 +272,178 @@
     "invalidEmail": "Please enter a valid email.",
     "passwordTooShort": "Password must be at least 8 characters.",
     "passwordsDontMatch": "Passwords don’t match."
+  },
+  "accessibility": {
+    "settings": "Accessibility",
+    "language": "Language",
+    "largeText": "Large text",
+    "largeTextHelp": "Increases base font size to 18px across the app",
+    "reducedMotion": "Reduced motion",
+    "voiceBooking": "Voice booking",
+    "voiceBookingHelp": "Use your microphone to search or post a care job hands-free"
+  },
+  "voice": {
+    "listening": "Listening…",
+    "idle": "Tap to speak",
+    "prompt": "What would you like to do?",
+    "didntCatch": "Didn't catch that. Please try again.",
+    "exampleHint": "Try: \"Book Sarah for tomorrow 3pm\" or \"Find a carer in Manchester\"",
+    "micPermission": "Microphone access is needed for voice booking.",
+    "notSupported": "Voice not supported on this device"
+  },
+  "earnings": {
+    "periodSwitcherLabel": "Choose earnings period",
+    "period": {
+      "this_week": "This week",
+      "this_month": "This month",
+      "last_month": "Last month",
+      "all_time": "All time"
+    },
+    "headline": {
+      "this_week": "Earned this week",
+      "this_month": "Earned this month",
+      "last_month": "Earned last month",
+      "all_time": "Earned all time"
+    },
+    "grossLabel": "Gross",
+    "feeLabel": "Fee",
+    "vsPrior": "vs previous period",
+    "upcoming": {
+      "title": "Upcoming — not yet earned",
+      "caption": "{count, plural, =0 {No confirmed bookings yet} one {# confirmed booking} other {# confirmed bookings}}"
+    },
+    "list": {
+      "title": "Recent completed bookings"
+    },
+    "rowGrossFee": "{gross} gross · {fee} fee",
+    "empty": {
+      "title": "No earnings yet",
+      "body": "Completed bookings will show up here with your take-home pay."
+    },
+    "loadMore": "Load more",
+    "loadingMore": "Loading…",
+    "loadError": "Couldn't load your earnings. Please try again.",
+    "retry": "Try again"
+  },
+  "calendar": {
+    "addToCalendar": "Add to calendar",
+    "addToCalendarHelp": "Download this booking as a calendar file for Google, Apple or Outlook.",
+    "syncTitle": "Calendar sync",
+    "syncIntro": "Subscribe to a private feed so your upcoming bookings appear automatically in your calendar app and stay up to date.",
+    "setupTitle": "Set up calendar sync",
+    "setupHelp": "Create a private link you can add to Google Calendar, Apple Calendar or Outlook.",
+    "setup": "Set up calendar sync",
+    "yourFeedUrl": "Your calendar feed",
+    "feedUrlHelp": "Keep this link private — anyone with it can see your upcoming bookings.",
+    "revealUrl": "Reveal link",
+    "hideUrl": "Hide link",
+    "copyUrl": "Copy link",
+    "copied": "Copied",
+    "openInCalendar": "Open in calendar",
+    "rotateUrl": "Rotate link",
+    "disable": "Disable",
+    "rotateHelp": "Rotating creates a new link and stops the old one working. Disabling removes the feed entirely."
+  },
+  "timeline": {
+    "day": {
+      "today": "Today",
+      "yesterday": "Yesterday"
+    },
+    "card": {
+      "someone": "Someone",
+      "noteCreated": "{actor} added a journal note",
+      "bookingConfirmed": "A visit was confirmed",
+      "bookingStarted": "{actor} started a visit",
+      "bookingCompleted": "{actor} completed a visit",
+      "bookingCancelled": "A visit was cancelled",
+      "keyPoints": "Key points",
+      "photos": "{count} photos",
+      "addComment": "Add a comment",
+      "noComments": "No comments yet",
+      "commentCount": "{count} comments"
+    },
+    "reaction": {
+      "heart": "Love",
+      "pray": "Thinking of you",
+      "thanks": "Thank you",
+      "concern": "Concerned"
+    },
+    "comment": {
+      "none": "Be the first to comment.",
+      "someone": "Someone",
+      "placeholder": "Write a comment…",
+      "send": "Send",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this comment?"
+    },
+    "empty": {
+      "title": "Nothing here yet",
+      "body": "When a carer adds a journal note or a visit happens, it'll show up here for the whole family."
+    },
+    "loadMore": {
+      "label": "Load more",
+      "loading": "Loading…"
+    },
+    "error": {
+      "load": "Couldn't load more activity. Please try again.",
+      "reaction": "Couldn't update your reaction. Please try again.",
+      "comment": "Couldn't post your comment. Please try again."
+    }
+  },
+  "security": {
+    "title": "Two-factor authentication",
+    "intro": "Add a second step to sign-in using an authenticator app. Even if someone learns your password, they can't get in without your phone.",
+    "statusOffTitle": "Two-factor authentication is off",
+    "statusOffSub": "Protect your account with an authenticator app.",
+    "statusOnTitle": "Two-factor authentication is on",
+    "statusOnSub": "You'll be asked for a code from your authenticator app when you sign in.",
+    "on": "On",
+    "off": "Off",
+    "enableTitle": "Set up two-factor authentication",
+    "enableIntro": "You'll need an authenticator app such as 1Password, Google Authenticator, Microsoft Authenticator, or Authy.",
+    "enable": "Enable 2FA",
+    "starting": "Starting…",
+    "enrolError": "We couldn't start setup. Please try again.",
+    "scanTitle": "Scan this QR code",
+    "scanHelp": "Open your authenticator app and scan the code, then enter the 6-digit code it shows.",
+    "qrAlt": "QR code for two-factor authentication setup",
+    "cantScan": "Can't scan? Enter the key manually",
+    "hideSecret": "Hide setup key",
+    "codeLabel": "6-digit code",
+    "verifyAndEnable": "Verify and enable",
+    "verifying": "Verifying…",
+    "codeMismatch": "That code didn't match. Try again.",
+    "rateLimited": "Too many attempts. Try again in a minute.",
+    "genericError": "Something went wrong. Please try again.",
+    "recoveryTitle": "Save your recovery codes",
+    "recoveryIntro": "Each code can be used once if you lose access to your authenticator app. Store them somewhere safe — they won't be shown again.",
+    "recoveryWarning": "Anyone with these codes can sign in as you. Keep them private.",
+    "recoveryFileHeader": "SpecialCarer two-factor recovery codes. Each code works once. Keep them private.",
+    "copy": "Copy",
+    "download": "Download",
+    "savedCodes": "I've saved these",
+    "codesRemaining": "{count} recovery codes remaining",
+    "regenerate": "Regenerate codes",
+    "regenerateTitle": "Regenerate recovery codes",
+    "regenerateHelp": "Enter a code from your authenticator app. Your old recovery codes will stop working.",
+    "confirmRegenerate": "Regenerate",
+    "disable": "Disable 2FA",
+    "disableTitle": "Disable two-factor authentication",
+    "disableHelp": "Enter a code from your authenticator app or a recovery code to confirm.",
+    "confirmDisable": "Disable",
+    "codeOrRecoveryLabel": "Authenticator or recovery code",
+    "codeOrRecoveryPlaceholder": "123456 or recovery code",
+    "cancel": "Cancel",
+    "working": "Working…",
+    "challengeTitle": "Enter your code",
+    "challengeHint": "Open your authenticator app and enter the 6-digit code.",
+    "challengeRecoveryHint": "Enter one of your recovery codes.",
+    "recoveryCodeLabel": "Recovery code",
+    "verify": "Verify",
+    "useRecoveryCodeInstead": "Use a recovery code instead",
+    "useAuthenticatorInstead": "Use your authenticator app instead",
+    "requiredTitle": "Two-factor authentication required",
+    "requiredIntro": "Your account requires two-factor authentication. Set it up now to continue.",
+    "supportRecoveryNote": "Lost your authenticator device? Contact support for identity verification and factor reset."
   }
 }

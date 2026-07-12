@@ -9,6 +9,27 @@ Trusted care, on your schedule. On-demand and scheduled childcare, elder care, a
 - **Supabase** for Postgres, auth, and realtime
 - **Vercel** for hosting
 
+## Security — TOTP two-factor authentication (Sprint 2.1)
+
+Sprint 2.1 implements TOTP 2FA via **Supabase Auth native MFA** (`supabase.auth.mfa.*`).
+Factors are stored in Supabase Auth — not in custom Postgres tables.
+
+| Audience | Policy |
+|----------|--------|
+| **Admins** (`profiles.role = admin`) | TOTP is **required**. Admin routes and `/api/admin/**` enforce **AAL2** (session must complete MFA challenge). |
+| **Everyone else** | TOTP is **optional**, self-service at `/dashboard/security` (web) or `/m/profile/security` (mobile). |
+
+**Manual setup (Supabase dashboard):**
+
+1. Enable **TOTP MFA** for the project: Authentication → Providers → MFA.
+2. No extra redirect URLs are needed beyond your existing auth callback (`/auth/callback`).
+
+**API responses:** unauthenticated → `401`; non-admin → `403`; admin without TOTP or AAL2 → `428` with `error: mfa_setup_required` or `mfa_challenge_required`.
+
+**Support recovery:** lost authenticator devices are reset by staff via identity verification — see `POST /api/admin/users/[id]/mfa-reset` (requires admin AAL2 + audit reason).
+
+**Sprint 2.2 (planned):** SMS OTP as a second factor type using the same Supabase MFA enrol/challenge/verify flow with `factorType: 'phone'`.
+
 ## Local development
 
 ```bash
@@ -50,7 +71,7 @@ supabase/
 
 ## Deployment
 
-Pushed to `main` → auto-deploys to Vercel → live at `specialcarer.com`.
+Pushed to `main` → auto-deploys to Vercel → live at `specialcarers.com`.
 
 ### Cutting an iOS TestFlight build
 
@@ -60,10 +81,29 @@ gets tripped fast if tags are cut for web-only changes. See
 [`docs/ios-release-runbook.md`](docs/ios-release-runbook.md) for the
 policy and the post-incident background.
 
+## Observability (Sentry)
+
+Error and performance monitoring for the web app is wired through
+[`@sentry/nextjs`](https://docs.sentry.io/platforms/javascript/guides/nextjs/).
+
+- **Running locally:** leave the Sentry env vars unset (see `.env.example`).
+  With no DSN, the SDK silently no-ops — no events are sent and no source-map
+  upload runs at build time. To exercise it locally, set `NEXT_PUBLIC_SENTRY_DSN`
+  (and `SENTRY_DSN` for the server) to a real DSN.
+- **PII policy:** `sendDefaultPii` is `false` and a `beforeSend` scrubber
+  (`src/lib/observability/scrub.ts`) strips sensitive fields (DOB, NI number,
+  DBS certificate number, address lines, bank details, cookies) and truncates
+  any postcode to its outward code before events leave the app. User context is
+  limited to `id`, role, and country — never email.
+- **Session Replay** runs at a low sample rate site-wide but is fully disabled
+  on `/dashboard/vetting/*` and `/m/dbs/*`, which render identity documents.
+- **Ad-blocker bypass:** events tunnel through `/api/monitoring` on our own
+  origin.
+
 ## Next steps
 
 - [ ] Apply `0001_init.sql` migration in Supabase
 - [ ] Add Supabase env vars in Vercel
-- [ ] Point `specialcarer.com` from IONOS to Vercel
+- [ ] Point `specialcarers.com` from IONOS to Vercel
 - [ ] Build seeker / caregiver auth flows
 - [ ] Wire up Stripe Connect, Mapbox, Twilio (post-launch checklist)

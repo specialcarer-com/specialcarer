@@ -149,7 +149,7 @@ Every 12 months, caregivers re-verify identity and we re-run their background ch
 
 ---
 
-If something ever feels wrong, [contact our team](mailto:safety@specialcarer.com) immediately. We respond to every safety concern within hours.`,
+If something ever feels wrong, [contact our team](mailto:safety@specialcarers.com) immediately. We respond to every safety concern within hours.`,
   },
 ];
 

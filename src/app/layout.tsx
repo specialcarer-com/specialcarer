@@ -5,6 +5,7 @@ import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
 import CookieBanner from "@/components/cookie-banner";
 import SkipToContent from "@/components/skip-to-content";
+import SentryUserContext from "@/lib/observability/SentryUserContext";
 import { dirFor, isAppLocale, DEFAULT_LOCALE } from "@/i18n/config";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
   title: "SpecialCarers — Trusted care, on your schedule",
   description:
     "On-demand and scheduled childcare, elder care, and home support from vetted, DBS-checked caregivers across the UK.",
-  metadataBase: new URL("https://specialcarer.com"),
+  metadataBase: new URL("https://www.specialcarers.com"),
   manifest: "/site.webmanifest",
   icons: {
     icon: [
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "SpecialCarers",
     description: "Trusted care, on your schedule.",
-    url: "https://specialcarer.com",
+    url: "https://www.specialcarers.com",
     siteName: "SpecialCarers",
     type: "website",
     images: [
@@ -74,6 +75,7 @@ export default async function RootLayout({
     >
       <body className="font-sans antialiased bg-white text-slate-900">
         <NextIntlClientProvider locale={locale} messages={messages}>
+          <SentryUserContext />
           <SkipToContent />
         {/* Site-wide "Beta is live" banner — only renders when
             NEXT_PUBLIC_TESTFLIGHT_URL is set in the deploy env. */}

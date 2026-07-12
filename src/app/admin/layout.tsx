@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/auth";
@@ -40,6 +41,7 @@ const SECTIONS: NavSection[] = [
       { href: "/admin/finance", label: "Finance" },
       { href: "/admin/payroll", label: "Payroll" },
       { href: "/admin/analytics", label: "Analytics" },
+      { href: "/admin/countries", label: "Countries" },
       { href: "/admin/audit-log", label: "Audit log" },
     ],
   },
@@ -72,6 +74,7 @@ const SECTIONS: NavSection[] = [
     label: "Compliance",
     items: [
       { href: "/admin/compliance", label: "Compliance dashboard" },
+      { href: "/admin/dbs", label: "DBS applications" },
     ],
   },
 ];
@@ -81,6 +84,18 @@ export default async function AdminLayout({
 }: {
   children: ReactNode;
 }) {
+  // The /admin/login page is the unauthenticated admin sign-in flow. It must
+  // render without the admin chrome and without requireAdmin() (which would
+  // redirect anonymous visitors away before they could ever sign in). The
+  // page enforces admin-only access itself after OTP verification.
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  if (
+    pathname.startsWith("/admin/login") ||
+    pathname.startsWith("/admin/mfa/")
+  ) {
+    return <>{children}</>;
+  }
+
   const admin = await requireAdmin();
 
   return (

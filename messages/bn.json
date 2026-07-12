@@ -134,7 +134,27 @@
     "setNewPassword": "নতুন পাসওয়ার্ড সেট করুন",
     "updating": "আপডেট করা হচ্ছে…",
     "resetExpiredPrefix": "আপনার রিসেট লিঙ্কের মেয়াদ শেষ হয়েছে বা এটি অবৈধ। অনুগ্রহ করে",
-    "requestNewLink": "একটি নতুন লিঙ্কের অনুরোধ করুন"
+    "requestNewLink": "একটি নতুন লিঙ্কের অনুরোধ করুন",
+    "displayName": "আপনার নাম",
+    "displayNamePlaceholder": "জেন ডো",
+    "contactName": "আপনার নাম",
+    "organisationName": "প্রতিষ্ঠানের নাম",
+    "organisationNamePlaceholder": "Acme Care Ltd",
+    "alreadyHaveAccount": "ইতিমধ্যে একটি অ্যাকাউন্ট আছে?",
+    "signInInstead": "সাইন ইন করুন",
+    "signupCaregiverHeadline": "কেয়ারগিভার হিসেবে আবেদন করুন",
+    "signupCaregiverIntro": "৫ মিনিটে আবেদন করুন। ব্যাকগ্রাউন্ড যাচাই সাধারণত ১–৫ দিনের মধ্যে সম্পন্ন হয়। সম্পন্ন হওয়ার সাথে সাথেই আপনি শিফট বুক করা শুরু করতে পারবেন।",
+    "signupCaregiverNote": "DBS এবং কাজের অধিকার যাচাই সাইন আপের পরে হয় — যাচাই চলাকালীন আপনি আপনার প্রোফাইল সম্পূর্ণ করতে পারেন।",
+    "signupFamilyHeadline": "আপনার পারিবারিক অ্যাকাউন্ট তৈরি করুন",
+    "signupFamilyIntro": "আপনার কাছাকাছি বিশ্বস্ত, যাচাইকৃত কেয়ারগিভার খুঁজুন এবং এক জায়গায় আপনার যত্ন পরিচালনা করুন।",
+    "signupFamilyNote": "প্রতিটি কেয়ারগিভার বুক করার আগে পরিচয় যাচাই এবং নিরাপদভাবে নিয়োগ করা হয়।",
+    "signupOrgHeadline": "একটি প্রতিষ্ঠানের অ্যাকাউন্ট সেট আপ করুন",
+    "signupOrgIntro": "কেয়ার কোম্পানি, কাউন্সিল এবং এজেন্সির জন্য — মাল্টি-সিট অ্যাক্সেস, চুক্তিভিত্তিক বুকিং এবং আপনার পরিচালিত একটি দল।",
+    "signupOrgNote": "বুকিং চালু হওয়ার আগে আমরা MSA এবং DPA সহ আপনার প্রতিষ্ঠান যাচাই করি।",
+    "signupLinkCaregiver": "কেয়ারগিভার হিসেবে আবেদন করুন",
+    "signupLinkFamily": "আপনার পরিবারের জন্য যত্ন খুঁজুন",
+    "signupLinkOrg": "একটি প্রতিষ্ঠানের অ্যাকাউন্ট সেট আপ করুন",
+    "newToSpecialCarers": "SpecialCarers-এ নতুন?"
   },
   "search": {
     "badge": "যত্ন খুঁজুন",
@@ -252,5 +272,177 @@
     "invalidEmail": "অনুগ্রহ করে একটি বৈধ ইমেল লিখুন।",
     "passwordTooShort": "পাসওয়ার্ড কমপক্ষে ৮টি অক্ষরের হতে হবে।",
     "passwordsDontMatch": "পাসওয়ার্ড মিলছে না।"
+  },
+  "accessibility": {
+    "settings": "অ্যাক্সেসিবিলিটি",
+    "language": "ভাষা",
+    "largeText": "বড় টেক্সট",
+    "largeTextHelp": "পুরো অ্যাপ জুড়ে মূল ফন্টের আকার ১৮ পিক্সেলে বাড়ায়",
+    "reducedMotion": "কম অ্যানিমেশন",
+    "voiceBooking": "ভয়েস বুকিং",
+    "voiceBookingHelp": "হাত ছাড়াই যত্ন খুঁজতে বা পোস্ট করতে আপনার মাইক্রোফোন ব্যবহার করুন"
+  },
+  "voice": {
+    "listening": "শুনছি…",
+    "idle": "কথা বলতে ট্যাপ করুন",
+    "prompt": "আপনি কী করতে চান?",
+    "didntCatch": "বুঝতে পারিনি। অনুগ্রহ করে আবার চেষ্টা করুন।",
+    "exampleHint": "চেষ্টা করুন: «আগামীকাল বিকেল ৩টায় সারাহকে বুক করুন» বা «ম্যানচেস্টারে একজন কেয়ারার খুঁজুন»",
+    "micPermission": "ভয়েস বুকিংয়ের জন্য মাইক্রোফোন অ্যাক্সেস প্রয়োজন।",
+    "notSupported": "এই ডিভাইসে ভয়েস সমর্থিত নয়"
+  },
+  "earnings": {
+    "periodSwitcherLabel": "আয়ের সময়কাল নির্বাচন করুন",
+    "period": {
+      "this_week": "এই সপ্তাহ",
+      "this_month": "এই মাস",
+      "last_month": "গত মাস",
+      "all_time": "সর্বমোট"
+    },
+    "headline": {
+      "this_week": "এই সপ্তাহে আয়",
+      "this_month": "এই মাসে আয়",
+      "last_month": "গত মাসে আয়",
+      "all_time": "সর্বমোট আয়"
+    },
+    "grossLabel": "মোট",
+    "feeLabel": "ফি",
+    "vsPrior": "আগের সময়ের তুলনায়",
+    "upcoming": {
+      "title": "আসন্ন — এখনও অর্জিত নয়",
+      "caption": "{count, plural, =0 {এখনও কোনো নিশ্চিত বুকিং নেই} one {# টি নিশ্চিত বুকিং} other {# টি নিশ্চিত বুকিং}}"
+    },
+    "list": {
+      "title": "সম্প্রতি সম্পন্ন বুকিং"
+    },
+    "rowGrossFee": "{gross} মোট · {fee} ফি",
+    "empty": {
+      "title": "এখনও কোনো আয় নেই",
+      "body": "সম্পন্ন বুকিংগুলি আপনার নিট আয়সহ এখানে দেখা যাবে।"
+    },
+    "loadMore": "আরও দেখুন",
+    "loadingMore": "লোড হচ্ছে…",
+    "loadError": "আপনার আয় লোড করা যায়নি। আবার চেষ্টা করুন।",
+    "retry": "আবার চেষ্টা করুন"
+  },
+  "calendar": {
+    "addToCalendar": "ক্যালেন্ডারে যোগ করুন",
+    "addToCalendarHelp": "এই বুকিংটি Google, Apple বা Outlook-এর জন্য ক্যালেন্ডার ফাইল হিসেবে ডাউনলোড করুন।",
+    "syncTitle": "ক্যালেন্ডার সিঙ্ক",
+    "syncIntro": "একটি ব্যক্তিগত ফিড সাবস্ক্রাইব করুন যাতে আপনার আসন্ন বুকিংগুলি স্বয়ংক্রিয়ভাবে আপনার ক্যালেন্ডার অ্যাপে দেখা যায় এবং হালনাগাদ থাকে।",
+    "setupTitle": "ক্যালেন্ডার সিঙ্ক সেট আপ করুন",
+    "setupHelp": "একটি ব্যক্তিগত লিঙ্ক তৈরি করুন যা আপনি Google Calendar, Apple Calendar বা Outlook-এ যোগ করতে পারেন।",
+    "setup": "ক্যালেন্ডার সিঙ্ক সেট আপ করুন",
+    "yourFeedUrl": "আপনার ক্যালেন্ডার ফিড",
+    "feedUrlHelp": "এই লিঙ্কটি ব্যক্তিগত রাখুন — যার কাছে এটি আছে সে আপনার আসন্ন বুকিং দেখতে পারে।",
+    "revealUrl": "লিঙ্ক দেখান",
+    "hideUrl": "লিঙ্ক লুকান",
+    "copyUrl": "লিঙ্ক কপি করুন",
+    "copied": "কপি করা হয়েছে",
+    "openInCalendar": "ক্যালেন্ডারে খুলুন",
+    "rotateUrl": "লিঙ্ক পুনর্নবীকরণ করুন",
+    "disable": "নিষ্ক্রিয় করুন",
+    "rotateHelp": "পুনর্নবীকরণ একটি নতুন লিঙ্ক তৈরি করে এবং পুরোনোটি বন্ধ করে দেয়। নিষ্ক্রিয় করলে ফিডটি সম্পূর্ণ সরে যায়।"
+  },
+  "timeline": {
+    "day": {
+      "today": "Today",
+      "yesterday": "Yesterday"
+    },
+    "card": {
+      "someone": "Someone",
+      "noteCreated": "{actor} added a journal note",
+      "bookingConfirmed": "A visit was confirmed",
+      "bookingStarted": "{actor} started a visit",
+      "bookingCompleted": "{actor} completed a visit",
+      "bookingCancelled": "A visit was cancelled",
+      "keyPoints": "Key points",
+      "photos": "{count} photos",
+      "addComment": "Add a comment",
+      "noComments": "No comments yet",
+      "commentCount": "{count} comments"
+    },
+    "reaction": {
+      "heart": "Love",
+      "pray": "Thinking of you",
+      "thanks": "Thank you",
+      "concern": "Concerned"
+    },
+    "comment": {
+      "none": "Be the first to comment.",
+      "someone": "Someone",
+      "placeholder": "Write a comment…",
+      "send": "Send",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this comment?"
+    },
+    "empty": {
+      "title": "Nothing here yet",
+      "body": "When a carer adds a journal note or a visit happens, it'll show up here for the whole family."
+    },
+    "loadMore": {
+      "label": "Load more",
+      "loading": "Loading…"
+    },
+    "error": {
+      "load": "Couldn't load more activity. Please try again.",
+      "reaction": "Couldn't update your reaction. Please try again.",
+      "comment": "Couldn't post your comment. Please try again."
+    }
+  },
+  "security": {
+    "title": "দুই-ধাপ যাচাইকরণ",
+    "intro": "একটি অথেন্টিকেটর অ্যাপ ব্যবহার করে সাইন-ইনে দ্বিতীয় ধাপ যোগ করুন। কেউ আপনার পাসওয়ার্ড জানলেও আপনার ফোন ছাড়া ঢুকতে পারবে না।",
+    "statusOffTitle": "দুই-ধাপ যাচাইকরণ বন্ধ আছে",
+    "statusOffSub": "একটি অথেন্টিকেটর অ্যাপ দিয়ে আপনার অ্যাকাউন্ট সুরক্ষিত করুন।",
+    "statusOnTitle": "দুই-ধাপ যাচাইকরণ চালু আছে",
+    "statusOnSub": "সাইন-ইন করার সময় আমরা আপনার অথেন্টিকেটর অ্যাপের কোড চাইব।",
+    "on": "চালু",
+    "off": "বন্ধ",
+    "enableTitle": "দুই-ধাপ যাচাইকরণ সেট আপ করুন",
+    "enableIntro": "আপনার একটি অথেন্টিকেটর অ্যাপ প্রয়োজন হবে, যেমন Google Authenticator, Authy বা 1Password।",
+    "enable": "2FA চালু করুন",
+    "starting": "শুরু হচ্ছে…",
+    "enrolError": "আমরা সেটআপ শুরু করতে পারিনি। আবার চেষ্টা করুন।",
+    "scanTitle": "এই QR কোড স্ক্যান করুন",
+    "scanHelp": "আপনার অথেন্টিকেটর অ্যাপ খুলে কোডটি স্ক্যান করুন, তারপর এটি যে ৬-সংখ্যার কোড দেখায় তা লিখুন।",
+    "qrAlt": "দুই-ধাপ যাচাইকরণ সেটআপের জন্য QR কোড",
+    "cantScan": "স্ক্যান করতে পারছেন না? কীটি হাতে লিখুন",
+    "hideSecret": "কী লুকান",
+    "codeLabel": "৬-সংখ্যার কোড",
+    "verifyAndEnable": "যাচাই করে চালু করুন",
+    "verifying": "যাচাই করা হচ্ছে…",
+    "codeMismatch": "কোডটি মেলেনি। আবার চেষ্টা করুন।",
+    "rateLimited": "অনেকবার চেষ্টা করা হয়েছে। এক মিনিট পর আবার চেষ্টা করুন।",
+    "genericError": "কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।",
+    "recoveryTitle": "আপনার রিকভারি কোড সংরক্ষণ করুন",
+    "recoveryIntro": "অথেন্টিকেটর অ্যাপে প্রবেশাধিকার হারালে প্রতিটি কোড একবার ব্যবহার করা যায়। নিরাপদ স্থানে রাখুন — এগুলো আর দেখানো হবে না।",
+    "recoveryWarning": "এই কোডগুলো যার কাছে থাকবে সে আপনার হয়ে সাইন-ইন করতে পারবে। গোপন রাখুন।",
+    "recoveryFileHeader": "SpecialCarer দুই-ধাপ রিকভারি কোড। প্রতিটি কোড একবার কাজ করে। গোপন রাখুন।",
+    "copy": "কপি করুন",
+    "download": "ডাউনলোড করুন",
+    "savedCodes": "আমি এগুলো সংরক্ষণ করেছি",
+    "codesRemaining": "{count}টি রিকভারি কোড বাকি আছে",
+    "regenerate": "কোড পুনরায় তৈরি করুন",
+    "regenerateTitle": "রিকভারি কোড পুনরায় তৈরি করুন",
+    "regenerateHelp": "আপনার অথেন্টিকেটর অ্যাপ থেকে একটি কোড লিখুন। আপনার পুরোনো রিকভারি কোড আর কাজ করবে না।",
+    "confirmRegenerate": "পুনরায় তৈরি করুন",
+    "disable": "2FA বন্ধ করুন",
+    "disableTitle": "দুই-ধাপ যাচাইকরণ বন্ধ করুন",
+    "disableHelp": "নিশ্চিত করতে আপনার অথেন্টিকেটর অ্যাপের কোড বা একটি রিকভারি কোড লিখুন।",
+    "confirmDisable": "বন্ধ করুন",
+    "codeOrRecoveryLabel": "অথেন্টিকেটর বা রিকভারি কোড",
+    "codeOrRecoveryPlaceholder": "123456 বা রিকভারি কোড",
+    "cancel": "বাতিল করুন",
+    "working": "প্রক্রিয়াধীন…",
+    "challengeTitle": "আপনার কোড লিখুন",
+    "challengeHint": "আপনার অথেন্টিকেটর অ্যাপ খুলে ৬-সংখ্যার কোড লিখুন।",
+    "challengeRecoveryHint": "আপনার রিকভারি কোডগুলোর একটি লিখুন।",
+    "recoveryCodeLabel": "রিকভারি কোড",
+    "verify": "যাচাই করুন",
+    "useRecoveryCodeInstead": "পরিবর্তে একটি রিকভারি কোড ব্যবহার করুন",
+    "useAuthenticatorInstead": "পরিবর্তে আপনার অথেন্টিকেটর অ্যাপ ব্যবহার করুন",
+    "requiredTitle": "দুই-ধাপ যাচাইকরণ প্রয়োজন",
+    "requiredIntro": "আপনার অ্যাকাউন্টে দুই-ধাপ যাচাইকরণ প্রয়োজন। চালিয়ে যেতে এখনই সেট আপ করুন।"
   }
 }

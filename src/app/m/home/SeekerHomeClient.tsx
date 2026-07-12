@@ -30,6 +30,8 @@ import type {
 } from "@/app/api/m/bookings/upcoming/route";
 import type { ApiRecentCarer } from "@/app/api/m/carers/recent/route";
 import { CarerTile } from "../_components/CarerTile";
+import PredictiveSlotCard from "./PredictiveSlotCard";
+import VerifyIdentityCard from "@/components/identity/VerifyIdentityCard";
 
 /**
  * Home (seeker) — Figma 7:1652.
@@ -184,6 +186,29 @@ export default function SeekerHomeClient() {
   }, []);
   const upcoming = upcomingBookings?.[0] ?? null;
 
+  // US-only: surface a subtle HSA/FSA expenses link when the family is US-based.
+  // The summary endpoint returns { enabled:false } for non-USD seekers.
+  const [hsaEnabled, setHsaEnabled] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/m/family/hsa-summary", {
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const json = (await res.json()) as { enabled?: boolean };
+        if (!cancelled && json.enabled === true) setHsaEnabled(true);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <main className="min-h-[100dvh] bg-bg-screen sc-with-bottom-nav">
       {/* Sticky white "header" — avatar + name + bell. */}
@@ -312,6 +337,17 @@ export default function SeekerHomeClient() {
         </>
       )}
 
+      {/* Predictive "usual time" tile — one-tap rebook of the seeker's
+          detected recurring slot. Renders nothing when there's no such
+          slot (API 204). Sits directly below the Book again strip. */}
+      <PredictiveSlotCard />
+
+      {/* Identity verification (Veriff). Renders nothing while the
+          IDENTITY_VERIFICATION_ENABLED flag is off. */}
+      <div className="px-4 mt-4">
+        <VerifyIdentityCard />
+      </div>
+
       {/* Care journal quick-access. */}
       <SectionTitle title="Care journal" />
       <div className="px-4">
@@ -371,6 +407,17 @@ export default function SeekerHomeClient() {
           featured.map((c) => <RealCarerCard key={c.user_id} carer={c} />)
         )}
       </div>
+
+      {hsaEnabled && (
+        <div className="px-4 mt-8 mb-2 text-center">
+          <Link
+            href="/m/family/expenses"
+            className="text-[13px] text-subheading underline underline-offset-2"
+          >
+            Track HSA/FSA-eligible care expenses
+          </Link>
+        </div>
+      )}
 
       <BottomNav active="home" role="seeker" />
     </main>

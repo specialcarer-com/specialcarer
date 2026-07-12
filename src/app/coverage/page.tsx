@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   title: "Where SpecialCarers is available — Coverage map",
   description:
     "Care, in cities across the UK. See where SpecialCarers is live, on the waitlist, and coming soon. Search by postcode.",
-  alternates: { canonical: "https://specialcarer.com/coverage" },
+  alternates: { canonical: "https://www.specialcarers.com/coverage" },
 };
 
 export default async function CoveragePage() {
@@ -28,7 +28,7 @@ export default async function CoveragePage() {
     itemListElement: cities.map((c, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      url: `https://specialcarer.com/coverage/${c.slug}`,
+      url: `https://www.specialcarers.com/coverage/${c.slug}`,
       item: {
         "@type": "Place",
         name: c.name,

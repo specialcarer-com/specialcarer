@@ -1,5 +1,17 @@
 /**
- * DBS provider abstraction — Update Service path.
+ * DBS provider abstraction — Update Service path (LEGACY model).
+ *
+ * RECONCILIATION (PR-DBS-2): this provider backs the LIVE `background_checks`
+ * Update-Service recheck/reminder crons (src/app/api/cron/dbs-update-service-*)
+ * and the `dbs_change_events` queue. It is a separate, already-shipped
+ * subsystem from the PR-DBS-1 *application* model (dbs_applications +
+ * src/lib/dbs/{service,vendor}.ts). The two were NOT merged: deleting this
+ * would break the live recheck cron. Instead, the Update Service *status*
+ * concept now also lives on the vendor adapter as
+ * DbsVendor.getUpdateServiceStatus(), which the new daily poll
+ * (src/app/api/cron/dbs-update-service-poll) uses against dbs_applications.
+ * New DBS work should target the dbs_applications model; this file is kept
+ * only for the existing background_checks flow.
  *
  * The Update Service (https://www.gov.uk/dbs-update-service) lets a carer
  * keep an existing Enhanced DBS certificate "live" with a £16/year

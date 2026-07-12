@@ -16,6 +16,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isDbsEnabled } from "@/lib/dbs/flag";
+import { US_REGION_ENABLED } from "@/lib/region";
 import {
   handleRespond,
   type AcceptRpcResult,
@@ -46,6 +48,35 @@ export async function POST(
   }
 
   const admin = createAdminClient();
+
+  // DBS gating (PR-DBS-1): a carer who isn't search-eligible (both Adult +
+  // Child DBS approved) cannot ACCEPT bookings. Declining is always allowed.
+  // No-op when NEXT_PUBLIC_DBS_ENABLED is off.
+  if (
+    isDbsEnabled() &&
+    typeof body === "object" &&
+    body !== null &&
+    (body as { action?: unknown }).action === "accept"
+  ) {
+    let profileQuery = admin
+      .from("caregiver_profiles")
+      .select("dbs_search_eligible")
+      .eq("user_id", user.id);
+    // UK-only regional constraint until the US launch (see @/lib/region).
+    if (!US_REGION_ENABLED) {
+      profileQuery = profileQuery.eq("country", "GB");
+    }
+    const { data: profile } = await profileQuery.maybeSingle();
+    if (!profile?.dbs_search_eligible) {
+      return NextResponse.json(
+        {
+          error:
+            "Complete your DBS check before accepting bookings. Adult and Child DBS must both be approved.",
+        },
+        { status: 403 },
+      );
+    }
+  }
   const client: RespondClient = {
     async loadOffer({ offerId, bookingId, carerId }) {
       const { data } = await admin
@@ -129,6 +160,19 @@ async function dispatchInstantConfirm(
         seekerId: booking.seeker_id,
         startsAt,
       });
+    }
+
+    // Gap 41: family-timeline event for the confirmation. Fire-and-forget.
+    try {
+      const { recordBookingEvent } = await import("@/lib/timeline/ingest");
+      void recordBookingEvent({
+        bookingId: offer.booking_id,
+        transition: "confirmed",
+        actorId: offer.carer_id,
+        adminClient: admin,
+      });
+    } catch (e) {
+      console.error("[respond] timeline event failed", e);
     }
 
     // Losing carers — every offer the RPC just cancelled as filled_by_other_carer.

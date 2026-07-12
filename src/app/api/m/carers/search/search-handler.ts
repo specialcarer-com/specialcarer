@@ -368,6 +368,12 @@ function runQuery(
     .select(cols, { count: "exact" })
     .eq("is_published", true);
 
+  // DBS gating (PR-DBS-1): only carers with both Adult + Child DBS approved
+  // surface in search when NEXT_PUBLIC_DBS_ENABLED is on. No-op when off.
+  if (process.env.NEXT_PUBLIC_DBS_ENABLED === "true") {
+    q = q.eq("dbs_search_eligible", true);
+  }
+
   if (p.service) q = q.contains("services", [p.service]);
   if (p.city) q = q.ilike("city", p.city);
   if (p.min_price_cents != null)

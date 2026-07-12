@@ -49,7 +49,7 @@ const SHARED_PASSWORD = "TestPass123!";
 const TEST_USERS = [
   {
     label: "Care Seeker (Family)",
-    email: "test.family@specialcarer.com",
+    email: "test.family@specialcarers.com",
     password: SHARED_PASSWORD,
     full_name: "Olivia Carter",
     role: "seeker",
@@ -60,7 +60,7 @@ const TEST_USERS = [
   },
   {
     label: "Caregiver (UK)",
-    email: "test.carer.uk@specialcarer.com",
+    email: "test.carer.uk@specialcarers.com",
     password: SHARED_PASSWORD,
     full_name: "Priya Sharma",
     role: "caregiver",
@@ -109,7 +109,7 @@ const TEST_USERS = [
   },
   {
     label: "Caregiver (US)",
-    email: "test.carer.us@specialcarer.com",
+    email: "test.carer.us@specialcarers.com",
     password: SHARED_PASSWORD,
     full_name: "Marcus Johnson",
     role: "caregiver",
@@ -155,7 +155,7 @@ const TEST_USERS = [
   },
   {
     label: "Organisation Admin",
-    email: "test.org@specialcarer.com",
+    email: "test.org@specialcarers.com",
     password: SHARED_PASSWORD,
     full_name: "Riverside Care Agency",
     role: "seeker", // org admins are stored as seekers + linked via organization_members
@@ -181,7 +181,7 @@ const TEST_USERS = [
   },
   {
     label: "Platform Admin",
-    email: "test.admin@specialcarer.com",
+    email: "test.admin@specialcarers.com",
     password: SHARED_PASSWORD,
     full_name: "Test Admin",
     role: "admin",

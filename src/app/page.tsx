@@ -21,14 +21,14 @@ export const metadata: Metadata = {
   title:
     "Special Carers — Vetted UK Carers, Babysitters & Nannies | specialcarers.com",
   description:
-    "Find a Special Carer — DBS-checked RSWs, HCAs, babysitters and nannies in London and across the UK. Book vetted care in minutes.",
-  alternates: { canonical: "https://specialcarer.com/" },
+    "SpecialCarers connects families and care providers with vetted UK carers. DBS-checked RSWs, HCAs, babysitters and nannies in London and across the UK. Book vetted care in minutes.",
+  alternates: { canonical: "https://www.specialcarers.com/" },
   openGraph: {
     title:
       "Special Carers — Vetted UK Carers, Babysitters & Nannies | specialcarers.com",
     description:
-      "Find a Special Carer — DBS-checked RSWs, HCAs, babysitters and nannies in London and across the UK. Book vetted care in minutes.",
-    url: "https://specialcarer.com/",
+      "SpecialCarers connects families and care providers with vetted UK carers. DBS-checked RSWs, HCAs, babysitters and nannies in London and across the UK. Book vetted care in minutes.",
+    url: "https://www.specialcarers.com/",
     siteName: "SpecialCarers",
     type: "website",
     images: [
@@ -79,8 +79,8 @@ export default async function Home() {
       {
         "@type": "Organization",
         name: "SpecialCarers",
-        url: "https://specialcarer.com",
-        logo: "https://specialcarer.com/icon.png",
+        url: "https://www.specialcarers.com",
+        logo: "https://www.specialcarers.com/icon.png",
         sameAs: [],
         parentOrganization: {
           "@type": "Organization",
@@ -97,11 +97,11 @@ export default async function Home() {
       },
       {
         "@type": "WebSite",
-        url: "https://specialcarer.com",
+        url: "https://www.specialcarers.com",
         name: "SpecialCarers",
         potentialAction: {
           "@type": "SearchAction",
-          target: "https://specialcarer.com/find-care?q={query}",
+          target: "https://www.specialcarers.com/find-care?q={query}",
           "query-input": "required name=query",
         },
       },
@@ -131,12 +131,16 @@ export default async function Home() {
 
       {/* Hero */}
       <section className="px-6 pt-12 pb-20 sm:pt-16 sm:pb-28 max-w-5xl mx-auto text-center">
+        <p className="mb-4 text-sm font-semibold uppercase tracking-wide text-teal-700">
+          For families &middot; For care providers &middot; For carers
+        </p>
         <h1 className="text-4xl sm:text-6xl font-semibold tracking-tight text-slate-900">
           Trusted care, on your schedule.
         </h1>
         <p className="mt-6 text-lg sm:text-xl text-slate-600 max-w-2xl mx-auto">
-          On-demand and scheduled childcare, elder care, and special-needs
-          support from vetted, DBS-checked caregivers. Book in minutes. Track,
+          SpecialCarers connects families and care providers with vetted,
+          DBS-checked carers across the UK. On-demand and scheduled childcare,
+          elder care, and special-needs support. Book in minutes. Track,
           message, and pay in one place.
         </p>
 
@@ -174,6 +178,13 @@ export default async function Home() {
             className="inline-flex items-center min-h-[44px] px-3 py-2.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition"
           >
             Apply as a caregiver
+          </Link>
+          <span className="hidden sm:inline text-slate-300" aria-hidden>·</span>
+          <Link
+            href="/organisations"
+            className="inline-flex items-center min-h-[44px] px-3 py-2.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition"
+          >
+            For care providers
           </Link>
         </div>
         <p className="mt-4 text-xs text-slate-500">
@@ -391,9 +402,10 @@ export default async function Home() {
               monitored throughout each shift.
             </p>
           </div>
-          <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
             {[
               { k: "Enhanced DBS", v: "UK Disclosure and Barring Service checks" },
+              { k: "Right to Work", v: "Confirmed before any carer goes live" },
               { k: "Annual refresh", v: "DBS status re-checked every year" },
               { k: "ID + selfie match", v: "Verified at signup, re-checked yearly" },
               { k: "Live shift tracking", v: "Real-time location for active bookings" },
@@ -476,7 +488,7 @@ export default async function Home() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center max-w-2xl mx-auto">
             <h2 className="text-3xl font-semibold text-slate-900">
-              What families say
+              What families and providers say
             </h2>
             <p className="mt-3 text-slate-600">
               Stories from early users across the UK.

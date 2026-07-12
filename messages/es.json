@@ -134,7 +134,27 @@
     "setNewPassword": "Establecer nueva contraseña",
     "updating": "Actualizando…",
     "resetExpiredPrefix": "Tu enlace de restablecimiento ha caducado o no es válido. Por favor,",
-    "requestNewLink": "solicita uno nuevo"
+    "requestNewLink": "solicita uno nuevo",
+    "displayName": "Tu nombre",
+    "displayNamePlaceholder": "Juana Pérez",
+    "contactName": "Tu nombre",
+    "organisationName": "Nombre de la organización",
+    "organisationNamePlaceholder": "Acme Care S.L.",
+    "alreadyHaveAccount": "¿Ya tienes una cuenta?",
+    "signInInstead": "Inicia sesión",
+    "signupCaregiverHeadline": "Solicita ser cuidador/a",
+    "signupCaregiverIntro": "Solicítalo en 5 minutos. Las verificaciones de antecedentes suelen completarse en 1 a 5 días. Podrás empezar a aceptar turnos en cuanto lo hagan.",
+    "signupCaregiverNote": "Las verificaciones de antecedentes y de derecho al trabajo se realizan después de registrarte; puedes completar tu perfil mientras se procesan.",
+    "signupFamilyHeadline": "Crea tu cuenta familiar",
+    "signupFamilyIntro": "Encuentra cuidadores de confianza y verificados cerca de ti y gestiona tu cuidado en un solo lugar.",
+    "signupFamilyNote": "Todos los cuidadores tienen su identidad verificada y una contratación segura antes de poder ser reservados.",
+    "signupOrgHeadline": "Crea una cuenta de organización",
+    "signupOrgIntro": "Para empresas de cuidados, ayuntamientos y agencias: acceso multiusuario, reservas por contrato y un equipo que tú gestionas.",
+    "signupOrgNote": "Verificamos tu organización antes de activar las reservas, con un MSA y un DPA en vigor.",
+    "signupLinkCaregiver": "Solicita ser cuidador/a",
+    "signupLinkFamily": "Encuentra cuidado para tu familia",
+    "signupLinkOrg": "Crea una cuenta de organización",
+    "newToSpecialCarers": "¿Nuevo en SpecialCarers?"
   },
   "search": {
     "badge": "Buscar cuidado",
@@ -252,5 +272,177 @@
     "invalidEmail": "Introduce un correo válido.",
     "passwordTooShort": "La contraseña debe tener al menos 8 caracteres.",
     "passwordsDontMatch": "Las contraseñas no coinciden."
+  },
+  "accessibility": {
+    "settings": "Accesibilidad",
+    "language": "Idioma",
+    "largeText": "Texto grande",
+    "largeTextHelp": "Aumenta el tamaño base de la fuente a 18 px en toda la aplicación",
+    "reducedMotion": "Movimiento reducido",
+    "voiceBooking": "Reserva por voz",
+    "voiceBookingHelp": "Usa el micrófono para buscar o publicar un trabajo de cuidado sin usar las manos"
+  },
+  "voice": {
+    "listening": "Escuchando…",
+    "idle": "Toca para hablar",
+    "prompt": "¿Qué deseas hacer?",
+    "didntCatch": "No te entendí. Por favor, inténtalo de nuevo.",
+    "exampleHint": "Prueba: «Reservar a Sara para mañana a las 3 pm» o «Buscar un cuidador en Madrid»",
+    "micPermission": "Se necesita acceso al micrófono para la reserva por voz.",
+    "notSupported": "La voz no es compatible con este dispositivo"
+  },
+  "earnings": {
+    "periodSwitcherLabel": "Elegir periodo de ingresos",
+    "period": {
+      "this_week": "Esta semana",
+      "this_month": "Este mes",
+      "last_month": "Mes pasado",
+      "all_time": "Histórico"
+    },
+    "headline": {
+      "this_week": "Ganado esta semana",
+      "this_month": "Ganado este mes",
+      "last_month": "Ganado el mes pasado",
+      "all_time": "Ganado en total"
+    },
+    "grossLabel": "Bruto",
+    "feeLabel": "Comisión",
+    "vsPrior": "frente al periodo anterior",
+    "upcoming": {
+      "title": "Próximo — aún no ganado",
+      "caption": "{count, plural, =0 {Sin reservas confirmadas todavía} one {# reserva confirmada} other {# reservas confirmadas}}"
+    },
+    "list": {
+      "title": "Reservas completadas recientes"
+    },
+    "rowGrossFee": "{gross} bruto · {fee} comisión",
+    "empty": {
+      "title": "Aún no hay ingresos",
+      "body": "Las reservas completadas aparecerán aquí con tu pago neto."
+    },
+    "loadMore": "Cargar más",
+    "loadingMore": "Cargando…",
+    "loadError": "No se pudieron cargar tus ingresos. Inténtalo de nuevo.",
+    "retry": "Reintentar"
+  },
+  "calendar": {
+    "addToCalendar": "Añadir al calendario",
+    "addToCalendarHelp": "Descarga esta reserva como archivo de calendario para Google, Apple u Outlook.",
+    "syncTitle": "Sincronización de calendario",
+    "syncIntro": "Suscríbete a un feed privado para que tus próximas reservas aparezcan automáticamente en tu calendario y se mantengan actualizadas.",
+    "setupTitle": "Configurar la sincronización",
+    "setupHelp": "Crea un enlace privado que puedes añadir a Google Calendar, Apple Calendar u Outlook.",
+    "setup": "Configurar la sincronización",
+    "yourFeedUrl": "Tu feed de calendario",
+    "feedUrlHelp": "Mantén este enlace privado: cualquiera que lo tenga puede ver tus próximas reservas.",
+    "revealUrl": "Mostrar enlace",
+    "hideUrl": "Ocultar enlace",
+    "copyUrl": "Copiar enlace",
+    "copied": "Copiado",
+    "openInCalendar": "Abrir en el calendario",
+    "rotateUrl": "Renovar enlace",
+    "disable": "Desactivar",
+    "rotateHelp": "Renovar crea un enlace nuevo y desactiva el anterior. Desactivar elimina el feed por completo."
+  },
+  "timeline": {
+    "day": {
+      "today": "Today",
+      "yesterday": "Yesterday"
+    },
+    "card": {
+      "someone": "Someone",
+      "noteCreated": "{actor} added a journal note",
+      "bookingConfirmed": "A visit was confirmed",
+      "bookingStarted": "{actor} started a visit",
+      "bookingCompleted": "{actor} completed a visit",
+      "bookingCancelled": "A visit was cancelled",
+      "keyPoints": "Key points",
+      "photos": "{count} photos",
+      "addComment": "Add a comment",
+      "noComments": "No comments yet",
+      "commentCount": "{count} comments"
+    },
+    "reaction": {
+      "heart": "Love",
+      "pray": "Thinking of you",
+      "thanks": "Thank you",
+      "concern": "Concerned"
+    },
+    "comment": {
+      "none": "Be the first to comment.",
+      "someone": "Someone",
+      "placeholder": "Write a comment…",
+      "send": "Send",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this comment?"
+    },
+    "empty": {
+      "title": "Nothing here yet",
+      "body": "When a carer adds a journal note or a visit happens, it'll show up here for the whole family."
+    },
+    "loadMore": {
+      "label": "Load more",
+      "loading": "Loading…"
+    },
+    "error": {
+      "load": "Couldn't load more activity. Please try again.",
+      "reaction": "Couldn't update your reaction. Please try again.",
+      "comment": "Couldn't post your comment. Please try again."
+    }
+  },
+  "security": {
+    "title": "Autenticación en dos pasos",
+    "intro": "Añade un segundo paso al iniciar sesión con una app de autenticación. Aunque alguien sepa tu contraseña, no podrá entrar sin tu teléfono.",
+    "statusOffTitle": "La autenticación en dos pasos está desactivada",
+    "statusOffSub": "Protege tu cuenta con una app de autenticación.",
+    "statusOnTitle": "La autenticación en dos pasos está activada",
+    "statusOnSub": "Te pediremos un código de tu app de autenticación al iniciar sesión.",
+    "on": "Activada",
+    "off": "Desactivada",
+    "enableTitle": "Configurar la autenticación en dos pasos",
+    "enableIntro": "Necesitarás una app de autenticación como Google Authenticator, Authy o 1Password.",
+    "enable": "Activar 2FA",
+    "starting": "Iniciando…",
+    "enrolError": "No pudimos iniciar la configuración. Inténtalo de nuevo.",
+    "scanTitle": "Escanea este código QR",
+    "scanHelp": "Abre tu app de autenticación y escanea el código; luego introduce el código de 6 dígitos que muestre.",
+    "qrAlt": "Código QR para configurar la autenticación en dos pasos",
+    "cantScan": "¿No puedes escanear? Introduce la clave manualmente",
+    "hideSecret": "Ocultar la clave",
+    "codeLabel": "Código de 6 dígitos",
+    "verifyAndEnable": "Verificar y activar",
+    "verifying": "Verificando…",
+    "codeMismatch": "Ese código no coincide. Inténtalo de nuevo.",
+    "rateLimited": "Demasiados intentos. Inténtalo de nuevo en un minuto.",
+    "genericError": "Algo salió mal. Inténtalo de nuevo.",
+    "recoveryTitle": "Guarda tus códigos de recuperación",
+    "recoveryIntro": "Cada código se puede usar una vez si pierdes el acceso a tu app de autenticación. Guárdalos en un lugar seguro: no se volverán a mostrar.",
+    "recoveryWarning": "Cualquier persona con estos códigos puede iniciar sesión como tú. Mantenlos en privado.",
+    "recoveryFileHeader": "Códigos de recuperación en dos pasos de SpecialCarer. Cada código funciona una vez. Mantenlos en privado.",
+    "copy": "Copiar",
+    "download": "Descargar",
+    "savedCodes": "Ya los he guardado",
+    "codesRemaining": "{count} códigos de recuperación restantes",
+    "regenerate": "Regenerar códigos",
+    "regenerateTitle": "Regenerar códigos de recuperación",
+    "regenerateHelp": "Introduce un código de tu app de autenticación. Tus códigos de recuperación antiguos dejarán de funcionar.",
+    "confirmRegenerate": "Regenerar",
+    "disable": "Desactivar 2FA",
+    "disableTitle": "Desactivar la autenticación en dos pasos",
+    "disableHelp": "Introduce un código de tu app de autenticación o un código de recuperación para confirmar.",
+    "confirmDisable": "Desactivar",
+    "codeOrRecoveryLabel": "Código de autenticación o de recuperación",
+    "codeOrRecoveryPlaceholder": "123456 o código de recuperación",
+    "cancel": "Cancelar",
+    "working": "Procesando…",
+    "challengeTitle": "Introduce tu código",
+    "challengeHint": "Abre tu app de autenticación e introduce el código de 6 dígitos.",
+    "challengeRecoveryHint": "Introduce uno de tus códigos de recuperación.",
+    "recoveryCodeLabel": "Código de recuperación",
+    "verify": "Verificar",
+    "useRecoveryCodeInstead": "Usar un código de recuperación",
+    "useAuthenticatorInstead": "Usar tu app de autenticación",
+    "requiredTitle": "Se requiere autenticación en dos pasos",
+    "requiredIntro": "Tu cuenta requiere autenticación en dos pasos. Configúrala ahora para continuar."
   }
 }

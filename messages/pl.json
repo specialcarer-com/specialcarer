@@ -134,7 +134,27 @@
     "setNewPassword": "Ustaw nowe hasło",
     "updating": "Aktualizowanie…",
     "resetExpiredPrefix": "Twój link do resetowania wygasł lub jest nieprawidłowy. Proszę",
-    "requestNewLink": "poproś o nowy"
+    "requestNewLink": "poproś o nowy",
+    "displayName": "Twoje imię i nazwisko",
+    "displayNamePlaceholder": "Jan Kowalski",
+    "contactName": "Twoje imię i nazwisko",
+    "organisationName": "Nazwa organizacji",
+    "organisationNamePlaceholder": "Acme Care Sp. z o.o.",
+    "alreadyHaveAccount": "Masz już konto?",
+    "signInInstead": "Zaloguj się",
+    "signupCaregiverHeadline": "Złóż wniosek jako opiekun",
+    "signupCaregiverIntro": "Zgłoś się w 5 minut. Weryfikacja przeszłości zwykle trwa od 1 do 5 dni. Możesz zacząć rezerwować zmiany, gdy tylko się zakończy.",
+    "signupCaregiverNote": "Weryfikacja niekaralności i prawa do pracy odbywa się po rejestracji — w tym czasie możesz uzupełnić swój profil.",
+    "signupFamilyHeadline": "Załóż konto rodzinne",
+    "signupFamilyIntro": "Znajdź zaufanych, zweryfikowanych opiekunów w pobliżu i zarządzaj opieką w jednym miejscu.",
+    "signupFamilyNote": "Każdy opiekun przechodzi weryfikację tożsamości i bezpieczną rekrutację, zanim będzie można go zarezerwować.",
+    "signupOrgHeadline": "Załóż konto organizacji",
+    "signupOrgIntro": "Dla firm opiekuńczych, samorządów i agencji — dostęp dla wielu osób, rezerwacje kontraktowe i zarządzany przez Ciebie zespół.",
+    "signupOrgNote": "Weryfikujemy Twoją organizację przed uruchomieniem rezerwacji, z umową MSA i DPA.",
+    "signupLinkCaregiver": "Złóż wniosek jako opiekun",
+    "signupLinkFamily": "Znajdź opiekę dla swojej rodziny",
+    "signupLinkOrg": "Załóż konto organizacji",
+    "newToSpecialCarers": "Nowy w SpecialCarers?"
   },
   "search": {
     "badge": "Znajdź opiekę",
@@ -252,5 +272,177 @@
     "invalidEmail": "Wprowadź prawidłowy adres e-mail.",
     "passwordTooShort": "Hasło musi mieć co najmniej 8 znaków.",
     "passwordsDontMatch": "Hasła nie są zgodne."
+  },
+  "accessibility": {
+    "settings": "Dostępność",
+    "language": "Język",
+    "largeText": "Duży tekst",
+    "largeTextHelp": "Zwiększa podstawowy rozmiar czcionki do 18 pikseli w całej aplikacji",
+    "reducedMotion": "Ograniczony ruch",
+    "voiceBooking": "Rezerwacja głosowa",
+    "voiceBookingHelp": "Użyj mikrofonu, aby wyszukać lub zlecić opiekę bez użycia rąk"
+  },
+  "voice": {
+    "listening": "Słucham…",
+    "idle": "Dotknij, aby mówić",
+    "prompt": "Co chcesz zrobić?",
+    "didntCatch": "Nie zrozumiałem. Spróbuj ponownie.",
+    "exampleHint": "Spróbuj: „Zarezerwuj Sarę na jutro na 15:00” lub „Znajdź opiekuna w Manchesterze”",
+    "micPermission": "Do rezerwacji głosowej wymagany jest dostęp do mikrofonu.",
+    "notSupported": "Funkcja głosowa nie jest obsługiwana na tym urządzeniu"
+  },
+  "earnings": {
+    "periodSwitcherLabel": "Wybierz okres zarobków",
+    "period": {
+      "this_week": "Ten tydzień",
+      "this_month": "Ten miesiąc",
+      "last_month": "Poprzedni miesiąc",
+      "all_time": "Cały okres"
+    },
+    "headline": {
+      "this_week": "Zarobiono w tym tygodniu",
+      "this_month": "Zarobiono w tym miesiącu",
+      "last_month": "Zarobiono w zeszłym miesiącu",
+      "all_time": "Zarobiono łącznie"
+    },
+    "grossLabel": "Brutto",
+    "feeLabel": "Prowizja",
+    "vsPrior": "w porównaniu z poprzednim okresem",
+    "upcoming": {
+      "title": "Nadchodzące — jeszcze nie zarobione",
+      "caption": "{count, plural, =0 {Brak potwierdzonych rezerwacji} one {# potwierdzona rezerwacja} few {# potwierdzone rezerwacje} many {# potwierdzonych rezerwacji} other {# potwierdzonych rezerwacji}}"
+    },
+    "list": {
+      "title": "Ostatnio ukończone rezerwacje"
+    },
+    "rowGrossFee": "{gross} brutto · {fee} prowizja",
+    "empty": {
+      "title": "Brak zarobków",
+      "body": "Ukończone rezerwacje pojawią się tutaj wraz z Twoim wynagrodzeniem netto."
+    },
+    "loadMore": "Załaduj więcej",
+    "loadingMore": "Ładowanie…",
+    "loadError": "Nie udało się załadować zarobków. Spróbuj ponownie.",
+    "retry": "Spróbuj ponownie"
+  },
+  "calendar": {
+    "addToCalendar": "Dodaj do kalendarza",
+    "addToCalendarHelp": "Pobierz tę rezerwację jako plik kalendarza dla Google, Apple lub Outlook.",
+    "syncTitle": "Synchronizacja kalendarza",
+    "syncIntro": "Subskrybuj prywatny kanał, aby Twoje nadchodzące rezerwacje pojawiały się automatycznie w aplikacji kalendarza i były na bieżąco.",
+    "setupTitle": "Skonfiguruj synchronizację",
+    "setupHelp": "Utwórz prywatny link, który możesz dodać do Google Calendar, Apple Calendar lub Outlook.",
+    "setup": "Skonfiguruj synchronizację",
+    "yourFeedUrl": "Twój kanał kalendarza",
+    "feedUrlHelp": "Zachowaj ten link w tajemnicy — każdy, kto go ma, widzi Twoje nadchodzące rezerwacje.",
+    "revealUrl": "Pokaż link",
+    "hideUrl": "Ukryj link",
+    "copyUrl": "Kopiuj link",
+    "copied": "Skopiowano",
+    "openInCalendar": "Otwórz w kalendarzu",
+    "rotateUrl": "Odśwież link",
+    "disable": "Wyłącz",
+    "rotateHelp": "Odświeżenie tworzy nowy link i unieważnia poprzedni. Wyłączenie całkowicie usuwa kanał."
+  },
+  "timeline": {
+    "day": {
+      "today": "Today",
+      "yesterday": "Yesterday"
+    },
+    "card": {
+      "someone": "Someone",
+      "noteCreated": "{actor} added a journal note",
+      "bookingConfirmed": "A visit was confirmed",
+      "bookingStarted": "{actor} started a visit",
+      "bookingCompleted": "{actor} completed a visit",
+      "bookingCancelled": "A visit was cancelled",
+      "keyPoints": "Key points",
+      "photos": "{count} photos",
+      "addComment": "Add a comment",
+      "noComments": "No comments yet",
+      "commentCount": "{count} comments"
+    },
+    "reaction": {
+      "heart": "Love",
+      "pray": "Thinking of you",
+      "thanks": "Thank you",
+      "concern": "Concerned"
+    },
+    "comment": {
+      "none": "Be the first to comment.",
+      "someone": "Someone",
+      "placeholder": "Write a comment…",
+      "send": "Send",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this comment?"
+    },
+    "empty": {
+      "title": "Nothing here yet",
+      "body": "When a carer adds a journal note or a visit happens, it'll show up here for the whole family."
+    },
+    "loadMore": {
+      "label": "Load more",
+      "loading": "Loading…"
+    },
+    "error": {
+      "load": "Couldn't load more activity. Please try again.",
+      "reaction": "Couldn't update your reaction. Please try again.",
+      "comment": "Couldn't post your comment. Please try again."
+    }
+  },
+  "security": {
+    "title": "Uwierzytelnianie dwuskładnikowe",
+    "intro": "Dodaj drugi krok logowania za pomocą aplikacji uwierzytelniającej. Nawet jeśli ktoś pozna Twoje hasło, nie zaloguje się bez Twojego telefonu.",
+    "statusOffTitle": "Uwierzytelnianie dwuskładnikowe jest wyłączone",
+    "statusOffSub": "Zabezpiecz konto aplikacją uwierzytelniającą.",
+    "statusOnTitle": "Uwierzytelnianie dwuskładnikowe jest włączone",
+    "statusOnSub": "Przy logowaniu poprosimy o kod z aplikacji uwierzytelniającej.",
+    "on": "Włączone",
+    "off": "Wyłączone",
+    "enableTitle": "Skonfiguruj uwierzytelnianie dwuskładnikowe",
+    "enableIntro": "Potrzebujesz aplikacji uwierzytelniającej, np. Google Authenticator, Authy lub 1Password.",
+    "enable": "Włącz 2FA",
+    "starting": "Rozpoczynanie…",
+    "enrolError": "Nie udało się rozpocząć konfiguracji. Spróbuj ponownie.",
+    "scanTitle": "Zeskanuj ten kod QR",
+    "scanHelp": "Otwórz aplikację uwierzytelniającą i zeskanuj kod, a następnie wpisz 6-cyfrowy kod, który wyświetli.",
+    "qrAlt": "Kod QR do konfiguracji uwierzytelniania dwuskładnikowego",
+    "cantScan": "Nie możesz zeskanować? Wpisz klucz ręcznie",
+    "hideSecret": "Ukryj klucz",
+    "codeLabel": "6-cyfrowy kod",
+    "verifyAndEnable": "Zweryfikuj i włącz",
+    "verifying": "Weryfikowanie…",
+    "codeMismatch": "Kod się nie zgadza. Spróbuj ponownie.",
+    "rateLimited": "Zbyt wiele prób. Spróbuj ponownie za minutę.",
+    "genericError": "Coś poszło nie tak. Spróbuj ponownie.",
+    "recoveryTitle": "Zapisz kody odzyskiwania",
+    "recoveryIntro": "Każdego kodu można użyć raz, jeśli stracisz dostęp do aplikacji uwierzytelniającej. Przechowuj je w bezpiecznym miejscu — nie zostaną pokazane ponownie.",
+    "recoveryWarning": "Każdy, kto ma te kody, może zalogować się jako Ty. Zachowaj je w tajemnicy.",
+    "recoveryFileHeader": "Kody odzyskiwania dwuskładnikowego SpecialCarer. Każdy kod działa raz. Zachowaj je w tajemnicy.",
+    "copy": "Kopiuj",
+    "download": "Pobierz",
+    "savedCodes": "Zapisałem(-am) je",
+    "codesRemaining": "Pozostało kodów odzyskiwania: {count}",
+    "regenerate": "Wygeneruj kody ponownie",
+    "regenerateTitle": "Wygeneruj ponownie kody odzyskiwania",
+    "regenerateHelp": "Wpisz kod z aplikacji uwierzytelniającej. Stare kody odzyskiwania przestaną działać.",
+    "confirmRegenerate": "Wygeneruj ponownie",
+    "disable": "Wyłącz 2FA",
+    "disableTitle": "Wyłącz uwierzytelnianie dwuskładnikowe",
+    "disableHelp": "Wpisz kod z aplikacji uwierzytelniającej lub kod odzyskiwania, aby potwierdzić.",
+    "confirmDisable": "Wyłącz",
+    "codeOrRecoveryLabel": "Kod uwierzytelniający lub odzyskiwania",
+    "codeOrRecoveryPlaceholder": "123456 lub kod odzyskiwania",
+    "cancel": "Anuluj",
+    "working": "Przetwarzanie…",
+    "challengeTitle": "Wpisz swój kod",
+    "challengeHint": "Otwórz aplikację uwierzytelniającą i wpisz 6-cyfrowy kod.",
+    "challengeRecoveryHint": "Wpisz jeden ze swoich kodów odzyskiwania.",
+    "recoveryCodeLabel": "Kod odzyskiwania",
+    "verify": "Zweryfikuj",
+    "useRecoveryCodeInstead": "Użyj kodu odzyskiwania",
+    "useAuthenticatorInstead": "Użyj aplikacji uwierzytelniającej",
+    "requiredTitle": "Wymagane uwierzytelnianie dwuskładnikowe",
+    "requiredIntro": "Twoje konto wymaga uwierzytelniania dwuskładnikowego. Skonfiguruj je teraz, aby kontynuować."
   }
 }

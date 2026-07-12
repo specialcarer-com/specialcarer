@@ -38,12 +38,20 @@
       "schedule": "47 8 * * *"
     },
     {
+      "path": "/api/cron/dbs-update-service-poll",
+      "schedule": "23 6 * * *"
+    },
+    {
       "path": "/api/cron/booking-reminders",
       "schedule": "0 8 * * *"
     },
     {
       "path": "/api/cron/expire-match-offers",
       "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/cron/refresh-caregiver-rates",
+      "schedule": "17 3 * * *"
     }
   ]
 }

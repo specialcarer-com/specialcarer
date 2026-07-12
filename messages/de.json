@@ -134,7 +134,27 @@
     "setNewPassword": "Neues Passwort festlegen",
     "updating": "Wird aktualisiert…",
     "resetExpiredPrefix": "Ihr Link zum Zurücksetzen ist abgelaufen oder ungültig. Bitte",
-    "requestNewLink": "fordern Sie einen neuen an"
+    "requestNewLink": "fordern Sie einen neuen an",
+    "displayName": "Ihr Name",
+    "displayNamePlaceholder": "Maria Mustermann",
+    "contactName": "Ihr Name",
+    "organisationName": "Name der Organisation",
+    "organisationNamePlaceholder": "Acme Care GmbH",
+    "alreadyHaveAccount": "Sie haben bereits ein Konto?",
+    "signInInstead": "Stattdessen anmelden",
+    "signupCaregiverHeadline": "Als Pflegekraft bewerben",
+    "signupCaregiverIntro": "Bewerben Sie sich in 5 Minuten. Hintergrundprüfungen sind in der Regel innerhalb von 1–5 Tagen abgeschlossen. Sobald sie abgeschlossen sind, können Sie Schichten buchen.",
+    "signupCaregiverNote": "Führungszeugnis- und Arbeitserlaubnisprüfungen erfolgen nach der Registrierung – Sie können Ihr Profil währenddessen vervollständigen.",
+    "signupFamilyHeadline": "Erstellen Sie Ihr Familienkonto",
+    "signupFamilyIntro": "Finden Sie vertrauenswürdige, geprüfte Pflegekräfte in Ihrer Nähe und verwalten Sie Ihre Pflege an einem Ort.",
+    "signupFamilyNote": "Jede Pflegekraft wird vor einer Buchung identitätsgeprüft und sicher eingestellt.",
+    "signupOrgHeadline": "Organisationskonto einrichten",
+    "signupOrgIntro": "Für Pflegeunternehmen, Kommunen und Agenturen – Zugang für mehrere Plätze, Vertragsbuchung und ein Team, das Sie verwalten.",
+    "signupOrgNote": "Wir prüfen Ihre Organisation, bevor Buchungen freigeschaltet werden, mit einem MSA und einer AVV.",
+    "signupLinkCaregiver": "Als Pflegekraft bewerben",
+    "signupLinkFamily": "Pflege für Ihre Familie finden",
+    "signupLinkOrg": "Organisationskonto einrichten",
+    "newToSpecialCarers": "Neu bei SpecialCarers?"
   },
   "search": {
     "badge": "Pflege finden",
@@ -252,5 +272,177 @@
     "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
     "passwordTooShort": "Das Passwort muss mindestens 8 Zeichen lang sein.",
     "passwordsDontMatch": "Die Passwörter stimmen nicht überein."
+  },
+  "accessibility": {
+    "settings": "Barrierefreiheit",
+    "language": "Sprache",
+    "largeText": "Großer Text",
+    "largeTextHelp": "Erhöht die Basisschriftgröße in der gesamten App auf 18 px",
+    "reducedMotion": "Reduzierte Bewegung",
+    "voiceBooking": "Sprachbuchung",
+    "voiceBookingHelp": "Verwende dein Mikrofon, um freihändig nach Pflege zu suchen oder einen Auftrag zu erstellen"
+  },
+  "voice": {
+    "listening": "Höre zu…",
+    "idle": "Zum Sprechen tippen",
+    "prompt": "Was möchtest du tun?",
+    "didntCatch": "Das habe ich nicht verstanden. Bitte versuche es erneut.",
+    "exampleHint": "Versuche: „Buche Sarah für morgen 15 Uhr“ oder „Finde eine Pflegekraft in Manchester“",
+    "micPermission": "Für die Sprachbuchung wird Mikrofonzugriff benötigt.",
+    "notSupported": "Sprache wird auf diesem Gerät nicht unterstützt"
+  },
+  "earnings": {
+    "periodSwitcherLabel": "Verdienstzeitraum wählen",
+    "period": {
+      "this_week": "Diese Woche",
+      "this_month": "Dieser Monat",
+      "last_month": "Letzter Monat",
+      "all_time": "Gesamt"
+    },
+    "headline": {
+      "this_week": "Diese Woche verdient",
+      "this_month": "Diesen Monat verdient",
+      "last_month": "Letzten Monat verdient",
+      "all_time": "Insgesamt verdient"
+    },
+    "grossLabel": "Brutto",
+    "feeLabel": "Gebühr",
+    "vsPrior": "gegenüber dem Vorzeitraum",
+    "upcoming": {
+      "title": "Bevorstehend — noch nicht verdient",
+      "caption": "{count, plural, =0 {Noch keine bestätigten Buchungen} one {# bestätigte Buchung} other {# bestätigte Buchungen}}"
+    },
+    "list": {
+      "title": "Kürzlich abgeschlossene Buchungen"
+    },
+    "rowGrossFee": "{gross} brutto · {fee} Gebühr",
+    "empty": {
+      "title": "Noch keine Einnahmen",
+      "body": "Abgeschlossene Buchungen erscheinen hier mit Ihrem Nettoverdienst."
+    },
+    "loadMore": "Mehr laden",
+    "loadingMore": "Wird geladen…",
+    "loadError": "Einnahmen konnten nicht geladen werden. Bitte erneut versuchen.",
+    "retry": "Erneut versuchen"
+  },
+  "calendar": {
+    "addToCalendar": "Zum Kalender hinzufügen",
+    "addToCalendarHelp": "Lade diese Buchung als Kalenderdatei für Google, Apple oder Outlook herunter.",
+    "syncTitle": "Kalender-Synchronisierung",
+    "syncIntro": "Abonniere einen privaten Feed, damit deine anstehenden Buchungen automatisch in deiner Kalender-App erscheinen und aktuell bleiben.",
+    "setupTitle": "Kalender-Synchronisierung einrichten",
+    "setupHelp": "Erstelle einen privaten Link, den du zu Google Kalender, Apple Kalender oder Outlook hinzufügen kannst.",
+    "setup": "Kalender-Synchronisierung einrichten",
+    "yourFeedUrl": "Dein Kalender-Feed",
+    "feedUrlHelp": "Halte diesen Link privat — wer ihn hat, kann deine anstehenden Buchungen sehen.",
+    "revealUrl": "Link anzeigen",
+    "hideUrl": "Link ausblenden",
+    "copyUrl": "Link kopieren",
+    "copied": "Kopiert",
+    "openInCalendar": "Im Kalender öffnen",
+    "rotateUrl": "Link erneuern",
+    "disable": "Deaktivieren",
+    "rotateHelp": "Beim Erneuern wird ein neuer Link erstellt und der alte deaktiviert. Deaktivieren entfernt den Feed vollständig."
+  },
+  "timeline": {
+    "day": {
+      "today": "Today",
+      "yesterday": "Yesterday"
+    },
+    "card": {
+      "someone": "Someone",
+      "noteCreated": "{actor} added a journal note",
+      "bookingConfirmed": "A visit was confirmed",
+      "bookingStarted": "{actor} started a visit",
+      "bookingCompleted": "{actor} completed a visit",
+      "bookingCancelled": "A visit was cancelled",
+      "keyPoints": "Key points",
+      "photos": "{count} photos",
+      "addComment": "Add a comment",
+      "noComments": "No comments yet",
+      "commentCount": "{count} comments"
+    },
+    "reaction": {
+      "heart": "Love",
+      "pray": "Thinking of you",
+      "thanks": "Thank you",
+      "concern": "Concerned"
+    },
+    "comment": {
+      "none": "Be the first to comment.",
+      "someone": "Someone",
+      "placeholder": "Write a comment…",
+      "send": "Send",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this comment?"
+    },
+    "empty": {
+      "title": "Nothing here yet",
+      "body": "When a carer adds a journal note or a visit happens, it'll show up here for the whole family."
+    },
+    "loadMore": {
+      "label": "Load more",
+      "loading": "Loading…"
+    },
+    "error": {
+      "load": "Couldn't load more activity. Please try again.",
+      "reaction": "Couldn't update your reaction. Please try again.",
+      "comment": "Couldn't post your comment. Please try again."
+    }
+  },
+  "security": {
+    "title": "Zwei-Faktor-Authentifizierung",
+    "intro": "Füge mit einer Authenticator-App einen zweiten Schritt zur Anmeldung hinzu. Selbst wenn jemand dein Passwort kennt, kommt er ohne dein Telefon nicht hinein.",
+    "statusOffTitle": "Zwei-Faktor-Authentifizierung ist aus",
+    "statusOffSub": "Schütze dein Konto mit einer Authenticator-App.",
+    "statusOnTitle": "Zwei-Faktor-Authentifizierung ist an",
+    "statusOnSub": "Bei der Anmeldung fragen wir nach einem Code aus deiner Authenticator-App.",
+    "on": "An",
+    "off": "Aus",
+    "enableTitle": "Zwei-Faktor-Authentifizierung einrichten",
+    "enableIntro": "Du brauchst eine Authenticator-App wie Google Authenticator, Authy oder 1Password.",
+    "enable": "2FA aktivieren",
+    "starting": "Wird gestartet…",
+    "enrolError": "Die Einrichtung konnte nicht gestartet werden. Bitte versuche es erneut.",
+    "scanTitle": "Diesen QR-Code scannen",
+    "scanHelp": "Öffne deine Authenticator-App und scanne den Code, gib dann den angezeigten 6-stelligen Code ein.",
+    "qrAlt": "QR-Code zur Einrichtung der Zwei-Faktor-Authentifizierung",
+    "cantScan": "Kannst du nicht scannen? Schlüssel manuell eingeben",
+    "hideSecret": "Schlüssel ausblenden",
+    "codeLabel": "6-stelliger Code",
+    "verifyAndEnable": "Prüfen und aktivieren",
+    "verifying": "Wird geprüft…",
+    "codeMismatch": "Dieser Code stimmt nicht. Bitte versuche es erneut.",
+    "rateLimited": "Zu viele Versuche. Bitte versuche es in einer Minute erneut.",
+    "genericError": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
+    "recoveryTitle": "Speichere deine Wiederherstellungscodes",
+    "recoveryIntro": "Jeder Code kann einmal verwendet werden, falls du den Zugriff auf deine Authenticator-App verlierst. Bewahre sie sicher auf — sie werden nicht erneut angezeigt.",
+    "recoveryWarning": "Wer diese Codes hat, kann sich als du anmelden. Halte sie privat.",
+    "recoveryFileHeader": "SpecialCarer Zwei-Faktor-Wiederherstellungscodes. Jeder Code funktioniert einmal. Halte sie privat.",
+    "copy": "Kopieren",
+    "download": "Herunterladen",
+    "savedCodes": "Ich habe sie gespeichert",
+    "codesRemaining": "{count} Wiederherstellungscodes übrig",
+    "regenerate": "Codes neu erstellen",
+    "regenerateTitle": "Wiederherstellungscodes neu erstellen",
+    "regenerateHelp": "Gib einen Code aus deiner Authenticator-App ein. Deine alten Wiederherstellungscodes funktionieren dann nicht mehr.",
+    "confirmRegenerate": "Neu erstellen",
+    "disable": "2FA deaktivieren",
+    "disableTitle": "Zwei-Faktor-Authentifizierung deaktivieren",
+    "disableHelp": "Gib zur Bestätigung einen Code aus deiner Authenticator-App oder einen Wiederherstellungscode ein.",
+    "confirmDisable": "Deaktivieren",
+    "codeOrRecoveryLabel": "Authenticator- oder Wiederherstellungscode",
+    "codeOrRecoveryPlaceholder": "123456 oder Wiederherstellungscode",
+    "cancel": "Abbrechen",
+    "working": "Wird verarbeitet…",
+    "challengeTitle": "Gib deinen Code ein",
+    "challengeHint": "Öffne deine Authenticator-App und gib den 6-stelligen Code ein.",
+    "challengeRecoveryHint": "Gib einen deiner Wiederherstellungscodes ein.",
+    "recoveryCodeLabel": "Wiederherstellungscode",
+    "verify": "Prüfen",
+    "useRecoveryCodeInstead": "Stattdessen einen Wiederherstellungscode verwenden",
+    "useAuthenticatorInstead": "Stattdessen deine Authenticator-App verwenden",
+    "requiredTitle": "Zwei-Faktor-Authentifizierung erforderlich",
+    "requiredIntro": "Dein Konto erfordert Zwei-Faktor-Authentifizierung. Richte sie jetzt ein, um fortzufahren."
   }
 }

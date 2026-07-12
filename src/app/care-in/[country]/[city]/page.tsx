@@ -24,7 +24,7 @@ export async function generateMetadata({
     title: `Caregivers in ${entry.city}, ${entry.region} — SpecialCarers`,
     description: `Vetted, background-checked childcare, eldercare, and special-needs caregivers in ${entry.city}. Book online with SpecialCarers.`,
     alternates: {
-      canonical: `https://specialcarer.com/care-in/${entry.countrySlug}/${entry.slug}`,
+      canonical: `https://www.specialcarers.com/care-in/${entry.countrySlug}/${entry.slug}`,
     },
   };
 }
@@ -205,7 +205,7 @@ export default async function CityPage({
         <section className="px-6 py-12 bg-slate-50">
           <div className="max-w-5xl mx-auto">
             <h2 className="text-2xl font-semibold text-slate-900">
-              Other {entry.country === "GB" ? "UK" : "US"} cities
+                              Other {entry.country === "GB" ? "GB" : "US"} cities
             </h2>
             <ul className="mt-5 flex flex-wrap gap-3">
               {otherCities.map((c) => (
