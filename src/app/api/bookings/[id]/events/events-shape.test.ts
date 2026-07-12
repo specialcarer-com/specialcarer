@@ -4,7 +4,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { shapeEvent } from "./shape";
+import { shapeEvent } from "./route";
 import type { VisitEventRow } from "../clock/clock-handler";
 
 const FULL: VisitEventRow = {
