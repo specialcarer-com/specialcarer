@@ -15,14 +15,16 @@ import {
   handleClock,
   type ClockClient,
   type ClockBookingRow,
-  type ClockEventType,
   type VisitEventRow,
 } from "./clock-handler";
+import { readPostcodeHint } from "./postcode-hint";
 
 export const dynamic = "force-dynamic";
 
+const VISIT_PHOTO_BUCKET = "visit-photos";
+
 const EVENT_COLS =
-  "id, visit_id, carer_id, event_type, event_at, latitude, longitude, accuracy_metres, client_reported_at, server_recorded_at, device_info, notes, photo_url, created_at";
+  "id, visit_id, carer_id, event_type, event_at, latitude, longitude, accuracy_metres, client_reported_at, server_recorded_at, device_info, notes, photo_url, photo_verification_status, photo_similarity_score, photo_verification_checked_at, geofence_status, distance_from_client_metres, admin_override_by, admin_override_reason, admin_override_at, verified_by_admin_id, created_at";
 
 export async function POST(
   req: Request,
@@ -34,7 +36,7 @@ export async function POST(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+    return NextResponse.json({ ok: false, error: "unauthenticated" }, { status: 401 });
   }
 
   let body: unknown;
@@ -65,6 +67,43 @@ export async function POST(
         .maybeSingle<VisitEventRow>();
       if (error) throw new Error(`visit_events read failed: ${error.message}`);
       return data ?? null;
+    },
+    async getClientLocation(id) {
+      // Coordinates come from the booking's geocoded service_point via the
+      // existing RPC (declared in 20260509004605_tracker_v2.sql). Returns no
+      // rows when service_point is null → treated as no_client_address.
+      const { data: pointRows, error: pointErr } = await admin
+        .rpc("booking_service_point_lnglat", { p_booking_id: id })
+        .returns<{ lng: number; lat: number }[]>();
+      if (pointErr) {
+        throw new Error(`client location read failed: ${pointErr.message}`);
+      }
+      const row = Array.isArray(pointRows) ? pointRows[0] : null;
+      const coords =
+        row && Number.isFinite(row.lat) && Number.isFinite(row.lng)
+          ? { lat: Number(row.lat), lng: Number(row.lng) }
+          : null;
+
+      const postcode = await readPostcodeHint(async () => {
+        const { data: bookingRow, error: pcErr } = await admin
+          .from("bookings")
+          .select("location_postcode")
+          .eq("id", id)
+          .maybeSingle<{ location_postcode: string | null }>();
+        if (pcErr) {
+          throw new Error(`client postcode read failed: ${pcErr.message}`);
+        }
+        return bookingRow?.location_postcode ?? null;
+      });
+      return { coords, postcode };
+    },
+    async deletePhoto(path) {
+      const { error } = await admin.storage
+        .from(VISIT_PHOTO_BUCKET)
+        .remove([path]);
+      if (error) {
+        throw new Error(`selfie cleanup failed: ${error.message}`);
+      }
     },
     async insertEvent(row) {
       const { data, error } = await admin
@@ -99,5 +138,3 @@ export async function POST(
     return NextResponse.json({ error: "clock_failed" }, { status: 500 });
   }
 }
-
-export type { ClockEventType };
