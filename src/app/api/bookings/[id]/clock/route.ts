@@ -36,7 +36,7 @@ export async function POST(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+    return NextResponse.json({ ok: false, error: "unauthenticated" }, { status: 401 });
   }
 
   let body: unknown;

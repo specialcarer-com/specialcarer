@@ -33,7 +33,7 @@ export async function GET(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+    return NextResponse.json({ ok: false, error: "unauthenticated" }, { status: 401 });
   }
 
   const admin = createAdminClient();
