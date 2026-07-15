@@ -170,7 +170,7 @@ export default async function SiteFooter() {
       <div className="border-t border-brand-700/15">
         <div className="max-w-6xl mx-auto px-6 py-5 text-xs text-[#1f4e4d] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <p>
-            © {new Date().getFullYear()} All Care 4 U Group Limited. Registered
+            © {new Date().getFullYear()} All Care 4 U Group Ltd. Registered
             in England &amp; Wales, company no. 09428739.
           </p>
           <p>85 Great Portland Street, London, England, W1W 7LT</p>
