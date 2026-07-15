@@ -182,7 +182,7 @@ export function AnimatedBrowsePhone() {
                 </div>
                 <div className="flex flex-col leading-none">
                   <span className="text-[6px] font-bold uppercase tracking-wider text-slate-500">
-                    Special Carers
+                    SpecialCarers
                   </span>
                   <span className="text-[9px] font-semibold text-slate-900">
                     Eleanor R.

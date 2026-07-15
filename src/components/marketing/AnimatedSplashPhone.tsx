@@ -171,7 +171,7 @@ export function AnimatedSplashPhone() {
                 className="opacity-95"
               />
               <span className="text-[8px] font-bold uppercase tracking-[0.18em] text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]">
-                Special Carers
+                SpecialCarers
               </span>
             </div>
             <AnimatePresence mode="wait" initial={false}>

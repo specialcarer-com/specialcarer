@@ -586,7 +586,7 @@ export default async function Home() {
                     sc: { v: "None — free to browse and message", good: true },
                     ag: { v: "Usually free upfront, packaged into hourly markup" },
                     cc: {
-                      v: "Premium required to message most carers ($38.99/mo)",
+                      v: "Premium required to message most carers (US$38.99/mo — Care.com does not operate in the UK)",
                       bad: true,
                     },
                   },
@@ -1052,7 +1052,7 @@ export default async function Home() {
             </h2>
             <p className="mt-5 text-lg text-white/90 leading-relaxed">
               <span className="font-semibold text-white">
-                Special Carers connects you with trusted, verified caregivers
+                SpecialCarers connects you with trusted, verified caregivers
                 who offer reliable and heartfelt support.
               </span>{" "}
               We make care simple, safe, and deeply meaningful—built on trust
