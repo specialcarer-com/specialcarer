@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { TopBar, Tag, IconChevronRight } from "../../_components/ui";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Invoices — SpecialCarers" };
+export const metadata = { title: "Invoices — SpecialCarer" };
 
 type InvoicePill = { label: string; tone: "green" | "amber" | "red" };
 

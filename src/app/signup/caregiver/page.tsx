@@ -2,9 +2,9 @@ import { getTranslations } from "next-intl/server";
 import AudienceSignup from "../audience-signup";
 
 export const metadata = {
-  title: "Apply to caregive — SpecialCarers",
+  title: "Apply to caregive — SpecialCarer",
   description:
-    "Apply to caregive on SpecialCarers. Apply in 5 minutes, clear your background checks in 1–5 days, then start booking shifts.",
+    "Apply to caregive on SpecialCarer. Apply in 5 minutes, clear your background checks in 1–5 days, then start booking shifts.",
 };
 
 export default async function CaregiverSignupPage() {

@@ -10,7 +10,7 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata = {
-  title: "Admin sign-in — SpecialCarers",
+  title: "Admin sign-in — SpecialCarer",
   // Keep the admin login out of search indexes — discoverable by direct URL only.
   robots: { index: false, follow: false },
 };
@@ -34,7 +34,7 @@ export default function AdminLoginPage() {
             Admin sign-in
           </h1>
           <p className="mt-2 text-[#0F1416]/60">
-            For SpecialCarers admins only
+            For SpecialCarer admins only
           </p>
 
           <div className="mt-8">

@@ -5,7 +5,7 @@ import { SecuritySettings } from "@/components/security/SecuritySettings";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
-  title: "Security — SpecialCarers",
+  title: "Security — SpecialCarer",
 };
 
 export default async function SecurityPage() {

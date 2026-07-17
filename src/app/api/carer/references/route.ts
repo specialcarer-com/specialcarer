@@ -106,7 +106,7 @@ export async function POST(req: Request) {
   }
 
   // Best-effort: fetch carer's display name for the email body.
-  let carerName = "A SpecialCarers applicant";
+  let carerName = "A SpecialCarer applicant";
   try {
     const admin = createAdminClient();
     const { data: prof } = await admin

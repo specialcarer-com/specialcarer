@@ -4,7 +4,7 @@ import { TopBar } from "../../_components/ui";
 import TaxClient from "./TaxClient";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Tax exports — SpecialCarers" };
+export const metadata = { title: "Tax exports — SpecialCarer" };
 
 export default async function TaxPage() {
   const supabase = await createClient();

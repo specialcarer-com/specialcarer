@@ -9,7 +9,7 @@ import { CARE_CATEGORY_LABEL } from "@/lib/org/booking-types";
 import type { ServiceUser, CareCategory } from "@/lib/org/booking-types";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Service users — SpecialCarers" };
+export const metadata = { title: "Service users — SpecialCarer" };
 
 export default async function OrgServiceUsersPage() {
   const supabase = await createClient();

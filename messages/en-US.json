@@ -77,7 +77,7 @@
     }
   },
   "auth": {
-    "signInTitle": "Sign in to SpecialCarers",
+    "signInTitle": "Sign in to SpecialCarer",
     "chooserSubtitle": "Pick the account type you’re signing in with. Each takes you to the right place.",
     "fallbackSubtitle": "Use your email or your Google account. New here? We’ll set you up automatically.",
     "checkInbox": "Check your inbox.",
@@ -97,13 +97,13 @@
     "audienceContinue": "Continue",
     "caregiverHeadline": "Sign in to your caregiver account",
     "caregiverIntro": "Pick up shifts, manage bookings, see your payouts, and grow your reputation.",
-    "caregiverCtaLead": "New to SpecialCarers?",
+    "caregiverCtaLead": "New to SpecialCarer?",
     "caregiverCtaLabel": "Apply to be a caregiver",
     "familyHeadline": "Sign in to your family account",
     "familyIntro": "Use your email or your Google account. New here? We’ll set you up automatically when you sign in — no separate signup needed.",
     "orgHeadline": "Sign in to your organization account",
     "orgIntro": "Care homes, agencies, health systems, fostering agencies, schools, and nonprofits — manage bookings, contracts, and your team.",
-    "orgCtaLead": "Not partnered with SpecialCarers yet?",
+    "orgCtaLead": "Not partnered with SpecialCarer yet?",
     "orgCtaLabel": "Talk to our partnerships team",
     "notRightAccount": "Not the right account?",
     "chooseDifferent": "Choose a different sign-in",
@@ -154,7 +154,7 @@
     "signupLinkCaregiver": "Apply as a caregiver",
     "signupLinkFamily": "Find care for your family",
     "signupLinkOrg": "Set up an organization account",
-    "newToSpecialCarers": "New to SpecialCarers?"
+    "newToSpecialCarers": "New to SpecialCarer?"
   },
   "search": {
     "badge": "Find care",

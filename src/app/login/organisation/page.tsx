@@ -2,9 +2,9 @@ import { getTranslations } from "next-intl/server";
 import AudienceSignIn from "../audience-sign-in";
 
 export const metadata = {
-  title: "Organisation sign in — SpecialCarers",
+  title: "Organisation sign in — SpecialCarer",
   description:
-    "Sign in to your SpecialCarers organisation account — care homes, councils, NHS trusts, fostering agencies, and charities.",
+    "Sign in to your SpecialCarer organisation account — care homes, councils, NHS trusts, fostering agencies, and charities.",
 };
 
 export default async function OrganisationLoginPage({

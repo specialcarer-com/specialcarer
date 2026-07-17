@@ -77,7 +77,7 @@
     }
   },
   "auth": {
-    "signInTitle": "SpecialCarers میں سائن اِن کریں",
+    "signInTitle": "SpecialCarer میں سائن اِن کریں",
     "chooserSubtitle": "وہ اکاؤنٹ کی قسم منتخب کریں جس سے آپ سائن اِن کر رہے ہیں۔ ہر ایک آپ کو درست جگہ پر لے جاتا ہے۔",
     "fallbackSubtitle": "اپنا ای میل یا اپنا Google اکاؤنٹ استعمال کریں۔ یہاں نئے ہیں؟ ہم آپ کو خودکار طور پر سیٹ اپ کر دیں گے۔",
     "checkInbox": "اپنا اِن باکس دیکھیں۔",
@@ -97,13 +97,13 @@
     "audienceContinue": "جاری رکھیں",
     "caregiverHeadline": "اپنے نگہداشت کنندہ اکاؤنٹ میں سائن اِن کریں",
     "caregiverIntro": "شفٹیں لیں، بکنگز کا انتظام کریں، اپنی ادائیگیاں دیکھیں، اور اپنی ساکھ بڑھائیں۔",
-    "caregiverCtaLead": "SpecialCarers پر نئے ہیں؟",
+    "caregiverCtaLead": "SpecialCarer پر نئے ہیں؟",
     "caregiverCtaLabel": "نگہداشت کنندہ بننے کے لیے درخواست دیں",
     "familyHeadline": "اپنے خاندانی اکاؤنٹ میں سائن اِن کریں",
     "familyIntro": "اپنا ای میل یا اپنا Google اکاؤنٹ استعمال کریں۔ یہاں نئے ہیں؟ سائن اِن کرتے وقت ہم آپ کو خودکار طور پر سیٹ اپ کر دیں گے — الگ سائن اپ کی ضرورت نہیں۔",
     "orgHeadline": "اپنے ادارے کے اکاؤنٹ میں سائن اِن کریں",
     "orgIntro": "کیئر ہومز، کونسلز، NHS ٹرسٹس، فاسٹرنگ ایجنسیاں، اسکول، اور خیراتی ادارے — بکنگز، معاہدوں، اور اپنی ٹیم کا انتظام کریں۔",
-    "orgCtaLead": "ابھی تک SpecialCarers کے ساتھ شراکت دار نہیں؟",
+    "orgCtaLead": "ابھی تک SpecialCarer کے ساتھ شراکت دار نہیں؟",
     "orgCtaLabel": "ہماری شراکت داری ٹیم سے بات کریں",
     "notRightAccount": "درست اکاؤنٹ نہیں؟",
     "chooseDifferent": "مختلف سائن اِن منتخب کریں",
@@ -154,7 +154,7 @@
     "signupLinkCaregiver": "نگہداشت کنندہ کے طور پر درخواست دیں",
     "signupLinkFamily": "اپنے خاندان کے لیے نگہداشت تلاش کریں",
     "signupLinkOrg": "ادارہ جاتی اکاؤنٹ ترتیب دیں",
-    "newToSpecialCarers": "SpecialCarers پر نئے ہیں؟"
+    "newToSpecialCarers": "SpecialCarer پر نئے ہیں؟"
   },
   "search": {
     "badge": "نگہداشت تلاش کریں",

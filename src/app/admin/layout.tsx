@@ -5,7 +5,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/auth";
 
 export const metadata = {
-  title: "Admin — SpecialCarers",
+  title: "Admin — SpecialCarer",
   robots: { index: false, follow: false },
 };
 
@@ -103,8 +103,8 @@ export default async function AdminLayout({
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/admin" className="flex items-center" aria-label="SpecialCarers Admin">
-              <Image src="/brand/logo.svg" alt="SpecialCarers" width={161} height={121} className="h-8 w-auto" priority />
+            <Link href="/admin" className="flex items-center" aria-label="SpecialCarer Admin">
+              <Image src="/brand/logo.svg" alt="SpecialCarer" width={161} height={121} className="h-8 w-auto" priority />
             </Link>
             <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-100 text-[11px] font-semibold uppercase tracking-wider">
               Admin

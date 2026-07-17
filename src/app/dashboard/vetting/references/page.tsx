@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import ReferencesClient from "./ReferencesClient";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "References — SpecialCarers" };
+export const metadata = { title: "References — SpecialCarer" };
 
 type Row = {
   id: string;

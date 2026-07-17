@@ -77,7 +77,7 @@
     }
   },
   "auth": {
-    "signInTitle": "Bei SpecialCarers anmelden",
+    "signInTitle": "Bei SpecialCarer anmelden",
     "chooserSubtitle": "Wählen Sie den Kontotyp, mit dem Sie sich anmelden. Jeder bringt Sie an die richtige Stelle.",
     "fallbackSubtitle": "Verwenden Sie Ihre E-Mail oder Ihr Google-Konto. Neu hier? Wir richten Sie automatisch ein.",
     "checkInbox": "Überprüfen Sie Ihren Posteingang.",
@@ -97,13 +97,13 @@
     "audienceContinue": "Weiter",
     "caregiverHeadline": "Melden Sie sich bei Ihrem Pflegekraft-Konto an",
     "caregiverIntro": "Übernehmen Sie Schichten, verwalten Sie Buchungen, sehen Sie Ihre Auszahlungen und bauen Sie Ihren Ruf auf.",
-    "caregiverCtaLead": "Neu bei SpecialCarers?",
+    "caregiverCtaLead": "Neu bei SpecialCarer?",
     "caregiverCtaLabel": "Als Pflegekraft bewerben",
     "familyHeadline": "Melden Sie sich bei Ihrem Familienkonto an",
     "familyIntro": "Verwenden Sie Ihre E-Mail oder Ihr Google-Konto. Neu hier? Wir richten Sie bei der Anmeldung automatisch ein – keine separate Registrierung nötig.",
     "orgHeadline": "Melden Sie sich bei Ihrem Organisationskonto an",
     "orgIntro": "Pflegeheime, Behörden, NHS-Trusts, Pflegeagenturen, Schulen und Wohltätigkeitsorganisationen – verwalten Sie Buchungen, Verträge und Ihr Team.",
-    "orgCtaLead": "Noch nicht Partner von SpecialCarers?",
+    "orgCtaLead": "Noch nicht Partner von SpecialCarer?",
     "orgCtaLabel": "Sprechen Sie mit unserem Partnerschaftsteam",
     "notRightAccount": "Nicht das richtige Konto?",
     "chooseDifferent": "Eine andere Anmeldung wählen",
@@ -154,7 +154,7 @@
     "signupLinkCaregiver": "Als Pflegekraft bewerben",
     "signupLinkFamily": "Pflege für Ihre Familie finden",
     "signupLinkOrg": "Organisationskonto einrichten",
-    "newToSpecialCarers": "Neu bei SpecialCarers?"
+    "newToSpecialCarers": "Neu bei SpecialCarer?"
   },
   "search": {
     "badge": "Pflege finden",

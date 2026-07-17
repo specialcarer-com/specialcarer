@@ -45,7 +45,7 @@ export async function POST(req: Request) {
   const payload: ApnsPayload = {
     aps: {
       alert: {
-        title: body.title?.trim() || "Special Carers",
+        title: body.title?.trim() || "SpecialCarer",
         body: body.body?.trim() || "Test push from the backend.",
       },
       sound: "default",

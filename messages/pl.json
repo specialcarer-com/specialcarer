@@ -77,7 +77,7 @@
     }
   },
   "auth": {
-    "signInTitle": "Zaloguj się do SpecialCarers",
+    "signInTitle": "Zaloguj się do SpecialCarer",
     "chooserSubtitle": "Wybierz typ konta, z którego się logujesz. Każdy z nich przeniesie Cię we właściwe miejsce.",
     "fallbackSubtitle": "Użyj adresu e-mail lub konta Google. Pierwszy raz? Skonfigurujemy Cię automatycznie.",
     "checkInbox": "Sprawdź swoją skrzynkę odbiorczą.",
@@ -97,13 +97,13 @@
     "audienceContinue": "Kontynuuj",
     "caregiverHeadline": "Zaloguj się do konta opiekuna",
     "caregiverIntro": "Przyjmuj zmiany, zarządzaj rezerwacjami, sprawdzaj wypłaty i buduj swoją reputację.",
-    "caregiverCtaLead": "Pierwszy raz w SpecialCarers?",
+    "caregiverCtaLead": "Pierwszy raz w SpecialCarer?",
     "caregiverCtaLabel": "Złóż wniosek, aby zostać opiekunem",
     "familyHeadline": "Zaloguj się do konta rodzinnego",
     "familyIntro": "Użyj adresu e-mail lub konta Google. Pierwszy raz? Skonfigurujemy Cię automatycznie podczas logowania — bez osobnej rejestracji.",
     "orgHeadline": "Zaloguj się do konta organizacji",
     "orgIntro": "Domy opieki, samorządy, jednostki NHS, agencje pieczy zastępczej, szkoły i organizacje charytatywne — zarządzaj rezerwacjami, umowami i swoim zespołem.",
-    "orgCtaLead": "Nie współpracujesz jeszcze ze SpecialCarers?",
+    "orgCtaLead": "Nie współpracujesz jeszcze ze SpecialCarer?",
     "orgCtaLabel": "Porozmawiaj z naszym zespołem ds. partnerstw",
     "notRightAccount": "Niewłaściwe konto?",
     "chooseDifferent": "Wybierz inny sposób logowania",
@@ -154,7 +154,7 @@
     "signupLinkCaregiver": "Złóż wniosek jako opiekun",
     "signupLinkFamily": "Znajdź opiekę dla swojej rodziny",
     "signupLinkOrg": "Załóż konto organizacji",
-    "newToSpecialCarers": "Nowy w SpecialCarers?"
+    "newToSpecialCarers": "Nowy w SpecialCarer?"
   },
   "search": {
     "badge": "Znajdź opiekę",

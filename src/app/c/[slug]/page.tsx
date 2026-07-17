@@ -21,15 +21,15 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   // The canonical page emits the rich metadata; this alias just points there.
-  if (!isValidSlug(slug)) return { title: "Caregiver — SpecialCarers" };
+  if (!isValidSlug(slug)) return { title: "Caregiver — SpecialCarer" };
   const profile = await getPublicCaregiverProfileBySlug(slug);
   // Always emit an absolute URL; falling back to the production origin avoids an
   // empty/relative canonical (and og:url) when the profile or base URL is absent.
   const url = profile ? publicProfileUrl(profile) : siteOrigin();
   return {
     title: profile
-      ? `${profile.display_name ?? "Caregiver"} — SpecialCarers`
-      : "Caregiver — SpecialCarers",
+      ? `${profile.display_name ?? "Caregiver"} — SpecialCarer`
+      : "Caregiver — SpecialCarer",
     alternates: { canonical: url },
     openGraph: { url },
   };

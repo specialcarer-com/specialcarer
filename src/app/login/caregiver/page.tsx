@@ -2,9 +2,9 @@ import { getTranslations } from "next-intl/server";
 import AudienceSignIn from "../audience-sign-in";
 
 export const metadata = {
-  title: "Caregiver sign in — SpecialCarers",
+  title: "Caregiver sign in — SpecialCarer",
   description:
-    "Sign in to your SpecialCarers caregiver account to pick up shifts, manage bookings, and get paid.",
+    "Sign in to your SpecialCarer caregiver account to pick up shifts, manage bookings, and get paid.",
 };
 
 export default async function CaregiverLoginPage({

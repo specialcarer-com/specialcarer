@@ -34,7 +34,7 @@ export default async function CountriesAdmin() {
       <header>
         <h1 className="text-2xl font-semibold text-slate-900">Countries</h1>
         <p className="mt-1 text-sm text-slate-600 max-w-2xl">
-          Enable or disable the countries SpecialCarers operates in. Turning on{" "}
+          Enable or disable the countries SpecialCarer operates in. Turning on{" "}
           <strong>Signup</strong> makes a country appear in the carer onboarding
           country dropdown. <strong>Search</strong> controls whether its
           postcodes are accepted by find-care (wired up in a later release).

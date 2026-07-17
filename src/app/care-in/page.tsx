@@ -5,9 +5,9 @@ import PageHeroBanner from "@/components/page-hero-banner";
 import { CITIES } from "@/lib/care/cities";
 
 export const metadata: Metadata = {
-  title: "Care by city — SpecialCarers",
+  title: "Care by city — SpecialCarer",
   description:
-    "SpecialCarers covers cities across the UK. Find vetted caregivers near you.",
+    "SpecialCarer covers cities across the UK. Find vetted caregivers near you.",
 };
 
 export default function Page() {

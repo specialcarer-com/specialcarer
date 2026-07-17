@@ -42,7 +42,7 @@ function useClock() {
 const slides = [
   {
     src: "/brand/people/team-splash.png",
-    alt: "A SpecialCarers team standing with an elderly couple at home",
+    alt: "A SpecialCarer team standing with an elderly couple at home",
     eyebrow: "Care for the whole family",
     headline: "Trusted, vetted carers",
     objectPosition: "50% 30%",
@@ -98,7 +98,7 @@ export function AnimatedSplashPhone() {
     <div
       className="sc-phone-tilt-left relative w-full aspect-[9/19] rotate-[-14deg] drop-shadow-2xl"
       role="img"
-      aria-label="SpecialCarers app preview: trusted carers for families and childcare."
+      aria-label="SpecialCarer app preview: trusted carers for families and childcare."
     >
       <div className="relative h-full w-full rounded-[2.4rem] bg-slate-900 p-[3px] ring-1 ring-slate-800">
         <div className="relative h-full w-full rounded-[2.2rem] overflow-hidden bg-slate-900">
@@ -140,7 +140,7 @@ export function AnimatedSplashPhone() {
           {/* Status bar (top) */}
           <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 pt-1.5 text-[8px] font-semibold text-white">
             <span>{clock}</span>
-            <span className="opacity-90">SpecialCarers</span>
+            <span className="opacity-90">SpecialCarer</span>
           </div>
           {/* Notch */}
           <div
@@ -171,7 +171,7 @@ export function AnimatedSplashPhone() {
                 className="opacity-95"
               />
               <span className="text-[8px] font-bold uppercase tracking-[0.18em] text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]">
-                SpecialCarers
+                SpecialCarer
               </span>
             </div>
             <AnimatePresence mode="wait" initial={false}>

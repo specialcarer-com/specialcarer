@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import ServicePage from "@/components/service-page";
 
 export const metadata: Metadata = {
-  title: "Postnatal & newborn care — SpecialCarers",
+  title: "Postnatal & newborn care — SpecialCarer",
   description:
     "Maternity nurses, night nannies, and breastfeeding peer support. Newborn-trained, DBS-checked caregivers across the UK.",
 };
@@ -36,7 +36,7 @@ export default function Page() {
       faqs={[
         {
           q: "What's the difference between a maternity nurse and a night nanny?",
-          a: "A maternity nurse typically lives in for short stays (1–6 weeks) and handles all newborn care 24/7 with a few hours off. A night nanny works overnight only, going home in the morning. Maternity nurses cost more and tend to be more experienced. Both are bookable through SpecialCarers.",
+          a: "A maternity nurse typically lives in for short stays (1–6 weeks) and handles all newborn care 24/7 with a few hours off. A night nanny works overnight only, going home in the morning. Maternity nurses cost more and tend to be more experienced. Both are bookable through SpecialCarer.",
         },
         {
           q: "Are your caregivers IBCLC lactation consultants?",

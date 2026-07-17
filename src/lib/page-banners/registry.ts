@@ -103,7 +103,7 @@ export const PAGE_BANNER_SLOTS: PageBannerSlot[] = [
     group: "Marketing",
     path: "/how-it-works",
     fallbackGradient: teal,
-    defaultAlt: "How SpecialCarers matches families with carers",
+    defaultAlt: "How SpecialCarer matches families with carers",
   },
   {
     key: "marketing.trust",
@@ -127,7 +127,7 @@ export const PAGE_BANNER_SLOTS: PageBannerSlot[] = [
     group: "Marketing",
     path: "/blog",
     fallbackGradient: tealCream,
-    defaultAlt: "Stories and guides from SpecialCarers",
+    defaultAlt: "Stories and guides from SpecialCarer",
   },
   {
     key: "marketing.cities",
@@ -152,7 +152,7 @@ export const PAGE_BANNER_SLOTS: PageBannerSlot[] = [
     group: "Audiences",
     path: "/organisations",
     fallbackGradient: tealAmber,
-    defaultAlt: "Care providers partnering with SpecialCarers",
+    defaultAlt: "Care providers partnering with SpecialCarer",
   },
   {
     key: "audience.caregivers",
@@ -160,7 +160,7 @@ export const PAGE_BANNER_SLOTS: PageBannerSlot[] = [
     group: "Audiences",
     path: "/become-a-caregiver",
     fallbackGradient: tealCream,
-    defaultAlt: "Become a SpecialCarers caregiver",
+    defaultAlt: "Become a SpecialCarer caregiver",
   },
   {
     key: "audience.families",
@@ -178,7 +178,7 @@ export const PAGE_BANNER_SLOTS: PageBannerSlot[] = [
     path: "/login",
     fallbackGradient: tealCream,
     defaultAlt:
-      "A woman at her kitchen counter checking her phone, laptop open, signing in to SpecialCarers",
+      "A woman at her kitchen counter checking her phone, laptop open, signing in to SpecialCarer",
   },
 ];
 

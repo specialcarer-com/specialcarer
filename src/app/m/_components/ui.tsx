@@ -639,7 +639,7 @@ export function AppLogo({
     >
       <Image
         src="/m/brand/logo-mark.png"
-        alt="SpecialCarers"
+        alt="SpecialCarer"
         width={Math.round(size * 0.86)}
         height={Math.round(size * 0.86 * 0.535)}
         priority
@@ -652,7 +652,7 @@ export function AppLogo({
   return (
     <div className="flex flex-col items-center gap-2">
       {mark}
-      <p className="text-primary font-bold text-[18px] tracking-tight">SpecialCarers</p>
+      <p className="text-primary font-bold text-[18px] tracking-tight">SpecialCarer</p>
     </div>
   );
 }

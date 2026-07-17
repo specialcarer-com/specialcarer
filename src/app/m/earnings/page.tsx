@@ -6,7 +6,7 @@ import EarningsClient from "./EarningsClient";
 import EarningsV1Client from "./EarningsV1Client";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Earnings — SpecialCarers" };
+export const metadata = { title: "Earnings — SpecialCarer" };
 
 export default async function EarningsPage() {
   const supabase = await createClient();

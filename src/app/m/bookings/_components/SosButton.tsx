@@ -182,7 +182,7 @@ export function SosButton({ bookingId }: SosButtonProps) {
                   className="mt-2 text-[14px] leading-relaxed"
                   style={{ color: "#2F2E31" }}
                 >
-                  The SpecialCarers team and your carer have been notified.
+                  The SpecialCarer team and your carer have been notified.
                   {result.emergencyContacts > 0
                     ? ` Your ${result.emergencyContacts} emergency contact${
                         result.emergencyContacts === 1 ? "" : "s"
@@ -217,7 +217,7 @@ export function SosButton({ bookingId }: SosButtonProps) {
                   className="mt-2 text-[14px] leading-relaxed"
                   style={{ color: "#2F2E31" }}
                 >
-                  This will alert your carer, the SpecialCarers team, and your
+                  This will alert your carer, the SpecialCarer team, and your
                   emergency contacts immediately.
                 </p>
                 {result?.kind === "error" && (

@@ -12,7 +12,7 @@ type Props = {
 };
 
 function shareMessage(name: string): string {
-  return `Check out ${name}'s caregiver profile on SpecialCarers — trusted, DBS-checked care.`;
+  return `Check out ${name}'s caregiver profile on SpecialCarer — trusted, DBS-checked care.`;
 }
 
 export default function ShareProfileModal({ url, name, onClose }: Props) {
@@ -26,7 +26,7 @@ export default function ShareProfileModal({ url, name, onClose }: Props) {
     {
       key: "email",
       label: "Email",
-      href: `mailto:?subject=${encodeURIComponent("My SpecialCarers profile")}&body=${eMsg}%20${eUrl}`,
+      href: `mailto:?subject=${encodeURIComponent("My SpecialCarer profile")}&body=${eMsg}%20${eUrl}`,
     },
     { key: "x", label: "X", href: `https://twitter.com/intent/tweet?text=${eMsg}&url=${eUrl}` },
     {

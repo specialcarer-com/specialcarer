@@ -99,7 +99,7 @@ export async function sendResumePaymentEmail(args: {
     "",
     "If you've already confirmed in the app, you can ignore this email.",
     "",
-    "— SpecialCarers",
+    "— SpecialCarer",
   ].join("\n");
 
   const html = `

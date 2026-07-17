@@ -237,7 +237,7 @@ export default function ReviewPanel({
             onClick={() => setShowPrivate((v) => !v)}
             className="text-sm text-brand-700 hover:underline"
           >
-            {showPrivate ? "Hide" : "Send"} private feedback to SpecialCarers
+            {showPrivate ? "Hide" : "Send"} private feedback to SpecialCarer
           </button>
           {showPrivate && (
             <textarea

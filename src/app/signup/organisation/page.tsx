@@ -2,9 +2,9 @@ import { getTranslations } from "next-intl/server";
 import AudienceSignup from "../audience-signup";
 
 export const metadata = {
-  title: "Set up an organisation account — SpecialCarers",
+  title: "Set up an organisation account — SpecialCarer",
   description:
-    "Set up a SpecialCarers organisation account for your care company, council, or agency — multi-seat access and contract booking.",
+    "Set up a SpecialCarer organisation account for your care company, council, or agency — multi-seat access and contract booking.",
 };
 
 export default async function OrganisationSignupPage() {

@@ -328,7 +328,7 @@ export async function chooseUpfrontPayment(
     amount: DBS_COST_PENCE,
     currency: "gbp",
     metadata: { purpose: "dbs_upfront", carer_id: carerId },
-    description: "SpecialCarers DBS application (paid upfront)",
+    description: "SpecialCarer DBS application (paid upfront)",
   });
 
   await admin

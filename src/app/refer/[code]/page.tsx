@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Join SpecialCarers — referral" };
+export const metadata = { title: "Join SpecialCarer — referral" };
 
 export default async function ReferralLandingPage({
   params,
@@ -42,7 +42,7 @@ export default async function ReferralLandingPage({
           <Link href="/" className="inline-flex items-center gap-2">
             <Image
               src="/brand/logo.svg"
-              alt="SpecialCarers"
+              alt="SpecialCarer"
               width={161}
               height={121}
               className="h-9 w-auto"
@@ -73,8 +73,8 @@ export default async function ReferralLandingPage({
               </h1>
               <p className="mt-3 text-white/90 text-lg">
                 {referrerFirst
-                  ? `${referrerFirst} invited you to SpecialCarers.`
-                  : "A friend invited you to SpecialCarers."}{" "}
+                  ? `${referrerFirst} invited you to SpecialCarer.`
+                  : "A friend invited you to SpecialCarer."}{" "}
                 Sign up with their code and they get £20 when you complete
                 your first booking.
               </p>

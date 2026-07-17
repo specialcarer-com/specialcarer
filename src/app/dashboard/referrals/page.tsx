@@ -6,7 +6,7 @@ import { getOrCreateReferralCode } from "@/lib/referrals/engine";
 import ReferralBanner from "@/components/dashboard/ReferralBanner";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Referrals — SpecialCarers" };
+export const metadata = { title: "Referrals — SpecialCarer" };
 
 export default async function ReferralsPage() {
   const supabase = await createClient();

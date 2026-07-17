@@ -82,7 +82,7 @@ function renderHtml(i: GracePeriodBlastInput): string {
 
     <p style="margin:0 0 16px">Hi ${i.fullName},</p>
 
-    <p style="margin:0 0 16px">We've updated SpecialCarers' mandatory training to bring it in line with current CQC and Ofsted guidance. ${populationLine}</p>
+    <p style="margin:0 0 16px">We've updated SpecialCarer's mandatory training to bring it in line with current CQC and Ofsted guidance. ${populationLine}</p>
 
     <p style="margin:0 0 16px">You've been given a <strong style="color:${ACCENT}">30-day grace period</strong> so you can keep working in the meantime. Your Channel B opt-in stays active until <strong>${fmtDate(i.graceEndsAt)}</strong>.</p>
 
@@ -102,7 +102,7 @@ function renderHtml(i: GracePeriodBlastInput): string {
     </p>
 
     <p style="margin:24px 0 0;color:${MUTED};font-size:13px">Questions? Reply to this email or contact compliance@specialcarers.com.</p>
-    <p style="margin:8px 0 0;color:${MUTED};font-size:13px">— The SpecialCarers team</p>
+    <p style="margin:8px 0 0;color:${MUTED};font-size:13px">— The SpecialCarer team</p>
   </div>
 </body></html>`;
 }
@@ -111,7 +111,7 @@ function renderText(i: GracePeriodBlastInput): string {
   const lines = [
     `Hi ${i.fullName},`,
     "",
-    "We've updated SpecialCarers' mandatory training to bring it in line with current CQC and Ofsted guidance.",
+    "We've updated SpecialCarer's mandatory training to bring it in line with current CQC and Ofsted guidance.",
     "",
     `You've been given a 30-day grace period so you can keep working. Your Channel B opt-in stays active until ${fmtDate(i.graceEndsAt)}.`,
     "",
@@ -127,7 +127,7 @@ function renderText(i: GracePeriodBlastInput): string {
     "https://specialcarers.com/dashboard/agency-optin",
     "",
     "Questions? Reply to this email or contact compliance@specialcarers.com.",
-    "— The SpecialCarers team",
+    "— The SpecialCarer team",
   ];
   return lines.join("\n");
 }

@@ -77,7 +77,7 @@
     }
   },
   "auth": {
-    "signInTitle": "Se connecter à SpecialCarers",
+    "signInTitle": "Se connecter à SpecialCarer",
     "chooserSubtitle": "Choisissez le type de compte avec lequel vous vous connectez. Chacun vous mène au bon endroit.",
     "fallbackSubtitle": "Utilisez votre e-mail ou votre compte Google. Nouveau ici ? Nous vous configurons automatiquement.",
     "checkInbox": "Consultez votre boîte de réception.",
@@ -97,13 +97,13 @@
     "audienceContinue": "Continuer",
     "caregiverHeadline": "Connectez-vous à votre compte aidant",
     "caregiverIntro": "Prenez des missions, gérez les réservations, consultez vos paiements et développez votre réputation.",
-    "caregiverCtaLead": "Nouveau sur SpecialCarers ?",
+    "caregiverCtaLead": "Nouveau sur SpecialCarer ?",
     "caregiverCtaLabel": "Postuler pour devenir aidant",
     "familyHeadline": "Connectez-vous à votre compte famille",
     "familyIntro": "Utilisez votre e-mail ou votre compte Google. Nouveau ici ? Nous vous configurons automatiquement à la connexion — aucune inscription séparée nécessaire.",
     "orgHeadline": "Connectez-vous à votre compte organisation",
     "orgIntro": "Maisons de retraite, collectivités, organismes du NHS, agences de placement, écoles et associations — gérez les réservations, les contrats et votre équipe.",
-    "orgCtaLead": "Pas encore partenaire de SpecialCarers ?",
+    "orgCtaLead": "Pas encore partenaire de SpecialCarer ?",
     "orgCtaLabel": "Parlez à notre équipe partenariats",
     "notRightAccount": "Ce n’est pas le bon compte ?",
     "chooseDifferent": "Choisir une autre connexion",
@@ -154,7 +154,7 @@
     "signupLinkCaregiver": "Postuler comme aidant·e",
     "signupLinkFamily": "Trouver des soins pour votre famille",
     "signupLinkOrg": "Créer un compte organisation",
-    "newToSpecialCarers": "Nouveau sur SpecialCarers ?"
+    "newToSpecialCarers": "Nouveau sur SpecialCarer ?"
   },
   "search": {
     "badge": "Trouver une aide",

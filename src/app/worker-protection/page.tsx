@@ -7,9 +7,9 @@ import { US_REGION_ENABLED } from "@/lib/region";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Worker protections — SpecialCarers",
+  title: "Worker protections — SpecialCarer",
   description:
-    "How SpecialCarers protects independent carers: right to a safe environment, right to leave a shift, anti-retaliation policy, pay protections.",
+    "How SpecialCarer protects independent carers: right to a safe environment, right to leave a shift, anti-retaliation policy, pay protections.",
 };
 
 export default async function WorkerProtectionPage() {

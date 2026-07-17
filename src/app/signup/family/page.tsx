@@ -2,9 +2,9 @@ import { getTranslations } from "next-intl/server";
 import AudienceSignup from "../audience-signup";
 
 export const metadata = {
-  title: "Create your family account — SpecialCarers",
+  title: "Create your family account — SpecialCarer",
   description:
-    "Create a SpecialCarers family account to find trusted, vetted carers near you.",
+    "Create a SpecialCarer family account to find trusted, vetted carers near you.",
 };
 
 export default async function FamilySignupPage() {

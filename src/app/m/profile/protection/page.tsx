@@ -5,7 +5,7 @@ import { getSupportConfig } from "@/lib/support/config";
 import { TopBar } from "../../_components/ui";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Worker protections — SpecialCarers" };
+export const metadata = { title: "Worker protections — SpecialCarer" };
 
 export default async function MobileProtectionPage() {
   const supabase = await createClient();

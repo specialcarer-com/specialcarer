@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import ServicePage from "@/components/service-page";
 
 export const metadata: Metadata = {
-  title: "Childcare & babysitters — SpecialCarers",
+  title: "Childcare & babysitters — SpecialCarer",
   description:
     "DBS-checked babysitters, nannies, and after-school caregivers across the UK. Book by the hour, evening, or recurring schedule.",
 };
@@ -44,7 +44,7 @@ export default function Page() {
         },
         {
           q: "How much do caregivers cost?",
-          a: "Caregivers set their own rates, typically £14–£22/hour across the UK. SpecialCarers adds a 30% service fee that covers verification, insurance, support, and payment processing. See our Pricing page for full transparency.",
+          a: "Caregivers set their own rates, typically £14–£22/hour across the UK. SpecialCarer adds a 30% service fee that covers verification, insurance, support, and payment processing. See our Pricing page for full transparency.",
         },
         {
           q: "Can caregivers drive my children?",

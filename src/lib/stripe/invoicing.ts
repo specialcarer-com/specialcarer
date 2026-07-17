@@ -50,7 +50,7 @@ type AnySupabase = SupabaseClient<any, any, any>;
 // IMPORTANT: use these on all B2B invoices. Never use "SpecialCarers" as issuer.
 export const LEGAL_ENTITY_NAME = "All Care 4 U Group Ltd";
 export const LEGAL_ENTITY_TRADING_AS =
-  "All Care 4 U Group Ltd (operating SpecialCarers)";
+  "All Care 4 U Group Ltd (operating SpecialCarer)";
 export const LEGAL_ENTITY_COMPANIES_HOUSE = "09428739";
 export const LEGAL_ENTITY_ADDRESS =
   "85 Great Portland Street, London, England, W1W 7LT";
@@ -301,7 +301,7 @@ export async function createShiftInvoice(
     // When delaying finalisation, leave auto_advance off so Stripe doesn't
     // race the cron with its own scheduled finalisation.
     auto_advance: finaliseImmediately,
-    description: `SpecialCarers shift — ${dateStr}`,
+    description: `SpecialCarer shift — ${dateStr}`,
     // ── Issuer identification ──────────────────────────────────────────────
     // All B2B invoices are issued by All Care 4 U Group Ltd, NOT SpecialCarers.
     custom_fields: [

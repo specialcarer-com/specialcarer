@@ -7,7 +7,7 @@ import BookingWizard from "./_components/BookingWizard";
 import type { ServiceUser } from "@/lib/org/booking-types";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "New booking — SpecialCarers" };
+export const metadata = { title: "New booking — SpecialCarer" };
 
 export default async function NewBookingPage() {
   const supabase = await createClient();

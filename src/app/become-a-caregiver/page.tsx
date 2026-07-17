@@ -4,9 +4,9 @@ import MarketingShell from "@/components/marketing-shell";
 import PageHeroBanner from "@/components/page-hero-banner";
 
 export const metadata: Metadata = {
-  title: "Become a caregiver — SpecialCarers",
+  title: "Become a caregiver — SpecialCarer",
   description:
-    "Apply to caregive on SpecialCarers. Keep 70% of every shift. Free DBS background check. Same-day payouts. Across the UK.",
+    "Apply to caregive on SpecialCarer. Keep 70% of every shift. Free DBS background check. Same-day payouts. Across the UK.",
 };
 
 const reasons = [
@@ -61,7 +61,7 @@ export default function Page() {
               Earn more. Keep more. Care better.
             </h1>
             <p className="mt-6 text-lg text-slate-600 leading-relaxed">
-              SpecialCarers is the marketplace built for caregivers who want
+              SpecialCarer is the marketplace built for caregivers who want
               fair pay, reliable shifts, and the support of a team that
               actually has their back.
             </p>

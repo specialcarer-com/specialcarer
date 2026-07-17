@@ -89,7 +89,7 @@ function Shell({
         <h1 className="text-2xl font-bold text-slate-900 mb-4">{title}</h1>
         <div className="text-slate-700 leading-relaxed">{children}</div>
         <p className="mt-8 text-xs text-slate-500">
-          SpecialCarers · A product of All Care 4 U Group Ltd
+          SpecialCarer · A product of All Care 4 U Group Ltd
         </p>
       </div>
     </main>

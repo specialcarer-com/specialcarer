@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import ServicePage from "@/components/service-page";
 
 export const metadata: Metadata = {
-  title: "Special-needs care — SpecialCarers",
+  title: "Special-needs care — SpecialCarer",
   description:
     "Caregivers experienced with autism, ADHD, sensory processing, learning disabilities, and complex care needs. Vetted, trained, and matched to your child or adult.",
 };
@@ -46,7 +46,7 @@ export default function Page() {
         },
         {
           q: "Do you support adults with learning disabilities?",
-          a: "Yes. SpecialCarers is open to adult care as well as childcare. For local-authority commissioned support (UK) or Medicaid waiver-funded care (US), the marketplace can't yet bill those funders directly, but we're working on it — get in touch if you'd like updates.",
+          a: "Yes. SpecialCarer is open to adult care as well as childcare. For local-authority commissioned support (UK) or Medicaid waiver-funded care (US), the marketplace can't yet bill those funders directly, but we're working on it — get in touch if you'd like updates.",
         },
         {
           q: "Can I request the same caregiver every week?",

@@ -4,7 +4,7 @@ import { TopBar } from "../../_components/ui";
 import PayoutClient from "./PayoutClient";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Cash out — SpecialCarers" };
+export const metadata = { title: "Cash out — SpecialCarer" };
 
 export default async function PayoutPage() {
   const supabase = await createClient();

@@ -3,7 +3,7 @@ import { BottomNav, TopBar } from "../../_components/ui";
 import WhenPicker from "../../../book/when-picker";
 
 export const metadata: Metadata = {
-  title: "Visiting care · SpecialCarers",
+  title: "Visiting care · SpecialCarer",
 };
 
 type Tab = "now" | "schedule" | "recurring";

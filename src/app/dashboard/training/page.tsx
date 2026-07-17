@@ -9,7 +9,7 @@ import {
 } from "@/lib/training/types";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Training & CEUs — SpecialCarers" };
+export const metadata = { title: "Training & CEUs — SpecialCarer" };
 
 type EnrollmentRow = TrainingEnrollment;
 

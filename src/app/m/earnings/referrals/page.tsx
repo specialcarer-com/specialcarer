@@ -4,7 +4,7 @@ import { TopBar } from "../../_components/ui";
 import ReferralsClient from "./ReferralsClient";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Referrals — SpecialCarers" };
+export const metadata = { title: "Referrals — SpecialCarer" };
 
 export default async function ReferralsPage() {
   const supabase = await createClient();

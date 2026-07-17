@@ -63,8 +63,8 @@ export default function ReferralsClient() {
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
         await navigator.share({
-          title: "Join SpecialCarers",
-          text: `Use my referral code ${me.code} when you sign up as a carer on SpecialCarers.`,
+          title: "Join SpecialCarer",
+          text: `Use my referral code ${me.code} when you sign up as a carer on SpecialCarer.`,
           url: me.share_url,
         });
         return;

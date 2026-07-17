@@ -201,7 +201,7 @@ export async function GET(req: Request) {
     .maybeSingle();
   const inviterName =
     (inviter as { full_name: string | null } | null)?.full_name ??
-    "A SpecialCarers member";
+    "A SpecialCarer member";
 
   const { data: threadRow } = await admin
     .from("chat_threads")

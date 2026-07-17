@@ -6,7 +6,7 @@ import OrgShell from "../../_components/OrgShell";
 import ServiceUserForm from "../_components/ServiceUserForm";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Add service user — SpecialCarers" };
+export const metadata = { title: "Add service user — SpecialCarer" };
 
 export default async function NewServiceUserPage() {
   const supabase = await createClient();

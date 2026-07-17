@@ -235,7 +235,7 @@ async function notifyAdminsAndCounterpart(
       ? `https://www.google.com/maps?q=${alert.lat},${alert.lng}`
       : null;
 
-  const subject = `🚨 SOS raised by ${raiserName ?? raiserEmail ?? "a SpecialCarers user"}`;
+  const subject = `🚨 SOS raised by ${raiserName ?? raiserEmail ?? "a SpecialCarer user"}`;
 
   const detailLines: string[] = [
     `User: ${raiserName ?? "(unknown)"} <${raiserEmail ?? "no email"}>`,
@@ -252,7 +252,7 @@ async function notifyAdminsAndCounterpart(
 
   const html = `
     <div style="font-family:Plus Jakarta Sans,Arial,sans-serif;max-width:560px;margin:0 auto">
-      <h2 style="color:#A33;margin:0 0 8px">🚨 SOS raised on SpecialCarers</h2>
+      <h2 style="color:#A33;margin:0 0 8px">🚨 SOS raised on SpecialCarer</h2>
       <p style="color:#2F2E31;margin:0 0 16px">A user has triggered the in-app SOS button. Please acknowledge promptly.</p>
       <ul style="color:#2F2E31;line-height:1.6">
         ${detailLines.map((l) => `<li>${l}</li>`).join("")}
@@ -262,12 +262,12 @@ async function notifyAdminsAndCounterpart(
           ? `<p style="margin-top:16px"><a href="${mapsUrl}" style="background:#039EA0;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none">Open in Google Maps</a></p>`
           : ""
       }
-      <p style="color:#575757;font-size:12px;margin-top:24px">— SpecialCarers Trust &amp; Safety</p>
+      <p style="color:#575757;font-size:12px;margin-top:24px">— SpecialCarer Trust &amp; Safety</p>
     </div>
   `;
 
   const text = [
-    "🚨 SOS raised on SpecialCarers",
+    "🚨 SOS raised on SpecialCarer",
     "",
     ...detailLines,
     mapsUrl ? `Map: ${mapsUrl}` : "",
@@ -282,7 +282,7 @@ async function notifyAdminsAndCounterpart(
 
   // Counterpart notification — only if booking-linked and we have an email.
   if (counterpartEmail) {
-    const cpSubject = `🚨 SOS on your SpecialCarers booking`;
+    const cpSubject = `🚨 SOS on your SpecialCarer booking`;
     const cpText = [
       `${raiserName ?? "Your booking party"} has raised an SOS on the booking you share.`,
       "",
@@ -296,7 +296,7 @@ async function notifyAdminsAndCounterpart(
       .join("\n");
     const cpHtml = `
       <div style="font-family:Plus Jakarta Sans,Arial,sans-serif;max-width:560px;margin:0 auto">
-        <h2 style="color:#A33;margin:0 0 8px">🚨 SOS on your SpecialCarers booking</h2>
+        <h2 style="color:#A33;margin:0 0 8px">🚨 SOS on your SpecialCarer booking</h2>
         <p style="color:#2F2E31">${raiserName ?? "Your booking party"} has raised an SOS on the booking you share. Please check on them and contact emergency services if needed.</p>
         <ul style="color:#2F2E31;line-height:1.6">
           <li>Booking: ${alert.booking_id}</li>

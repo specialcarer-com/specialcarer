@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import ServicePage from "@/components/service-page";
 
 export const metadata: Metadata = {
-  title: "Elderly care at home — SpecialCarers",
+  title: "Elderly care at home — SpecialCarer",
   description:
     "Vetted elderly carers for companionship, mobility, dementia-friendly support, medication reminders, and respite. Available across the UK.",
 };
@@ -44,7 +44,7 @@ export default function Page() {
         },
         {
           q: "Are caregivers insured?",
-          a: "Caregivers operate as independent contractors and are responsible for their own public liability cover. SpecialCarers maintains marketplace-level insurance to cover gaps. See our Trust & Safety page for the full breakdown.",
+          a: "Caregivers operate as independent contractors and are responsible for their own public liability cover. SpecialCarer maintains marketplace-level insurance to cover gaps. See our Trust & Safety page for the full breakdown.",
         },
         {
           q: "What if a caregiver doesn't show up?",
