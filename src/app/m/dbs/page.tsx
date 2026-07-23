@@ -157,7 +157,7 @@ export default function CarerDbsPage() {
               ) : (
                 <>
                   <p className="mt-1 text-[13px] text-subheading">
-                    SpecialCarers fronts the £{targetPounds} DBS cost and recovers
+                    SpecialCarer fronts the £{targetPounds} DBS cost and recovers
                     it from your first earnings (10% of each payout, £6 minimum).
                   </p>
                   <p className="mt-2 text-[14px] font-medium text-heading">

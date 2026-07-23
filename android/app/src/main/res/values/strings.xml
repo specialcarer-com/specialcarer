@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Special Carers</string>
-    <string name="title_activity_main">Special Carers</string>
+    <string name="app_name">SpecialCarer</string>
+    <string name="title_activity_main">SpecialCarer</string>
     <string name="package_name">com.allcare4ugroup.specialcarer</string>
     <string name="custom_url_scheme">com.allcare4ugroup.specialcarer</string>
 </resources>

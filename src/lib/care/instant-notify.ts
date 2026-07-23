@@ -108,7 +108,7 @@ export async function notifyCarerInstantBooking(args: Args) {
       ``,
       `If you don't respond soon, the request will go to the next nearest carer.`,
       ``,
-      `— SpecialCarers`,
+      `— SpecialCarer`,
     ]
       .filter(Boolean)
       .join("\n");

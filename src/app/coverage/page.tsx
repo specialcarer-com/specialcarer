@@ -8,9 +8,9 @@ import CityFilters from "./CityFilters";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Where SpecialCarers is available — Coverage map",
+  title: "Where SpecialCarer is available — Coverage map",
   description:
-    "Care, in cities across the UK. See where SpecialCarers is live, on the waitlist, and coming soon. Search by postcode.",
+    "Care, in cities across the UK. See where SpecialCarer is live, on the waitlist, and coming soon. Search by postcode.",
   alternates: { canonical: "https://www.specialcarers.com/coverage" },
 };
 

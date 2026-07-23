@@ -4,7 +4,7 @@ import { TopBar, BottomNav } from "../_components/ui";
 import VerifyIdentityCard from "@/components/identity/VerifyIdentityCard";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Identity — SpecialCarers" };
+export const metadata = { title: "Identity — SpecialCarer" };
 
 /**
  * /m/identity — Identity verification surface (Veriff).

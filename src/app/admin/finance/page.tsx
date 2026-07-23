@@ -41,7 +41,7 @@ export default async function AdminFinancePage() {
         <h1 className="text-2xl font-semibold text-slate-900">Finance</h1>
         <p className="text-sm text-slate-500 mt-1">
           GMV, platform fee revenue, payout schedule, and refund metrics by
-          currency. SpecialCarers charges a 30% platform fee and holds funds
+          currency. SpecialCarer charges a 30% platform fee and holds funds
           until the shift completes plus a 24-hour cool-off window.
         </p>
         <p className="mt-1 text-[11px] text-slate-400">

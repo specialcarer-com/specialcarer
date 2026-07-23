@@ -524,7 +524,7 @@ export default function ProfilePage() {
       <div className="px-5 pt-8 pb-2 flex flex-col items-center gap-2">
         <AppLogo size={48} withText={false} tone="plain" />
         <p className="text-center text-[11px] text-subheading">
-          SpecialCarers · v1.0.0 · All Care 4 U Group Ltd
+          SpecialCarer · v1.0.0 · All Care 4 U Group Ltd
         </p>
       </div>
 

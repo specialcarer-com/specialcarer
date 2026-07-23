@@ -3,8 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { ResetPasswordForm } from "./reset-password-form";
 
 export const metadata = {
-  title: "Set new password — SpecialCarers",
-  description: "Set a new password for your SpecialCarers account.",
+  title: "Set new password — SpecialCarer",
+  description: "Set a new password for your SpecialCarer account.",
 };
 
 // Force a minimal layout for this page: no marketing header (and therefore
@@ -20,7 +20,7 @@ export default async function ResetPasswordPage() {
         <div className="mx-auto max-w-6xl">
           <Image
             src="/brand/logo.svg"
-            alt="SpecialCarers"
+            alt="SpecialCarer"
             width={140}
             height={40}
             priority

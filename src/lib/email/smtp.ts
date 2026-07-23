@@ -36,7 +36,7 @@ export type SendEmailResult =
   | { ok: true; messageId: string }
   | { ok: false; error: string };
 
-const DEFAULT_FROM = "SpecialCarers Ops <ops@specialcarers.com>";
+const DEFAULT_FROM = "SpecialCarer Ops <ops@specialcarers.com>";
 
 let cachedResend: Resend | null = null;
 let cachedSmtp: Transporter | null = null;

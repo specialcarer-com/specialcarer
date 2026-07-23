@@ -6,7 +6,7 @@ import { BookingTypeTabs } from "../_components/booking-type-tabs";
 import type { Country } from "@/lib/pricing";
 
 export const metadata: Metadata = {
-  title: "Live-in care · SpecialCarers",
+  title: "Live-in care · SpecialCarer",
   description:
     "A vetted carer lives in your home for 7+ days. Round-the-clock support, manually matched within 48 hours.",
 };

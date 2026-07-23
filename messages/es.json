@@ -77,7 +77,7 @@
     }
   },
   "auth": {
-    "signInTitle": "Inicia sesión en SpecialCarers",
+    "signInTitle": "Inicia sesión en SpecialCarer",
     "chooserSubtitle": "Elige el tipo de cuenta con el que inicias sesión. Cada uno te lleva al lugar correcto.",
     "fallbackSubtitle": "Usa tu correo o tu cuenta de Google. ¿Nuevo aquí? Te daremos de alta automáticamente.",
     "checkInbox": "Revisa tu bandeja de entrada.",
@@ -97,13 +97,13 @@
     "audienceContinue": "Continuar",
     "caregiverHeadline": "Inicia sesión en tu cuenta de cuidador",
     "caregiverIntro": "Acepta turnos, gestiona reservas, consulta tus pagos y mejora tu reputación.",
-    "caregiverCtaLead": "¿Nuevo en SpecialCarers?",
+    "caregiverCtaLead": "¿Nuevo en SpecialCarer?",
     "caregiverCtaLabel": "Solicita ser cuidador",
     "familyHeadline": "Inicia sesión en tu cuenta familiar",
     "familyIntro": "Usa tu correo o tu cuenta de Google. ¿Nuevo aquí? Te daremos de alta automáticamente al iniciar sesión, sin registro aparte.",
     "orgHeadline": "Inicia sesión en tu cuenta de organización",
     "orgIntro": "Residencias, ayuntamientos, organismos del NHS, agencias de acogida, escuelas y ONG: gestiona reservas, contratos y tu equipo.",
-    "orgCtaLead": "¿Aún no colaboras con SpecialCarers?",
+    "orgCtaLead": "¿Aún no colaboras con SpecialCarer?",
     "orgCtaLabel": "Habla con nuestro equipo de alianzas",
     "notRightAccount": "¿No es la cuenta correcta?",
     "chooseDifferent": "Elige otro inicio de sesión",
@@ -154,7 +154,7 @@
     "signupLinkCaregiver": "Solicita ser cuidador/a",
     "signupLinkFamily": "Encuentra cuidado para tu familia",
     "signupLinkOrg": "Crea una cuenta de organización",
-    "newToSpecialCarers": "¿Nuevo en SpecialCarers?"
+    "newToSpecialCarers": "¿Nuevo en SpecialCarer?"
   },
   "search": {
     "badge": "Buscar cuidado",
@@ -443,6 +443,7 @@
     "useRecoveryCodeInstead": "Usar un código de recuperación",
     "useAuthenticatorInstead": "Usar tu app de autenticación",
     "requiredTitle": "Se requiere autenticación en dos pasos",
-    "requiredIntro": "Tu cuenta requiere autenticación en dos pasos. Configúrala ahora para continuar."
+    "requiredIntro": "Tu cuenta requiere autenticación en dos pasos. Configúrala ahora para continuar.",
+    "supportRecoveryNote": "¿Perdió su dispositivo de autenticación? Contacte con soporte para verificar su identidad y restablecer el factor."
   }
 }

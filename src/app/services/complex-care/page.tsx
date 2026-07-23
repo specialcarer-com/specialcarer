@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import ServicePage from "@/components/service-page";
 
 export const metadata: Metadata = {
-  title: "Complex care — SpecialCarers",
+  title: "Complex care — SpecialCarer",
   description:
     "Clinically trained caregivers for complex needs — PEG/tracheostomy care, ventilator support, seizure management, palliative and end-of-life care. Across the UK, fully vetted and matched to your medical brief.",
 };
@@ -13,7 +13,7 @@ export default function Page() {
       bannerKey="services.complex_care"
       eyebrow="Complex care"
       title="Clinical-grade care, in the comfort of home."
-      lede="When a loved one needs more than companionship — tube feeds, tracheostomy management, ventilator support, seizure protocols, or palliative care — you need caregivers with the clinical training and steady hands to match. SpecialCarers connects you with vetted nurses, healthcare assistants, and complex-care specialists who can step in for a shift, a respite week, or an ongoing care plan."
+      lede="When a loved one needs more than companionship — tube feeds, tracheostomy management, ventilator support, seizure protocols, or palliative care — you need caregivers with the clinical training and steady hands to match. SpecialCarer connects you with vetted nurses, healthcare assistants, and complex-care specialists who can step in for a shift, a respite week, or an ongoing care plan."
       bullets={[
         "PEG, NG, and JEJ tube-feed competence",
         "Tracheostomy suctioning and care",

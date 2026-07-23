@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSupportConfig } from "@/lib/support/config";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Support & Safety — SpecialCarers" };
+export const metadata = { title: "Support & Safety — SpecialCarer" };
 
 export default async function SupportHubPage() {
   const supabase = await createClient();

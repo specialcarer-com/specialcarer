@@ -81,7 +81,7 @@ export async function POST(
         signedByRole: row.signed_by_role,
         signedAt: row.signed_at ? new Date(row.signed_at) : null,
         signatureIp: row.signature_ip,
-        countersignName: me.email ?? "SpecialCarers Admin",
+        countersignName: me.email ?? "SpecialCarer Admin",
         countersignedAt: counterTime,
         legalReviewComment: row.legal_review_comment,
       });

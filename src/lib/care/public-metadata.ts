@@ -12,12 +12,12 @@ export function buildCaregiverMetadata(
   profile: CaregiverProfileFull | null,
 ): Metadata {
   if (!profile) {
-    return { title: "Caregiver — SpecialCarers" };
+    return { title: "Caregiver — SpecialCarer" };
   }
 
   const name = profile.display_name ?? "Caregiver";
   const role = primaryRole(profile.services);
-  const title = `${name} — ${role} on SpecialCarers`;
+  const title = `${name} — ${role} on SpecialCarer`;
   const description = bioExcerpt(profile.bio, profile.headline);
   const url = publicProfileUrl(profile);
   const image = profile.photo_url ?? "/brand/og-image.png";
@@ -31,7 +31,7 @@ export function buildCaregiverMetadata(
       description,
       url,
       type: "profile",
-      siteName: "SpecialCarers",
+      siteName: "SpecialCarer",
       images: [{ url: image, alt: name }],
     },
     twitter: {
@@ -49,7 +49,7 @@ export function bioExcerpt(
 ): string {
   const source = headline?.trim() || bio?.trim() || "";
   if (!source) {
-    return "Verified, DBS-checked caregiver on SpecialCarers.";
+    return "Verified, DBS-checked caregiver on SpecialCarer.";
   }
   return source.length > 160 ? `${source.slice(0, 157)}…` : source;
 }

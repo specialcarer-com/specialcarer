@@ -9,7 +9,7 @@ import {
 import SkillsQuizClient from "./SkillsQuizClient";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Skills assessment — SpecialCarers" };
+export const metadata = { title: "Skills assessment — SpecialCarer" };
 
 type Attempt = {
   vertical: Vertical;

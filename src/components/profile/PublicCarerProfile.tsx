@@ -38,7 +38,7 @@ export default function PublicCarerProfile({
     >
       <header className="px-6 py-4">
         <Link href="/" className="font-display text-[18px] font-bold" style={{ color: "#039EA0" }}>
-          SpecialCarers
+          SpecialCarer
         </Link>
       </header>
 
@@ -69,7 +69,7 @@ export default function PublicCarerProfile({
               <p className="mt-1 text-[13px] text-[#0F1416]/60">{location}</p>
             )}
             <p className="mt-3 inline-flex items-center gap-2 text-[13px] font-medium" style={{ color: "#039EA0" }}>
-              <span aria-hidden>✓</span> Background-checked by SpecialCarers
+              <span aria-hidden>✓</span> Background-checked by SpecialCarer
             </p>
           </div>
 

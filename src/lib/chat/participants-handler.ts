@@ -148,7 +148,7 @@ export async function handleInviteFamily(input: {
   }
 
   const inviterName =
-    (await client.getInviterName(inviter_id)) ?? "A SpecialCarers member";
+    (await client.getInviterName(inviter_id)) ?? "A SpecialCarer member";
   const acceptUrl = buildAcceptUrl(site_url, token);
   const send = await client.sendInviteEmail({
     invited_email: email,

@@ -660,7 +660,7 @@ export const NOTIFICATIONS: AppNotification[] = [
   {
     id: "n4",
     kind: "system",
-    title: "Welcome to SpecialCarers",
+    title: "Welcome to SpecialCarer",
     body: "Verified carers, transparent pricing, and 24/7 support \u2014 we're glad you're here.",
     when: "3 days ago",
     read: true,

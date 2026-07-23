@@ -22,9 +22,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const post = getPostBySlug(slug);
-  if (!post) return { title: "Article not found — SpecialCarers" };
+  if (!post) return { title: "Article not found — SpecialCarer" };
   return {
-    title: `${post.title} — SpecialCarers`,
+    title: `${post.title} — SpecialCarer`,
     description: post.excerpt,
   };
 }

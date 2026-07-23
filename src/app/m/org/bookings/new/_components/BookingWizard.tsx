@@ -561,7 +561,7 @@ export default function BookingWizard({ serviceUsers, bookerName, bookerRole }: 
                 Includes active care hours at your carer&rsquo;s rate, plus the
                 £{values.sleep_in_org_charge.toFixed(2)} sleep-in allowance
                 (overnight portion). Invoiced by{" "}
-                <strong>All Care 4 U Group Ltd (operating SpecialCarers)</strong>{" "}
+                <strong>All Care 4 U Group Ltd (operating SpecialCarer)</strong>{" "}
                 on net-14 terms.
               </p>
             )}
@@ -591,7 +591,7 @@ export default function BookingWizard({ serviceUsers, bookerName, bookerRole }: 
           <div className="rounded-card bg-slate-50 border border-line p-3 text-[12px] text-subheading">
             By confirming, you agree to the booking terms set out in the Master
             Services Agreement with{" "}
-            <strong>All Care 4 U Group Ltd (trading as SpecialCarers)</strong>.
+            <strong>All Care 4 U Group Ltd (trading as SpecialCarer)</strong>.
             The cancellation policy applies once a carer has accepted the shift.
           </div>
         </div>

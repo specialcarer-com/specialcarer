@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
-  title: "Verify certificate — SpecialCarers",
+  title: "Verify certificate — SpecialCarer",
 };
 
 type VerifyResponse =
@@ -74,7 +74,7 @@ export default async function VerifyPage({
               <strong>{result.ceu_credits.toFixed(2)} CEU credits</strong>.
             </p>
             <p className="text-xs text-slate-500">
-              Issued by SpecialCarers · All Care 4 U Group Ltd · Companies
+              Issued by SpecialCarer · All Care 4 U Group Ltd · Companies
               House 09428739
             </p>
           </div>
@@ -95,7 +95,7 @@ export default async function VerifyPage({
             href="/"
             className="text-sm font-semibold text-slate-900 hover:underline"
           >
-            ← Back to SpecialCarers
+            ← Back to SpecialCarer
           </Link>
         </div>
       </div>

@@ -97,7 +97,7 @@ export default async function PayoutsPage({
       </div>
 
       <p className="text-xs text-slate-500 mt-6">
-        SpecialCarers uses Stripe Connect Express to handle payouts, identity
+        SpecialCarer uses Stripe Connect Express to handle payouts, identity
         verification, and tax reporting. We never see or store your bank
         details — Stripe holds them securely.
       </p>

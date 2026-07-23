@@ -152,7 +152,7 @@ export function AnimatedBrowsePhone() {
     <div
       className="sc-phone-tilt-right relative w-full aspect-[9/19] rotate-[8deg] drop-shadow-2xl"
       role="img"
-      aria-label="SpecialCarers browse screen: search results showing vetted caregivers across the UK."
+      aria-label="SpecialCarer browse screen: search results showing vetted caregivers across the UK."
     >
       <div className="relative h-full w-full rounded-[2.4rem] bg-slate-900 p-[3px] ring-1 ring-slate-800">
         <div className="relative h-full w-full rounded-[2.2rem] overflow-hidden bg-[#F4EFE6]">
@@ -182,7 +182,7 @@ export function AnimatedBrowsePhone() {
                 </div>
                 <div className="flex flex-col leading-none">
                   <span className="text-[6px] font-bold uppercase tracking-wider text-slate-500">
-                    SpecialCarers
+                    SpecialCarer
                   </span>
                   <span className="text-[9px] font-semibold text-slate-900">
                     Eleanor R.

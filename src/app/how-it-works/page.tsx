@@ -5,9 +5,9 @@ import PageHeroBanner from "@/components/page-hero-banner";
 import { ExplainerVideo } from "@/components/explainer-video";
 
 export const metadata: Metadata = {
-  title: "How it works — SpecialCarers",
+  title: "How it works — SpecialCarer",
   description:
-    "How SpecialCarers matches families to vetted caregivers, handles payments, and supports both sides of every shift.",
+    "How SpecialCarer matches families to vetted caregivers, handles payments, and supports both sides of every shift.",
 };
 
 const seeker = [

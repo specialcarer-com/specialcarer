@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { COURSE_MODULES } from "@/lib/vetting/course-content";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Onboarding course — SpecialCarers" };
+export const metadata = { title: "Onboarding course — SpecialCarer" };
 
 type Progress = {
   module_key: string;

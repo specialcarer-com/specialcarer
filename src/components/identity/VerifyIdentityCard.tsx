@@ -168,7 +168,7 @@ export default function VerifyIdentityCard() {
       </p>
       <p className="text-[12px] text-subheading mb-3 leading-relaxed">
         Confirm who you are with a quick, secure check. It helps keep
-        SpecialCarers safe for everyone.
+        SpecialCarer safe for everyone.
       </p>
       <button
         type="button"

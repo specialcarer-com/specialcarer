@@ -78,7 +78,7 @@ export function HeroTeaserVideo() {
     <div
       ref={containerRef}
       className="relative mx-auto w-full max-w-3xl"
-      aria-label="SpecialCarers product walkthrough"
+      aria-label="SpecialCarer product walkthrough"
     >
       {/* Soft teal glow behind the video */}
       <div
@@ -91,7 +91,7 @@ export function HeroTeaserVideo() {
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={POSTER}
-            alt="A worried parent searches for a trusted carer on the SpecialCarers app."
+            alt="A worried parent searches for a trusted carer on the SpecialCarer app."
             className="h-full w-full object-cover"
           />
         ) : (
@@ -105,7 +105,7 @@ export function HeroTeaserVideo() {
               playsInline
               preload="metadata"
               poster={POSTER}
-              aria-label="SpecialCarers product walkthrough — worried parent finds a vetted carer through the app"
+              aria-label="SpecialCarer product walkthrough — worried parent finds a vetted carer through the app"
             >
               <source src={WEBM} type="video/webm" />
               <source src={MP4} type="video/mp4" />
@@ -162,7 +162,7 @@ export function HeroTeaserVideo() {
       </div>
 
       <p className="mt-3 text-center text-sm text-white/70">
-        A quick look at how SpecialCarers connects families with vetted carers.
+        A quick look at how SpecialCarer connects families with vetted carers.
       </p>
     </div>
   );

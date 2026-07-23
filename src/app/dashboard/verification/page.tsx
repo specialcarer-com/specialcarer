@@ -144,7 +144,7 @@ export default async function VerificationPage() {
       <h1 className="text-3xl font-semibold mt-2">Verification</h1>
       <p className="text-slate-600 mt-1">
         We verify every {country === "US" ? "US" : "UK"} caregiver before they
-        can be booked. SpecialCarers covers the cost &mdash; you pay nothing.
+        can be booked. SpecialCarer covers the cost &mdash; you pay nothing.
       </p>
 
       {allCleared && (
@@ -212,7 +212,7 @@ export default async function VerificationPage() {
       </div>
 
       <p className="text-xs text-slate-500 mt-6">
-        SpecialCarers uses {provider} to run your checks. We never see your
+        SpecialCarer uses {provider} to run your checks. We never see your
         personal documents &mdash; they&rsquo;re held securely by the provider
         under {country === "US" ? "FCRA + CCPA" : "UK GDPR"}.
       </p>

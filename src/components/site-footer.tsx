@@ -124,11 +124,11 @@ export default async function SiteFooter() {
           <Link
             href="/"
             className="inline-flex items-center"
-            aria-label="SpecialCarers — home"
+            aria-label="SpecialCarer — home"
           >
             <Image
               src="/brand/logo.svg"
-              alt="SpecialCarers"
+              alt="SpecialCarer"
               width={161}
               height={121}
               className="h-12 w-auto"

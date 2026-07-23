@@ -19,24 +19,24 @@ import { AnimatedBrowsePhone } from "@/components/marketing/AnimatedBrowsePhone"
 
 export const metadata: Metadata = {
   title:
-    "Special Carers — Vetted UK Carers, Babysitters & Nannies | specialcarers.com",
+    "SpecialCarer — Vetted UK Carers, Babysitters & Nannies | specialcarers.com",
   description:
-    "SpecialCarers connects families and care providers with vetted UK carers. DBS-checked RSWs, HCAs, babysitters and nannies in London and across the UK. Book vetted care in minutes.",
+    "SpecialCarer connects families and care providers with vetted UK carers. DBS-checked RSWs, HCAs, babysitters and nannies in London and across the UK. Book vetted care in minutes.",
   alternates: { canonical: "https://www.specialcarers.com/" },
   openGraph: {
     title:
-      "Special Carers — Vetted UK Carers, Babysitters & Nannies | specialcarers.com",
+      "SpecialCarer — Vetted UK Carers, Babysitters & Nannies | specialcarers.com",
     description:
-      "SpecialCarers connects families and care providers with vetted UK carers. DBS-checked RSWs, HCAs, babysitters and nannies in London and across the UK. Book vetted care in minutes.",
+      "SpecialCarer connects families and care providers with vetted UK carers. DBS-checked RSWs, HCAs, babysitters and nannies in London and across the UK. Book vetted care in minutes.",
     url: "https://www.specialcarers.com/",
-    siteName: "SpecialCarers",
+    siteName: "SpecialCarer",
     type: "website",
     images: [
       {
         url: "/brand/og-image.png",
         width: 1200,
         height: 630,
-        alt: "SpecialCarers — trusted care, on your schedule",
+        alt: "SpecialCarer — trusted care, on your schedule",
       },
     ],
   },
@@ -78,7 +78,7 @@ export default async function Home() {
     "@graph": [
       {
         "@type": "Organization",
-        name: "SpecialCarers",
+        name: "SpecialCarer",
         url: "https://www.specialcarers.com",
         logo: "https://www.specialcarers.com/icon.png",
         sameAs: [],
@@ -98,7 +98,7 @@ export default async function Home() {
       {
         "@type": "WebSite",
         url: "https://www.specialcarers.com",
-        name: "SpecialCarers",
+        name: "SpecialCarer",
         potentialAction: {
           "@type": "SearchAction",
           target: "https://www.specialcarers.com/find-care?q={query}",
@@ -138,7 +138,7 @@ export default async function Home() {
           Trusted care, on your schedule.
         </h1>
         <p className="mt-6 text-lg sm:text-xl text-slate-600 max-w-2xl mx-auto">
-          SpecialCarers connects families and care providers with vetted,
+          SpecialCarer connects families and care providers with vetted,
           DBS-checked carers across the UK. On-demand and scheduled childcare,
           elder care, and special-needs support. Book in minutes. Track,
           message, and pay in one place.
@@ -222,7 +222,7 @@ export default async function Home() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-4">
             <h2 className="text-2xl sm:text-3xl font-semibold text-slate-900">
-              How SpecialCarers works
+              How SpecialCarer works
             </h2>
             <p className="mt-2 text-slate-600">
               From worried search to trusted carer at your door — in 45 seconds.
@@ -507,7 +507,7 @@ export default async function Home() {
                 d: "Working parents · Manchester",
               },
               {
-                q: "I\u2019ve worked through agencies for ten years. SpecialCarers is the first platform where I keep most of what I earn — and I pick my own shifts.",
+                q: "I\u2019ve worked through agencies for ten years. SpecialCarer is the first platform where I keep most of what I earn — and I pick my own shifts.",
                 n: "Aisha R.",
                 d: "Caregiver · Birmingham",
               },
@@ -563,7 +563,7 @@ export default async function Home() {
                     scope="col"
                     className="px-5 py-4 font-semibold text-brand-700 bg-brand-50/60"
                   >
-                    SpecialCarers
+                    SpecialCarer
                   </th>
                   <th
                     scope="col"
@@ -925,7 +925,7 @@ export default async function Home() {
             <div className="flex items-end justify-between gap-6 flex-wrap">
               <div>
                 <h2 className="text-3xl font-semibold text-slate-900">
-                  From the SpecialCarers blog
+                  From the SpecialCarer blog
                 </h2>
                 <p className="mt-3 text-slate-600 max-w-2xl">
                   Practical guides, policy updates, and stories from inside the
@@ -1052,7 +1052,7 @@ export default async function Home() {
             </h2>
             <p className="mt-5 text-lg text-white/90 leading-relaxed">
               <span className="font-semibold text-white">
-                SpecialCarers connects you with trusted, verified caregivers
+                SpecialCarer connects you with trusted, verified caregivers
                 who offer reliable and heartfelt support.
               </span>{" "}
               We make care simple, safe, and deeply meaningful—built on trust
@@ -1227,7 +1227,7 @@ function Tick() {
 
 const HOMEPAGE_FAQ = [
   {
-    q: "How does SpecialCarers vet caregivers?",
+    q: "How does SpecialCarer vet caregivers?",
     a: "Every caregiver completes identity verification with a selfie match, plus an Enhanced DBS check via the UK Disclosure and Barring Service, refreshed annually. We also verify right-to-work status. Profiles only go live once all checks have cleared.",
   },
   {
@@ -1236,7 +1236,7 @@ const HOMEPAGE_FAQ = [
   },
   {
     q: "What does it cost?",
-    a: "There\u2019s no subscription fee. Caregivers set their own hourly rate, and SpecialCarers takes a flat 30% platform fee — that covers payments, insurance support, dispute resolution, background checks, and live shift tracking. Caregivers keep 70%.",
+    a: "There\u2019s no subscription fee. Caregivers set their own hourly rate, and SpecialCarer takes a flat 30% platform fee — that covers payments, insurance support, dispute resolution, background checks, and live shift tracking. Caregivers keep 70%.",
   },
   {
     q: "What happens during a live shift?",

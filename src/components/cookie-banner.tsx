@@ -68,7 +68,7 @@ export default function CookieBanner() {
       className="fixed inset-x-3 bottom-3 z-50 sm:inset-x-auto sm:right-4 sm:bottom-4 sm:max-w-md"
     >
       <div className="bg-white border border-slate-200 shadow-xl rounded-2xl p-5 text-sm text-slate-700">
-        <p className="font-medium text-slate-900">Cookies on SpecialCarers</p>
+        <p className="font-medium text-slate-900">Cookies on SpecialCarer</p>
         <p className="mt-2">
           We use strictly necessary cookies to keep you signed in and the
           site secure. With your consent we also set one anonymous

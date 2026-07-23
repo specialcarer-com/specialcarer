@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import MarketingShell from "@/components/marketing-shell";
 
 export const metadata: Metadata = {
-  title: "Talk to our employer team — SpecialCarers",
+  title: "Talk to our employer team — SpecialCarer",
   description:
     "Tell us about your team and we'll come back within one business day with a tailored proposal.",
 };

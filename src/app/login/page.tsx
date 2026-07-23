@@ -5,9 +5,9 @@ import MarketingShell from "@/components/marketing-shell";
 import PageHeroBanner from "@/components/page-hero-banner";
 
 export const metadata = {
-  title: "Sign in — SpecialCarers",
+  title: "Sign in — SpecialCarer",
   description:
-    "Sign in to SpecialCarers — for caregivers, families, and organisations.",
+    "Sign in to SpecialCarer — for caregivers, families, and organisations.",
 };
 
 export default async function LoginPage({

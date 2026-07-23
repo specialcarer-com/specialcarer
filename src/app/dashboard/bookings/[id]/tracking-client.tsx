@@ -159,7 +159,7 @@ export default function BookingTrackingClient(props: Props) {
     return onNativeEvent((evt) => {
       if (evt.type === "tracking.status") {
         if (evt.payload.permission === "denied") {
-          setPermission("Native location permission denied. Enable it in Settings → SpecialCarers → Location.");
+          setPermission("Native location permission denied. Enable it in Settings → SpecialCarer → Location.");
           setTracking(false);
         } else if (evt.payload.active) {
           setTracking(true);

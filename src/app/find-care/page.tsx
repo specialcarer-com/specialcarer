@@ -24,7 +24,7 @@ import { createClient } from "@/lib/supabase/server";
 import { US_REGION_ENABLED } from "@/lib/region";
 
 export const metadata: Metadata = {
-  title: "Find vetted caregivers — SpecialCarers",
+  title: "Find vetted caregivers — SpecialCarer",
   description:
     "Search DBS-checked, payouts-enabled caregivers across the UK. Filter by service, city, and budget.",
 };

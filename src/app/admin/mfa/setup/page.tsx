@@ -15,7 +15,7 @@ function AdminMfaSetupInner() {
     <div className="min-h-screen bg-[#F4EFE6] flex flex-col">
       <header className="border-b border-[#0F1416]/10 bg-white">
         <div className="max-w-lg mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2" aria-label="SpecialCarers">
+          <Link href="/" className="flex items-center gap-2" aria-label="SpecialCarer">
             <Image src="/brand/logo.svg" alt="" width={120} height={40} className="h-7 w-auto" />
           </Link>
           <span className="text-[11px] font-semibold uppercase tracking-wider text-[#039EA0]">

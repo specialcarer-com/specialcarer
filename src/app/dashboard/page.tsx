@@ -26,7 +26,7 @@ import { SERVICE_TYPES } from "@/lib/ai/types";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
-  title: "Dashboard — SpecialCarers",
+  title: "Dashboard — SpecialCarer",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -339,7 +339,7 @@ export default async function DashboardPage() {
       <header className="px-6 py-5 bg-white border-b border-slate-100">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <Image src="/brand/logo.svg" alt="SpecialCarers" width={161} height={121} className="h-9 w-auto" priority />
+            <Image src="/brand/logo.svg" alt="SpecialCarer" width={161} height={121} className="h-9 w-auto" priority />
           </Link>
           <div className="flex items-center gap-4">
             <span className="text-sm text-slate-600 hidden sm:inline">
@@ -420,7 +420,7 @@ export default async function DashboardPage() {
                 <div>
                   <h2 className="font-semibold text-slate-900">
                     {readiness.isPublished
-                      ? "You're live on SpecialCarers"
+                      ? "You're live on SpecialCarer"
                       : readiness.isPublishable
                         ? "Ready to publish"
                         : "Get publish-ready"}

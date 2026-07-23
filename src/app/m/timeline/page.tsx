@@ -16,7 +16,7 @@ import TimelineClient from "./TimelineClient";
  * reach it (carers see the recipients of bookings they're on).
  */
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Family timeline — SpecialCarers" };
+export const metadata = { title: "Family timeline — SpecialCarer" };
 
 export default async function TimelinePage() {
   const supabase = await createClient();

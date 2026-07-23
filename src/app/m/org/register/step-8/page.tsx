@@ -233,7 +233,7 @@ export default function Step8() {
 
       <p className="mt-5 text-[12px] text-subheading">
         By submitting you confirm you&rsquo;re an authorised representative
-        of the organisation and agree to SpecialCarers&rsquo;s organisation
+        of the organisation and agree to SpecialCarer&rsquo;s organisation
         terms.
       </p>
       {err && <p className="mt-2 text-[12px] text-rose-700">{err}</p>}

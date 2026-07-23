@@ -99,7 +99,7 @@ export default function DesignatedPayerCard({
     <Card>
       <p className="text-[14px] font-bold text-heading mb-1">Who pays</p>
       <p className="text-[12px] text-subheading mb-3 leading-relaxed">
-        Nominate another adult in your SpecialCarers household to be billed for
+        Nominate another adult in your SpecialCarer household to be billed for
         this booking. Current payer:{" "}
         <span className="font-semibold text-heading">{currentName}</span>.
       </p>

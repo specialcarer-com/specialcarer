@@ -662,7 +662,7 @@ export default function ProfileEditor({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="font-semibold">
-              {isPublished ? "Listed on SpecialCarers" : "Publish your profile"}
+              {isPublished ? "Listed on SpecialCarer" : "Publish your profile"}
             </h3>
             <p className="mt-1 text-sm text-slate-600">
               {isPublished

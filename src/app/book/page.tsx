@@ -7,7 +7,7 @@ import CareFormatChooser from "./care-format-chooser";
 import type { Country } from "@/lib/pricing";
 
 export const metadata: Metadata = {
-  title: "Book care · SpecialCarers",
+  title: "Book care · SpecialCarer",
   description:
     "Choose visiting or live-in care. Vetted carers, transparent pricing, escrowed payments.",
 };

@@ -5,7 +5,7 @@ import { INTERVIEW_PROMPTS } from "@/lib/vetting/types";
 import InterviewClient from "./InterviewClient";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Video interview — SpecialCarers" };
+export const metadata = { title: "Video interview — SpecialCarer" };
 
 type Submission = {
   prompt_index: number;

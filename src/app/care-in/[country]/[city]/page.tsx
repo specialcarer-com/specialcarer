@@ -19,10 +19,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { country, city } = await params;
   const entry = getCity(country, city);
-  if (!entry) return { title: "Care not found — SpecialCarers" };
+  if (!entry) return { title: "Care not found — SpecialCarer" };
   return {
-    title: `Caregivers in ${entry.city}, ${entry.region} — SpecialCarers`,
-    description: `Vetted, background-checked childcare, eldercare, and special-needs caregivers in ${entry.city}. Book online with SpecialCarers.`,
+    title: `Caregivers in ${entry.city}, ${entry.region} — SpecialCarer`,
+    description: `Vetted, background-checked childcare, eldercare, and special-needs caregivers in ${entry.city}. Book online with SpecialCarer.`,
     alternates: {
       canonical: `https://www.specialcarers.com/care-in/${entry.countrySlug}/${entry.slug}`,
     },

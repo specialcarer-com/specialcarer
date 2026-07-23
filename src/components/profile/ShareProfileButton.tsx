@@ -30,8 +30,8 @@ export default function ShareProfileButton({
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
         await navigator.share({
-          title: "My SpecialCarers profile",
-          text: `Check out ${name}'s caregiver profile on SpecialCarers.`,
+          title: "My SpecialCarer profile",
+          text: `Check out ${name}'s caregiver profile on SpecialCarer.`,
           url,
         });
         return;

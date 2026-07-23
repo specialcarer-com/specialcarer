@@ -77,7 +77,7 @@
     }
   },
   "auth": {
-    "signInTitle": "Autentifică-te în SpecialCarers",
+    "signInTitle": "Autentifică-te în SpecialCarer",
     "chooserSubtitle": "Alege tipul de cont cu care te autentifici. Fiecare te duce în locul potrivit.",
     "fallbackSubtitle": "Folosește e-mailul sau contul tău Google. Ești nou aici? Te vom configura automat.",
     "checkInbox": "Verifică-ți căsuța de e-mail.",
@@ -97,13 +97,13 @@
     "audienceContinue": "Continuă",
     "caregiverHeadline": "Autentifică-te în contul tău de îngrijitor",
     "caregiverIntro": "Preia ture, gestionează rezervări, vezi-ți plățile și îți crește reputația.",
-    "caregiverCtaLead": "Ești nou la SpecialCarers?",
+    "caregiverCtaLead": "Ești nou la SpecialCarer?",
     "caregiverCtaLabel": "Aplică pentru a deveni îngrijitor",
     "familyHeadline": "Autentifică-te în contul tău de familie",
     "familyIntro": "Folosește e-mailul sau contul tău Google. Ești nou aici? Te vom configura automat la autentificare — fără înregistrare separată.",
     "orgHeadline": "Autentifică-te în contul organizației tale",
     "orgIntro": "Cămine de îngrijire, primării, unități NHS, agenții de plasament, școli și organizații caritabile — gestionează rezervări, contracte și echipa ta.",
-    "orgCtaLead": "Încă nu ești partener cu SpecialCarers?",
+    "orgCtaLead": "Încă nu ești partener cu SpecialCarer?",
     "orgCtaLabel": "Discută cu echipa noastră de parteneriate",
     "notRightAccount": "Nu este contul potrivit?",
     "chooseDifferent": "Alege o altă autentificare",
@@ -154,7 +154,7 @@
     "signupLinkCaregiver": "Aplică pentru a fi îngrijitor",
     "signupLinkFamily": "Găsește îngrijire pentru familia ta",
     "signupLinkOrg": "Configurează un cont de organizație",
-    "newToSpecialCarers": "Nou pe SpecialCarers?"
+    "newToSpecialCarers": "Nou pe SpecialCarer?"
   },
   "search": {
     "badge": "Găsește îngrijire",
@@ -443,6 +443,7 @@
     "useRecoveryCodeInstead": "Folosește un cod de recuperare",
     "useAuthenticatorInstead": "Folosește aplicația de autentificare",
     "requiredTitle": "Autentificarea în doi pași este necesară",
-    "requiredIntro": "Contul tău necesită autentificare în doi pași. Configureaz-o acum pentru a continua."
+    "requiredIntro": "Contul tău necesită autentificare în doi pași. Configureaz-o acum pentru a continua.",
+    "supportRecoveryNote": "Ai pierdut dispozitivul de autentificare? Contactează asistența pentru verificarea identității și resetarea factorului."
   }
 }

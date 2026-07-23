@@ -4,7 +4,7 @@ import MarketingShell from "@/components/marketing-shell";
 import PageHeroBanner from "@/components/page-hero-banner";
 
 export const metadata: Metadata = {
-  title: "For employers — backup care benefits | SpecialCarers",
+  title: "For employers — backup care benefits | SpecialCarer",
   description:
     "Reduce parental absenteeism and improve retention with employer-sponsored backup childcare, elder care, and special-needs support. A single UK-wide contract.",
 };
@@ -76,7 +76,7 @@ export default function Page() {
             </h1>
             <p className="mt-6 text-lg text-slate-600 leading-relaxed">
               When childcare falls through, an employee&rsquo;s day is gone.
-              When eldercare falls through, weeks are gone. SpecialCarers for
+              When eldercare falls through, weeks are gone. SpecialCarer for
               Employers turns those gaps into a single, instant booking — at
               your subsidy level.
             </p>

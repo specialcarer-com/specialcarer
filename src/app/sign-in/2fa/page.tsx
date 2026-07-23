@@ -5,7 +5,7 @@ import { TotpChallenge } from "@/components/security/TotpChallenge";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
-  title: "Two-factor authentication — SpecialCarers",
+  title: "Two-factor authentication — SpecialCarer",
   robots: { index: false, follow: false },
 };
 
@@ -21,7 +21,7 @@ export default async function SignInTwoFactorPage() {
       <header className="border-b border-[#0F1416]/10 bg-white">
         <div className="max-w-md mx-auto px-4 sm:px-6 h-14 flex items-center">
           <Link href="/" className="text-sm font-semibold text-[#039EA0]">
-            SpecialCarers
+            SpecialCarer
           </Link>
         </div>
       </header>

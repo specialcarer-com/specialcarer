@@ -4,7 +4,7 @@ import WhenPicker from "../when-picker";
 import { BookingTypeTabs } from "../_components/booking-type-tabs";
 
 export const metadata: Metadata = {
-  title: "Visiting care · SpecialCarers",
+  title: "Visiting care · SpecialCarer",
   description:
     "By the hour, available now or scheduled. Live ETAs and transparent hourly pricing across the UK.",
 };

@@ -19,7 +19,7 @@ export function ExplainerVideo({
         poster="/video/specialcarer-explainer-poster.jpg"
         autoPlay={autoPlay}
         muted={autoPlay}
-        aria-label="Special Carers App explainer video — how families find trusted, vetted carers"
+        aria-label="SpecialCarer App explainer video — how families find trusted, vetted carers"
       >
         <source src="/video/specialcarer-explainer.mp4" type="video/mp4" />
         Your browser doesn’t support embedded video. You can{" "}

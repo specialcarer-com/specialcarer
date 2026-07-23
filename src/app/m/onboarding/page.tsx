@@ -45,7 +45,7 @@ const SLIDES: Slide[] = [
     img: "/m/onboarding/onb1.png",
     alt: "A caregiver looking through a photo album with an older man and his daughter",
     title: "Because Every Moment Matters.",
-    body: "At SpecialCarers, we believe care is more than a service — it's a promise. To be present. To uplift. To love with patience.",
+    body: "At SpecialCarer, we believe care is more than a service — it's a promise. To be present. To uplift. To love with patience.",
     hook: "Welcome to a place where care feels like family.",
     redesignHeadline: "Care that feels like family.",
     redesignSegment: "ELDERLY · COMPANIONSHIP",
@@ -62,7 +62,7 @@ const SLIDES: Slide[] = [
   },
   {
     img: "/m/onboarding/onb3.png",
-    alt: "A hand holding a smartphone with the SpecialCarers app open",
+    alt: "A hand holding a smartphone with the SpecialCarer app open",
     title: "Let's Bring Compassion to Life.",
     body: "Together, we can create a world where no one feels forgotten, and everyone feels valued. This is more than an app.",
     hook: "It's a lifeline.",
@@ -111,7 +111,7 @@ function LegacyOnboarding({
       <div className="sc-safe-top px-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <AppLogo size={36} withText={false} tone="plain" />
-          <span className="text-primary font-bold text-[15px] tracking-tight">SpecialCarers</span>
+          <span className="text-primary font-bold text-[15px] tracking-tight">SpecialCarer</span>
         </div>
         <Link
           href="/m/login"
@@ -217,7 +217,7 @@ function RedesignedOnboarding({
         <div className="flex items-center gap-2">
           <AppLogo size={32} withText={false} tone="plain" />
           <span className="text-white font-bold text-[15px] tracking-tight drop-shadow-sm">
-            SpecialCarers
+            SpecialCarer
           </span>
         </div>
         <Link
@@ -249,7 +249,7 @@ function RedesignedOnboarding({
           <div className="inline-flex items-center gap-2 justify-center">
             <AppLogo size={20} withText={false} tone="plain" />
             <span className="text-white font-bold text-[12px] tracking-[0.22em] uppercase drop-shadow-sm">
-              Special Carers
+              SpecialCarer
             </span>
           </div>
 

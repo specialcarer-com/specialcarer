@@ -47,8 +47,8 @@ function profile(overrides: Partial<CaregiverProfileFull> = {}): CaregiverProfil
 describe("buildCaregiverMetadata (public /caregiver/[id])", () => {
   it("emits an og:title for a published GB carer", () => {
     const meta = buildCaregiverMetadata(profile());
-    assert.equal(meta.title, "Priya Kaur — Elderly Care on SpecialCarers");
-    assert.equal(meta.openGraph?.title, "Priya Kaur — Elderly Care on SpecialCarers");
+    assert.equal(meta.title, "Priya Kaur — Elderly Care on SpecialCarer");
+    assert.equal(meta.openGraph?.title, "Priya Kaur — Elderly Care on SpecialCarer");
     const og = meta.openGraph as Record<string, unknown>;
     assert.equal(og.type, "profile");
     const tw = meta.twitter as Record<string, unknown>;
@@ -74,7 +74,7 @@ describe("buildCaregiverMetadata (public /caregiver/[id])", () => {
 
   it("returns a generic title when the carer is missing (404 / non-GB)", () => {
     const meta = buildCaregiverMetadata(null);
-    assert.equal(meta.title, "Caregiver — SpecialCarers");
+    assert.equal(meta.title, "Caregiver — SpecialCarer");
     assert.equal(meta.openGraph, undefined);
   });
 

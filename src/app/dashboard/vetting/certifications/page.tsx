@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import CertificationsClient from "./CertificationsClient";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Certifications — SpecialCarers" };
+export const metadata = { title: "Certifications — SpecialCarer" };
 
 export default async function CertificationsPage() {
   const supabase = await createClient();

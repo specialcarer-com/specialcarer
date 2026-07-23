@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { taxYearForDate } from "@/lib/payroll/tax-constants";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Payslips — SpecialCarers" };
+export const metadata = { title: "Payslips — SpecialCarer" };
 
 const gbp = (p: number) =>
   new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format((p ?? 0) / 100);

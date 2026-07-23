@@ -8,7 +8,7 @@ import {
 } from "@/lib/safety/types";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "My safety reports — SpecialCarers" };
+export const metadata = { title: "My safety reports — SpecialCarer" };
 
 const STATUS_TONE: Record<string, string> = {
   open: "bg-amber-50 text-amber-800 border-amber-200",

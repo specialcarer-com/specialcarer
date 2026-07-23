@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { defaultCareTipsSource } from "@/lib/care-tips/source";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Care tips — SpecialCarers" };
+export const metadata = { title: "Care tips — SpecialCarer" };
 
 const VERTICAL_LABEL: Record<string, string> = {
   elderly_care: "Elderly",

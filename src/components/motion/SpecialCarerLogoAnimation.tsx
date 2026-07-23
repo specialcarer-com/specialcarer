@@ -185,7 +185,7 @@ export function SpecialCarerLogoAnimation({
         overflow: "hidden",
         ...style,
       }}
-      aria-label="SpecialCarers logo"
+      aria-label="SpecialCarer logo"
       role="img"
     >
       <div

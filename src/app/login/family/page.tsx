@@ -2,9 +2,9 @@ import { getTranslations } from "next-intl/server";
 import AudienceSignIn from "../audience-sign-in";
 
 export const metadata = {
-  title: "Family sign in — SpecialCarers",
+  title: "Family sign in — SpecialCarer",
   description:
-    "Sign in to your SpecialCarers family account to book trusted carers, manage your care plan, and view invoices.",
+    "Sign in to your SpecialCarer family account to book trusted carers, manage your care plan, and view invoices.",
 };
 
 export default async function FamilyLoginPage({

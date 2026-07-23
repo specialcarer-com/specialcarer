@@ -11,7 +11,7 @@ import { dirFor, isAppLocale, DEFAULT_LOCALE } from "@/i18n/config";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "SpecialCarers — Trusted care, on your schedule",
+  title: "SpecialCarer — Trusted care, on your schedule",
   description:
     "On-demand and scheduled childcare, elder care, and home support from vetted, DBS-checked caregivers across the UK.",
   metadataBase: new URL("https://www.specialcarers.com"),
@@ -26,23 +26,23 @@ export const metadata: Metadata = {
     shortcut: "/brand/favicon.ico",
   },
   openGraph: {
-    title: "SpecialCarers",
+    title: "SpecialCarer",
     description: "Trusted care, on your schedule.",
     url: "https://www.specialcarers.com",
-    siteName: "SpecialCarers",
+    siteName: "SpecialCarer",
     type: "website",
     images: [
       {
         url: "/brand/og-image.png",
         width: 1200,
         height: 630,
-        alt: "SpecialCarers — trusted care, on your schedule",
+        alt: "SpecialCarer — trusted care, on your schedule",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "SpecialCarers",
+    title: "SpecialCarer",
     description: "Trusted care, on your schedule.",
     images: ["/brand/og-image.png"],
   },
