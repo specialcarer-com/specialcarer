@@ -443,6 +443,7 @@
     "useRecoveryCodeInstead": "Stattdessen einen Wiederherstellungscode verwenden",
     "useAuthenticatorInstead": "Stattdessen deine Authenticator-App verwenden",
     "requiredTitle": "Zwei-Faktor-Authentifizierung erforderlich",
-    "requiredIntro": "Dein Konto erfordert Zwei-Faktor-Authentifizierung. Richte sie jetzt ein, um fortzufahren."
+    "requiredIntro": "Dein Konto erfordert Zwei-Faktor-Authentifizierung. Richte sie jetzt ein, um fortzufahren.",
+    "supportRecoveryNote": "Authenticator-Gerät verloren? Kontaktieren Sie den Support zur Identitätsprüfung und Faktor-Zurücksetzung."
   }
 }

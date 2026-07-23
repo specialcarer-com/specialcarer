@@ -443,6 +443,7 @@
     "useRecoveryCodeInstead": "Folosește un cod de recuperare",
     "useAuthenticatorInstead": "Folosește aplicația de autentificare",
     "requiredTitle": "Autentificarea în doi pași este necesară",
-    "requiredIntro": "Contul tău necesită autentificare în doi pași. Configureaz-o acum pentru a continua."
+    "requiredIntro": "Contul tău necesită autentificare în doi pași. Configureaz-o acum pentru a continua.",
+    "supportRecoveryNote": "Ai pierdut dispozitivul de autentificare? Contactează asistența pentru verificarea identității și resetarea factorului."
   }
 }

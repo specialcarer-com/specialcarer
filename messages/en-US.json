@@ -443,6 +443,7 @@
     "useRecoveryCodeInstead": "Use a recovery code instead",
     "useAuthenticatorInstead": "Use your authenticator app instead",
     "requiredTitle": "Two-factor authentication required",
-    "requiredIntro": "Your account requires two-factor authentication. Set it up now to continue."
+    "requiredIntro": "Your account requires two-factor authentication. Set it up now to continue.",
+    "supportRecoveryNote": "Lost your authenticator device? Contact support for identity verification and factor reset."
   }
 }

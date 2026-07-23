@@ -443,6 +443,7 @@
     "useRecoveryCodeInstead": "Użyj kodu odzyskiwania",
     "useAuthenticatorInstead": "Użyj aplikacji uwierzytelniającej",
     "requiredTitle": "Wymagane uwierzytelnianie dwuskładnikowe",
-    "requiredIntro": "Twoje konto wymaga uwierzytelniania dwuskładnikowego. Skonfiguruj je teraz, aby kontynuować."
+    "requiredIntro": "Twoje konto wymaga uwierzytelniania dwuskładnikowego. Skonfiguruj je teraz, aby kontynuować.",
+    "supportRecoveryNote": "Zgubiłeś urządzenie z aplikacją uwierzytelniającą? Skontaktuj się z pomocą techniczną w celu weryfikacji tożsamości i zresetowania czynnika."
   }
 }

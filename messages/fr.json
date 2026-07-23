@@ -443,6 +443,7 @@
     "useRecoveryCodeInstead": "Utiliser un code de récupération",
     "useAuthenticatorInstead": "Utiliser votre application d'authentification",
     "requiredTitle": "Authentification à deux facteurs requise",
-    "requiredIntro": "Votre compte nécessite l'authentification à deux facteurs. Configurez-la maintenant pour continuer."
+    "requiredIntro": "Votre compte nécessite l'authentification à deux facteurs. Configurez-la maintenant pour continuer.",
+    "supportRecoveryNote": "Vous avez perdu votre appareil d'authentification ? Contactez l'assistance pour la vérification d'identité et la réinitialisation du facteur."
   }
 }

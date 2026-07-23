@@ -443,6 +443,7 @@
     "useRecoveryCodeInstead": "Usar un código de recuperación",
     "useAuthenticatorInstead": "Usar tu app de autenticación",
     "requiredTitle": "Se requiere autenticación en dos pasos",
-    "requiredIntro": "Tu cuenta requiere autenticación en dos pasos. Configúrala ahora para continuar."
+    "requiredIntro": "Tu cuenta requiere autenticación en dos pasos. Configúrala ahora para continuar.",
+    "supportRecoveryNote": "¿Perdió su dispositivo de autenticación? Contacte con soporte para verificar su identidad y restablecer el factor."
   }
 }
