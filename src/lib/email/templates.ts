@@ -1,5 +1,5 @@
 /**
- * Plain HTML email templates for SpecialCarers transactional emails.
+ * Plain HTML email templates for SpecialCarer transactional emails.
  *
  * Templates are inlined-CSS so they render in major mail clients.
  * Brand: primary #039EA0, navy heading #171E54.
@@ -15,12 +15,12 @@ const BRAND_HEADING = "#171E54";
 const BRAND_SUBHEAD = "#575757";
 const BG_PALE = "#F7FAFA";
 const BRAND_LOGO_URL = "https://www.specialcarer.com/brand/logo-wordmark-email.png";
-// Full SpecialCarers wordmark logo (icon + "Special Carers" text, all teal,
+// Full SpecialCarer wordmark logo (icon + "SpecialCarer" text, all teal,
 // transparent background). Source 960x721, rendered at 240x180 in email
 // (@4x retina). Aspect ratio 161:121.
 
 /**
- * Branded email header with the SpecialCarers logo mark + wordmark.
+ * Branded email header with the SpecialCarer logo mark + wordmark.
  * Uses absolute https URL for the logo (required by all major mail
  * clients). The wordmark text is always rendered next to the image so
  * the brand still reads even when the recipient's client blocks remote
@@ -37,7 +37,7 @@ function renderBrandHeader(eyebrow?: string): string {
             </td>
           </tr>`
     : "";
-  // Full SpecialCarers wordmark logo (icon + "Special Carers" text). Image is
+  // Full SpecialCarer wordmark logo (icon + "SpecialCarer" text). Image is
   // 960×721 served as @4x retina; rendered at 240×180 in client. The wordmark
   // is part of the image so we no longer render a separate text wordmark below.
   // Aspect ratio 161:121 → height = round(width * 121/161).
