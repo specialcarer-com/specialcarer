@@ -45,7 +45,7 @@ export async function generateMetadata({
         ? `${city.carer_count} background-checked carers in ${city.name}, ${city.region ?? city.country}. Average response ${city.avg_response_min ?? "—"} min. Book online.`
         : `Be among the first to hear when SpecialCarer launches in ${city.name}, ${city.region ?? city.country}.`,
     alternates: {
-      canonical: `https://www.specialcarers.com/coverage/${city.slug}`,
+      canonical: `https://www.specialcarer.com/coverage/${city.slug}`,
     },
   };
 }
@@ -64,9 +64,9 @@ export default async function CoverageCityPage({
   const ld = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
-    "@id": `https://www.specialcarers.com/coverage/${city.slug}`,
+    "@id": `https://www.specialcarer.com/coverage/${city.slug}`,
     name: `SpecialCarer — ${city.name}`,
-    url: `https://www.specialcarers.com/coverage/${city.slug}`,
+    url: `https://www.specialcarer.com/coverage/${city.slug}`,
     address: {
       "@type": "PostalAddress",
       addressLocality: city.name,

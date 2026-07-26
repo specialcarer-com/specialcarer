@@ -20,7 +20,7 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   appInfo: {
     name: "SpecialCarers",
     version: "0.1.0",
-    url: "https://specialcarers.com",
+    url: "https://www.specialcarer.com",
   },
 });
 

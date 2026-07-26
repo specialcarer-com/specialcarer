@@ -70,7 +70,7 @@ export async function POST(req: Request) {
   }
 
   const origin =
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://specialcarers.com";
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.specialcarer.com";
 
   const link = await stripe.accountLinks.create({
     account: accountId,

@@ -107,7 +107,7 @@ export async function POST(
     await sendEmail({
       to: adminEmail,
       subject: `Payslip dispute flagged — ${payslip.period_start} to ${payslip.period_end}`,
-      html: `<p>A carer has flagged a dispute on their draft payslip.</p><p><strong>Carer:</strong> ${user.id}</p><p><strong>Reason:</strong> ${reason}</p>${body.booking_id ? `<p><strong>Booking:</strong> ${body.booking_id}</p>` : ""}<p>Review at https://specialcarers.com/admin/payroll/disputes</p>`,
+      html: `<p>A carer has flagged a dispute on their draft payslip.</p><p><strong>Carer:</strong> ${user.id}</p><p><strong>Reason:</strong> ${reason}</p>${body.booking_id ? `<p><strong>Booking:</strong> ${body.booking_id}</p>` : ""}<p>Review at https://www.specialcarer.com/admin/payroll/disputes</p>`,
       text: `Dispute flagged for ${user.id} on ${payslip.period_start}-${payslip.period_end}. Reason: ${reason}`,
     });
   }

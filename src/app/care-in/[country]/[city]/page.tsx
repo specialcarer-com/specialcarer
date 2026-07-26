@@ -24,7 +24,7 @@ export async function generateMetadata({
     title: `Caregivers in ${entry.city}, ${entry.region} — SpecialCarer`,
     description: `Vetted, background-checked childcare, eldercare, and special-needs caregivers in ${entry.city}. Book online with SpecialCarer.`,
     alternates: {
-      canonical: `https://www.specialcarers.com/care-in/${entry.countrySlug}/${entry.slug}`,
+      canonical: `https://www.specialcarer.com/care-in/${entry.countrySlug}/${entry.slug}`,
     },
   };
 }

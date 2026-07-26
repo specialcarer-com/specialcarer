@@ -19,16 +19,16 @@ import { AnimatedBrowsePhone } from "@/components/marketing/AnimatedBrowsePhone"
 
 export const metadata: Metadata = {
   title:
-    "SpecialCarer — Vetted UK Carers, Babysitters & Nannies | specialcarers.com",
+    "SpecialCarer — Vetted UK Carers, Babysitters & Nannies | specialcarer.com",
   description:
     "SpecialCarer connects families and care providers with vetted UK carers. DBS-checked RSWs, HCAs, babysitters and nannies in London and across the UK. Book vetted care in minutes.",
-  alternates: { canonical: "https://www.specialcarers.com/" },
+  alternates: { canonical: "https://www.specialcarer.com/" },
   openGraph: {
     title:
-      "SpecialCarer — Vetted UK Carers, Babysitters & Nannies | specialcarers.com",
+      "SpecialCarer — Vetted UK Carers, Babysitters & Nannies | specialcarer.com",
     description:
       "SpecialCarer connects families and care providers with vetted UK carers. DBS-checked RSWs, HCAs, babysitters and nannies in London and across the UK. Book vetted care in minutes.",
-    url: "https://www.specialcarers.com/",
+    url: "https://www.specialcarer.com/",
     siteName: "SpecialCarer",
     type: "website",
     images: [
@@ -79,8 +79,8 @@ export default async function Home() {
       {
         "@type": "Organization",
         name: "SpecialCarer",
-        url: "https://www.specialcarers.com",
-        logo: "https://www.specialcarers.com/icon.png",
+        url: "https://www.specialcarer.com",
+        logo: "https://www.specialcarer.com/icon.png",
         sameAs: [],
         parentOrganization: {
           "@type": "Organization",
@@ -97,11 +97,11 @@ export default async function Home() {
       },
       {
         "@type": "WebSite",
-        url: "https://www.specialcarers.com",
+        url: "https://www.specialcarer.com",
         name: "SpecialCarer",
         potentialAction: {
           "@type": "SearchAction",
-          target: "https://www.specialcarers.com/find-care?q={query}",
+          target: "https://www.specialcarer.com/find-care?q={query}",
           "query-input": "required name=query",
         },
       },

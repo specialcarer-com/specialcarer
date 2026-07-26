@@ -6,12 +6,12 @@ export const metadata: Metadata = {
   title: "Press & media — SpecialCarer",
   description:
     "Newsroom, brand assets, key facts and press contact for SpecialCarer — the on-demand, vetted-caregiver marketplace from All Care 4 U Group Limited.",
-  alternates: { canonical: "https://www.specialcarers.com/press" },
+  alternates: { canonical: "https://www.specialcarer.com/press" },
   openGraph: {
     title: "Press & media — SpecialCarer",
     description:
       "Newsroom, brand assets, key facts and press contact for SpecialCarer.",
-    url: "https://www.specialcarers.com/press",
+    url: "https://www.specialcarer.com/press",
     siteName: "SpecialCarer",
     type: "website",
     images: [
@@ -79,13 +79,13 @@ export default function Page() {
     "@context": "https://schema.org",
     "@type": "AboutPage",
     name: "Press & media — SpecialCarer",
-    url: "https://www.specialcarers.com/press",
+    url: "https://www.specialcarer.com/press",
     mainEntity: {
       "@type": "Organization",
       name: "SpecialCarer",
       legalName: "All Care 4 U Group Limited",
       taxID: "09428739",
-      url: "https://www.specialcarers.com",
+      url: "https://www.specialcarer.com",
       address: {
         "@type": "PostalAddress",
         streetAddress: "85 Great Portland Street",
