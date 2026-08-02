@@ -211,7 +211,7 @@ export function AdminLoginForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@specialcarers.com"
+          placeholder="you@specialcarer.com"
           autoComplete="email"
           className="mt-1 w-full px-4 py-3 rounded-xl border border-[#0F1416]/15 focus:outline-none focus:ring-2 focus:ring-[#039EA0] text-[#0F1416]"
         />

@@ -607,10 +607,10 @@ export default async function FindCarePage({
             <p className="mt-1 text-slate-700">
               {t("helpBody")}{" "}
               <a
-                href="mailto:support@specialcarers.com"
+                href="mailto:support@specialcarer.com"
                 className="text-brand-700 hover:underline"
               >
-                support@specialcarers.com
+                support@specialcarer.com
               </a>
               .
             </p>

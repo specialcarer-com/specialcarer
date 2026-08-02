@@ -172,10 +172,10 @@ export default function Page() {
               Request a pilot
             </Link>
             <a
-              href="mailto:employers@specialcarers.com"
+              href="mailto:employers@specialcarer.com"
               className="px-6 py-3 rounded-xl bg-white border border-slate-200 text-slate-900 font-medium hover:bg-slate-50 transition text-center"
             >
-              employers@specialcarers.com
+              employers@specialcarer.com
             </a>
           </div>
         </div>
