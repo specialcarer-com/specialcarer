@@ -9,7 +9,7 @@ import "server-only";
 import fs from "node:fs";
 import path from "node:path";
 
-export const CURRENT_MSA_VERSION = "msa-v1.0-2026-05";
+export const CURRENT_MSA_VERSION = "msa-v1.1-2026-08";
 export const CURRENT_DPA_VERSION = "dpa-v1.0-2026-05";
 export const CURRENT_WORKER_B_VERSION = "wkr-v1.0-2026-05";
 
