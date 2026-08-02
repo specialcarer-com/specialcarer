@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/smtp";
-import { isFreeEmail } from "@/lib/org/types";
 import { rateLimit, getRequestIp } from "@/lib/rate-limit";
+import { validateLead } from "@/lib/anti-spam/validate-lead";
+import { logSpamAttempt, recordHoneypotHit } from "@/lib/anti-spam/log-attempt";
 
 export const dynamic = "force-dynamic";
 
+const SOURCE_FORM = "organisations_page";
 const ADMIN_EMAIL =
   process.env.ORG_LEADS_EMAIL ?? process.env.ORG_ADMIN_EMAIL ?? "hello@specialcarers.com";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -17,7 +19,8 @@ type Body = {
   role?: string;
   message?: string;
   source?: string;
-  free_email_override?: boolean;
+  /** Honeypot — must stay empty. Bots that fill every input will trip this. */
+  website?: string;
 };
 
 function escHtml(s: string): string {
@@ -37,12 +40,7 @@ function escHtml(s: string): string {
  */
 export async function POST(req: Request) {
   const ip = getRequestIp(req);
-  if (!rateLimit(`org-leads:${ip}`, { limit: 5, windowMs: 60 * 60 * 1000 })) {
-    return NextResponse.json(
-      { error: "rate_limited" },
-      { status: 429 },
-    );
-  }
+  const ua = req.headers.get("user-agent")?.slice(0, 240) ?? null;
 
   let body: Body;
   try {
@@ -51,25 +49,61 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
 
+  // Honeypot: a real browser never fills this hidden field. Drop silently
+  // (200 OK) so bots don't learn to look for it, but log the hit.
+  if (String(body.website ?? "").trim().length > 0) {
+    recordHoneypotHit(SOURCE_FORM);
+    await logSpamAttempt({
+      sourceForm: SOURCE_FORM,
+      rejectionReason: "honeypot",
+      ipAddress: ip,
+      userAgent: ua,
+      payload: { ...body, website: "[REDACTED-HONEYPOT-VALUE]" },
+    });
+    return NextResponse.json({ ok: true });
+  }
+
+  // Soft per-IP rate limit — volume is low (1-3 spam/day), so 3/hour is
+  // plenty of headroom for a genuine org submitting more than once.
+  if (!rateLimit(`org-leads:${ip}`, { limit: 3, windowMs: 60 * 60 * 1000 })) {
+    await logSpamAttempt({
+      sourceForm: SOURCE_FORM,
+      rejectionReason: "rate_limited",
+      ipAddress: ip,
+      userAgent: ua,
+      payload: body,
+    });
+    return NextResponse.json(
+      { error: "rate_limited", message: "Too many submissions — please try again in an hour." },
+      { status: 429 },
+    );
+  }
+
   const work_email = String(body.work_email ?? "").trim().toLowerCase();
   if (!EMAIL_RE.test(work_email) || work_email.length > 200) {
     return NextResponse.json({ error: "invalid_email" }, { status: 400 });
   }
-  // Free-webmail check: warn but allow when user has acknowledged.
-  const free = isFreeEmail(work_email);
-  if (free && !body.free_email_override) {
+
+  const check = validateLead({
+    name: body.full_name,
+    email: work_email,
+    org: body.org_name,
+    role: body.role,
+  });
+  if (!check.valid) {
+    await logSpamAttempt({
+      sourceForm: SOURCE_FORM,
+      rejectionReason: check.reason ?? "validation_failed",
+      ipAddress: ip,
+      userAgent: ua,
+      payload: body,
+    });
     return NextResponse.json(
-      {
-        ok: false,
-        free_email: true,
-        message:
-          "That looks like a personal email. Use a work address, or tick 'Continue anyway'.",
-      },
+      { ok: false, error: check.reason },
       { status: 400 },
     );
   }
 
-  const ua = req.headers.get("user-agent")?.slice(0, 240) ?? null;
   const admin = createAdminClient();
   const { data: inserted, error } = await admin
     .from("org_leads")
@@ -79,7 +113,7 @@ export async function POST(req: Request) {
       org_name: body.org_name?.trim().slice(0, 200) || null,
       role: body.role?.trim().slice(0, 120) || null,
       message: body.message?.trim().slice(0, 4000) || null,
-      source: body.source?.trim().slice(0, 60) || "organisations_page",
+      source: body.source?.trim().slice(0, 60) || SOURCE_FORM,
       user_agent: ua,
       ip_address: ip,
     })
@@ -98,10 +132,10 @@ export async function POST(req: Request) {
   const lines = [
     `Lead from /organisations`,
     `Name: ${body.full_name ?? "—"}`,
-    `Email: ${work_email}${free ? " (free webmail — flagged)" : ""}`,
+    `Email: ${work_email}`,
     `Org: ${body.org_name ?? "—"}`,
     `Role: ${body.role ?? "—"}`,
-    `Source: ${body.source ?? "organisations_page"}`,
+    `Source: ${body.source ?? SOURCE_FORM}`,
     "",
     body.message ?? "(no message)",
   ];

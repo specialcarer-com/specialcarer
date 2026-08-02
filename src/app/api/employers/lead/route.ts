@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { rateLimit, getRequestIp } from "@/lib/rate-limit";
+import { validateLead } from "@/lib/anti-spam/validate-lead";
+import { logSpamAttempt, recordHoneypotHit } from "@/lib/anti-spam/log-attempt";
+
+const SOURCE_FORM = "employers_contact_page";
 
 export async function POST(req: NextRequest) {
-  // Per-IP rate limit: 5 submissions per hour. Returns the user to the
-  // /employers/contact page with a friendly status so they're not stuck.
   const ip = getRequestIp(req);
-  if (!rateLimit(`employers-lead:${ip}`, { limit: 5, windowMs: 60 * 60 * 1000 })) {
-    return NextResponse.redirect(
-      new URL(`/employers/contact?status=rate_limited`, req.url),
-      { status: 303 },
-    );
-  }
+  const ua = req.headers.get("user-agent")?.slice(0, 240) ?? null;
 
   const formData = await req.formData();
   const company_name = String(formData.get("company_name") || "").trim();
@@ -22,13 +19,81 @@ export async function POST(req: NextRequest) {
   const employee_count = String(formData.get("employee_count") || "").trim() || null;
   const use_case = String(formData.get("use_case") || "").trim() || null;
   const message = String(formData.get("message") || "").trim() || null;
+  const website = String(formData.get("website") || "").trim(); // honeypot
 
   const back = (q: string) =>
     NextResponse.redirect(new URL(`/employers/contact?status=${q}`, req.url), { status: 303 });
 
+  const rawPayload = {
+    company_name,
+    contact_name,
+    work_email,
+    phone,
+    country,
+    employee_count,
+    use_case,
+    message,
+  };
+
+  // Honeypot: a real browser never fills this hidden field. Drop
+  // silently (redirect to the normal success page) so bots don't learn
+  // to look for it, but log the hit.
+  if (website.length > 0) {
+    recordHoneypotHit(SOURCE_FORM);
+    await logSpamAttempt({
+      sourceForm: SOURCE_FORM,
+      rejectionReason: "honeypot",
+      ipAddress: ip,
+      userAgent: ua,
+      payload: { ...rawPayload, website: "[REDACTED-HONEYPOT-VALUE]" },
+    });
+    return NextResponse.redirect(new URL("/employers/contact?status=success", req.url), {
+      status: 303,
+    });
+  }
+
+  // Soft per-IP rate limit — volume is low, so 3/hour is plenty of
+  // headroom for a genuine employer submitting more than once.
+  if (!rateLimit(`employers-lead:${ip}`, { limit: 3, windowMs: 60 * 60 * 1000 })) {
+    await logSpamAttempt({
+      sourceForm: SOURCE_FORM,
+      rejectionReason: "rate_limited",
+      ipAddress: ip,
+      userAgent: ua,
+      payload: rawPayload,
+    });
+    return back("rate_limited");
+  }
+
   if (!company_name || !contact_name) return back("missing");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(work_email)) return back("invalid_email");
   if (!["UK", "US", "OTHER"].includes(country)) return back("invalid_country");
+
+  // UK phone format is only enforced when the employer selected "UK" —
+  // this form legitimately serves US/global employers too (see the
+  // country selector), so we don't hard-block US-style numbers for
+  // them. Free-webmail and random-string checks apply to everyone.
+  // `use_case` is a constrained <select>, not free text, so it's not
+  // passed through the random-string check (there's no `role` field
+  // on this form — only company_name and contact_name are free text).
+  const check = validateLead({
+    name: contact_name,
+    email: work_email,
+    org: company_name,
+    phone: country === "UK" ? phone ?? "" : undefined,
+  });
+  if (!check.valid) {
+    await logSpamAttempt({
+      sourceForm: SOURCE_FORM,
+      rejectionReason: check.reason ?? "validation_failed",
+      ipAddress: ip,
+      userAgent: ua,
+      payload: rawPayload,
+    });
+    if (check.reason?.includes("UK phone")) return back("invalid_phone");
+    if (check.reason?.includes("organisation email")) return back("free_email");
+    return back("invalid");
+  }
 
   try {
     const supabase = await createClient();
