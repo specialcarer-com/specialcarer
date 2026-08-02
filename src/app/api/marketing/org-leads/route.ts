@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/smtp";
 import { rateLimit, getRequestIp } from "@/lib/rate-limit";
-import { validateLead } from "@/lib/anti-spam/validate-lead";
+import { validateLead, isGmail } from "@/lib/anti-spam/validate-lead";
 import { logSpamAttempt, recordHoneypotHit } from "@/lib/anti-spam/log-attempt";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +21,12 @@ type Body = {
   source?: string;
   /** Honeypot — must stay empty. Bots that fill every input will trip this. */
   website?: string;
+  /**
+   * Set true on resubmission after seeing the Gmail soft-block warning
+   * (micro-charities/sole traders with no other email). Only ever
+   * suppresses the Gmail-specific soft block.
+   */
+  use_personal_email?: boolean;
 };
 
 function escHtml(s: string): string {
@@ -89,19 +95,41 @@ export async function POST(req: Request) {
     email: work_email,
     org: body.org_name,
     role: body.role,
+    usePersonalEmail: body.use_personal_email === true,
   });
   if (!check.valid) {
     await logSpamAttempt({
       sourceForm: SOURCE_FORM,
-      rejectionReason: check.reason ?? "validation_failed",
+      rejectionReason:
+        check.reasonCode === "FREE_WEBMAIL" && check.soft
+          ? "GMAIL_SOFT_WARNED"
+          : check.reasonCode ?? "validation_failed",
       ipAddress: ip,
       userAgent: ua,
       payload: body,
     });
     return NextResponse.json(
-      { ok: false, error: check.reason },
+      {
+        ok: false,
+        error: check.reasonCode,
+        message: check.reason,
+        soft: check.soft ?? false,
+      },
       { status: 400 },
     );
+  }
+
+  // If this submission used the Gmail override, log it distinctly for
+  // ops visibility (per-provider override usage) even though it's not a
+  // rejection.
+  if (body.use_personal_email === true && isGmail(work_email)) {
+    await logSpamAttempt({
+      sourceForm: SOURCE_FORM,
+      rejectionReason: "GMAIL_OVERRIDE_USED",
+      ipAddress: ip,
+      userAgent: ua,
+      payload: body,
+    });
   }
 
   const admin = createAdminClient();

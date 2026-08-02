@@ -1,15 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { isFreeWebmail } from "@/lib/anti-spam/validate-lead";
+import { isFreeWebmail, isGmail } from "@/lib/anti-spam/validate-lead";
 
 /**
  * Inline contact form on /organisations#contact and reused on the
  * sub-pages.
  *
- * Free-webmail addresses get a soft client-side tip (not a block) —
- * the server enforces the hard block, since this is a B2B form and a
- * genuine organisation enquiry should come from a work email address.
+ * Free-webmail addresses get a soft client-side tip. Gmail specifically
+ * also gets a soft *server-side* block with an override: if the server
+ * comes back with `soft: true` (Gmail only), we show its warning and
+ * let the user resubmit with `use_personal_email: true` — this restores
+ * the pre-PR-175 escape hatch for micro-charities/sole traders whose
+ * only email is Gmail, without extending it to any other free-webmail
+ * provider (those stay a hard block, per policy).
  *
  * Includes a hidden honeypot field (`website`) that real users never
  * see or fill in; the API drops anything that arrives with it filled.
@@ -23,6 +27,8 @@ export default function ContactForm({ source }: { source: string }) {
   const [website, setWebsite] = useState(""); // honeypot — must stay empty
   const [state, setState] = useState<"idle" | "sending" | "ok" | "err">("idle");
   const [err, setErr] = useState<string | null>(null);
+  const [gmailOverride, setGmailOverride] = useState(false);
+  const [gmailSoftBlocked, setGmailSoftBlocked] = useState(false);
 
   const free = email ? isFreeWebmail(email) : false;
   const valid =
@@ -47,18 +53,26 @@ export default function ContactForm({ source }: { source: string }) {
           message: message.trim() || undefined,
           source,
           website, // honeypot; left blank by real users
+          use_personal_email: gmailOverride || undefined,
         }),
       });
       const json = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
         error?: string;
         message?: string;
+        soft?: boolean;
       };
       if (!res.ok || !json.ok) {
         if (res.status === 429) {
           setErr(json.message ?? "Too many submissions — try again in an hour.");
+          setGmailSoftBlocked(false);
+        } else if (json.soft && isGmail(email.trim().toLowerCase())) {
+          // Gmail soft-block: show the warning + let the user tick through.
+          setErr(json.message ?? "That looks like a personal Gmail address.");
+          setGmailSoftBlocked(true);
         } else {
-          setErr(json.error ?? "Couldn't send. Please try again.");
+          setErr(json.message ?? "Couldn't send. Please try again.");
+          setGmailSoftBlocked(false);
         }
         setState("err");
         return;
@@ -154,7 +168,22 @@ export default function ContactForm({ source }: { source: string }) {
           className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
         />
       </Field>
-      {err && <p className="text-sm text-rose-700">{err}</p>}
+      {err && (
+        <div className="space-y-2">
+          <p className="text-sm text-rose-700">{err}</p>
+          {gmailSoftBlocked && (
+            <label className="flex items-center gap-2 text-xs text-amber-900">
+              <input
+                type="checkbox"
+                checked={gmailOverride}
+                onChange={(e) => setGmailOverride(e.target.checked)}
+              />
+              I don&rsquo;t have an organisation email — use this Gmail address
+              anyway
+            </label>
+          )}
+        </div>
+      )}
       <button
         type="submit"
         disabled={!valid || state === "sending"}
