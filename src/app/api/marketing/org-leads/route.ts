@@ -49,34 +49,34 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
 
+  // Rate-limit FIRST — cheap, no I/O, no DB write. A bot hammering this
+  // endpoint hits its 429 before we ever touch the honeypot/validation/
+  // DB-insert path. Previously the honeypot check ran first, so every
+  // single bot request (the honeypot's exact target audience) triggered
+  // an unconditional, un-throttled `spam_lead_attempts` insert — this
+  // reordering closes that log-flooding gap (review finding).
+  if (!rateLimit(`org-leads:${ip}`, { limit: 3, windowMs: 60 * 60 * 1000 })) {
+    // Rate-limit rejections do NOT insert into spam_lead_attempts — the
+    // rate limiter's whole point is to bound load, and logging every hit
+    // here would defeat that.
+    return NextResponse.json(
+      { error: "rate_limited", message: "Too many submissions — please try again in an hour." },
+      { status: 429 },
+    );
+  }
+
   // Honeypot: a real browser never fills this hidden field. Drop silently
   // (200 OK) so bots don't learn to look for it, but log the hit.
   if (String(body.website ?? "").trim().length > 0) {
     recordHoneypotHit(SOURCE_FORM);
     await logSpamAttempt({
       sourceForm: SOURCE_FORM,
-      rejectionReason: "honeypot",
+      rejectionReason: "HONEYPOT_HIT",
       ipAddress: ip,
       userAgent: ua,
       payload: { ...body, website: "[REDACTED-HONEYPOT-VALUE]" },
     });
     return NextResponse.json({ ok: true });
-  }
-
-  // Soft per-IP rate limit — volume is low (1-3 spam/day), so 3/hour is
-  // plenty of headroom for a genuine org submitting more than once.
-  if (!rateLimit(`org-leads:${ip}`, { limit: 3, windowMs: 60 * 60 * 1000 })) {
-    await logSpamAttempt({
-      sourceForm: SOURCE_FORM,
-      rejectionReason: "rate_limited",
-      ipAddress: ip,
-      userAgent: ua,
-      payload: body,
-    });
-    return NextResponse.json(
-      { error: "rate_limited", message: "Too many submissions — please try again in an hour." },
-      { status: 429 },
-    );
   }
 
   const work_email = String(body.work_email ?? "").trim().toLowerCase();

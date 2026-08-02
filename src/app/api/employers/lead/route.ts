@@ -35,6 +35,18 @@ export async function POST(req: NextRequest) {
     message,
   };
 
+  // Rate-limit FIRST — cheap, no I/O, no DB write. A bot hammering this
+  // endpoint hits its redirect before we ever touch the honeypot/
+  // validation/insert path. Previously the honeypot check ran first, so
+  // every single bot request (the honeypot's exact target audience)
+  // triggered an unconditional, un-throttled `spam_lead_attempts` insert
+  // — this reordering closes that log-flooding gap (review finding).
+  // Rate-limit rejections do NOT insert into spam_lead_attempts — the
+  // rate limiter's whole point is to bound load.
+  if (!rateLimit(`employers-lead:${ip}`, { limit: 3, windowMs: 60 * 60 * 1000 })) {
+    return back("rate_limited");
+  }
+
   // Honeypot: a real browser never fills this hidden field. Drop
   // silently (redirect to the normal success page) so bots don't learn
   // to look for it, but log the hit.
@@ -42,7 +54,7 @@ export async function POST(req: NextRequest) {
     recordHoneypotHit(SOURCE_FORM);
     await logSpamAttempt({
       sourceForm: SOURCE_FORM,
-      rejectionReason: "honeypot",
+      rejectionReason: "HONEYPOT_HIT",
       ipAddress: ip,
       userAgent: ua,
       payload: { ...rawPayload, website: "[REDACTED-HONEYPOT-VALUE]" },
@@ -50,19 +62,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.redirect(new URL("/employers/contact?status=success", req.url), {
       status: 303,
     });
-  }
-
-  // Soft per-IP rate limit — volume is low, so 3/hour is plenty of
-  // headroom for a genuine employer submitting more than once.
-  if (!rateLimit(`employers-lead:${ip}`, { limit: 3, windowMs: 60 * 60 * 1000 })) {
-    await logSpamAttempt({
-      sourceForm: SOURCE_FORM,
-      rejectionReason: "rate_limited",
-      ipAddress: ip,
-      userAgent: ua,
-      payload: rawPayload,
-    });
-    return back("rate_limited");
   }
 
   if (!company_name || !contact_name) return back("missing");
