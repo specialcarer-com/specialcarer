@@ -68,8 +68,22 @@ export default async function Page({
         )}
         {status === "free_email" && (
           <div className="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900">
-            Please use your organisation email address (not a personal
-            Gmail/Hotmail/etc).
+            Please use your organisation email address so we can respond to
+            the right domain. If you don&rsquo;t have one, email{" "}
+            <a href="mailto:hello@specialcarer.com" className="underline">
+              hello@specialcarer.com
+            </a>
+            .
+          </div>
+        )}
+        {status === "random_string" && (
+          <div className="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900">
+            This submission was flagged as automated. If you&rsquo;re a real
+            person and your details look unusual, please email{" "}
+            <a href="mailto:hello@specialcarer.com" className="underline">
+              hello@specialcarer.com
+            </a>{" "}
+            and we&rsquo;ll respond personally.
           </div>
         )}
         {status === "rate_limited" && (

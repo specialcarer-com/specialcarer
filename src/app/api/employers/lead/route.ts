@@ -84,14 +84,27 @@ export async function POST(req: NextRequest) {
   if (!check.valid) {
     await logSpamAttempt({
       sourceForm: SOURCE_FORM,
-      rejectionReason: check.reason ?? "validation_failed",
+      rejectionReason: check.reasonCode ?? "validation_failed",
       ipAddress: ip,
       userAgent: ua,
       payload: rawPayload,
     });
-    if (check.reason?.includes("UK phone")) return back("invalid_phone");
-    if (check.reason?.includes("organisation email")) return back("free_email");
-    return back("invalid");
+    // Route by machine-readable enum, never by substring-matching the
+    // human-readable `reason` prose (a copy tweak used to silently break
+    // this mapping — review finding).
+    switch (check.reasonCode) {
+      case "INVALID_UK_PHONE":
+        return back("invalid_phone");
+      case "FREE_WEBMAIL":
+        return back("free_email");
+      case "RANDOM_STRING_NAME":
+      case "RANDOM_STRING_ORG":
+      case "RANDOM_STRING_ROLE":
+      case "MULTI_FIELD_RANDOM":
+        return back("random_string");
+      default:
+        return back("invalid");
+    }
   }
 
   try {
