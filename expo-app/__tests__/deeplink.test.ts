@@ -66,9 +66,9 @@ describe("classifyDeeplink", () => {
       kind: "external",
       url: "tel:+441234567890",
     });
-    assert.deepEqual(classifyDeeplink("mailto:help@specialcarers.com"), {
+    assert.deepEqual(classifyDeeplink("mailto:help@specialcarer.com"), {
       kind: "external",
-      url: "mailto:help@specialcarers.com",
+      url: "mailto:help@specialcarer.com",
     });
     assert.deepEqual(classifyDeeplink("sms:+441234567890"), {
       kind: "external",
@@ -102,12 +102,12 @@ describe("classifyDeeplink", () => {
 
   it("respects a custom webOrigin override", () => {
     assert.deepEqual(
-      classifyDeeplink("https://staging.specialcarers.com/m/x", "https://staging.specialcarers.com"),
+      classifyDeeplink("https://staging.specialcarer.com/m/x", "https://staging.specialcarer.com"),
       { kind: "web", path: "/m/x" },
     );
     assert.deepEqual(
-      classifyDeeplink("https://specialcarers.com/m/x", "https://staging.specialcarers.com"),
-      { kind: "external", url: "https://specialcarers.com/m/x" },
+      classifyDeeplink("https://specialcarer.com/m/x", "https://staging.specialcarer.com"),
+      { kind: "external", url: "https://specialcarer.com/m/x" },
     );
   });
 });
