@@ -101,7 +101,7 @@ function renderHtml(i: GracePeriodBlastInput): string {
       </a>
     </p>
 
-    <p style="margin:24px 0 0;color:${MUTED};font-size:13px">Questions? Reply to this email or contact compliance@specialcarers.com.</p>
+    <p style="margin:24px 0 0;color:${MUTED};font-size:13px">Questions? Reply to this email or contact compliance@specialcarer.com.</p>
     <p style="margin:8px 0 0;color:${MUTED};font-size:13px">— The SpecialCarer team</p>
   </div>
 </body></html>`;
@@ -126,7 +126,7 @@ function renderText(i: GracePeriodBlastInput): string {
     "Go to your training dashboard:",
     "https://www.specialcarer.com/dashboard/agency-optin",
     "",
-    "Questions? Reply to this email or contact compliance@specialcarers.com.",
+    "Questions? Reply to this email or contact compliance@specialcarer.com.",
     "— The SpecialCarer team",
   ];
   return lines.join("\n");

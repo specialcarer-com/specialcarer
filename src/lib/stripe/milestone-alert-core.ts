@@ -23,7 +23,7 @@ export const MILESTONE_FIRST_LIVE_PI_SUCCEEDED = "first_live_payment_succeeded";
 /** Where the alert is delivered. */
 export const ALERT_RECIPIENTS = [
   "steve@allcare4u.co.uk",
-  "bot@specialcarers.com",
+  "bot@specialcarer.com",
 ] as const;
 
 export type MilestoneDeps = {

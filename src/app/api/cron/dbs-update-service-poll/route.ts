@@ -112,7 +112,7 @@ function makePollClient(admin: Admin): PollClient {
 }
 
 const ADMIN_DBS_INBOX =
-  process.env.DBS_ADMIN_EMAIL ?? "ops@specialcarers.com";
+  process.env.DBS_ADMIN_EMAIL ?? "ops@specialcarer.com";
 
 function makeNotifier(admin: Admin): PollNotifier {
   async function carerEmail(carerId: string): Promise<string | null> {

@@ -103,7 +103,7 @@ export async function POST(
 
   // Notify admin queue
   if (process.env.PAYROLL_DRY_RUN !== "true") {
-    const adminEmail = process.env.PAYROLL_ADMIN_EMAIL ?? "ops@specialcarers.com";
+    const adminEmail = process.env.PAYROLL_ADMIN_EMAIL ?? "ops@specialcarer.com";
     await sendEmail({
       to: adminEmail,
       subject: `Payslip dispute flagged — ${payslip.period_start} to ${payslip.period_end}`,
