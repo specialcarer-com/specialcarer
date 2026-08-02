@@ -107,7 +107,7 @@ export function maskPhone(raw: string | null | undefined): string {
  * the family is on a personal vs corporate domain.
  *
  *   "jane.doe@gmail.com" → "j••••••e@gmail.com"
- *   "bot@specialcarers.com" → "b••••••t@specialcarers.com"
+ *   "bot@specialcarer.com" → "b••••••t@specialcarer.com"
  *   "a@b.co" → "a•@b.co"
  */
 export function maskEmail(raw: string | null | undefined): string {

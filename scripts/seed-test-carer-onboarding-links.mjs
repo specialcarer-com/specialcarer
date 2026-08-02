@@ -58,7 +58,7 @@ const CARERS = [
   {
     label: "Priya Sharma (UK)",
     user_id: "7a6dc3e0-8bac-4874-bf48-250575a685e5",
-    email: "test.carer.uk@specialcarers.com",
+    email: "test.carer.uk@specialcarer.com",
     country: "GB",
     currency: "gbp",
     bg_checks: ["enhanced_dbs_barred", "right_to_work", "digital_id"],
@@ -67,7 +67,7 @@ const CARERS = [
   {
     label: "Marcus Johnson (US)",
     user_id: "aa4aa4e3-2c25-4b79-91fe-cb4004f80a0e",
-    email: "test.carer.us@specialcarers.com",
+    email: "test.carer.us@specialcarer.com",
     country: "US",
     currency: "usd",
     bg_checks: ["us_criminal", "us_healthcare_sanctions"],

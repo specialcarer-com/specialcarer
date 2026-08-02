@@ -66,9 +66,9 @@ describe("classifyDeeplink", () => {
       kind: "external",
       url: "tel:+441234567890",
     });
-    assert.deepEqual(classifyDeeplink("mailto:help@specialcarers.com"), {
+    assert.deepEqual(classifyDeeplink("mailto:help@specialcarer.com"), {
       kind: "external",
-      url: "mailto:help@specialcarers.com",
+      url: "mailto:help@specialcarer.com",
     });
     assert.deepEqual(classifyDeeplink("sms:+441234567890"), {
       kind: "external",
