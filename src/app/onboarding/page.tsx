@@ -55,7 +55,7 @@ export default async function OnboardingPage({
         <div className="w-full max-w-md">
           <h1 className="text-3xl font-semibold tracking-tight">Welcome</h1>
           <p className="mt-2 text-slate-600">
-            Tell us a little about you so we can show you the right things.
+            Just a couple of quick questions so we can match you to the right care — or the right families.
           </p>
 
           <div className="mt-8">

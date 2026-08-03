@@ -70,7 +70,7 @@ export function OnboardingForm({
     <form onSubmit={onSubmit} className="space-y-5">
       <fieldset>
         <legend className="text-sm font-medium text-slate-700 mb-2">
-          I&rsquo;m here to…
+          Which describes you?
         </legend>
         <div className="grid grid-cols-2 gap-3">
           <label
@@ -110,13 +110,13 @@ export function OnboardingForm({
             />
             <span className="font-medium">Provide care</span>
             <span className="text-xs text-slate-500 mt-1">
-              for non-medical or clinical support needs
+              personal and clinical support for families
             </span>
           </label>
         </div>
         <p className="mt-2 text-xs leading-snug text-slate-500">
-          Please choose carefully — your account type is locked once you sign
-          up. If you pick the wrong one, contact support to fix it.
+          Choose carefully — this decides whether you&rsquo;ll book care or
+          offer it. Support can change it later if needed.
         </p>
       </fieldset>
 
