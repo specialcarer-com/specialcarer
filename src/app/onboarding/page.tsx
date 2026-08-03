@@ -11,9 +11,9 @@ export const metadata = {
 export default async function OnboardingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; preview?: string }>;
 }) {
-  const { next } = await searchParams;
+  const { next, preview } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -26,8 +26,9 @@ export default async function OnboardingPage({
     .eq("id", user.id)
     .maybeSingle();
 
-  // If already complete, skip onboarding.
-  if (profile?.full_name && profile?.country) {
+  // If already complete, skip onboarding — unless ?preview=1 is set (design review bypass).
+  const isPreview = preview === "1";
+  if (profile?.full_name && profile?.country && !isPreview) {
     redirect(next || "/dashboard");
   }
 
