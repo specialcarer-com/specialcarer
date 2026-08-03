@@ -180,6 +180,15 @@ export const PAGE_BANNER_SLOTS: PageBannerSlot[] = [
     defaultAlt:
       "A woman at her kitchen counter checking her phone, laptop open, signing in to SpecialCarer",
   },
+  {
+    key: "account.onboarding",
+    label: "Welcome / onboarding",
+    group: "Account",
+    path: "/onboarding",
+    fallbackGradient: creamTeal,
+    defaultAlt:
+      "A warm welcome to SpecialCarer — setting up your account",
+  },
 ];
 
 export function getSlot(key: string): PageBannerSlot | undefined {
