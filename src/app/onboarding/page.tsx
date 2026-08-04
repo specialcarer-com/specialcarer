@@ -27,7 +27,8 @@ export default async function OnboardingPage({
     .maybeSingle();
 
   // If already complete, skip onboarding — unless ?preview=1 is set (design review bypass).
-  const isPreview = preview === "1";
+  // Gated to non-production deployments so production traffic can never bypass the redirect.
+  const isPreview = preview === "1" && process.env.VERCEL_ENV !== "production";
   if (profile?.full_name && profile?.country && !isPreview) {
     redirect(next || "/dashboard");
   }
