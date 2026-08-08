@@ -112,16 +112,61 @@ export async function POST(req: Request) {
     if (responseMode === "declined") {
       const reason = typeof body.decline_reason === "string" ? body.decline_reason.trim() : "";
       if (reason.length < 5 || reason.length > 1000) return invalid("A decline reason of at least 5 characters is required");
-      const { error } = await admin.from("carer_references").update({ status: "rejected", response_mode: "declined", decline_reason: reason, rejected_reason: reason, submitted_at: new Date().toISOString(), ip_address: ip, user_agent: ua }).eq("id", row.id);
-      return error ? NextResponse.json({ error: error.message }, { status: 500 }) : NextResponse.json({ ok: true });
+      const { data: updated, error } = await admin
+        .from("carer_references")
+        .update({
+          status: "rejected",
+          response_mode: "declined",
+          decline_reason: reason,
+          rejected_reason: reason,
+          submitted_at: new Date().toISOString(),
+          ip_address: ip,
+          user_agent: ua,
+        })
+        .eq("id", row.id)
+        .eq("status", "invited")
+        .select("id, status")
+        .maybeSingle<{ id: string; status: string }>();
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      if (!updated || updated.status !== "rejected") {
+        return NextResponse.json({ error: "already_submitted" }, { status: 409 });
+      }
+      return NextResponse.json({ ok: true });
     }
     const filePath = typeof body.uploaded_file_path === "string" ? body.uploaded_file_path : "";
     const fileSize = body.uploaded_file_size;
     const fileMime = typeof body.uploaded_file_mime === "string" ? body.uploaded_file_mime : "";
     const allowedMime = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "image/png", "image/jpeg"];
     if (!filePath.startsWith(`${token}/`) || !Number.isInteger(fileSize) || (fileSize as number) < 1 || (fileSize as number) > 10 * 1024 * 1024 || !allowedMime.includes(fileMime)) return invalid("A valid uploaded reference document is required");
-    const { error } = await admin.from("carer_references").update({ status: "submitted", response_mode: "upload", uploaded_file_path: filePath, uploaded_file_size: fileSize, uploaded_file_mime: fileMime, comment: typeof body.comment === "string" ? body.comment.trim().slice(0, 2000) || null : null, submitted_at: new Date().toISOString(), ip_address: ip, user_agent: ua }).eq("id", row.id);
-    return error ? NextResponse.json({ error: error.message }, { status: 500 }) : NextResponse.json({ ok: true });
+    const { data: updated, error } = await admin
+      .from("carer_references")
+      .update({
+        status: "submitted",
+        response_mode: "upload",
+        uploaded_file_path: filePath,
+        uploaded_file_size: fileSize,
+        uploaded_file_mime: fileMime,
+        comment:
+          typeof body.comment === "string"
+            ? body.comment.trim().slice(0, 2000) || null
+            : null,
+        submitted_at: new Date().toISOString(),
+        ip_address: ip,
+        user_agent: ua,
+      })
+      .eq("id", row.id)
+      .eq("status", "invited")
+      .select("id, status")
+      .maybeSingle<{ id: string; status: string }>();
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    if (!updated || updated.status !== "submitted") {
+      return NextResponse.json({ error: "already_submitted" }, { status: 409 });
+    }
+    return NextResponse.json({ ok: true });
   }
   const rating =
     Number.isInteger(body.rating) &&
