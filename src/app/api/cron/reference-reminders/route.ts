@@ -7,9 +7,8 @@ import {
   renderReferenceReminderStage3Email,
 } from "@/lib/email/templates";
 import {
-  firstName,
-  nextReferenceReminderStage,
-  type ReferenceReminderRow,
+  processReferenceReminders,
+  type ReferenceReminderCandidate,
 } from "@/lib/vetting/reference-reminders";
 import type { ReferenceType } from "@/lib/vetting/types";
 
@@ -17,9 +16,7 @@ export const dynamic = "force-dynamic";
 
 const MAX_ROWS_PER_RUN = 500;
 
-type ReminderReference = ReferenceReminderRow & {
-  id: string;
-  carer_id: string;
+type ReminderReference = ReferenceReminderCandidate & {
   referee_name: string;
   referee_email: string;
   reference_type: ReferenceType | null;
@@ -60,27 +57,17 @@ export async function GET(req: Request) {
   }
 
   const references = (data ?? []) as ReminderReference[];
-  const carerNames = new Map<string, string>();
-  const errors: { reference_id: string; error: string }[] = [];
-  let sent = 0;
-
-  for (const reference of references) {
-    const stage = nextReferenceReminderStage(reference, now);
-    if (!stage) continue;
-
-    try {
-      let carerName = carerNames.get(reference.carer_id);
-      if (!carerName) {
-        const { data: profile, error: profileError } = await admin
-          .from("caregiver_profiles")
-          .select("display_name")
-          .eq("user_id", reference.carer_id)
-          .maybeSingle<{ display_name: string | null }>();
-        if (profileError) throw profileError;
-        carerName = firstName(profile?.display_name ?? "the carer");
-        carerNames.set(reference.carer_id, carerName);
-      }
-
+  const result = await processReferenceReminders(references, now, {
+    getCarerName: async (carerId) => {
+      const { data: profile, error: profileError } = await admin
+        .from("caregiver_profiles")
+        .select("display_name")
+        .eq("user_id", carerId)
+        .maybeSingle<{ display_name: string | null }>();
+      if (profileError) throw profileError;
+      return profile?.display_name ?? null;
+    },
+    dispatch: async ({ reference, stage, carerName }) => {
       const emailArgs = {
         refereeName: reference.referee_name,
         carerName,
@@ -102,26 +89,20 @@ export async function GET(req: Request) {
         text,
       });
       if (!delivery.ok) throw new Error(delivery.error);
-
-      const { error: stampError } = await admin
+    },
+    markSent: async ({ reference, stage, sentAt }) => {
+      const { data: stamped, error: stampError } = await admin
         .from("carer_references")
-        .update({ reminder_stage: stage, last_reminder_at: now.toISOString() })
+        .update({ reminder_stage: stage, last_reminder_at: sentAt })
         .eq("id", reference.id)
         .eq("status", "invited")
-        .eq("reminder_stage", reference.reminder_stage);
+        .eq("reminder_stage", reference.reminder_stage)
+        .select("id")
+        .maybeSingle();
       if (stampError) throw stampError;
-      sent += 1;
-    } catch (err) {
-      errors.push({
-        reference_id: reference.id,
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }
-
-  return NextResponse.json({
-    scanned: references.length,
-    sent,
-    errors,
+      if (!stamped) throw new Error("Reference reminder was already updated");
+    },
   });
+
+  return NextResponse.json(result);
 }
