@@ -1,18 +1,20 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/smtp";
 import { renderReferenceInviteEmail } from "@/lib/email/templates";
-import { isReferenceType } from "@/lib/vetting/reference-cqc";
-import {
-  MAX_REFERENCES,
-  type ReferenceType,
-} from "@/lib/vetting/types";
+import { MAX_REFERENCES, REFERENCE_TYPES } from "@/lib/vetting/types";
 
 export const dynamic = "force-dynamic";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const CreateBodySchema = z.object({
+  referee_name: z.string().trim().min(1).max(80),
+  referee_email: z.string().trim().email().max(120),
+  relationship: z.string().trim().max(80).optional(),
+  reference_type: z.enum(REFERENCE_TYPES),
+});
 
 function siteUrl(): string {
   return (
@@ -43,13 +45,6 @@ export async function GET() {
   return NextResponse.json({ references: data ?? [] });
 }
 
-type CreateBody = {
-  referee_name?: string;
-  referee_email?: string;
-  relationship?: string;
-  reference_type?: string;
-};
-
 export async function POST(req: Request) {
   const supabase = await createClient();
   const {
@@ -59,31 +54,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  let body: CreateBody;
+  let payload: unknown;
   try {
-    body = (await req.json()) as CreateBody;
+    payload = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  const name = String(body.referee_name ?? "").trim();
-  const email = String(body.referee_email ?? "").trim().toLowerCase();
-  const relationship =
-    typeof body.relationship === "string" && body.relationship.trim()
-      ? body.relationship.trim().slice(0, 80)
-      : null;
-  const referenceType = String(body.reference_type ?? "").trim();
-  if (name.length < 1 || name.length > 80) {
-    return NextResponse.json({ error: "Name required" }, { status: 400 });
-  }
-  if (!EMAIL_RE.test(email) || email.length > 120) {
-    return NextResponse.json({ error: "Valid email required" }, { status: 400 });
-  }
-  if (!isReferenceType(referenceType)) {
+  const parsed = CreateBodySchema.safeParse(payload);
+  if (!parsed.success) {
     return NextResponse.json(
-      { error: "Valid reference type required" },
+      { error: "Invalid reference details" },
       { status: 400 },
     );
   }
+  const { referee_name: name, reference_type: referenceType } = parsed.data;
+  const email = parsed.data.referee_email.toLowerCase();
+  const relationship = parsed.data.relationship || null;
 
   const { count } = await supabase
     .from("carer_references")
@@ -139,7 +125,7 @@ export async function POST(req: Request) {
     carerName,
     link,
     expiresAtIso: inserted.token_expires_at,
-    referenceType: referenceType as ReferenceType,
+    referenceType,
   });
   await sendEmail({ to: email, subject, html, text }).catch((e) => {
     console.error("[references] invite email failed", e);
