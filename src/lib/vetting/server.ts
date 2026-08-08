@@ -62,18 +62,40 @@ export async function hasCompletedCourse(
   return { completed_modules: done, total, complete: done === total };
 }
 
-/** "Complete" when at least 2 of 3 references are verified. */
+/**
+ * "Complete" when at least 2 references are verified, including one
+ * employer reference required by CQC Schedule 3. Existing rows pre-date
+ * `reference_type`; their null type is treated as employer for backward
+ * compatibility so already-complete carers do not regress.
+ */
 export async function getReferencesStatus(
   admin: AdminClient,
   carerId: string,
-): Promise<{ verified: number; total: number; complete: boolean }> {
+): Promise<{
+  verified: number;
+  total: number;
+  verified_employer: number;
+  complete: boolean;
+}> {
   const { data } = await admin
     .from("carer_references")
-    .select("status")
+    .select("status, reference_type")
     .eq("carer_id", carerId);
-  const rows = (data ?? []) as { status: string }[];
-  const verified = rows.filter((r) => r.status === "verified").length;
-  return { verified, total: rows.length, complete: verified >= 2 };
+  const rows = (data ?? []) as {
+    status: string;
+    reference_type: string | null;
+  }[];
+  const verifiedRows = rows.filter((r) => r.status === "verified");
+  const verified = verifiedRows.length;
+  const verified_employer = verifiedRows.filter(
+    (r) => r.reference_type === null || r.reference_type === "employer",
+  ).length;
+  return {
+    verified,
+    total: rows.length,
+    verified_employer,
+    complete: verified >= 2 && verified_employer >= 1,
+  };
 }
 
 export async function getCertificationsCount(
