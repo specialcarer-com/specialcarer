@@ -48,6 +48,9 @@ export default function RefereeForm({
   const [rating, setRating] = useState<number>(5);
   const [recommend, setRecommend] = useState<boolean | null>(null);
   const [comment, setComment] = useState("");
+  const [responseMode, setResponseMode] = useState<"form" | "upload" | "declined">("form");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [declineReason, setDeclineReason] = useState("");
   const [refereePosition, setRefereePosition] = useState("");
   const [refereeCompany, setRefereeCompany] = useState("");
   const [refereeCompanyAddr, setRefereeCompanyAddr] = useState("");
@@ -113,6 +116,106 @@ export default function RefereeForm({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (submitting) return;
+
+    if (responseMode === "declined") {
+      if (declineReason.trim().length < 5) {
+        setErrors(["Please tell us briefly why you are declining."]);
+        setState("err");
+        return;
+      }
+      setState("submitting");
+      const res = await fetch("/api/references/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token,
+          response_mode: "declined",
+          decline_reason: declineReason.trim(),
+        }),
+      });
+      if (res.ok) {
+        setState("ok");
+      } else {
+        const json = await res.json().catch(() => ({}));
+        setErrors([prettyError(json.error)]);
+        setState("err");
+      }
+      return;
+    }
+
+    if (responseMode === "upload") {
+      if (!uploadFile) {
+        setErrors(["Choose a reference document to upload."]);
+        setState("err");
+        return;
+      }
+      const allowed = [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "image/png",
+        "image/jpeg",
+      ];
+      if (
+        uploadFile.size > 10 * 1024 * 1024 ||
+        !allowed.includes(uploadFile.type)
+      ) {
+        setErrors([
+          "Upload a PDF, Word document, PNG or JPG no larger than 10MB.",
+        ]);
+        setState("err");
+        return;
+      }
+      setState("submitting");
+      try {
+        const setup = await fetch("/api/references/upload-url", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            token,
+            filename: uploadFile.name,
+            mime: uploadFile.type,
+            size: uploadFile.size,
+          }),
+        });
+        const signed = await setup.json().catch(() => ({}));
+        if (!setup.ok || !signed.signedUrl) {
+          throw new Error(signed.error ?? "Could not prepare upload");
+        }
+        const put = await fetch(signed.signedUrl, {
+          method: "PUT",
+          headers: { "Content-Type": uploadFile.type },
+          body: uploadFile,
+        });
+        if (!put.ok) throw new Error("Could not upload document");
+        const res = await fetch("/api/references/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            token,
+            response_mode: "upload",
+            uploaded_file_path: signed.path,
+            uploaded_file_size: uploadFile.size,
+            uploaded_file_mime: uploadFile.type,
+            comment: comment.trim() || undefined,
+          }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || !json.ok) {
+          throw new Error(json.error ?? "Could not submit document");
+        }
+        setState("ok");
+      } catch (err) {
+        setErrors([
+          err instanceof Error
+            ? prettyError(err.message)
+            : "Could not upload document",
+        ]);
+        setState("err");
+      }
+      return;
+    }
+
     const missing = validate();
     if (missing.length > 0) {
       setErrors(missing);
@@ -178,7 +281,43 @@ export default function RefereeForm({
 
   return (
     <form onSubmit={submit} className="space-y-8">
-      <FormSection title="Candidate details">
+      <fieldset className="rounded-2xl border border-brand-teal/20 bg-brand-cream p-4">
+        <legend className="px-1 text-sm font-bold text-brand-ink">
+          How would you like to respond?
+        </legend>
+        <div className="mt-2 space-y-3">
+          {[
+            ["form", "I’m happy to provide a reference", "Complete the secure reference form online."],
+            ["upload", "I’d prefer to upload my own reference document", "Upload a signed or company reference instead."],
+            ["declined", "I don’t wish to provide a reference", "Tell us privately why you are declining."],
+          ].map(([value, label, help]) => (
+            <label
+              key={value}
+              className="flex cursor-pointer items-start gap-3 rounded-xl bg-white p-3 text-sm"
+            >
+              <input
+                type="radio"
+                name="response-mode"
+                value={value}
+                checked={responseMode === value}
+                onChange={() =>
+                  setResponseMode(value as "form" | "upload" | "declined")
+                }
+                className="mt-1 h-4 w-4 text-brand-teal"
+              />
+              <span>
+                <span className="block font-semibold text-brand-ink">
+                  {label}
+                </span>
+                <span className="text-brand-ink/70">{help}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      {responseMode === "form" && (
+        <>
+          <FormSection title="Candidate details">
         <Field label="Candidate name">
           <input className={`${inputClass} bg-brand-cream`} readOnly value={carerName} />
         </Field>
@@ -445,7 +584,9 @@ export default function RefereeForm({
             className={inputClass}
           />
         </Field>
-      </FormSection>
+          </FormSection>
+        </>
+      )}
 
       <div className="rounded-xl border border-brand-teal/20 bg-brand-cream p-4 text-xs leading-relaxed text-brand-ink/80">
         <strong>Data Protection.</strong> This form contains personal data as
@@ -456,6 +597,52 @@ export default function RefereeForm({
         required — the CQC or Local Authority Designated Officer. For details
         see <a href="/privacy" className="font-semibold text-brand-teal underline">Privacy Policy</a>.
       </div>
+
+      {responseMode === "upload" && (
+        <section className="space-y-3 rounded-xl border border-brand-ink/15 bg-brand-cream p-4">
+          <label className="block text-sm font-semibold text-brand-ink">
+            Upload reference document
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+              onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+              className="mt-2 block w-full text-sm"
+            />
+          </label>
+          <p className="text-xs text-brand-ink/60">
+            PDF, Word, PNG or JPG. Maximum 10MB.
+          </p>
+          <label className="block text-sm font-semibold text-brand-ink">
+            Anything else you’d like to add?
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              maxLength={2000}
+              rows={4}
+              className={`${inputClass} mt-1`}
+            />
+          </label>
+        </section>
+      )}
+      {responseMode === "declined" && (
+        <section className="rounded-xl border border-brand-peach/50 bg-brand-cream p-4">
+          <label className="block text-sm font-semibold text-brand-ink">
+            Please tell us briefly why you’re declining.{" "}
+            <span className="font-normal text-brand-ink/70">
+              This won’t be shared with the candidate.
+            </span>
+            <textarea
+              value={declineReason}
+              onChange={(e) => setDeclineReason(e.target.value)}
+              required={responseMode === "declined"}
+              minLength={5}
+              maxLength={1000}
+              rows={4}
+              className={`${inputClass} mt-2`}
+            />
+          </label>
+        </section>
+      )}
 
       {state === "err" && errors.length > 0 && (
         <div role="alert" className="rounded-xl border border-[#B24747]/30 bg-[#F9E9E9] p-4 text-sm text-[#B24747]">
@@ -470,7 +657,7 @@ export default function RefereeForm({
         disabled={submitting}
         className="w-full px-5 py-3 rounded-xl bg-brand-teal text-white text-sm font-semibold hover:bg-[#028688] transition disabled:opacity-60"
       >
-        {state === "submitting" ? "Submitting…" : "Submit reference"}
+        {state === "submitting" ? "Submitting…" : responseMode === "upload" ? "Upload and submit reference" : responseMode === "declined" ? "Submit decline" : "Submit reference"}
       </button>
     </form>
   );
