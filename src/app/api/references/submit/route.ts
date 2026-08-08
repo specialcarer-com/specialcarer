@@ -34,6 +34,11 @@ type Body = {
   referee_company?: string | null;
   referee_company_addr?: string | null;
   referee_signed_date?: string | null;
+  response_mode?: string;
+  decline_reason?: string;
+  uploaded_file_path?: string;
+  uploaded_file_size?: number;
+  uploaded_file_mime?: string;
 };
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -91,6 +96,32 @@ export async function POST(req: Request) {
   const token = String(body.token ?? "").trim();
   if (!token) {
     return NextResponse.json({ error: "Missing token" }, { status: 400 });
+  }
+  const responseMode = body.response_mode ?? "form";
+  if (responseMode !== "form" && responseMode !== "upload" && responseMode !== "declined") {
+    return invalid("Invalid response mode");
+  }
+  if (responseMode !== "form") {
+    const admin = createAdminClient();
+    const { data: row } = await admin.from("carer_references").select("id, status, token_expires_at").eq("token", token).maybeSingle<{ id: string; status: string; token_expires_at: string }>();
+    if (!row) return NextResponse.json({ error: "not_found" }, { status: 404 });
+    if (row.status !== "invited") return NextResponse.json({ error: "already_submitted" }, { status: 400 });
+    if (new Date(row.token_expires_at).getTime() < Date.now()) { await admin.from("carer_references").update({ status: "expired" }).eq("id", row.id); return NextResponse.json({ error: "expired" }, { status: 400 }); }
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || null;
+    const ua = req.headers.get("user-agent")?.slice(0, 240) ?? null;
+    if (responseMode === "declined") {
+      const reason = typeof body.decline_reason === "string" ? body.decline_reason.trim() : "";
+      if (reason.length < 5 || reason.length > 1000) return invalid("A decline reason of at least 5 characters is required");
+      const { error } = await admin.from("carer_references").update({ status: "rejected", response_mode: "declined", decline_reason: reason, rejected_reason: reason, submitted_at: new Date().toISOString(), ip_address: ip, user_agent: ua }).eq("id", row.id);
+      return error ? NextResponse.json({ error: error.message }, { status: 500 }) : NextResponse.json({ ok: true });
+    }
+    const filePath = typeof body.uploaded_file_path === "string" ? body.uploaded_file_path : "";
+    const fileSize = body.uploaded_file_size;
+    const fileMime = typeof body.uploaded_file_mime === "string" ? body.uploaded_file_mime : "";
+    const allowedMime = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "image/png", "image/jpeg"];
+    if (!filePath.startsWith(`${token}/`) || !Number.isInteger(fileSize) || (fileSize as number) < 1 || (fileSize as number) > 10 * 1024 * 1024 || !allowedMime.includes(fileMime)) return invalid("A valid uploaded reference document is required");
+    const { error } = await admin.from("carer_references").update({ status: "submitted", response_mode: "upload", uploaded_file_path: filePath, uploaded_file_size: fileSize, uploaded_file_mime: fileMime, comment: typeof body.comment === "string" ? body.comment.trim().slice(0, 2000) || null : null, submitted_at: new Date().toISOString(), ip_address: ip, user_agent: ua }).eq("id", row.id);
+    return error ? NextResponse.json({ error: error.message }, { status: 500 }) : NextResponse.json({ ok: true });
   }
   const rating =
     Number.isInteger(body.rating) &&
@@ -250,6 +281,7 @@ export async function POST(req: Request) {
     .from("carer_references")
     .update({
       status: "submitted",
+      response_mode: "form",
       rating,
       recommend,
       comment,
