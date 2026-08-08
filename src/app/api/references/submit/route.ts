@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  REFERENCE_TYPES,
+  TRISTATE_YES_NO,
+  type ReferenceType,
+  type YesNoUnsure,
+} from "@/lib/vetting/types";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +14,62 @@ type Body = {
   rating?: number;
   recommend?: boolean;
   comment?: string;
+  reference_type?: string;
+  employment_start?: string | null;
+  employment_end?: string | null;
+  still_employed?: boolean;
+  position_held?: string | null;
+  weekly_hours?: number | null;
+  reason_for_leaving?: string | null;
+  absence_days_12m?: number | null;
+  sponsors_visa?: string | null;
+  warnings_undisposed?: string | null;
+  under_investigation?: string | null;
+  safeguarding_dbs?: string | null;
+  would_reemploy?: string | null;
+  values_example?: string | null;
+  referee_position?: string | null;
+  referee_company?: string | null;
+  referee_company_addr?: string | null;
+  referee_signed_date?: string | null;
 };
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function asOptionalText(
+  value: unknown,
+  maxLength: number,
+  field: string,
+): { value: string | null; error?: string } {
+  if (value === undefined || value === null || value === "") {
+    return { value: null };
+  }
+  if (typeof value !== "string") return { value: null, error: `${field} is invalid` };
+  const trimmed = value.trim();
+  if (trimmed.length > maxLength) {
+    return { value: null, error: `${field} must be ${maxLength} characters or fewer` };
+  }
+  return { value: trimmed || null };
+}
+
+function asDate(
+  value: unknown,
+  field: string,
+): { value: string | null; error?: string } {
+  if (value === undefined || value === null || value === "") return { value: null };
+  if (typeof value !== "string" || !ISO_DATE_RE.test(value)) {
+    return { value: null, error: `${field} must be a valid date` };
+  }
+  const date = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
+    return { value: null, error: `${field} must be a valid date` };
+  }
+  return { value };
+}
+
+function invalid(error: string) {
+  return NextResponse.json({ error }, { status: 400 });
+}
 
 /**
  * POST /api/references/submit
@@ -41,6 +102,118 @@ export async function POST(req: Request) {
     typeof body.comment === "string" && body.comment.trim()
       ? body.comment.trim().slice(0, 2000)
       : null;
+  const referenceType = String(body.reference_type ?? "").trim();
+  if (!REFERENCE_TYPES.includes(referenceType as ReferenceType)) {
+    return invalid("Reference type is required");
+  }
+  const employmentStart = asDate(body.employment_start, "Employment start date");
+  const employmentEnd = asDate(body.employment_end, "Employment end date");
+  const refereeSignedDate = asDate(body.referee_signed_date, "Today's date");
+  const positionHeld = asOptionalText(body.position_held, 120, "Position held");
+  const reasonForLeaving = asOptionalText(
+    body.reason_for_leaving,
+    500,
+    "Reason for leaving",
+  );
+  const sponsorsVisa = asOptionalText(body.sponsors_visa, 200, "Visa sponsorship");
+  const valuesExample = asOptionalText(body.values_example, 2000, "Values example");
+  const refereePosition = asOptionalText(
+    body.referee_position,
+    120,
+    "Your position",
+  );
+  const refereeCompany = asOptionalText(
+    body.referee_company,
+    160,
+    "Company name",
+  );
+  const refereeCompanyAddr = asOptionalText(
+    body.referee_company_addr,
+    500,
+    "Company address",
+  );
+  const textFields = [
+    employmentStart,
+    employmentEnd,
+    refereeSignedDate,
+    positionHeld,
+    reasonForLeaving,
+    sponsorsVisa,
+    valuesExample,
+    refereePosition,
+    refereeCompany,
+    refereeCompanyAddr,
+  ];
+  const textError = textFields.find((field) => field.error)?.error;
+  if (textError) return invalid(textError);
+
+  const stillEmployed =
+    typeof body.still_employed === "boolean" ? body.still_employed : false;
+  const weeklyHours =
+    typeof body.weekly_hours === "number" &&
+    Number.isFinite(body.weekly_hours) &&
+    body.weekly_hours >= 0 &&
+    body.weekly_hours <= 168
+      ? body.weekly_hours
+      : null;
+  const absenceDays =
+    Number.isInteger(body.absence_days_12m) &&
+    (body.absence_days_12m as number) >= 0 &&
+    (body.absence_days_12m as number) <= 366
+      ? (body.absence_days_12m as number)
+      : null;
+  const tristate = (value: unknown): YesNoUnsure | null => {
+    if (!TRISTATE_YES_NO.includes(value as YesNoUnsure)) {
+      return null;
+    }
+    return value as YesNoUnsure;
+  };
+  const warningsUndisposed = tristate(body.warnings_undisposed);
+  const underInvestigation = tristate(body.under_investigation);
+  const safeguardingDbs = tristate(body.safeguarding_dbs);
+  const wouldReemploy = tristate(body.would_reemploy);
+
+  if (
+    !warningsUndisposed ||
+    !underInvestigation ||
+    !safeguardingDbs ||
+    !wouldReemploy
+  ) {
+    return invalid("All conduct and safeguarding questions must be answered");
+  }
+  if (!valuesExample.value) return invalid("Values example is required");
+  if (!refereePosition.value) return invalid("Your position is required");
+  if (!refereeCompany.value) return invalid("Company name is required");
+  if (!refereeCompanyAddr.value) return invalid("Company address is required");
+  if (!refereeSignedDate.value) return invalid("Today's date is required");
+  if (weeklyHours === null) return invalid("Weekly hours must be between 0 and 168");
+  if (absenceDays === null) return invalid("Absence days must be between 0 and 366");
+
+  const needsEmploymentDetails =
+    referenceType === "employer" || referenceType === "professional";
+  if (needsEmploymentDetails && !employmentStart.value) {
+    return invalid("Employment start date is required");
+  }
+  if (needsEmploymentDetails && !positionHeld.value) {
+    return invalid("Position held is required");
+  }
+  if (referenceType === "employer" && !stillEmployed && !reasonForLeaving.value) {
+    return invalid("Reason for leaving is required");
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  if (employmentStart.value && employmentStart.value > today) {
+    return invalid("Employment start date cannot be in the future");
+  }
+  if (
+    employmentStart.value &&
+    employmentEnd.value &&
+    employmentEnd.value < employmentStart.value
+  ) {
+    return invalid("Employment end date cannot be before the start date");
+  }
+  if (stillEmployed && employmentEnd.value) {
+    return invalid("Employment end date must be empty when still employed");
+  }
 
   const admin = createAdminClient();
   const { data: row } = await admin
@@ -80,6 +253,24 @@ export async function POST(req: Request) {
       rating,
       recommend,
       comment,
+      reference_type: referenceType,
+      employment_start: employmentStart.value,
+      employment_end: employmentEnd.value,
+      still_employed: stillEmployed,
+      position_held: positionHeld.value,
+      weekly_hours: weeklyHours,
+      reason_for_leaving: reasonForLeaving.value,
+      absence_days_12m: absenceDays,
+      sponsors_visa: sponsorsVisa.value,
+      warnings_undisposed: warningsUndisposed,
+      under_investigation: underInvestigation,
+      safeguarding_dbs: safeguardingDbs,
+      would_reemploy: wouldReemploy,
+      values_example: valuesExample.value,
+      referee_position: refereePosition.value,
+      referee_company: refereeCompany.value,
+      referee_company_addr: refereeCompanyAddr.value,
+      referee_signed_date: refereeSignedDate.value,
       ip_address: ip,
       user_agent: ua,
       submitted_at: new Date().toISOString(),

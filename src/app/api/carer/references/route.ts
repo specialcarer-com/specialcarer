@@ -4,7 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/smtp";
 import { renderReferenceInviteEmail } from "@/lib/email/templates";
-import { MAX_REFERENCES } from "@/lib/vetting/types";
+import {
+  MAX_REFERENCES,
+  REFERENCE_TYPES,
+  type ReferenceType,
+} from "@/lib/vetting/types";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +33,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("carer_references")
     .select(
-      "id, referee_name, referee_email, relationship, status, token_expires_at, rating, recommend, comment, submitted_at, verified_at, rejected_reason, created_at",
+      "id, referee_name, referee_email, relationship, reference_type, status, token_expires_at, rating, recommend, comment, employment_start, employment_end, still_employed, position_held, weekly_hours, reason_for_leaving, absence_days_12m, sponsors_visa, warnings_undisposed, under_investigation, safeguarding_dbs, would_reemploy, values_example, referee_position, referee_company, referee_company_addr, referee_signed_date, submitted_at, verified_at, rejected_reason, created_at",
     )
     .eq("carer_id", user.id)
     .order("created_at", { ascending: false });
@@ -43,6 +47,7 @@ type CreateBody = {
   referee_name?: string;
   referee_email?: string;
   relationship?: string;
+  reference_type?: string;
 };
 
 export async function POST(req: Request) {
@@ -66,11 +71,18 @@ export async function POST(req: Request) {
     typeof body.relationship === "string" && body.relationship.trim()
       ? body.relationship.trim().slice(0, 80)
       : null;
+  const referenceType = String(body.reference_type ?? "").trim();
   if (name.length < 1 || name.length > 80) {
     return NextResponse.json({ error: "Name required" }, { status: 400 });
   }
   if (!EMAIL_RE.test(email) || email.length > 120) {
     return NextResponse.json({ error: "Valid email required" }, { status: 400 });
+  }
+  if (!REFERENCE_TYPES.includes(referenceType as ReferenceType)) {
+    return NextResponse.json(
+      { error: "Valid reference type required" },
+      { status: 400 },
+    );
   }
 
   const { count } = await supabase
@@ -92,10 +104,11 @@ export async function POST(req: Request) {
       referee_name: name,
       referee_email: email,
       relationship,
+      reference_type: referenceType,
       token,
     })
     .select(
-      "id, referee_name, referee_email, relationship, status, token, token_expires_at",
+      "id, referee_name, referee_email, relationship, reference_type, status, token, token_expires_at",
     )
     .single();
   if (error || !inserted) {
@@ -137,6 +150,7 @@ export async function POST(req: Request) {
       referee_name: inserted.referee_name,
       referee_email: inserted.referee_email,
       relationship: inserted.relationship,
+      reference_type: inserted.reference_type,
       status: inserted.status,
       token_expires_at: inserted.token_expires_at,
     },
