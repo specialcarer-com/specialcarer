@@ -33,6 +33,23 @@ export const SKILLS_COOLDOWN_HOURS = 24;
 export const INTERVIEW_PROMPT_COUNT = 3;
 export const INTERVIEW_MAX_SECONDS = 60;
 
+export const REFERENCE_TYPES = [
+  "employer",
+  "character",
+  "professional",
+  "client",
+] as const;
+export type ReferenceType = (typeof REFERENCE_TYPES)[number];
+export const REFERENCE_TYPE_LABEL: Record<ReferenceType, string> = {
+  employer: "Former employer",
+  character: "Character reference",
+  professional: "Professional colleague",
+  client: "Client / family cared for",
+};
+
+export const TRISTATE_YES_NO = ["yes", "no", "unsure"] as const;
+export type YesNoUnsure = (typeof TRISTATE_YES_NO)[number];
+
 export const CERTIFICATIONS_BUCKET = "certifications";
 export const INTERVIEW_VIDEOS_BUCKET = "interview-videos";
 
@@ -124,7 +141,12 @@ export type CertStatus = "pending" | "verified" | "rejected" | "expired";
 export type InterviewStatus = "pending" | "approved" | "rejected";
 
 export type VettingSummary = {
-  references: { verified: number; total: number; complete: boolean };
+  references: {
+    verified: number;
+    total: number;
+    verified_employer: number;
+    complete: boolean;
+  };
   certifications: { verified: number; pending: number };
   skills: {
     verticals_passed: Vertical[];
