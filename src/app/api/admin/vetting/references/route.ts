@@ -36,11 +36,14 @@ export async function POST(req: Request) {
   if (body.action === "verify") {
     const { data: reference } = await admin
       .from("carer_references")
-      .select("safeguarding_dbs")
+      .select("safeguarding_dbs, response_mode")
       .eq("id", body.id)
-      .maybeSingle<{ safeguarding_dbs: string | null }>();
+      .maybeSingle<{ safeguarding_dbs: string | null; response_mode: string | null }>();
     if (!reference) {
       return NextResponse.json({ error: "not_found" }, { status: 404 });
+    }
+    if (reference.response_mode === "declined") {
+      return NextResponse.json({ error: "declined_references_cannot_be_verified" }, { status: 400 });
     }
     const guardError = validateReferenceVerifyGuard({
       safeguardingDbs: reference.safeguarding_dbs,
