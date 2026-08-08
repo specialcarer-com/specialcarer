@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { requireAdminApi } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { validateReferenceVerifyGuard } from "@/lib/vetting/reference-cqc";
 
 export const dynamic = "force-dynamic";
 
-type Body = {
-  id?: string;
-  action?: "verify" | "reject";
-  reason?: string;
-  admin_notes?: string;
-};
+const BodySchema = z.object({
+  id: z.string().trim().min(1),
+  action: z.enum(["verify", "reject"]),
+  reason: z.string().trim().max(500).optional(),
+  admin_notes: z.string().trim().max(1000).optional(),
+});
 
 export async function POST(req: Request) {
   const _adminGuard_me = await requireAdminApi();
@@ -18,27 +19,31 @@ export async function POST(req: Request) {
   if (!_adminGuard_me.ok) return _adminGuard_me.response;
 
   const me = _adminGuard_me.admin;
-  let body: Body;
+  let payload: unknown;
   try {
-    body = (await req.json()) as Body;
+    payload = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  if (!body.id || (body.action !== "verify" && body.action !== "reject")) {
+  const parsed = BodySchema.safeParse(payload);
+  if (!parsed.success) {
     return NextResponse.json({ error: "invalid_args" }, { status: 400 });
   }
+  const body = parsed.data;
   const admin = createAdminClient();
-  const adminNotes =
-    typeof body.admin_notes === "string" ? body.admin_notes.trim() : "";
-  if (adminNotes.length > 1000) {
-    return NextResponse.json({ error: "admin_notes_too_long" }, { status: 400 });
-  }
+  const adminNotes = body.admin_notes ?? "";
   if (body.action === "verify") {
-    const { data: reference } = await admin
+    const { data: reference, error: referenceError } = await admin
       .from("carer_references")
       .select("safeguarding_dbs")
       .eq("id", body.id)
       .maybeSingle<{ safeguarding_dbs: string | null }>();
+    if (referenceError) {
+      return NextResponse.json(
+        { error: referenceError.message },
+        { status: 500 },
+      );
+    }
     if (!reference) {
       return NextResponse.json({ error: "not_found" }, { status: 404 });
     }
@@ -53,18 +58,19 @@ export async function POST(req: Request) {
       );
     }
   }
-  const update: Record<string, unknown> = {
-    verified_by: me.id,
-    verified_at: new Date().toISOString(),
-    admin_notes: adminNotes || null,
-  };
+  const update: Record<string, unknown> = {};
+  if (typeof body.admin_notes === "string") {
+    update.admin_notes = adminNotes || null;
+  }
   if (body.action === "verify") {
     update.status = "verified";
+    update.verified_by = me.id;
+    update.verified_at = new Date().toISOString();
     update.rejected_reason = null;
   } else {
     update.status = "rejected";
     update.rejected_reason =
-      typeof body.reason === "string" ? body.reason.slice(0, 500) : null;
+      body.reason || null;
   }
   const { error } = await admin
     .from("carer_references")
