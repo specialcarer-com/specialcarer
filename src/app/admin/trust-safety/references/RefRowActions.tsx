@@ -49,7 +49,7 @@ export default function RefRowActions({
   return (
     <div className="space-y-2">
       {safeguardingDbs === "yes" && (
-        <p className="text-xs font-semibold text-rose-700">
+        <p className="text-xs font-semibold text-[#B24747]">
           Safeguarding / DBS is marked Yes. Explain the decision before verifying.
         </p>
       )}
@@ -58,7 +58,7 @@ export default function RefRowActions({
         type="button"
         onClick={() => call("verify")}
         disabled={busy}
-        className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 disabled:opacity-50"
+        className="px-3 py-1.5 rounded-lg bg-brand-teal text-white text-xs font-semibold hover:bg-[#028688] disabled:opacity-50"
       >
         Verify
       </button>
@@ -67,7 +67,7 @@ export default function RefRowActions({
         value={reason}
         onChange={(e) => setReason(e.target.value)}
         placeholder="Reject reason (optional)"
-        className="text-xs px-2 py-1.5 rounded-lg border border-slate-200 w-64"
+        className="text-xs px-2 py-1.5 rounded-lg border border-brand-ink/15 w-64"
       />
       <input
         type="text"
@@ -79,18 +79,18 @@ export default function RefRowActions({
             ? "Admin notes (required to verify)"
             : "Admin notes (optional)"
         }
-        className="text-xs px-2 py-1.5 rounded-lg border border-slate-200 w-72"
+        className="text-xs px-2 py-1.5 rounded-lg border border-brand-ink/15 w-72"
       />
       <button
         type="button"
         onClick={() => call("reject")}
         disabled={busy}
-        className="px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700 disabled:opacity-50"
+        className="px-3 py-1.5 rounded-lg bg-[#B24747] text-white text-xs font-semibold hover:bg-[#B24747]/90 disabled:opacity-50"
       >
         Reject
       </button>
       </div>
-      {error && <p role="alert" className="text-xs text-rose-700">{error}</p>}
+      {error && <p role="alert" className="text-xs text-[#B24747]">{error}</p>}
     </div>
   );
 }
