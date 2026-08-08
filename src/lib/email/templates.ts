@@ -9,10 +9,7 @@
 // across email templates, carer-facing API responses, admin dashboards,
 // etc. See src/lib/privacy/mask.ts for the lifecycle rule and rationale.
 import { maskAddress, maskEmail, maskPhone } from "@/lib/privacy/mask";
-import {
-  REFERENCE_TYPE_LABEL,
-  type ReferenceType,
-} from "@/lib/vetting/types";
+import type { ReferenceType } from "@/lib/vetting/types";
 
 const BRAND_PRIMARY = "#039EA0";
 const BRAND_HEADING = "#171E54";
@@ -370,6 +367,13 @@ export type ReferenceInviteEmail = {
   referenceType: ReferenceType;
 };
 
+const REFERENCE_INVITE_DESCRIPTION: Record<ReferenceType, string> = {
+  employer: "an employer reference",
+  character: "a character reference",
+  professional: "a professional reference",
+  client: "a reference from a client you have supported",
+};
+
 function escapeRefHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -385,7 +389,7 @@ export function renderReferenceInviteEmail(args: ReferenceInviteEmail): {
   text: string;
 } {
   const subject = `${args.carerName} has listed you as a reference on SpecialCarer`;
-  const referenceTypeLabel = REFERENCE_TYPE_LABEL[args.referenceType];
+  const referenceDescription = REFERENCE_INVITE_DESCRIPTION[args.referenceType];
   const expires = new Date(args.expiresAtIso).toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
@@ -397,7 +401,7 @@ export function renderReferenceInviteEmail(args: ReferenceInviteEmail): {
   <h2 style="color:#0E7C7B;margin:0 0 8px">Reference request</h2>
   <p>Hi ${escapeRefHtml(args.refereeName)},</p>
   <p>${escapeRefHtml(args.carerName)} has applied to provide care on SpecialCarer and has listed you as one of their references.</p>
-  <p>You've been listed as a ${escapeRefHtml(referenceTypeLabel)} reference for ${escapeRefHtml(args.carerName)}.</p>
+  <p>${escapeRefHtml(args.carerName)} has asked you to provide ${escapeRefHtml(referenceDescription)}.</p>
   <p>Could you take 2 minutes to vouch for them? It really helps families know who they're inviting into their homes.</p>
   <p style="margin:24px 0">
     <a href="${args.link}" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
@@ -421,7 +425,7 @@ export function renderReferenceInviteEmail(args: ReferenceInviteEmail): {
     `Hi ${args.refereeName},`,
     "",
     `${args.carerName} has applied to provide care on SpecialCarer and has listed you as a reference.`,
-    `You've been listed as a ${referenceTypeLabel} reference for ${args.carerName}.`,
+    `${args.carerName} has asked you to provide ${referenceDescription}.`,
     "",
     "Open the reference form:",
     args.link,
