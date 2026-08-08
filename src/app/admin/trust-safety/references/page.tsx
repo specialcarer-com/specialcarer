@@ -43,6 +43,11 @@ type Row = {
   referee_company_addr: string | null;
   referee_signed_date: string | null;
   admin_notes: string | null;
+  response_mode: "form" | "upload" | "declined" | null;
+  decline_reason: string | null;
+  uploaded_file_path: string | null;
+  uploaded_file_size: number | null;
+  uploaded_file_mime: string | null;
   created_at: string;
 };
 
@@ -67,7 +72,9 @@ export default async function ReferencesQueuePage({
     )
     .order("submitted_at", { ascending: false, nullsFirst: false })
     .limit(200);
-  if (filter !== "all") {
+  if (filter === "declined") {
+    q = q.eq("response_mode", "declined");
+  } else if (filter !== "all") {
     q = q.eq("status", filter);
   }
   if (referenceType !== "all") {
@@ -75,6 +82,15 @@ export default async function ReferencesQueuePage({
   }
   const { data } = await q;
   const rows = (data ?? []) as Row[];
+  const carerIds = [...new Set(rows.map((row) => row.carer_id))];
+  const { data: consents } = carerIds.length ? await admin.from("carer_reference_consents").select("carer_id, pdf_storage_path, revoked_at").in("carer_id", carerIds).is("revoked_at", null) : { data: [] as { carer_id: string; pdf_storage_path: string | null; revoked_at: string | null }[] };
+  const consentByCarer = new Map((consents ?? []).filter((consent) => consent.pdf_storage_path).map((consent) => [consent.carer_id, consent.pdf_storage_path!]));
+  const signedUrls = await Promise.all(rows.map(async (row) => {
+    const [upload, consentPath] = [row.uploaded_file_path, consentByCarer.get(row.carer_id)];
+    const [uploadUrl, consentUrl] = await Promise.all([upload ? admin.storage.from("reference-uploads").createSignedUrl(upload, 3600) : Promise.resolve({ data: null }), consentPath ? admin.storage.from("reference-consents").createSignedUrl(consentPath, 3600) : Promise.resolve({ data: null })]);
+    return [row.id, { uploadUrl: uploadUrl.data?.signedUrl ?? null, consentUrl: consentUrl.data?.signedUrl ?? null }] as const;
+  }));
+  const urlsById = new Map(signedUrls);
 
   return (
     <div className="space-y-6">
@@ -96,7 +112,7 @@ export default async function ReferencesQueuePage({
       </div>
 
       <div className="flex gap-2 text-xs">
-        {["submitted", "verified", "rejected", "expired", "all"].map((f) => (
+        {["submitted", "declined", "verified", "rejected", "expired", "all"].map((f) => (
           <Link
             key={f}
             href={`/admin/trust-safety/references?filter=${f}`}
@@ -149,6 +165,7 @@ export default async function ReferencesQueuePage({
                 <p className="text-xs text-slate-500">
                   {r.referee_email} · for carer {r.carer_id.slice(0, 8)}…
                 </p>
+                {r.response_mode && <span className="mt-2 ml-2 inline-flex rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-bold tracking-wide text-slate-700">{r.response_mode.toUpperCase()}</span>}
                 <span className="mt-2 inline-flex rounded-full border border-[#039EA0]/20 bg-[#F4EFE6] px-2 py-0.5 text-[10px] font-bold tracking-wide text-[#0F1416]">
                   {(r.reference_type ?? "employer").toUpperCase()}
                 </span>
@@ -213,6 +230,8 @@ export default async function ReferencesQueuePage({
                 </p>
               </div>
             )}
+            {r.response_mode === "declined" && <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-800"><span className="block text-xs uppercase tracking-wide">Referee declined</span>{r.decline_reason ?? r.rejected_reason}</p>}
+            {(urlsById.get(r.id)?.uploadUrl || urlsById.get(r.id)?.consentUrl) && <div className="mt-3 flex flex-wrap gap-2"><RefRowActions id={r.id} safeguardingDbs={r.safeguarding_dbs} uploadUrl={urlsById.get(r.id)?.uploadUrl ?? null} consentUrl={urlsById.get(r.id)?.consentUrl ?? null} linksOnly /></div>}
             {r.admin_notes && (
               <p className="mt-3 text-xs text-slate-600">
                 <strong>Admin notes:</strong> {r.admin_notes}
@@ -220,7 +239,7 @@ export default async function ReferencesQueuePage({
             )}
             {r.status === "submitted" && (
               <div className="mt-3">
-                <RefRowActions id={r.id} safeguardingDbs={r.safeguarding_dbs} />
+                <RefRowActions id={r.id} safeguardingDbs={r.safeguarding_dbs} uploadUrl={null} consentUrl={null} />
               </div>
             )}
           </li>

@@ -7,9 +7,15 @@ import type { YesNoUnsure } from "@/lib/vetting/types";
 export default function RefRowActions({
   id,
   safeguardingDbs,
+  uploadUrl,
+  consentUrl,
+  linksOnly = false,
 }: {
   id: string;
   safeguardingDbs: YesNoUnsure | null;
+  uploadUrl: string | null;
+  consentUrl: string | null;
+  linksOnly?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -48,6 +54,8 @@ export default function RefRowActions({
 
   return (
     <div className="space-y-2">
+      {(uploadUrl || consentUrl) && <div className="flex flex-wrap gap-2">{uploadUrl && <a href={uploadUrl} target="_blank" rel="noreferrer" className="rounded-lg border border-[#039EA0] px-3 py-1.5 text-xs font-semibold text-[#039EA0]">Download uploaded file</a>}{consentUrl && <a href={consentUrl} target="_blank" rel="noreferrer" className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700">View candidate consent</a>}</div>}
+      {linksOnly ? null : <>
       {safeguardingDbs === "yes" && (
         <p className="text-xs font-semibold text-rose-700">
           Safeguarding / DBS is marked Yes. Explain the decision before verifying.
@@ -91,6 +99,7 @@ export default function RefRowActions({
       </button>
       </div>
       {error && <p role="alert" className="text-xs text-rose-700">{error}</p>}
+      </>}
     </div>
   );
 }
