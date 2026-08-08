@@ -1,12 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import {
+  REFERENCE_TYPE_LABEL,
+  REFERENCE_TYPES,
+  type ReferenceType,
+} from "@/lib/vetting/types";
 
 type Row = {
   id: string;
   referee_name: string;
   referee_email: string;
   relationship: string | null;
+  reference_type: ReferenceType | null;
   status: string;
   token_expires_at: string;
   rating: number | null;
@@ -30,10 +36,19 @@ export default function ReferencesClient({ initial }: { initial: Row[] }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [relationship, setRelationship] = useState("");
+  const [referenceType, setReferenceType] =
+    useState<ReferenceType>("employer");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const atCap = rows.length >= 3;
+  // Existing rows pre-date the type column and are employer references for
+  // backward compatibility with the CQC completion gate.
+  const verifiedEmployers = rows.filter(
+    (row) =>
+      row.status === "verified" &&
+      (row.reference_type === null || row.reference_type === "employer"),
+  ).length;
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -48,6 +63,7 @@ export default function ReferencesClient({ initial }: { initial: Row[] }) {
           referee_name: name.trim(),
           referee_email: email.trim(),
           relationship: relationship.trim() || undefined,
+          reference_type: referenceType,
         }),
       });
       const json = (await res.json().catch(() => ({}))) as {
@@ -62,6 +78,7 @@ export default function ReferencesClient({ initial }: { initial: Row[] }) {
       setName("");
       setEmail("");
       setRelationship("");
+      setReferenceType("employer");
     } catch {
       setErr("Network error.");
     } finally {
@@ -85,6 +102,13 @@ export default function ReferencesClient({ initial }: { initial: Row[] }) {
 
   return (
     <div className="space-y-6">
+      {verifiedEmployers < 1 && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <strong>CQC requires at least one former-employer reference.</strong>{" "}
+          You currently have {verifiedEmployers} verified employer reference
+          {verifiedEmployers === 1 ? "" : "s"}.
+        </div>
+      )}
       <div className="rounded-2xl bg-white border border-slate-200 p-5">
         {rows.length === 0 ? (
           <p className="text-sm text-slate-600">
@@ -107,6 +131,9 @@ export default function ReferencesClient({ initial }: { initial: Row[] }) {
                     ) : null}
                   </p>
                   <p className="text-xs text-slate-500">{r.referee_email}</p>
+                  <span className="mt-1 inline-flex rounded-full border border-[#039EA0]/20 bg-[#F4EFE6] px-2 py-0.5 text-[10px] font-bold tracking-wide text-[#0F1416]">
+                    {(r.reference_type ?? "employer").toUpperCase()}
+                  </span>
                   {r.status === "invited" && (
                     <p className="text-xs text-slate-500 mt-1">
                       Link expires{" "}
@@ -181,6 +208,20 @@ export default function ReferencesClient({ initial }: { initial: Row[] }) {
               placeholder="e.g. Former manager at Surrey Care"
               className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
             />
+          </Field>
+          <Field label="Reference type">
+            <select
+              required
+              value={referenceType}
+              onChange={(e) => setReferenceType(e.target.value as ReferenceType)}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            >
+              {REFERENCE_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {REFERENCE_TYPE_LABEL[type]}
+                </option>
+              ))}
+            </select>
           </Field>
           {err && <p className="text-sm text-rose-700">{err}</p>}
           <button

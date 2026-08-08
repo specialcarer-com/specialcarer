@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import type { ReferenceType } from "@/lib/vetting/types";
 import ReferencesClient from "./ReferencesClient";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +12,7 @@ type Row = {
   referee_name: string;
   referee_email: string;
   relationship: string | null;
+  reference_type: ReferenceType | null;
   status: string;
   token_expires_at: string;
   rating: number | null;
@@ -31,7 +33,7 @@ export default async function ReferencesPage() {
   const { data } = await supabase
     .from("carer_references")
     .select(
-      "id, referee_name, referee_email, relationship, status, token_expires_at, rating, recommend, comment, submitted_at, verified_at, created_at",
+      "id, referee_name, referee_email, relationship, reference_type, status, token_expires_at, rating, recommend, comment, submitted_at, verified_at, created_at",
     )
     .eq("carer_id", user.id)
     .order("created_at", { ascending: false });
