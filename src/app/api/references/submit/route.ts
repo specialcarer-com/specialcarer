@@ -186,8 +186,13 @@ export async function POST(req: Request) {
   if (!refereeCompany.value) return invalid("Company name is required");
   if (!refereeCompanyAddr.value) return invalid("Company address is required");
   if (!refereeSignedDate.value) return invalid("Today's date is required");
-  if (weeklyHours === null) return invalid("Weekly hours must be between 0 and 168");
-  if (absenceDays === null) return invalid("Absence days must be between 0 and 366");
+  const hasEmploymentFields = referenceType !== "character";
+  if (hasEmploymentFields && weeklyHours === null) {
+    return invalid("Weekly hours must be between 0 and 168");
+  }
+  if (hasEmploymentFields && absenceDays === null) {
+    return invalid("Absence days must be between 0 and 366");
+  }
 
   const needsEmploymentDetails =
     referenceType === "employer" || referenceType === "professional";

@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { ReferenceType } from "@/lib/vetting/types";
 import RefereeForm from "./RefereeForm";
 
 export const dynamic = "force-dynamic";
@@ -7,6 +8,8 @@ type RefRow = {
   id: string;
   carer_id: string;
   referee_name: string;
+  referee_email: string;
+  reference_type: ReferenceType | null;
   status: string;
   token_expires_at: string;
 };
@@ -24,7 +27,7 @@ export default async function RefereePage({
   const admin = createAdminClient();
   const { data: row } = await admin
     .from("carer_references")
-    .select("id, carer_id, referee_name, status, token_expires_at")
+    .select("id, carer_id, referee_name, referee_email, reference_type, status, token_expires_at")
     .eq("token", token)
     .maybeSingle<RefRow>();
 
@@ -71,7 +74,13 @@ export default async function RefereePage({
         Your answers help families know who they're inviting into their
         homes. This takes ~2 minutes.
       </p>
-      <RefereeForm token={token} />
+      <RefereeForm
+        token={token}
+        carerName={carerName}
+        refereeName={row.referee_name}
+        refereeEmail={row.referee_email}
+        initialReferenceType={row.reference_type}
+      />
     </Shell>
   );
 }
