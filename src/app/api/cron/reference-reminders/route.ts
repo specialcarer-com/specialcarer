@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/smtp";
-import { renderReferenceInviteEmail } from "@/lib/email/templates";
+import {
+  renderReferenceReminderStage1Email,
+  renderReferenceReminderStage2Email,
+  renderReferenceReminderStage3Email,
+} from "@/lib/email/templates";
 import {
   firstName,
   nextReferenceReminderStage,
@@ -77,16 +81,20 @@ export async function GET(req: Request) {
         carerNames.set(reference.carer_id, carerName);
       }
 
-      // The branded stage-specific renderers are supplied by the accompanying
-      // email-template change. This temporary common shape keeps the cron
-      // delivery path explicit and is replaced with those renderers there.
-      const { subject, html, text } = renderReferenceInviteEmail({
+      const emailArgs = {
         refereeName: reference.referee_name,
         carerName,
         link: `${siteUrl()}/r/${reference.token}`,
+        declineLink: `${siteUrl()}/r/${reference.token}?decline=1`,
         expiresAtIso: reference.token_expires_at,
         referenceType: reference.reference_type ?? "employer",
-      });
+      };
+      const { subject, html, text } =
+        stage === 1
+          ? renderReferenceReminderStage1Email(emailArgs)
+          : stage === 2
+            ? renderReferenceReminderStage2Email(emailArgs)
+            : renderReferenceReminderStage3Email(emailArgs);
       const delivery = await sendEmail({
         to: reference.referee_email,
         subject,
