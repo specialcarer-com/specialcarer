@@ -22,6 +22,10 @@ for (const referenceType of [
       }),
     );
 
+    assert.match(html, /How would you like to respond/);
+    assert.match(html, /I’m happy to provide a reference/);
+    assert.match(html, /I’d prefer to upload my own reference document/);
+    assert.match(html, /I don’t wish to provide a reference/);
     assert.match(html, /Candidate details/);
     assert.match(html, /About the candidate/);
     assert.match(html, /Rating/);
