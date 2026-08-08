@@ -139,6 +139,7 @@ export async function POST(req: Request) {
     carerName,
     link,
     expiresAtIso: inserted.token_expires_at,
+    referenceType: referenceType as ReferenceType,
   });
   await sendEmail({ to: email, subject, html, text }).catch((e) => {
     console.error("[references] invite email failed", e);
