@@ -18,7 +18,7 @@ type Props = {
 };
 
 const inputClass =
-  "w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:border-[#039EA0] focus:outline-none focus:ring-2 focus:ring-[#039EA0]/15";
+  "w-full px-3 py-2 rounded-xl border border-brand-ink/15 bg-white text-brand-ink focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/15";
 
 export default function RefereeForm({
   token,
@@ -58,6 +58,7 @@ export default function RefereeForm({
     "idle" | "submitting" | "ok" | "err"
   >("idle");
   const [errors, setErrors] = useState<string[]>([]);
+  const submitting = state === "submitting";
 
   const hasEmploymentFields = referenceType !== "character";
   const needsEmploymentDetails =
@@ -111,6 +112,7 @@ export default function RefereeForm({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitting) return;
     const missing = validate();
     if (missing.length > 0) {
       setErrors(missing);
@@ -126,12 +128,14 @@ export default function RefereeForm({
         body: JSON.stringify({
           token,
           reference_type: referenceType,
-          employment_start: employmentStart || null,
-          employment_end: employmentEnd || null,
-          still_employed: stillEmployed,
-          position_held: positionHeld.trim() || null,
+          employment_start: hasEmploymentFields ? employmentStart || null : null,
+          employment_end: hasEmploymentFields ? employmentEnd || null : null,
+          still_employed: hasEmploymentFields ? stillEmployed : null,
+          position_held: hasEmploymentFields ? positionHeld.trim() || null : null,
           weekly_hours: hasEmploymentFields ? Number(weeklyHours) : null,
-          reason_for_leaving: reasonForLeaving.trim() || null,
+          reason_for_leaving: hasEmploymentFields
+            ? reasonForLeaving.trim() || null
+            : null,
           absence_days_12m: hasEmploymentFields ? Number(absenceDays) : null,
           sponsors_visa: sponsorsVisa.trim() || null,
           warnings_undisposed: warningsUndisposed,
@@ -166,7 +170,7 @@ export default function RefereeForm({
 
   if (state === "ok") {
     return (
-      <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-emerald-800">
+      <div className="rounded-xl bg-brand-teal/10 border border-brand-teal/30 p-4 text-brand-ink">
         Thank you! Your reference has been received.
       </div>
     );
@@ -176,7 +180,7 @@ export default function RefereeForm({
     <form onSubmit={submit} className="space-y-8">
       <FormSection title="Candidate details">
         <Field label="Candidate name">
-          <input className={`${inputClass} bg-slate-50`} readOnly value={carerName} />
+          <input className={`${inputClass} bg-brand-cream`} readOnly value={carerName} />
         </Field>
       </FormSection>
 
@@ -220,7 +224,7 @@ export default function RefereeForm({
                 />
               </Field>
             </div>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
+            <label className="flex items-center gap-2 text-sm text-brand-ink/80">
               <input
                 type="checkbox"
                 checked={stillEmployed}
@@ -228,7 +232,7 @@ export default function RefereeForm({
                   setStillEmployed(e.target.checked);
                   if (e.target.checked) setEmploymentEnd("");
                 }}
-                className="h-4 w-4 rounded border-slate-300 text-[#039EA0] focus:ring-[#039EA0]"
+                className="h-4 w-4 rounded border-brand-ink/20 text-brand-teal focus:ring-brand-teal"
               />
               Still currently employed
             </label>
@@ -266,7 +270,7 @@ export default function RefereeForm({
                   required
                   className={inputClass}
                 />
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-brand-ink/60">
                   If the candidate worked for you for less than 12 months, give
                   the total number of days absent during their employment.
                 </p>
@@ -330,7 +334,7 @@ export default function RefereeForm({
             required
             className={inputClass}
           />
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-brand-ink/60">
             {valuesExample.length}/2000 characters
           </p>
         </Field>
@@ -348,12 +352,12 @@ export default function RefereeForm({
                 aria-pressed={n === rating}
                 className="text-3xl leading-none focus:outline-none"
               >
-                <span className={n <= rating ? "text-[#F4A261]" : "text-slate-300"}>
+                <span className={n <= rating ? "text-brand-peach" : "text-brand-ink/20"}>
                   ★
                 </span>
               </button>
             ))}
-            <span className="ml-3 text-sm text-slate-600">{rating}/5</span>
+            <span className="ml-3 text-sm text-brand-ink/70">{rating}/5</span>
           </div>
         </Field>
         <Field label="Would you recommend this carer to others?" required>
@@ -369,8 +373,8 @@ export default function RefereeForm({
                 aria-pressed={recommend === option.value}
                 className={`px-4 py-2 rounded-full border text-sm font-semibold transition ${
                   recommend === option.value
-                    ? "bg-[#0F1416] border-[#0F1416] text-white"
-                    : "bg-white border-slate-200 text-slate-700"
+                    ? "bg-brand-ink border-brand-ink text-white"
+                    : "bg-white border-brand-ink/15 text-brand-ink/80"
                 }`}
               >
                 {option.label}
@@ -392,7 +396,7 @@ export default function RefereeForm({
 
       <FormSection title="About you">
         <Field label="Your name">
-          <input className={`${inputClass} bg-slate-50`} readOnly value={refereeName} />
+          <input className={`${inputClass} bg-brand-cream`} readOnly value={refereeName} />
         </Field>
         <Field label="Your position" required>
           <input
@@ -405,7 +409,12 @@ export default function RefereeForm({
           />
         </Field>
         <Field label="Your email">
-          <input className={`${inputClass} bg-slate-50`} readOnly value={refereeEmail} />
+          <input
+            className={`${inputClass} bg-brand-cream`}
+            readOnly
+            value={refereeEmail}
+            data-ph-no-capture
+          />
         </Field>
         <Field label="Company name" required>
           <input
@@ -438,18 +447,18 @@ export default function RefereeForm({
         </Field>
       </FormSection>
 
-      <div className="rounded-xl border border-[#039EA0]/20 bg-[#F4EFE6] p-4 text-xs leading-relaxed text-slate-700">
+      <div className="rounded-xl border border-brand-teal/20 bg-brand-cream p-4 text-xs leading-relaxed text-brand-ink/80">
         <strong>Data Protection.</strong> This form contains personal data as
         defined by the Data Protection Act 2018 (underpinned by the UK GDPR).
         SpecialCarer requests this data solely for the purpose of vetting care
         workers and complying with CQC Schedule 3. We will protect this
         information and only share it with authorised staff and — where
         required — the CQC or Local Authority Designated Officer. For details
-        see <a href="/privacy" className="font-semibold text-[#039EA0] underline">Privacy Policy</a>.
+        see <a href="/privacy" className="font-semibold text-brand-teal underline">Privacy Policy</a>.
       </div>
 
       {state === "err" && errors.length > 0 && (
-        <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+        <div role="alert" className="rounded-xl border border-[#B24747]/30 bg-[#F9E9E9] p-4 text-sm text-[#B24747]">
           <p className="font-semibold">Please check the following fields:</p>
           <ul className="mt-1 list-disc pl-5">
             {errors.map((error) => <li key={error}>{error}</li>)}
@@ -458,8 +467,8 @@ export default function RefereeForm({
       )}
       <button
         type="submit"
-        disabled={state === "submitting"}
-        className="w-full px-5 py-3 rounded-xl bg-[#039EA0] text-white text-sm font-semibold hover:bg-[#027f81] transition disabled:opacity-60"
+        disabled={submitting}
+        className="w-full px-5 py-3 rounded-xl bg-brand-teal text-white text-sm font-semibold hover:bg-[#028688] transition disabled:opacity-60"
       >
         {state === "submitting" ? "Submitting…" : "Submit reference"}
       </button>
@@ -476,7 +485,7 @@ function FormSection({
 }) {
   return (
     <section className="space-y-4">
-      <h2 className="border-b border-slate-200 pb-2 text-lg font-bold text-[#0F1416]">
+      <h2 className="border-b border-brand-ink/15 pb-2 text-lg font-bold text-brand-ink">
         {title}
       </h2>
       {children}
@@ -494,9 +503,9 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block text-sm font-semibold text-slate-800">
+    <label className="block text-sm font-semibold text-brand-ink">
       <span className="mb-1 block">
-        {required && <span className="mr-1 text-rose-700">*</span>}
+        {required && <span className="mr-1 text-[#B24747]">*</span>}
         {label}
       </span>
       {children}
@@ -517,12 +526,13 @@ function TriStateField({
 }) {
   return (
     <Field label={label} required>
-      {helper && <p className="mb-2 text-xs font-normal text-slate-500">{helper}</p>}
+      {helper && <p className="mb-2 text-xs font-normal text-brand-ink/60">{helper}</p>}
       <select
         value={value}
         onChange={(e) => onChange(e.target.value as YesNoUnsure)}
         required
         className={inputClass}
+        data-ph-no-capture
       >
         <option value="" disabled>Please select</option>
         {TRISTATE_YES_NO.map((option) => (

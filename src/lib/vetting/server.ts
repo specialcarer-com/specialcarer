@@ -78,10 +78,13 @@ export async function getReferencesStatus(
   verified_employer: number;
   complete: boolean;
 }> {
-  const { data } = await admin
+  const { data, error } = await admin
     .from("carer_references")
     .select("status, reference_type")
     .eq("carer_id", carerId);
+  if (error) {
+    throw new Error(`Unable to load reference status: ${error.message}`);
+  }
   const rows = (data ?? []) as {
     status: string;
     reference_type: string | null;

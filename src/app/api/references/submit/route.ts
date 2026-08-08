@@ -19,7 +19,7 @@ type Body = {
   reference_type?: string;
   employment_start?: string | null;
   employment_end?: string | null;
-  still_employed?: boolean;
+  still_employed?: boolean | null;
   position_held?: string | null;
   weekly_hours?: number | null;
   reason_for_leaving?: string | null;
@@ -150,7 +150,7 @@ export async function POST(req: Request) {
   if (textError) return invalid(textError);
 
   const stillEmployed =
-    typeof body.still_employed === "boolean" ? body.still_employed : false;
+    typeof body.still_employed === "boolean" ? body.still_employed : null;
   const weeklyHours =
     typeof body.weekly_hours === "number" &&
     Number.isFinite(body.weekly_hours) &&
@@ -210,7 +210,7 @@ export async function POST(req: Request) {
   const dateError = validateEmploymentDates({
     employmentStart: employmentStart.value,
     employmentEnd: employmentEnd.value,
-    stillEmployed,
+    stillEmployed: stillEmployed ?? false,
     today: new Date().toISOString().slice(0, 10),
   });
   if (dateError) return invalid(dateError);
@@ -246,7 +246,7 @@ export async function POST(req: Request) {
     null;
   const ua = req.headers.get("user-agent")?.slice(0, 240) ?? null;
 
-  const { error } = await admin
+  const { data: updated, error } = await admin
     .from("carer_references")
     .update({
       status: "submitted",
@@ -275,9 +275,15 @@ export async function POST(req: Request) {
       user_agent: ua,
       submitted_at: new Date().toISOString(),
     })
-    .eq("id", row.id);
+    .eq("id", row.id)
+    .eq("status", "invited")
+    .select("id, status")
+    .maybeSingle<{ id: string; status: string }>();
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  if (!updated || updated.status !== "submitted") {
+    return NextResponse.json({ error: "already_submitted" }, { status: 409 });
   }
   return NextResponse.json({ ok: true });
 }

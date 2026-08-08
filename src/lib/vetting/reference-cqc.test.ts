@@ -71,6 +71,18 @@ describe("reference field validation", () => {
     );
   });
 
+  it("rejects an employment start date in the future", () => {
+    assert.equal(
+      validateEmploymentDates({
+        employmentStart: "2026-09-01",
+        employmentEnd: null,
+        stillEmployed: false,
+        today: "2026-08-08",
+      }),
+      "Employment start date cannot be in the future",
+    );
+  });
+
   it("rejects an end date when the referee says the candidate is still employed", () => {
     assert.equal(
       validateEmploymentDates({

@@ -70,7 +70,9 @@ export default async function ReferencesQueuePage({
   if (filter !== "all") {
     q = q.eq("status", filter);
   }
-  if (referenceType !== "all") {
+  if (referenceType === "employer") {
+    q = q.or("reference_type.eq.employer,reference_type.is.null");
+  } else if (referenceType !== "all") {
     q = q.eq("reference_type", referenceType);
   }
   const { data } = await q;
@@ -80,16 +82,16 @@ export default async function ReferencesQueuePage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">
+          <h1 className="text-2xl font-semibold text-brand-ink">
             Carer references
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-brand-ink/60 mt-1">
             Submitted references awaiting verification.
           </p>
         </div>
         <Link
           href="/admin/trust-safety"
-          className="text-sm text-slate-600 hover:text-slate-900"
+          className="text-sm text-brand-ink/70 hover:text-brand-ink"
         >
           ← Back to Trust &amp; safety
         </Link>
@@ -102,8 +104,8 @@ export default async function ReferencesQueuePage({
             href={`/admin/trust-safety/references?filter=${f}`}
             className={`px-3 py-1.5 rounded-full border ${
               filter === f
-                ? "bg-slate-900 text-white border-slate-900"
-                : "bg-white text-slate-700 border-slate-200"
+                ? "bg-brand-ink text-white border-brand-ink"
+                : "bg-white text-brand-ink/80 border-brand-ink/15"
             }`}
           >
             {f}
@@ -111,7 +113,7 @@ export default async function ReferencesQueuePage({
         ))}
       </div>
       <div className="flex flex-wrap gap-2 text-xs">
-        <span className="self-center font-semibold text-slate-600">
+        <span className="self-center font-semibold text-brand-ink/70">
           Reference type:
         </span>
         {(["all", ...REFERENCE_TYPES] as const).map((type) => (
@@ -120,8 +122,8 @@ export default async function ReferencesQueuePage({
             href={`/admin/trust-safety/references?filter=${filter}&reference_type=${type}`}
             className={`px-3 py-1.5 rounded-full border ${
               referenceType === type
-                ? "bg-[#039EA0] text-white border-[#039EA0]"
-                : "bg-white text-slate-700 border-slate-200"
+                ? "bg-brand-teal text-white border-brand-teal"
+                : "bg-white text-brand-ink/80 border-brand-ink/15"
             }`}
           >
             {type === "all" ? "All types" : REFERENCE_TYPE_LABEL[type]}
@@ -131,45 +133,46 @@ export default async function ReferencesQueuePage({
 
       <ul className="space-y-3">
         {rows.length === 0 && (
-          <li className="text-sm text-slate-500">Nothing in this queue.</li>
+          <li className="text-sm text-brand-ink/60">Nothing in this queue.</li>
         )}
         {rows.map((r) => (
           <li
             key={r.id}
-            className="rounded-2xl bg-white border border-slate-200 p-5"
+            className="rounded-2xl bg-white border border-brand-ink/15 p-5"
+            data-ph-no-capture
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="font-semibold text-slate-900">
+                <p className="font-semibold text-brand-ink">
                   {r.referee_name}{" "}
-                  <span className="text-xs font-normal text-slate-500">
+                  <span className="text-xs font-normal text-brand-ink/60">
                     {r.relationship ? `· ${r.relationship}` : ""}
                   </span>
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-brand-ink/60">
                   {r.referee_email} · for carer {r.carer_id.slice(0, 8)}…
                 </p>
                 <span className="mt-2 inline-flex rounded-full border border-[#039EA0]/20 bg-[#F4EFE6] px-2 py-0.5 text-[10px] font-bold tracking-wide text-[#0F1416]">
                   {(r.reference_type ?? "employer").toUpperCase()}
                 </span>
                 {r.rating != null && (
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-brand-ink/60 mt-1">
                     Rated {r.rating}/5
                     {r.recommend === true ? " · would recommend" : ""}
                     {r.recommend === false ? " · would NOT recommend" : ""}
                   </p>
                 )}
                 {r.comment && (
-                  <p className="text-sm text-slate-700 mt-2 whitespace-pre-wrap">
+                  <p className="text-sm text-brand-ink/80 mt-2 whitespace-pre-wrap">
                     {r.comment}
                   </p>
                 )}
               </div>
-              <span className="text-[11px] px-2 py-1 rounded-full border bg-slate-50 border-slate-200 font-semibold">
+              <span className="text-[11px] px-2 py-1 rounded-full border bg-brand-cream border-brand-ink/15 font-semibold text-brand-ink">
                 {r.status}
               </span>
             </div>
-            <div className="mt-4 grid gap-4 border-t border-slate-100 pt-4 text-sm sm:grid-cols-2">
+            <div className="mt-4 grid gap-4 border-t border-brand-ink/10 pt-4 text-sm sm:grid-cols-2">
               <Details
                 title="Employment details"
                 items={[
@@ -192,8 +195,11 @@ export default async function ReferencesQueuePage({
                 ]}
               />
             </div>
-            <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50 p-3">
-              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-600">
+            <div
+              className="mt-4 rounded-xl border border-brand-ink/10 bg-brand-cream p-3"
+              data-ph-no-capture
+            >
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-brand-ink/70">
                 Conduct and safeguarding declarations
               </p>
               <div className="flex flex-wrap gap-2">
@@ -205,16 +211,16 @@ export default async function ReferencesQueuePage({
             </div>
             {r.values_example && (
               <div className="mt-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-600">
+                <p className="text-xs font-bold uppercase tracking-wide text-brand-ink/70">
                   Values example
                 </p>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">
+                <p className="mt-1 whitespace-pre-wrap text-sm text-brand-ink/80">
                   {r.values_example}
                 </p>
               </div>
             )}
             {r.admin_notes && (
-              <p className="mt-3 text-xs text-slate-600">
+              <p className="mt-3 text-xs text-brand-ink/70">
                 <strong>Admin notes:</strong> {r.admin_notes}
               </p>
             )}
@@ -241,14 +247,14 @@ function Details({
   if (present.length === 0) return null;
   return (
     <div>
-      <p className="mb-1 text-xs font-bold uppercase tracking-wide text-slate-600">
+      <p className="mb-1 text-xs font-bold uppercase tracking-wide text-brand-ink/70">
         {title}
       </p>
       <dl className="space-y-1">
         {present.map(([label, value]) => (
           <div key={label} className="flex gap-2">
-            <dt className="min-w-28 text-slate-500">{label}</dt>
-            <dd className="whitespace-pre-wrap text-slate-800">{value}</dd>
+            <dt className="min-w-28 text-brand-ink/60">{label}</dt>
+            <dd className="whitespace-pre-wrap text-brand-ink">{value}</dd>
           </div>
         ))}
       </dl>
@@ -265,10 +271,10 @@ function AnswerPill({
 }) {
   const tone =
     value === "yes"
-      ? "border-rose-200 bg-rose-50 text-rose-800"
+      ? "border-[#B24747]/30 bg-[#F9E9E9] text-[#B24747]"
       : value === "no"
-        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-        : "border-amber-200 bg-amber-50 text-amber-800";
+        ? "border-brand-teal/30 bg-brand-teal/10 text-brand-ink"
+        : "border-brand-peach/40 bg-brand-cream text-brand-ink";
   return (
     <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${tone}`}>
       {label}: {value ? value.toUpperCase() : "MISSING"}

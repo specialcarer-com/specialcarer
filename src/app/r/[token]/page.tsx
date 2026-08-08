@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { ReferenceType } from "@/lib/vetting/types";
+import { isReferenceType } from "@/lib/vetting/reference-cqc";
 import RefereeForm from "./RefereeForm";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,7 @@ type RefRow = {
   carer_id: string;
   referee_name: string;
   referee_email: string;
-  reference_type: ReferenceType | null;
+  reference_type: string | null;
   status: string;
   token_expires_at: string;
 };
@@ -79,7 +79,11 @@ export default async function RefereePage({
         carerName={carerName}
         refereeName={row.referee_name}
         refereeEmail={row.referee_email}
-        initialReferenceType={row.reference_type}
+        initialReferenceType={
+          row.reference_type && isReferenceType(row.reference_type)
+            ? row.reference_type
+            : null
+        }
       />
     </Shell>
   );

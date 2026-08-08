@@ -12,8 +12,11 @@ export type ReferenceGateStatus = {
   complete: boolean;
 };
 
-export function isReferenceType(value: string): value is ReferenceType {
-  return REFERENCE_TYPES.includes(value as ReferenceType);
+export function isReferenceType(value: unknown): value is ReferenceType {
+  return (
+    typeof value === "string" &&
+    (REFERENCE_TYPES as readonly string[]).includes(value)
+  );
 }
 
 /**
