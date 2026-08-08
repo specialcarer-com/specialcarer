@@ -7,15 +7,40 @@ import type { YesNoUnsure } from "@/lib/vetting/types";
 export default function RefRowActions({
   id,
   safeguardingDbs,
+  status,
 }: {
   id: string;
   safeguardingDbs: YesNoUnsure | null;
+  status: string;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [reason, setReason] = useState("");
   const [adminNotes, setAdminNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  async function resend() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/admin/vetting/references/${encodeURIComponent(id)}/resend`,
+        { method: "POST" },
+      );
+      if (res.ok) {
+        router.refresh();
+      } else {
+        const json = (await res.json().catch(() => ({}))) as { error?: string };
+        setError(
+          res.status === 429
+            ? "This invitation has already been resent 3 times in the last 24 hours."
+            : (json.error?.replace(/_/g, " ") ?? "Could not resend this reference invitation."),
+        );
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function call(action: "verify" | "reject") {
     if (action === "verify" && safeguardingDbs === "yes" && !adminNotes.trim()) {
@@ -54,6 +79,17 @@ export default function RefRowActions({
         </p>
       )}
       <div className="flex items-center gap-2 flex-wrap">
+      {status === "invited" && (
+        <button
+          type="button"
+          onClick={resend}
+          disabled={busy}
+          className="px-3 py-1.5 rounded-lg bg-[#039EA0] text-white text-xs font-semibold hover:bg-[#087C7D] disabled:opacity-50"
+        >
+          {busy ? "Resending…" : "Resend invite"}
+        </button>
+      )}
+      {status === "submitted" && <>
       <button
         type="button"
         onClick={() => call("verify")}
@@ -89,6 +125,7 @@ export default function RefRowActions({
       >
         Reject
       </button>
+      </>}
       </div>
       {error && <p role="alert" className="text-xs text-rose-700">{error}</p>}
     </div>
