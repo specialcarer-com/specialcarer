@@ -73,7 +73,7 @@ export default async function ReferencesQueuePage({
   let q = admin
     .from("carer_references")
     .select(
-      "id, carer_id, referee_name, referee_email, relationship, reference_type, status, rating, recommend, comment, submitted_at, verified_at, rejected_reason, employment_start, employment_end, still_employed, position_held, weekly_hours, reason_for_leaving, absence_days_12m, sponsors_visa, warnings_undisposed, under_investigation, safeguarding_dbs, would_reemploy, values_example, referee_position, referee_company, referee_company_addr, referee_signed_date, admin_notes, created_at",
+      "id, carer_id, referee_name, referee_email, relationship, reference_type, status, rating, recommend, comment, submitted_at, verified_at, rejected_reason, employment_start, employment_end, still_employed, position_held, weekly_hours, reason_for_leaving, absence_days_12m, sponsors_visa, warnings_undisposed, under_investigation, safeguarding_dbs, would_reemploy, values_example, referee_position, referee_company, referee_company_addr, referee_signed_date, admin_notes, response_mode, decline_reason, uploaded_file_path, uploaded_file_size, uploaded_file_mime, created_at",
     )
     .order("submitted_at", { ascending: false, nullsFirst: false })
     .limit(200);
