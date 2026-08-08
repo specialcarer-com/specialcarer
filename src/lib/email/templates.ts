@@ -9,6 +9,7 @@
 // across email templates, carer-facing API responses, admin dashboards,
 // etc. See src/lib/privacy/mask.ts for the lifecycle rule and rationale.
 import { maskAddress, maskEmail, maskPhone } from "@/lib/privacy/mask";
+import { SUPPORT_HOURS, SUPPORT_PHONE } from "@/lib/brand/contact";
 import {
   REFERENCE_TYPE_LABEL,
   type ReferenceType,
@@ -356,11 +357,11 @@ https://www.specialcarer.com
 }
 
 
-// ─── Reference invitation email ──────────────────────────────────
+// ─── Reference invitation and reminder emails ───────────────────
 //
-// Sent by /api/carer/references when a carer adds a referee. The
-// referee follows the link to /r/[token] and submits the form. The
-// link expires in 14 days (enforced server-side).
+// Sent to referees for SpecialCarer vetting. The link expires after 14 days
+// and each reminder repeats the one-click decline route for people who were
+// nominated in error.
 
 export type ReferenceInviteEmail = {
   refereeName: string;
@@ -369,6 +370,17 @@ export type ReferenceInviteEmail = {
   expiresAtIso: string;
   referenceType: ReferenceType;
 };
+
+export type ReferenceReminderEmail = ReferenceInviteEmail & {
+  declineLink: string;
+};
+
+const REFERENCE_WORDMARK_URL =
+  "https://www.specialcarer.com/brand/wordmark-teal.png";
+const REFERENCE_TEAL = "#039EA0";
+const REFERENCE_CREAM = "#F4EFE6";
+const REFERENCE_INK = "#0F1416";
+const REFERENCE_PEACH = "#F4A261";
 
 function escapeRefHtml(s: string): string {
   return s
@@ -379,61 +391,195 @@ function escapeRefHtml(s: string): string {
     .replace(/'/g, "&#39;");
 }
 
+function referenceFirstName(name: string): string {
+  return name.trim().split(/\s+/)[0] || "the carer";
+}
+
+function formatReferenceExpiry(expiresAtIso: string): string {
+  return new Date(expiresAtIso).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function renderReferenceEmail(args: {
+  subject: string;
+  refereeName: string;
+  link: string;
+  bodyHtml: string;
+  bodyText: string[];
+  declineLink?: string;
+}): { subject: string; html: string; text: string } {
+  const safeSubject = escapeRefHtml(args.subject);
+  const safeReferee = escapeRefHtml(args.refereeName);
+  const safeLink = escapeRefHtml(args.link);
+  const safeDeclineLink = args.declineLink
+    ? escapeRefHtml(args.declineLink)
+    : null;
+  const declineHtml = safeDeclineLink
+    ? `<p style="margin:20px 0 0;color:#4A5355;font-size:14px;line-height:1.55;">If this is not you, or you cannot provide this reference, <a href="${safeDeclineLink}" style="color:${REFERENCE_TEAL};font-weight:700;text-decoration:underline;">let us know</a>.</p>`
+    : "";
+  const declineText = args.declineLink
+    ? [
+        "",
+        `If this is not you, or you cannot provide this reference, let us know: ${args.declineLink}`,
+      ]
+    : [];
+
+  const html = `<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#FFFFFF;color:${REFERENCE_INK};font-family:'Plus Jakarta Sans',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#FFFFFF;margin:0;padding:28px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#FFFFFF;border:1px solid #DCE6E5;">
+          <tr>
+            <td style="padding:28px 32px 22px;background:#FFFFFF;">
+              <img src="${REFERENCE_WORDMARK_URL}" width="190" alt="SpecialCarer" border="0" style="display:block;width:190px;max-width:190px;height:auto;border:0;outline:none;text-decoration:none;">
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 32px;background:${REFERENCE_CREAM};border-top:5px solid ${REFERENCE_TEAL};border-bottom:1px solid #E6DDD2;">
+              <h1 style="margin:0;color:${REFERENCE_INK};font-size:27px;line-height:1.25;font-weight:700;font-family:'Plus Jakarta Sans',Arial,sans-serif;">${safeSubject}</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:30px 32px 8px;color:${REFERENCE_INK};font-size:16px;line-height:1.6;">
+              <p style="margin:0 0 16px;">Hi ${safeReferee},</p>
+              ${args.bodyHtml}
+              <p style="margin:26px 0 24px;">
+                <a href="${safeLink}" style="display:inline-block;background:${REFERENCE_TEAL};color:#FFFFFF;text-decoration:none;padding:14px 22px;font-size:16px;line-height:1;font-weight:700;border-radius:6px;">Complete the reference</a>
+              </p>
+              <p style="margin:0;padding:14px 16px;background:#FFF4EA;border-left:4px solid ${REFERENCE_PEACH};color:${REFERENCE_INK};font-size:14px;line-height:1.55;"><strong style="font-weight:700;">Reference link</strong><br><a href="${safeLink}" style="color:${REFERENCE_TEAL};word-break:break-all;text-decoration:underline;">${safeLink}</a></p>
+              ${declineHtml}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:22px 32px;background:#F7F9F9;border-top:1px solid #DCE6E5;color:#4A5355;font-size:13px;line-height:1.55;">
+              <p style="margin:0;word-break:break-word;">If you can&apos;t click the link, copy this URL: <a href="${safeLink}" style="color:${REFERENCE_TEAL};text-decoration:underline;">${safeLink}</a>. Questions? Reply to this email or call SpecialCarer support at ${escapeRefHtml(SUPPORT_PHONE)} (${escapeRefHtml(SUPPORT_HOURS)}).</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px;background:${REFERENCE_INK};color:#F4EFE6;font-size:12px;line-height:1.5;">
+              SpecialCarer &middot; A product of All Care 4 U Group Ltd<br>
+              <a href="https://www.specialcarer.com" style="color:#FFFFFF;text-decoration:underline;">specialcarer.com</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  const text = [
+    `Hi ${args.refereeName},`,
+    "",
+    ...args.bodyText,
+    "",
+    "Complete the reference:",
+    args.link,
+    ...declineText,
+    "",
+    `If you can't click the link, copy this URL: ${args.link}. Questions? Reply to this email or call SpecialCarer support at ${SUPPORT_PHONE} (${SUPPORT_HOURS}).`,
+    "",
+    "— SpecialCarer",
+    "https://www.specialcarer.com",
+  ].join("\n");
+
+  return { subject: args.subject, html, text };
+}
+
 export function renderReferenceInviteEmail(args: ReferenceInviteEmail): {
   subject: string;
   html: string;
   text: string;
 } {
-  const subject = `${args.carerName} has listed you as a reference on SpecialCarer`;
+  const carerName = referenceFirstName(args.carerName);
   const referenceTypeLabel = REFERENCE_TYPE_LABEL[args.referenceType];
-  const expires = new Date(args.expiresAtIso).toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
+  const expires = formatReferenceExpiry(args.expiresAtIso);
+  const subject = `${carerName} has listed you as a reference on SpecialCarer`;
+
+  return renderReferenceEmail({
+    subject,
+    refereeName: args.refereeName,
+    link: args.link,
+    bodyHtml: `<p style="margin:0 0 16px;">${escapeRefHtml(carerName)} has asked you to provide a ${escapeRefHtml(referenceTypeLabel.toLowerCase())} reference as part of their SpecialCarer vetting.</p>
+      <p style="margin:0 0 16px;">Your reference helps us meet CQC compliance requirements and supports safer care. It should take around two minutes to complete.</p>
+      <p style="margin:0;color:#4A5355;font-size:14px;line-height:1.55;">This secure link expires on <strong style="color:${REFERENCE_INK};font-weight:700;">${escapeRefHtml(expires)}</strong>.</p>`,
+    bodyText: [
+      `${carerName} has asked you to provide a ${referenceTypeLabel.toLowerCase()} reference as part of their SpecialCarer vetting.`,
+      "Your reference helps us meet CQC compliance requirements and supports safer care. It should take around two minutes to complete.",
+      `This secure link expires on ${expires}.`,
+    ],
   });
-  const html = `<!DOCTYPE html>
-<html><body style="font-family:'Plus Jakarta Sans',Arial,sans-serif;background:#F7FAFA;margin:0;padding:24px;color:#2F2E31">
-<div style="max-width:560px;margin:0 auto;background:#FFFFFF;border-radius:16px;padding:32px">
-  <h2 style="color:#0E7C7B;margin:0 0 8px">Reference request</h2>
-  <p>Hi ${escapeRefHtml(args.refereeName)},</p>
-  <p>${escapeRefHtml(args.carerName)} has applied to provide care on SpecialCarer and has listed you as one of their references.</p>
-  <p>You've been listed as a ${escapeRefHtml(referenceTypeLabel)} reference for ${escapeRefHtml(args.carerName)}.</p>
-  <p>Could you take 2 minutes to vouch for them? It really helps families know who they're inviting into their homes.</p>
-  <p style="margin:24px 0">
-    <a href="${args.link}" style="display:inline-block;background:#0E7C7B;color:#FFFFFF;text-decoration:none;padding:12px 20px;border-radius:9999px;font-weight:700">
-      Open the reference form
-    </a>
-  </p>
-  <p style="font-size:12px;color:#575757;margin-top:24px">
-    This link expires on <strong>${expires}</strong>. If you don't recognise the carer named, please ignore this email — no action is needed.
-  </p>
-  <hr style="border:none;border-top:1px solid #E9ECEC;margin:24px 0">
-  <p style="font-size:12px;color:#575757">
-    Why you're seeing this: ${escapeRefHtml(args.carerName)} entered your email address as a reference on SpecialCarer's vetting form. We never share your email and only use it for this single message.
-  </p>
-  <p style="font-size:11px;color:#575757;margin-top:24px">
-    SpecialCarer · A product of All Care 4 U Group Ltd<br>
-    <a href="https://www.specialcarer.com" style="color:#0E7C7B">specialcarer.com</a>
-  </p>
-</div></body></html>`;
+}
 
-  const text = [
-    `Hi ${args.refereeName},`,
-    "",
-    `${args.carerName} has applied to provide care on SpecialCarer and has listed you as a reference.`,
-    `You've been listed as a ${referenceTypeLabel} reference for ${args.carerName}.`,
-    "",
-    "Open the reference form:",
-    args.link,
-    "",
-    `This link expires on ${expires}.`,
-    "",
-    "If you don't recognise this carer, please ignore this email.",
-    "",
-    "— SpecialCarer",
-  ].join("\n");
+export function renderReferenceReminderStage1Email(
+  args: ReferenceReminderEmail,
+): { subject: string; html: string; text: string } {
+  const carerName = referenceFirstName(args.carerName);
+  const expires = formatReferenceExpiry(args.expiresAtIso);
+  const subject = `Quick nudge: reference for ${carerName}`;
+  return renderReferenceEmail({
+    subject,
+    refereeName: args.refereeName,
+    link: args.link,
+    declineLink: args.declineLink,
+    bodyHtml: `<p style="margin:0 0 16px;">Just a quick nudge about the reference request for ${escapeRefHtml(carerName)}.</p>
+      <p style="margin:0 0 16px;">It is for SpecialCarer vetting and CQC compliance. Your response helps us complete the checks needed before ${escapeRefHtml(carerName)} can provide care.</p>
+      <p style="margin:0;color:#4A5355;font-size:14px;line-height:1.55;">The reference link expires on <strong style="color:${REFERENCE_INK};font-weight:700;">${escapeRefHtml(expires)}</strong>.</p>`,
+    bodyText: [
+      `Just a quick nudge about the reference request for ${carerName}.`,
+      `It is for SpecialCarer vetting and CQC compliance. Your response helps us complete the checks needed before ${carerName} can provide care.`,
+      `The reference link expires on ${expires}.`,
+    ],
+  });
+}
 
-  return { subject, html, text };
+export function renderReferenceReminderStage2Email(
+  args: ReferenceReminderEmail,
+): { subject: string; html: string; text: string } {
+  const carerName = referenceFirstName(args.carerName);
+  const expires = formatReferenceExpiry(args.expiresAtIso);
+  const subject = `${carerName} is waiting on your reference`;
+  return renderReferenceEmail({
+    subject,
+    refereeName: args.refereeName,
+    link: args.link,
+    declineLink: args.declineLink,
+    bodyHtml: `<p style="margin:0 0 16px;">${escapeRefHtml(carerName)} is waiting on your reference.</p>
+      <p style="margin:0 0 16px;">It is part of SpecialCarer vetting and CQC compliance. Completing it helps ${escapeRefHtml(carerName)} start their new role and helps us keep care safe.</p>
+      <p style="margin:0;color:#4A5355;font-size:14px;line-height:1.55;">The reference link expires on <strong style="color:${REFERENCE_INK};font-weight:700;">${escapeRefHtml(expires)}</strong>.</p>`,
+    bodyText: [
+      `${carerName} is waiting on your reference.`,
+      `It is part of SpecialCarer vetting and CQC compliance. Completing it helps ${carerName} start their new role and helps us keep care safe.`,
+      `The reference link expires on ${expires}.`,
+    ],
+  });
+}
+
+export function renderReferenceReminderStage3Email(
+  args: ReferenceReminderEmail,
+): { subject: string; html: string; text: string } {
+  const carerName = referenceFirstName(args.carerName);
+  const expires = formatReferenceExpiry(args.expiresAtIso);
+  const subject = `Final reminder: reference for ${carerName} expires in 2 days`;
+  return renderReferenceEmail({
+    subject,
+    refereeName: args.refereeName,
+    link: args.link,
+    declineLink: args.declineLink,
+    bodyHtml: `<p style="margin:0 0 16px;"><strong style="font-weight:700;">Final reminder:</strong> this reference link expires in two days.</p>
+      <p style="margin:0 0 16px;">It is needed for ${escapeRefHtml(carerName)}&rsquo;s SpecialCarer vetting and CQC compliance. A completed reference helps us complete the safety checks before they can provide care.</p>
+      <p style="margin:0;color:#4A5355;font-size:14px;line-height:1.55;">The reference link expires on <strong style="color:${REFERENCE_INK};font-weight:700;">${escapeRefHtml(expires)}</strong>.</p>`,
+    bodyText: [
+      "Final reminder: this reference link expires in two days.",
+      `It is needed for ${carerName}'s SpecialCarer vetting and CQC compliance. A completed reference helps us complete the safety checks before they can provide care.`,
+      `The reference link expires on ${expires}.`,
+    ],
+  });
 }
 
 // ─── Organisation lifecycle emails ─────────────────────────────

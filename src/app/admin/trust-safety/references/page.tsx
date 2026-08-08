@@ -96,7 +96,7 @@ export default async function ReferencesQueuePage({
       </div>
 
       <div className="flex gap-2 text-xs">
-        {["submitted", "verified", "rejected", "expired", "all"].map((f) => (
+        {["invited", "submitted", "verified", "rejected", "expired", "all"].map((f) => (
           <Link
             key={f}
             href={`/admin/trust-safety/references?filter=${f}`}
@@ -218,9 +218,13 @@ export default async function ReferencesQueuePage({
                 <strong>Admin notes:</strong> {r.admin_notes}
               </p>
             )}
-            {r.status === "submitted" && (
+            {(r.status === "submitted" || r.status === "invited") && (
               <div className="mt-3">
-                <RefRowActions id={r.id} safeguardingDbs={r.safeguarding_dbs} />
+                <RefRowActions
+                  id={r.id}
+                  safeguardingDbs={r.safeguarding_dbs}
+                  status={r.status}
+                />
               </div>
             )}
           </li>

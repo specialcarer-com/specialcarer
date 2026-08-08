@@ -21,6 +21,8 @@ type Row = {
   submitted_at: string | null;
   verified_at: string | null;
   created_at: string;
+  resend_count: number;
+  last_resend_at: string | null;
 };
 
 export default async function ReferencesPage() {
@@ -33,7 +35,7 @@ export default async function ReferencesPage() {
   const { data } = await supabase
     .from("carer_references")
     .select(
-      "id, referee_name, referee_email, relationship, reference_type, status, token_expires_at, rating, recommend, comment, submitted_at, verified_at, created_at",
+      "id, referee_name, referee_email, relationship, reference_type, status, token_expires_at, rating, recommend, comment, submitted_at, verified_at, created_at, resend_count, last_resend_at",
     )
     .eq("carer_id", user.id)
     .order("created_at", { ascending: false });
