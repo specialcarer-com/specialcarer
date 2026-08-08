@@ -66,6 +66,15 @@ export default async function RefereePage({
     .eq("user_id", row.carer_id)
     .maybeSingle<CarerProfile>();
   const carerName = prof?.display_name ?? "this carer";
+  const { data: consent } = await admin
+    .from("carer_reference_consents")
+    .select("pdf_storage_path, revoked_at")
+    .eq("carer_id", row.carer_id)
+    .is("revoked_at", null)
+    .maybeSingle<{ pdf_storage_path: string | null; revoked_at: string | null }>();
+  const consentUrl = consent?.pdf_storage_path
+    ? (await admin.storage.from("reference-consents").createSignedUrl(consent.pdf_storage_path, 10 * 60)).data?.signedUrl ?? null
+    : null;
 
   return (
     <Shell title={`Reference for ${carerName}`}>
@@ -74,6 +83,11 @@ export default async function RefereePage({
         Your answers help families know who they're inviting into their
         homes. This takes ~2 minutes.
       </p>
+      {consentUrl ? (
+        <a href={consentUrl} target="_blank" rel="noreferrer" className="mb-4 inline-flex rounded-xl border border-[#039EA0] px-3 py-2 text-sm font-semibold text-[#039EA0] hover:bg-[#039EA0]/5">View candidate’s consent</a>
+      ) : (
+        <div role="status" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">The candidate has not yet signed a data-sharing consent. You may still provide this reference; the candidate will be prompted to sign after.</div>
+      )}
       <RefereeForm
         token={token}
         carerName={carerName}
