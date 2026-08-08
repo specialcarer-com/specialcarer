@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { validateReferenceVerifyGuard } from "@/lib/vetting/reference-cqc";
 
 export const dynamic = "force-dynamic";
 
@@ -41,15 +42,13 @@ export async function POST(req: Request) {
     if (!reference) {
       return NextResponse.json({ error: "not_found" }, { status: 404 });
     }
-    if (!reference.safeguarding_dbs) {
+    const guardError = validateReferenceVerifyGuard({
+      safeguardingDbs: reference.safeguarding_dbs,
+      adminNotes,
+    });
+    if (guardError) {
       return NextResponse.json(
-        { error: "safeguarding_dbs_required" },
-        { status: 400 },
-      );
-    }
-    if (reference.safeguarding_dbs === "yes" && !adminNotes) {
-      return NextResponse.json(
-        { error: "admin_notes_required_for_safeguarding_yes" },
+        { error: guardError },
         { status: 400 },
       );
     }

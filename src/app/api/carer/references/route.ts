@@ -4,9 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/smtp";
 import { renderReferenceInviteEmail } from "@/lib/email/templates";
+import { isReferenceType } from "@/lib/vetting/reference-cqc";
 import {
   MAX_REFERENCES,
-  REFERENCE_TYPES,
   type ReferenceType,
 } from "@/lib/vetting/types";
 
@@ -78,7 +78,7 @@ export async function POST(req: Request) {
   if (!EMAIL_RE.test(email) || email.length > 120) {
     return NextResponse.json({ error: "Valid email required" }, { status: 400 });
   }
-  if (!REFERENCE_TYPES.includes(referenceType as ReferenceType)) {
+  if (!isReferenceType(referenceType)) {
     return NextResponse.json(
       { error: "Valid reference type required" },
       { status: 400 },

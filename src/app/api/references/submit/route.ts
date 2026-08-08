@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  REFERENCE_TYPES,
   TRISTATE_YES_NO,
-  type ReferenceType,
   type YesNoUnsure,
 } from "@/lib/vetting/types";
+import {
+  isReferenceType,
+  validateEmploymentDates,
+} from "@/lib/vetting/reference-cqc";
 
 export const dynamic = "force-dynamic";
 
@@ -103,7 +105,7 @@ export async function POST(req: Request) {
       ? body.comment.trim().slice(0, 2000)
       : null;
   const referenceType = String(body.reference_type ?? "").trim();
-  if (!REFERENCE_TYPES.includes(referenceType as ReferenceType)) {
+  if (!isReferenceType(referenceType)) {
     return invalid("Reference type is required");
   }
   const employmentStart = asDate(body.employment_start, "Employment start date");
@@ -205,20 +207,13 @@ export async function POST(req: Request) {
   if (referenceType === "employer" && !stillEmployed && !reasonForLeaving.value) {
     return invalid("Reason for leaving is required");
   }
-  const today = new Date().toISOString().slice(0, 10);
-  if (employmentStart.value && employmentStart.value > today) {
-    return invalid("Employment start date cannot be in the future");
-  }
-  if (
-    employmentStart.value &&
-    employmentEnd.value &&
-    employmentEnd.value < employmentStart.value
-  ) {
-    return invalid("Employment end date cannot be before the start date");
-  }
-  if (stillEmployed && employmentEnd.value) {
-    return invalid("Employment end date must be empty when still employed");
-  }
+  const dateError = validateEmploymentDates({
+    employmentStart: employmentStart.value,
+    employmentEnd: employmentEnd.value,
+    stillEmployed,
+    today: new Date().toISOString().slice(0, 10),
+  });
+  if (dateError) return invalid(dateError);
 
   const admin = createAdminClient();
   const { data: row } = await admin

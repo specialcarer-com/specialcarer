@@ -9,6 +9,7 @@
 
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { calculateReferenceGate } from "./reference-cqc";
 import { COURSE_MODULE_KEYS } from "./types";
 import type {
   Vertical,
@@ -85,17 +86,7 @@ export async function getReferencesStatus(
     status: string;
     reference_type: string | null;
   }[];
-  const verifiedRows = rows.filter((r) => r.status === "verified");
-  const verified = verifiedRows.length;
-  const verified_employer = verifiedRows.filter(
-    (r) => r.reference_type === null || r.reference_type === "employer",
-  ).length;
-  return {
-    verified,
-    total: rows.length,
-    verified_employer,
-    complete: verified >= 2 && verified_employer >= 1,
-  };
+  return calculateReferenceGate(rows);
 }
 
 export async function getCertificationsCount(
