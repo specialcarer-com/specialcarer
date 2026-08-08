@@ -98,7 +98,7 @@ export default async function ReferencesQueuePage({
       </div>
 
       <div className="flex gap-2 text-xs">
-        {["submitted", "verified", "rejected", "expired", "all"].map((f) => (
+        {["invited", "submitted", "verified", "rejected", "expired", "all"].map((f) => (
           <Link
             key={f}
             href={`/admin/trust-safety/references?filter=${f}`}
