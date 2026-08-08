@@ -224,9 +224,13 @@ export default async function ReferencesQueuePage({
                 <strong>Admin notes:</strong> {r.admin_notes}
               </p>
             )}
-            {r.status === "submitted" && (
+            {(r.status === "submitted" || r.status === "invited") && (
               <div className="mt-3">
-                <RefRowActions id={r.id} safeguardingDbs={r.safeguarding_dbs} />
+                <RefRowActions
+                  id={r.id}
+                  safeguardingDbs={r.safeguarding_dbs}
+                  status={r.status}
+                />
               </div>
             )}
           </li>
