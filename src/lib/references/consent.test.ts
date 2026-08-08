@@ -19,7 +19,8 @@ test("consent PDF contains candidate details and declaration", async () => {
   const stream = loaded.context.lookup(contents as never) as unknown as { getContents(): Uint8Array };
   const text = inflateSync(stream.getContents()).toString("latin1");
   assert.equal(loaded.getPageCount(), 1);
-  assert.match(text, /Aisha Khan/);
-  assert.match(text, /Candidate Disclosure Consent/);
+  const pdfHex = text.replace(/[^0-9A-F]/gi, "").toUpperCase();
+  assert.match(pdfHex, new RegExp(Buffer.from("Aisha Khan").toString("hex").toUpperCase()));
+  assert.match(pdfHex, new RegExp(Buffer.from("Candidate Disclosure Consent").toString("hex").toUpperCase()));
   assert.match(CANDIDATE_CONSENT_DECLARATION("Aisha Khan"), /CQC Schedule 3/);
 });
