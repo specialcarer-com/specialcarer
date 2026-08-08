@@ -8,10 +8,16 @@ export default function RefRowActions({
   id,
   safeguardingDbs,
   status,
+  uploadUrl,
+  consentUrl,
+  linksOnly = false,
 }: {
   id: string;
   safeguardingDbs: YesNoUnsure | null;
   status: string;
+  uploadUrl: string | null;
+  consentUrl: string | null;
+  linksOnly?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -68,6 +74,8 @@ export default function RefRowActions({
         const json = (await res.json().catch(() => ({}))) as { error?: string };
         setError(json.error?.replace(/_/g, " ") ?? "Could not update this reference.");
       }
+    } catch {
+      setError("Could not update this reference. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -75,60 +83,90 @@ export default function RefRowActions({
 
   return (
     <div className="space-y-2">
-      {safeguardingDbs === "yes" && (
-        <p className="text-xs font-semibold text-[#B24747]">
-          Safeguarding / DBS is marked Yes. Explain the decision before verifying.
-        </p>
+      {(uploadUrl || consentUrl) && (
+        <div className="flex flex-wrap gap-2">
+          {uploadUrl && (
+            <a
+              href={uploadUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-lg border border-brand-teal px-3 py-1.5 text-xs font-semibold text-brand-teal"
+            >
+              Download uploaded file
+            </a>
+          )}
+          {consentUrl && (
+            <a
+              href={consentUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-lg border border-brand-ink/20 px-3 py-1.5 text-xs font-semibold text-brand-ink/80"
+            >
+              View candidate consent
+            </a>
+          )}
+        </div>
       )}
-      <div className="flex items-center gap-2 flex-wrap">
-      {status === "invited" && (
-        <button
-          type="button"
-          onClick={resend}
-          disabled={busy}
-          className="px-3 py-1.5 rounded-lg bg-brand-teal text-white text-xs font-semibold hover:bg-[#039EA0]/90 disabled:opacity-50"
-        >
-          {busy ? "Resending…" : "Resend invite"}
-        </button>
+      {!linksOnly && (
+        <>
+          {safeguardingDbs === "yes" && (
+            <p className="text-xs font-semibold text-[#B24747]">
+              Safeguarding / DBS is marked Yes. Explain the decision before verifying.
+            </p>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {status === "invited" && (
+              <button
+                type="button"
+                onClick={resend}
+                disabled={busy}
+                className="px-3 py-1.5 rounded-lg bg-brand-teal text-white text-xs font-semibold hover:bg-[#039EA0]/90 disabled:opacity-50"
+              >
+                {busy ? "Resending…" : "Resend invite"}
+              </button>
+            )}
+            {status === "submitted" && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => call("verify")}
+                  disabled={busy}
+                  className="px-3 py-1.5 rounded-lg bg-brand-teal text-white text-xs font-semibold hover:bg-[#028688] disabled:opacity-50"
+                >
+                  Verify
+                </button>
+                <input
+                  type="text"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Reject reason (optional)"
+                  className="text-xs px-2 py-1.5 rounded-lg border border-brand-ink/15 w-64"
+                />
+                <input
+                  type="text"
+                  value={adminNotes}
+                  onChange={(e) => setAdminNotes(e.target.value)}
+                  maxLength={1000}
+                  placeholder={
+                    safeguardingDbs === "yes"
+                      ? "Admin notes (required to verify)"
+                      : "Admin notes (optional)"
+                  }
+                  className="text-xs px-2 py-1.5 rounded-lg border border-brand-ink/15 w-72"
+                />
+                <button
+                  type="button"
+                  onClick={() => call("reject")}
+                  disabled={busy}
+                  className="px-3 py-1.5 rounded-lg bg-[#B24747] text-white text-xs font-semibold hover:bg-[#B24747]/90 disabled:opacity-50"
+                >
+                  Reject
+                </button>
+              </>
+            )}
+          </div>
+        </>
       )}
-      {status === "submitted" && <>
-      <button
-        type="button"
-        onClick={() => call("verify")}
-        disabled={busy}
-        className="px-3 py-1.5 rounded-lg bg-brand-teal text-white text-xs font-semibold hover:bg-[#028688] disabled:opacity-50"
-      >
-        Verify
-      </button>
-      <input
-        type="text"
-        value={reason}
-        onChange={(e) => setReason(e.target.value)}
-        placeholder="Reject reason (optional)"
-        className="text-xs px-2 py-1.5 rounded-lg border border-brand-ink/15 w-64"
-      />
-      <input
-        type="text"
-        value={adminNotes}
-        onChange={(e) => setAdminNotes(e.target.value)}
-        maxLength={1000}
-        placeholder={
-          safeguardingDbs === "yes"
-            ? "Admin notes (required to verify)"
-            : "Admin notes (optional)"
-        }
-        className="text-xs px-2 py-1.5 rounded-lg border border-brand-ink/15 w-72"
-      />
-      <button
-        type="button"
-        onClick={() => call("reject")}
-        disabled={busy}
-        className="px-3 py-1.5 rounded-lg bg-[#B24747] text-white text-xs font-semibold hover:bg-[#B24747]/90 disabled:opacity-50"
-      >
-        Reject
-      </button>
-      </>}
-      </div>
       {error && <p role="alert" className="text-xs text-[#B24747]">{error}</p>}
     </div>
   );
