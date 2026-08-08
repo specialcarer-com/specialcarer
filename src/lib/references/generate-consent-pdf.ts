@@ -17,5 +17,5 @@ export async function generateConsentPdf(consent: ReferenceConsent): Promise<Uin
   y -= 8; page.drawText("Signature", { x: MARGIN, y, size: 11, font: bold }); y -= 72;
   try { const signature = await pdf.embedPng(Buffer.from(consent.signature_data_url.replace(/^data:image\/png;base64,/, ""), "base64")); const s = Math.min(220 / signature.width, 58 / signature.height); page.drawImage(signature, { x: MARGIN, y, width: signature.width * s, height: signature.height * s }); } catch { page.drawText("Signature image unavailable", { x: MARGIN, y: y + 20, size: 9, font: regular }); }
   let footerY = 86; for (const text of [`Signed: ${new Date(consent.signed_at).toLocaleString("en-GB")}`, `IP address: ${consent.signed_ip ?? "Unavailable"}`, `User agent: ${(consent.signed_ua ?? "Unavailable").slice(0, 100)}`, "Retained per CQC Health and Social Care Act 2008 (Regulated Activities) Regulations 2014, Schedule 3."]) { page.drawText(text, { x: MARGIN, y: footerY, size: 7.4, font: regular, color: rgb(.3,.33,.35) }); footerY -= 10; }
-  return pdf.save();
+  return pdf.save({ useObjectStreams: false });
 }
