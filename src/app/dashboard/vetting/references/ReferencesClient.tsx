@@ -21,6 +21,8 @@ type Row = {
   submitted_at: string | null;
   verified_at: string | null;
   created_at: string;
+  resend_count?: number;
+  last_resend_at: string | null;
 };
 
 const STATUS_TONE: Record<string, string> = {
@@ -40,6 +42,8 @@ export default function ReferencesClient({ initial }: { initial: Row[] }) {
     useState<ReferenceType>("employer");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
+  const [resendErrors, setResendErrors] = useState<Record<string, string>>({});
 
   const atCap = rows.length >= 3;
   // Existing rows pre-date the type column and are employer references for
@@ -83,6 +87,51 @@ export default function ReferencesClient({ initial }: { initial: Row[] }) {
       setErr("Network error.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function resend(id: string) {
+    if (resendingId) return;
+    setResendingId(id);
+    setResendErrors((errors) => {
+      const next = { ...errors };
+      delete next[id];
+      return next;
+    });
+    try {
+      const res = await fetch(
+        `/api/carer/references/${encodeURIComponent(id)}/resend`,
+        { method: "POST" },
+      );
+      const json = (await res.json().catch(() => ({}))) as {
+        reference?: Pick<
+          Row,
+          "status" | "token_expires_at" | "resend_count" | "last_resend_at"
+        >;
+        error?: string;
+      };
+      if (!res.ok || !json.reference) {
+        setResendErrors((errors) => ({
+          ...errors,
+          [id]:
+            res.status === 429
+              ? "You can resend this invitation up to 3 times in 24 hours."
+              : (json.error ?? "Couldn't resend invitation."),
+        }));
+        return;
+      }
+      setRows((current) =>
+        current.map((row) =>
+          row.id === id ? { ...row, ...json.reference } : row,
+        ),
+      );
+    } catch {
+      setResendErrors((errors) => ({
+        ...errors,
+        [id]: "Network error. Please try again.",
+      }));
+    } finally {
+      setResendingId(null);
     }
   }
 
@@ -140,6 +189,11 @@ export default function ReferencesClient({ initial }: { initial: Row[] }) {
                       {new Date(r.token_expires_at).toLocaleDateString("en-GB")}
                     </p>
                   )}
+                  {r.last_resend_at && (
+                    <p className="text-xs text-brand-ink/60 mt-1">
+                      Reminded {relativeTime(r.last_resend_at)}
+                    </p>
+                  )}
                   {r.status === "submitted" && r.submitted_at && (
                     <p className="text-xs text-brand-ink/60 mt-1">
                       Awaiting admin verification
@@ -158,15 +212,42 @@ export default function ReferencesClient({ initial }: { initial: Row[] }) {
                 >
                   {r.status}
                 </span>
-                {r.status === "invited" && (
-                  <button
-                    type="button"
-                    onClick={() => remove(r.id)}
-                    className="text-xs font-semibold text-[#B24747] hover:underline"
-                  >
-                    Cancel
-                  </button>
-                )}
+
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  {(r.status === "invited" || r.status === "expired") && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => resend(r.id)}
+                        disabled={resendingId !== null}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-brand-teal hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {resendingId === r.id && (
+                          <span
+                            aria-hidden="true"
+                            className="h-3 w-3 animate-spin rounded-full border-2 border-[#039EA0] border-t-transparent"
+                          />
+                        )}
+                        {resendingId === r.id ? "Resending…" : "Resend invite"}
+                      </button>
+                      {resendErrors[r.id] && (
+                        <p role="alert" className="max-w-44 text-right text-xs text-[#B24747]">
+                          {resendErrors[r.id]}
+                        </p>
+                      )}
+                    </>
+                  )}
+                  {r.status === "invited" && (
+                    <button
+                      type="button"
+                      onClick={() => remove(r.id)}
+                      className="text-xs font-semibold text-[#B24747] hover:underline"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+
               </li>
             ))}
           </ul>
@@ -257,4 +338,12 @@ function Field({
       {children}
     </label>
   );
+}
+
+function relativeTime(value: string): string {
+  const seconds = Math.max(0, Math.floor((Date.now() - Date.parse(value)) / 1000));
+  if (seconds < 60) return "just now";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
 }
