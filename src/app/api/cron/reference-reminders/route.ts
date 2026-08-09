@@ -82,6 +82,7 @@ export async function GET(req: Request) {
         declineLink: `${siteUrl()}/r/${reference.token}?decline=1`,
         expiresAtIso: reference.token_expires_at,
         referenceType: reference.reference_type ?? "employer",
+        now,
       };
       const { subject, html, text } =
         stage === 1

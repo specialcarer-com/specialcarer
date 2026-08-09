@@ -365,7 +365,7 @@ export type ReferenceInviteEmail = {
   carerName: string;
   link: string;
   expiresAtIso: string;
-  referenceType: ReferenceType;
+  referenceType?: ReferenceType | string | null;
 };
 
 const REFERENCE_INVITE_DESCRIPTION: Record<ReferenceType, string> = {
@@ -377,6 +377,7 @@ const REFERENCE_INVITE_DESCRIPTION: Record<ReferenceType, string> = {
 
 export type ReferenceReminderEmail = ReferenceInviteEmail & {
   declineLink: string;
+  now?: Date;
 };
 
 const REFERENCE_WORDMARK_URL =
@@ -501,7 +502,9 @@ export function renderReferenceInviteEmail(args: ReferenceInviteEmail): {
   text: string;
 } {
   const carerName = referenceFirstName(args.carerName);
-  const referenceDescription = REFERENCE_INVITE_DESCRIPTION[args.referenceType];
+  const referenceDescription =
+    REFERENCE_INVITE_DESCRIPTION[args.referenceType as ReferenceType] ??
+    "a reference";
   const expires = formatReferenceExpiry(args.expiresAtIso);
   const subject = `${carerName} has listed you as a reference on SpecialCarer`;
 
@@ -569,17 +572,28 @@ export function renderReferenceReminderStage3Email(
 ): { subject: string; html: string; text: string } {
   const carerName = referenceFirstName(args.carerName);
   const expires = formatReferenceExpiry(args.expiresAtIso);
-  const subject = `Final reminder: reference for ${carerName} expires in 2 days`;
+  const expiresAt = Date.parse(args.expiresAtIso);
+  const daysRemaining = Number.isFinite(expiresAt)
+    ? Math.max(
+        0,
+        Math.floor(
+          (expiresAt - (args.now?.getTime() ?? Date.now())) /
+            (24 * 60 * 60 * 1000),
+        ),
+      )
+    : 0;
+  const daysRemainingText = `${daysRemaining} day${daysRemaining === 1 ? "" : "s"}`;
+  const subject = `Final reminder: reference for ${carerName} expires in ${daysRemainingText}`;
   return renderReferenceEmail({
     subject,
     refereeName: args.refereeName,
     link: args.link,
     declineLink: args.declineLink,
-    bodyHtml: `<p style="margin:0 0 16px;"><strong style="font-weight:700;">Final reminder:</strong> this reference link expires in two days.</p>
+    bodyHtml: `<p style="margin:0 0 16px;"><strong style="font-weight:700;">Final reminder:</strong> this reference link expires in ${daysRemainingText}.</p>
       <p style="margin:0 0 16px;">It is needed for ${escapeRefHtml(carerName)}&rsquo;s SpecialCarer vetting and CQC compliance. A completed reference helps us complete the safety checks before they can provide care.</p>
       <p style="margin:0;color:#4A5355;font-size:14px;line-height:1.55;">The reference link expires on <strong style="color:${REFERENCE_INK};font-weight:700;">${escapeRefHtml(expires)}</strong>.</p>`,
     bodyText: [
-      "Final reminder: this reference link expires in two days.",
+      `Final reminder: this reference link expires in ${daysRemainingText}.`,
       `It is needed for ${carerName}'s SpecialCarer vetting and CQC compliance. A completed reference helps us complete the safety checks before they can provide care.`,
       `The reference link expires on ${expires}.`,
     ],
