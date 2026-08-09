@@ -37,6 +37,8 @@ export default function RefRowActions({
             : (json.error?.replace(/_/g, " ") ?? "Could not resend this reference invitation."),
         );
       }
+    } catch {
+      setError("Could not resend this reference invitation. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -84,7 +86,7 @@ export default function RefRowActions({
           type="button"
           onClick={resend}
           disabled={busy}
-          className="px-3 py-1.5 rounded-lg bg-[#039EA0] text-white text-xs font-semibold hover:bg-[#087C7D] disabled:opacity-50"
+          className="px-3 py-1.5 rounded-lg bg-brand-teal text-white text-xs font-semibold hover:bg-[#039EA0]/90 disabled:opacity-50"
         >
           {busy ? "Resending…" : "Resend invite"}
         </button>

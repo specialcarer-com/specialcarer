@@ -59,6 +59,13 @@ export default async function ReferencesQueuePage({
   )
     ? (sp.reference_type as ReferenceType)
     : "all";
+  const statusFilterHref = (nextFilter: string) => {
+    const params = new URLSearchParams({ filter: nextFilter });
+    if (sp.reference_type) {
+      params.set("reference_type", sp.reference_type);
+    }
+    return `/admin/trust-safety/references?${params.toString()}`;
+  };
   const admin = createAdminClient();
   let q = admin
     .from("carer_references")
@@ -101,7 +108,7 @@ export default async function ReferencesQueuePage({
         {["invited", "submitted", "verified", "rejected", "expired", "all"].map((f) => (
           <Link
             key={f}
-            href={`/admin/trust-safety/references?filter=${f}`}
+            href={statusFilterHref(f)}
             className={`px-3 py-1.5 rounded-full border ${
               filter === f
                 ? "bg-brand-ink text-white border-brand-ink"
