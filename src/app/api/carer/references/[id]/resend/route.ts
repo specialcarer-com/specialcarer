@@ -92,6 +92,27 @@ export async function POST(
     token,
     now,
   });
+  const carerName = await carerDisplayName({
+    carerId: reference.carer_id,
+    fallbackEmail: user.email,
+  });
+  const { subject, html, text } = renderReferenceInviteEmail({
+    refereeName: reference.referee_name,
+    carerName,
+    link: `${siteUrl()}/r/${token}`,
+    expiresAtIso: update.token_expires_at,
+    referenceType: reference.reference_type ?? "employer",
+  });
+  const delivery = await sendEmail({
+    to: reference.referee_email,
+    subject,
+    html,
+    text,
+  });
+  if (!delivery.ok) {
+    return NextResponse.json({ error: delivery.error }, { status: 500 });
+  }
+
   const { data: updated, error: updateError } = await admin
     .from("carer_references")
     .update(update)
@@ -109,26 +130,6 @@ export async function POST(
       { status: 409 },
     );
   }
-
-  const carerName = await carerDisplayName({
-    carerId: reference.carer_id,
-    fallbackEmail: user.email,
-  });
-  const { subject, html, text } = renderReferenceInviteEmail({
-    refereeName: reference.referee_name,
-    carerName,
-    link: `${siteUrl()}/r/${token}`,
-    expiresAtIso: updated.token_expires_at,
-    referenceType: reference.reference_type ?? "employer",
-  });
-  await sendEmail({
-    to: reference.referee_email,
-    subject,
-    html,
-    text,
-  }).catch((error: unknown) => {
-    console.error("[references] resend email failed", error);
-  });
 
   return NextResponse.json({
     reference: updated,

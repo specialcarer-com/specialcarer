@@ -64,23 +64,6 @@ export async function POST(
     token,
     now,
   });
-  const { data: updated, error: updateError } = await admin
-    .from("carer_references")
-    .update(update)
-    .eq("id", reference.id)
-    .in("status", ["invited", "expired"])
-    .select("id, status, token_expires_at, resend_count, last_resend_at")
-    .maybeSingle();
-  if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
-  }
-  if (!updated) {
-    return NextResponse.json(
-      { error: "Reference can no longer be resent" },
-      { status: 409 },
-    );
-  }
-
   let carerName = "A SpecialCarer applicant";
   try {
     const { data: profile } = await admin
@@ -97,17 +80,35 @@ export async function POST(
     refereeName: reference.referee_name,
     carerName,
     link: `${siteUrl()}/r/${token}`,
-    expiresAtIso: updated.token_expires_at,
+    expiresAtIso: update.token_expires_at,
     referenceType: reference.reference_type ?? "employer",
   });
-  await sendEmail({
+  const delivery = await sendEmail({
     to: reference.referee_email,
     subject,
     html,
     text,
-  }).catch((error: unknown) => {
-    console.error("[references] admin resend email failed", error);
   });
+  if (!delivery.ok) {
+    return NextResponse.json({ error: delivery.error }, { status: 500 });
+  }
+
+  const { data: updated, error: updateError } = await admin
+    .from("carer_references")
+    .update(update)
+    .eq("id", reference.id)
+    .in("status", ["invited", "expired"])
+    .select("id, status, token_expires_at, resend_count, last_resend_at")
+    .maybeSingle();
+  if (updateError) {
+    return NextResponse.json({ error: updateError.message }, { status: 500 });
+  }
+  if (!updated) {
+    return NextResponse.json(
+      { error: "Reference can no longer be resent" },
+      { status: 409 },
+    );
+  }
 
   return NextResponse.json({
     reference: updated,
