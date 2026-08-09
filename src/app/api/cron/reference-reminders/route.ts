@@ -13,8 +13,10 @@ import {
 import type { ReferenceType } from "@/lib/vetting/types";
 
 export const dynamic = "force-dynamic";
+// Vercel serverless per-invocation timeout; keep each daily batch bounded.
+export const maxDuration = 60;
 
-const MAX_ROWS_PER_RUN = 500;
+const MAX_ROWS_PER_RUN = 100;
 
 type ReminderReference = ReferenceReminderCandidate & {
   referee_name: string;
@@ -34,11 +36,15 @@ function siteUrl(): string {
 /** GET /api/cron/reference-reminders — daily Day 3/7/12 reference nudges. */
 export async function GET(req: Request) {
   const expected = process.env.CRON_SECRET;
-  if (expected) {
-    const auth = req.headers.get("authorization") ?? "";
-    if (auth !== `Bearer ${expected}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!expected) {
+    return NextResponse.json(
+      { error: "CRON_SECRET not configured" },
+      { status: 401 },
+    );
+  }
+  const auth = req.headers.get("authorization") ?? "";
+  if (auth !== `Bearer ${expected}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const admin = createAdminClient();
@@ -50,6 +56,7 @@ export async function GET(req: Request) {
     )
     .eq("status", "invited")
     .gt("token_expires_at", now.toISOString())
+    .lt("reminder_stage", 3)
     .order("created_at", { ascending: true })
     .limit(MAX_ROWS_PER_RUN);
   if (error) {
