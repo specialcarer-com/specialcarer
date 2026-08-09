@@ -67,6 +67,7 @@ export async function POST(
       "id, carer_id, referee_name, referee_email, reference_type, status, resend_count, last_resend_at",
     )
     .eq("id", id)
+    .eq("carer_id", user.id)
     .maybeSingle<ReferenceRow>();
   if (loadError) {
     return NextResponse.json({ error: loadError.message }, { status: 500 });
