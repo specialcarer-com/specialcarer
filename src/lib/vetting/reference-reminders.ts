@@ -7,6 +7,7 @@ export const REFERENCE_REMINDER_DAYS = {
 export type ReferenceReminderRow = {
   created_at: string;
   token_expires_at: string;
+  last_resend_at: string | null;
   reminder_stage: number;
 };
 
@@ -29,15 +30,37 @@ export function nextReferenceReminderStage(
   reference: ReferenceReminderRow,
   now: Date,
 ): 1 | 2 | 3 | null {
-  if (Date.parse(reference.token_expires_at) <= now.getTime()) return null;
+  const tokenExpiresAt = Date.parse(reference.token_expires_at);
+  if (!Number.isFinite(tokenExpiresAt) || tokenExpiresAt <= now.getTime()) {
+    return null;
+  }
   const createdAt = Date.parse(reference.created_at);
   if (!Number.isFinite(createdAt)) return null;
-  const ageMs = now.getTime() - createdAt;
-  const hours = 60 * 60 * 1000;
+  const tokenIssuedAt = reference.last_resend_at
+    ? Date.parse(reference.last_resend_at)
+    : createdAt;
+  if (!Number.isFinite(tokenIssuedAt)) return null;
+  const ageMs = now.getTime() - Math.max(createdAt, tokenIssuedAt);
+  const dayMs = 24 * 60 * 60 * 1000;
 
-  if (reference.reminder_stage === 0 && ageMs >= 72 * hours) return 1;
-  if (reference.reminder_stage === 1 && ageMs >= 168 * hours) return 2;
-  if (reference.reminder_stage === 2 && ageMs >= 288 * hours) return 3;
+  if (
+    reference.reminder_stage === 0 &&
+    ageMs >= REFERENCE_REMINDER_DAYS.stage1 * dayMs
+  ) {
+    return 1;
+  }
+  if (
+    reference.reminder_stage === 1 &&
+    ageMs >= REFERENCE_REMINDER_DAYS.stage2 * dayMs
+  ) {
+    return 2;
+  }
+  if (
+    reference.reminder_stage === 2 &&
+    ageMs >= REFERENCE_REMINDER_DAYS.stage3 * dayMs
+  ) {
+    return 3;
+  }
   return null;
 }
 

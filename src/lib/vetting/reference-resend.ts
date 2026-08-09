@@ -64,6 +64,7 @@ export function buildReferenceResendUpdate(args: {
   token_expires_at: string;
   resend_count: number;
   last_resend_at: string;
+  reminder_stage: number;
 } {
   return {
     status: "invited",
@@ -73,5 +74,6 @@ export function buildReferenceResendUpdate(args: {
     ).toISOString(),
     resend_count: args.nextResendCount,
     last_resend_at: args.now.toISOString(),
+    reminder_stage: 0,
   };
 }

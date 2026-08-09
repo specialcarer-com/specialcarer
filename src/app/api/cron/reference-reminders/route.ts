@@ -52,7 +52,7 @@ export async function GET(req: Request) {
   const { data, error } = await admin
     .from("carer_references")
     .select(
-      "id, carer_id, referee_name, referee_email, reference_type, token, token_expires_at, created_at, reminder_stage",
+      "id, carer_id, referee_name, referee_email, reference_type, token, token_expires_at, created_at, last_resend_at, reminder_stage",
     )
     .eq("status", "invited")
     .gt("token_expires_at", now.toISOString())
