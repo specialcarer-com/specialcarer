@@ -11,6 +11,7 @@ import {
   type ReferenceReminderCandidate,
 } from "@/lib/vetting/reference-reminders";
 import type { ReferenceType } from "@/lib/vetting/types";
+import { authoriseReferenceReminderCron } from "./auth";
 
 export const dynamic = "force-dynamic";
 // Vercel serverless per-invocation timeout; keep each daily batch bounded.
@@ -35,16 +36,15 @@ function siteUrl(): string {
 
 /** GET /api/cron/reference-reminders — daily Day 3/7/12 reference nudges. */
 export async function GET(req: Request) {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) {
+  const authorisation = authoriseReferenceReminderCron(
+    req.headers.get("authorization"),
+    process.env.CRON_SECRET,
+  );
+  if (!authorisation.ok) {
     return NextResponse.json(
-      { error: "CRON_SECRET not configured" },
-      { status: 401 },
+      { error: authorisation.error },
+      { status: authorisation.status },
     );
-  }
-  const auth = req.headers.get("authorization") ?? "";
-  if (auth !== `Bearer ${expected}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const admin = createAdminClient();

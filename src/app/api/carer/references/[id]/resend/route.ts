@@ -9,6 +9,7 @@ import {
   decideReferenceResend,
   type ReferenceResendRow,
 } from "@/lib/vetting/reference-resend";
+import { deliverReferenceResendEmail } from "@/lib/vetting/reference-resend-delivery";
 import type { ReferenceType } from "@/lib/vetting/types";
 
 export const dynamic = "force-dynamic";
@@ -103,14 +104,14 @@ export async function POST(
     expiresAtIso: update.token_expires_at,
     referenceType: reference.reference_type ?? "employer",
   });
-  const delivery = await sendEmail({
+  const delivery = await deliverReferenceResendEmail(sendEmail, {
     to: reference.referee_email,
     subject,
     html,
     text,
   });
   if (!delivery.ok) {
-    return NextResponse.json({ error: delivery.error }, { status: 500 });
+    return NextResponse.json({ error: delivery.error }, { status: delivery.status });
   }
 
   const { data: updated, error: updateError } = await admin

@@ -41,4 +41,22 @@ describe("reference email templates", () => {
       assert.match(email.text, new RegExp(link));
     }
   });
+
+  it("falls back safely for legacy or missing reference types", () => {
+    for (const referenceType of [undefined, "legacy-type"] as const) {
+      const email = renderReferenceInviteEmail({ ...common, referenceType });
+      assert.match(email.html, /has asked you to provide a reference/);
+      assert.match(email.text, /has asked you to provide a reference/);
+    }
+  });
+
+  it("derives final reminder days remaining from the expiry timestamp", () => {
+    const email = renderReferenceReminderStage3Email({
+      ...common,
+      declineLink: `${link}?decline=1`,
+      now: new Date("2026-08-20T09:00:00.000Z"),
+    });
+    assert.match(email.subject, /expires in 2 days/);
+    assert.match(email.html, /expires in 2 days/);
+  });
 });

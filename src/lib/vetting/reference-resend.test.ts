@@ -70,5 +70,6 @@ describe("reference resend endpoint policy", () => {
     assert.equal(update.status, "invited");
     assert.equal(update.token, "fresh-token");
     assert.equal(update.token_expires_at, "2026-08-22T09:00:00.000Z");
+    assert.equal(update.reminder_stage, 0);
   });
 });

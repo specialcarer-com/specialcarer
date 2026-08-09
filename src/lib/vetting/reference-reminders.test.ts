@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  nextReferenceReminderStage,
   processReferenceReminders,
   type ReferenceReminderCandidate,
 } from "./reference-reminders";
@@ -16,6 +17,7 @@ function reference(
     carer_id: "carer-1",
     created_at: "2026-08-12T09:00:00.000Z",
     token_expires_at: futureExpiry,
+    last_resend_at: null,
     reminder_stage: 0,
     ...overrides,
   };
@@ -72,5 +74,28 @@ describe("reference reminder cron scheduling", () => {
     assert.deepEqual(dispatched, []);
     assert.deepEqual(marked, []);
     assert.equal(result.sent, 0);
+  });
+
+  it("restarts the reminder schedule from the most recent resend", () => {
+    assert.equal(
+      nextReferenceReminderStage(
+        reference({
+          created_at: "2026-08-01T09:00:00.000Z",
+          last_resend_at: "2026-08-13T09:00:00.000Z",
+        }),
+        NOW,
+      ),
+      null,
+    );
+  });
+
+  it("skips corrupt token expiry timestamps", () => {
+    assert.equal(
+      nextReferenceReminderStage(
+        reference({ token_expires_at: "not-a-timestamp" }),
+        NOW,
+      ),
+      null,
+    );
   });
 });
