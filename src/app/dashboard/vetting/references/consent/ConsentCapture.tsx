@@ -1,17 +1,356 @@
 "use client";
+
 import { useEffect, useRef, useState } from "react";
 import type { ReferenceConsent } from "@/lib/references/consent";
-import { CANDIDATE_CONSENT_DECLARATION, normaliseNationalInsuranceNumber, UK_NI_RE } from "@/lib/references/consent";
-const input = "mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 focus:border-[#039EA0] focus:outline-none focus:ring-2 focus:ring-[#039EA0]/15";
-export default function ConsentCapture({ initialConsent, defaultName }: { initialConsent: ReferenceConsent | null; defaultName: string }) {
-  const [consent, setConsent] = useState(initialConsent); const [name, setName] = useState(initialConsent?.full_name ?? defaultName); const [dob, setDob] = useState(initialConsent?.date_of_birth ?? ""); const [ni, setNi] = useState(initialConsent?.national_insurance_number ?? ""); const [agreed, setAgreed] = useState(false); const [busy, setBusy] = useState(false); const [message, setMessage] = useState<string | null>(null); const canvas = useRef<HTMLCanvasElement>(null); const drawing = useRef(false); const signed = useRef(false);
-  useEffect(() => { const el = canvas.current; if (!el) return; const ctx = el.getContext("2d"); if (!ctx) return; ctx.strokeStyle = "#0F1416"; ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.lineJoin = "round"; }, [consent]);
-  function position(e: React.PointerEvent<HTMLCanvasElement>) { const r = e.currentTarget.getBoundingClientRect(); return { x: (e.clientX - r.left) * (e.currentTarget.width / r.width), y: (e.clientY - r.top) * (e.currentTarget.height / r.height) }; }
-  function start(e: React.PointerEvent<HTMLCanvasElement>) { const ctx = e.currentTarget.getContext("2d"); if (!ctx) return; drawing.current = true; e.currentTarget.setPointerCapture(e.pointerId); const p = position(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }
-  function move(e: React.PointerEvent<HTMLCanvasElement>) { if (!drawing.current) return; const ctx = e.currentTarget.getContext("2d"); if (!ctx) return; const p = position(e); ctx.lineTo(p.x, p.y); ctx.stroke(); signed.current = true; }
-  function clear() { const el = canvas.current; const ctx = el?.getContext("2d"); if (el && ctx) ctx.clearRect(0, 0, el.width, el.height); signed.current = false; }
-  async function revoke() { setBusy(true); const res = await fetch("/api/carer/reference-consents", { method: "DELETE" }); setBusy(false); if (!res.ok) return setMessage("We could not revoke your consent. Please try again."); setConsent((value) => value ? { ...value, revoked_at: new Date().toISOString() } : value); setMessage("Your consent has been revoked. Please sign again before inviting new referees."); }
-  async function submit(e: React.FormEvent) { e.preventDefault(); const formattedNi = normaliseNationalInsuranceNumber(ni); if (!name.trim() || !dob || !UK_NI_RE.test(formattedNi) || !agreed || !signed.current || !canvas.current) return setMessage("Complete every field, agree to the declaration and add your signature."); setBusy(true); setMessage(null); const res = await fetch("/api/carer/reference-consents", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ full_name: name.trim(), date_of_birth: dob, national_insurance_number: formattedNi, signature_data_url: canvas.current.toDataURL("image/png") }) }); const json = await res.json().catch(() => ({})); setBusy(false); if (!res.ok) return setMessage(json.error ?? "We could not save your consent."); setConsent(json.consent); setMessage(json.warning ?? "Your signed consent has been saved."); }
-  if (consent && !consent.revoked_at) return <section className="rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm"><p className="font-semibold text-emerald-800">Your consent is signed and active.</p><dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2"><div><dt className="text-slate-500">Signed by</dt><dd>{consent.full_name}</dd></div><div><dt className="text-slate-500">Signed on</dt><dd>{new Date(consent.signed_at).toLocaleString("en-GB")}</dd></div></dl><div className="mt-6 flex flex-wrap gap-3">{consent.pdf_storage_path && <a href={`/api/carer/reference-consents/pdf?id=${consent.id}`} className="rounded-xl border border-[#039EA0] px-4 py-2 text-sm font-semibold text-[#039EA0]">View my consent</a>}<button type="button" onClick={revoke} disabled={busy} className="rounded-xl bg-[#0F1416] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{busy ? "Revoking…" : "Revoke and re-sign"}</button></div>{message && <p className="mt-4 text-sm text-slate-600">{message}</p>}</section>;
-  return <form onSubmit={submit} className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><div className="rounded-xl border border-[#039EA0]/20 bg-[#F4EFE6] p-4 text-sm leading-relaxed text-slate-700"><p className="font-semibold text-[#0F1416]">How we use this information</p><p className="mt-2">SpecialCarer will use your details to request employment and character references for your care-worker vetting. We only share your name, date of birth and National Insurance number with the referees you nominate where it is reasonably necessary to identify you accurately.</p></div><label className="block text-sm font-semibold text-slate-800">Full legal name<input className={input} value={name} onChange={(e) => setName(e.target.value)} maxLength={120} /></label><div className="grid gap-4 sm:grid-cols-2"><label className="block text-sm font-semibold text-slate-800">Date of birth<input type="date" className={input} value={dob} onChange={(e) => setDob(e.target.value)} /></label><label className="block text-sm font-semibold text-slate-800">National Insurance number<input className={input} value={ni} onChange={(e) => setNi(normaliseNationalInsuranceNumber(e.target.value))} maxLength={9} aria-describedby="ni-hint" /></label></div><p id="ni-hint" className="-mt-4 text-xs text-slate-500">For example: QQ 12 34 56 C</p><div className="rounded-xl bg-slate-50 p-4 text-sm leading-relaxed text-slate-700"><p>{CANDIDATE_CONSENT_DECLARATION(name.trim() || "[full name]")}</p></div><div><p className="mb-2 text-sm font-semibold text-slate-800">Your signature</p><canvas ref={canvas} width={600} height={150} onPointerDown={start} onPointerMove={move} onPointerUp={() => { drawing.current = false; }} className="h-36 w-full touch-none rounded-xl border border-dashed border-slate-300 bg-white" aria-label="Draw your signature" /><button type="button" onClick={clear} className="mt-2 text-sm font-semibold text-[#039EA0] underline">Clear signature</button></div><label className="flex items-start gap-3 text-sm text-slate-700"><input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-1 h-4 w-4 rounded border-slate-300 text-[#039EA0]" />I have read and agree to the declaration above.</label>{message && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{message}</p>}<button disabled={busy} className="w-full rounded-xl bg-[#039EA0] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60">{busy ? "Saving…" : "Sign consent and continue"}</button></form>;
+import {
+  CANDIDATE_CONSENT_DECLARATION,
+  normaliseNationalInsuranceNumber,
+  UK_NI_RE,
+} from "@/lib/references/consent";
+
+const input =
+  "mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 focus:border-[#039EA0] focus:outline-none focus:ring-2 focus:ring-[#039EA0]/15";
+
+export default function ConsentCapture({
+  initialConsent,
+  defaultName,
+}: {
+  initialConsent: ReferenceConsent | null;
+  defaultName: string;
+}) {
+  const [consent, setConsent] = useState(initialConsent);
+  const [name, setName] = useState(initialConsent?.full_name ?? defaultName);
+  const [dob, setDob] = useState(initialConsent?.date_of_birth ?? "");
+  const [ni, setNi] = useState(initialConsent?.national_insurance_number ?? "");
+  const [agreed, setAgreed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const drawing = useRef(false);
+  const signed = useRef(false);
+
+  useEffect(() => {
+    const el = canvas.current;
+    if (!el) return;
+    const ctx = el.getContext("2d");
+    if (!ctx) return;
+    ctx.strokeStyle = "#0F1416";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+  }, [consent]);
+
+  function position(e: React.PointerEvent<HTMLCanvasElement>) {
+    const r = e.currentTarget.getBoundingClientRect();
+    return {
+      x: (e.clientX - r.left) * (e.currentTarget.width / r.width),
+      y: (e.clientY - r.top) * (e.currentTarget.height / r.height),
+    };
+  }
+
+  function start(e: React.PointerEvent<HTMLCanvasElement>) {
+    const ctx = e.currentTarget.getContext("2d");
+    if (!ctx) return;
+    drawing.current = true;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const p = position(e);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+  }
+
+  function move(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!drawing.current) return;
+    const ctx = e.currentTarget.getContext("2d");
+    if (!ctx) return;
+    const p = position(e);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    signed.current = true;
+  }
+
+  function clear() {
+    const el = canvas.current;
+    const ctx = el?.getContext("2d");
+    if (el && ctx) ctx.clearRect(0, 0, el.width, el.height);
+    signed.current = false;
+  }
+
+  async function revoke() {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/carer/reference-consents", {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        setMessage("We could not revoke your consent. Please try again.");
+        return;
+      }
+      setConsent((value) =>
+        value ? { ...value, revoked_at: new Date().toISOString() } : value
+      );
+      setMessage(
+        "Your consent has been revoked. Please sign again before inviting new referees."
+      );
+    } catch {
+      setMessage("We could not revoke your consent. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function retryPdf() {
+    if (!consent || consent.consent_pdf_status !== "failed") return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch(
+        `/api/carer/reference-consents/${encodeURIComponent(
+          consent.id
+        )}/retry-pdf`,
+        { method: "POST" }
+      );
+      const json = (await res.json().catch(() => ({}))) as {
+        consent?: ReferenceConsent;
+        error?: string;
+      };
+      if (json.consent) setConsent(json.consent);
+      if (!res.ok || !json.consent) {
+        setMessage(
+          json.error ??
+            "We could not generate your consent PDF. Please try again."
+        );
+        return;
+      }
+      setMessage("Your consent PDF has been generated.");
+    } catch {
+      setMessage(
+        "We could not generate your consent PDF. Please check your connection and try again."
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const formattedNi = normaliseNationalInsuranceNumber(ni);
+    if (
+      !name.trim() ||
+      !dob ||
+      !UK_NI_RE.test(formattedNi) ||
+      !agreed ||
+      !signed.current ||
+      !canvas.current
+    ) {
+      setMessage(
+        "Complete every field, agree to the declaration and add your signature."
+      );
+      return;
+    }
+    setBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/carer/reference-consents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          full_name: name.trim(),
+          date_of_birth: dob,
+          national_insurance_number: formattedNi,
+          signature_data_url: canvas.current.toDataURL("image/png"),
+        }),
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        consent?: ReferenceConsent;
+        error?: string;
+      };
+      if (json.consent) setConsent(json.consent);
+      if (!res.ok || !json.consent) {
+        setMessage(
+          json.error ??
+            "We could not save your consent. Please check your connection and try again."
+        );
+        return;
+      }
+      setMessage("Your signed consent has been saved.");
+    } catch {
+      setMessage(
+        "We could not save your consent. Please check your connection and try again."
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (consent && !consent.revoked_at) {
+    const active = consent.consent_pdf_status === "active";
+    const failed = consent.consent_pdf_status === "failed";
+    return (
+      <section className="rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm">
+        <p className="font-semibold text-emerald-800">
+          {active
+            ? "Your consent is signed and active."
+            : "Your consent has been saved, but is not active yet."}
+        </p>
+        {failed && (
+          <p
+            role="alert"
+            className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800"
+          >
+            We could not generate your consent PDF. Please retry generation
+            before sharing this consent with referees.
+          </p>
+        )}
+        {!active && !failed && (
+          <p className="mt-3 text-sm text-slate-600">
+            Your consent PDF is being prepared. This consent will become active
+            once the PDF is available.
+          </p>
+        )}
+        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-slate-500">Signed by</dt>
+            <dd>{consent.full_name}</dd>
+          </div>
+          <div>
+            <dt className="text-slate-500">Signed on</dt>
+            <dd>{new Date(consent.signed_at).toLocaleString("en-GB")}</dd>
+          </div>
+        </dl>
+        <div className="mt-6 flex flex-wrap gap-3">
+          {active && consent.pdf_storage_path && (
+            <a
+              href={`/api/carer/reference-consents/pdf?id=${consent.id}`}
+              className="rounded-xl border border-[#039EA0] px-4 py-2 text-sm font-semibold text-[#039EA0]"
+            >
+              View my consent
+            </a>
+          )}
+          {failed && (
+            <button
+              type="button"
+              onClick={retryPdf}
+              disabled={busy}
+              className="rounded-xl bg-[#039EA0] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            >
+              {busy ? "Retrying…" : "Retry generation"}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={revoke}
+            disabled={busy}
+            className="rounded-xl bg-[#0F1416] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {busy ? "Working…" : "Revoke and re-sign"}
+          </button>
+        </div>
+        {message && <p className="mt-4 text-sm text-slate-600">{message}</p>}
+      </section>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={submit}
+      className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+    >
+      <div className="rounded-xl border border-[#039EA0]/20 bg-[#F4EFE6] p-4 text-sm leading-relaxed text-slate-700">
+        <p className="font-semibold text-[#0F1416]">
+          How we use this information
+        </p>
+        <p className="mt-2">
+          SpecialCarer will use your details to request employment and character
+          references for your care-worker vetting. We only share your name, date
+          of birth and National Insurance number with the referees you nominate
+          where it is reasonably necessary to identify you accurately.
+        </p>
+      </div>
+      <label className="block text-sm font-semibold text-slate-800">
+        Full legal name
+        <input
+          className={input}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={120}
+        />
+      </label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block text-sm font-semibold text-slate-800">
+          Date of birth
+          <input
+            type="date"
+            className={input}
+            value={dob}
+            onChange={(e) => setDob(e.target.value)}
+          />
+        </label>
+        <label className="block text-sm font-semibold text-slate-800">
+          National Insurance number
+          <input
+            className={input}
+            value={ni}
+            onChange={(e) =>
+              setNi(normaliseNationalInsuranceNumber(e.target.value))
+            }
+            maxLength={9}
+            aria-describedby="ni-hint"
+          />
+        </label>
+      </div>
+      <p id="ni-hint" className="-mt-4 text-xs text-slate-500">
+        For example: QQ 12 34 56 C
+      </p>
+      <div className="rounded-xl bg-slate-50 p-4 text-sm leading-relaxed text-slate-700">
+        <p>{CANDIDATE_CONSENT_DECLARATION(name.trim() || "[full name]")}</p>
+      </div>
+      <div>
+        <p className="mb-2 text-sm font-semibold text-slate-800">
+          Your signature
+        </p>
+        <canvas
+          ref={canvas}
+          width={600}
+          height={150}
+          onPointerDown={start}
+          onPointerMove={move}
+          onPointerUp={() => {
+            drawing.current = false;
+          }}
+          className="h-36 w-full touch-none rounded-xl border border-dashed border-slate-300 bg-white"
+          aria-label="Draw your signature"
+        />
+        <button
+          type="button"
+          onClick={clear}
+          className="mt-2 text-sm font-semibold text-[#039EA0] underline"
+        >
+          Clear signature
+        </button>
+      </div>
+      <label className="flex items-start gap-3 text-sm text-slate-700">
+        <input
+          type="checkbox"
+          checked={agreed}
+          onChange={(e) => setAgreed(e.target.checked)}
+          className="mt-1 h-4 w-4 rounded border-slate-300 text-[#039EA0]"
+        />
+        I have read and agree to the declaration above.
+      </label>
+      {message && (
+        <p
+          role="alert"
+          className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800"
+        >
+          {message}
+        </p>
+      )}
+      <button
+        disabled={busy}
+        className="w-full rounded-xl bg-[#039EA0] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
+      >
+        {busy ? "Saving…" : "Sign consent and continue"}
+      </button>
+    </form>
+  );
 }

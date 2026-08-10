@@ -60,7 +60,7 @@ export default async function ReferencesQueuePage({
   const sp = await searchParams;
   const filter = sp.filter ?? "submitted";
   const referenceType = REFERENCE_TYPES.includes(
-    sp.reference_type as ReferenceType,
+    sp.reference_type as ReferenceType
   )
     ? (sp.reference_type as ReferenceType)
     : "all";
@@ -73,7 +73,7 @@ export default async function ReferencesQueuePage({
   let q = admin
     .from("carer_references")
     .select(
-      "id, carer_id, referee_name, referee_email, relationship, reference_type, status, rating, recommend, comment, submitted_at, verified_at, rejected_reason, employment_start, employment_end, still_employed, position_held, weekly_hours, reason_for_leaving, absence_days_12m, sponsors_visa, warnings_undisposed, under_investigation, safeguarding_dbs, would_reemploy, values_example, referee_position, referee_company, referee_company_addr, referee_signed_date, admin_notes, response_mode, decline_reason, uploaded_file_path, uploaded_file_size, uploaded_file_mime, created_at",
+      "id, carer_id, referee_name, referee_email, relationship, reference_type, status, rating, recommend, comment, submitted_at, verified_at, rejected_reason, employment_start, employment_end, still_employed, position_held, weekly_hours, reason_for_leaving, absence_days_12m, sponsors_visa, warnings_undisposed, under_investigation, safeguarding_dbs, would_reemploy, values_example, referee_position, referee_company, referee_company_addr, referee_signed_date, admin_notes, response_mode, decline_reason, uploaded_file_path, uploaded_file_size, uploaded_file_mime, created_at"
     )
     .order("submitted_at", { ascending: false, nullsFirst: false })
     .limit(200);
@@ -90,13 +90,53 @@ export default async function ReferencesQueuePage({
   const { data } = await q;
   const rows = (data ?? []) as Row[];
   const carerIds = [...new Set(rows.map((row) => row.carer_id))];
-  const { data: consents } = carerIds.length ? await admin.from("carer_reference_consents").select("carer_id, pdf_storage_path, revoked_at").in("carer_id", carerIds).is("revoked_at", null) : { data: [] as { carer_id: string; pdf_storage_path: string | null; revoked_at: string | null }[] };
-  const consentByCarer = new Map((consents ?? []).filter((consent) => consent.pdf_storage_path).map((consent) => [consent.carer_id, consent.pdf_storage_path!]));
-  const signedUrls = await Promise.all(rows.map(async (row) => {
-    const [upload, consentPath] = [row.uploaded_file_path, consentByCarer.get(row.carer_id)];
-    const [uploadUrl, consentUrl] = await Promise.all([upload ? admin.storage.from("reference-uploads").createSignedUrl(upload, 3600) : Promise.resolve({ data: null }), consentPath ? admin.storage.from("reference-consents").createSignedUrl(consentPath, 3600) : Promise.resolve({ data: null })]);
-    return [row.id, { uploadUrl: uploadUrl.data?.signedUrl ?? null, consentUrl: consentUrl.data?.signedUrl ?? null }] as const;
-  }));
+  const { data: consents } = carerIds.length
+    ? await admin
+        .from("carer_reference_consents")
+        .select("carer_id, pdf_storage_path, revoked_at, consent_pdf_status")
+        .in("carer_id", carerIds)
+        .eq("consent_pdf_status", "active")
+        .is("revoked_at", null)
+    : {
+        data: [] as {
+          carer_id: string;
+          pdf_storage_path: string | null;
+          revoked_at: string | null;
+          consent_pdf_status: "active";
+        }[],
+      };
+  const consentByCarer = new Map(
+    (consents ?? [])
+      .filter((consent) => consent.pdf_storage_path)
+      .map((consent) => [consent.carer_id, consent.pdf_storage_path!])
+  );
+  const signedUrls = await Promise.all(
+    rows.map(async (row) => {
+      const [upload, consentPath] = [
+        row.uploaded_file_path,
+        consentByCarer.get(row.carer_id),
+      ];
+      const [uploadUrl, consentUrl] = await Promise.all([
+        upload
+          ? admin.storage
+              .from("reference-uploads")
+              .createSignedUrl(upload, 3600)
+          : Promise.resolve({ data: null }),
+        consentPath
+          ? admin.storage
+              .from("reference-consents")
+              .createSignedUrl(consentPath, 3600)
+          : Promise.resolve({ data: null }),
+      ]);
+      return [
+        row.id,
+        {
+          uploadUrl: uploadUrl.data?.signedUrl ?? null,
+          consentUrl: consentUrl.data?.signedUrl ?? null,
+        },
+      ] as const;
+    })
+  );
   const urlsById = new Map(signedUrls);
 
   return (
@@ -119,7 +159,15 @@ export default async function ReferencesQueuePage({
       </div>
 
       <div className="flex gap-2 text-xs">
-        {["invited", "submitted", "declined", "verified", "rejected", "expired", "all"].map((f) => (
+        {[
+          "invited",
+          "submitted",
+          "declined",
+          "verified",
+          "rejected",
+          "expired",
+          "all",
+        ].map((f) => (
           <Link
             key={f}
             href={statusFilterHref(f)}
@@ -173,7 +221,11 @@ export default async function ReferencesQueuePage({
                 <p className="text-xs text-brand-ink/60">
                   {r.referee_email} · for carer {r.carer_id.slice(0, 8)}…
                 </p>
-                {r.response_mode && <span className="mt-2 ml-2 inline-flex rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-bold tracking-wide text-slate-700">{r.response_mode.toUpperCase()}</span>}
+                {r.response_mode && (
+                  <span className="mt-2 ml-2 inline-flex rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-bold tracking-wide text-slate-700">
+                    {r.response_mode.toUpperCase()}
+                  </span>
+                )}
                 <span className="mt-2 inline-flex rounded-full border border-[#039EA0]/20 bg-[#F4EFE6] px-2 py-0.5 text-[10px] font-bold tracking-wide text-[#0F1416]">
                   {(r.reference_type ?? "employer").toUpperCase()}
                 </span>
@@ -199,11 +251,19 @@ export default async function ReferencesQueuePage({
                 title="Employment details"
                 items={[
                   ["Start date", displayDate(r.employment_start)],
-                  ["End date", r.still_employed ? "Still employed" : displayDate(r.employment_end)],
+                  [
+                    "End date",
+                    r.still_employed
+                      ? "Still employed"
+                      : displayDate(r.employment_end),
+                  ],
                   ["Position", r.position_held],
                   ["Weekly hours", r.weekly_hours?.toString() ?? null],
                   ["Reason for leaving", r.reason_for_leaving],
-                  ["Days absent (12 months)", r.absence_days_12m?.toString() ?? null],
+                  [
+                    "Days absent (12 months)",
+                    r.absence_days_12m?.toString() ?? null,
+                  ],
                   ["Visa sponsorship", r.sponsors_visa],
                 ]}
               />
@@ -226,8 +286,14 @@ export default async function ReferencesQueuePage({
               </p>
               <div className="flex flex-wrap gap-2">
                 <AnswerPill label="Warnings" value={r.warnings_undisposed} />
-                <AnswerPill label="Investigation" value={r.under_investigation} />
-                <AnswerPill label="Safeguarding / DBS" value={r.safeguarding_dbs} />
+                <AnswerPill
+                  label="Investigation"
+                  value={r.under_investigation}
+                />
+                <AnswerPill
+                  label="Safeguarding / DBS"
+                  value={r.safeguarding_dbs}
+                />
                 <AnswerPill label="Would re-employ" value={r.would_reemploy} />
               </div>
             </div>
@@ -241,8 +307,27 @@ export default async function ReferencesQueuePage({
                 </p>
               </div>
             )}
-            {r.response_mode === "declined" && <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-800"><span className="block text-xs uppercase tracking-wide">Referee declined</span>{r.decline_reason ?? r.rejected_reason}</p>}
-            {(urlsById.get(r.id)?.uploadUrl || urlsById.get(r.id)?.consentUrl) && <div className="mt-3 flex flex-wrap gap-2"><RefRowActions id={r.id} safeguardingDbs={r.safeguarding_dbs} status={r.status} uploadUrl={urlsById.get(r.id)?.uploadUrl ?? null} consentUrl={urlsById.get(r.id)?.consentUrl ?? null} linksOnly /></div>}
+            {r.response_mode === "declined" && (
+              <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-800">
+                <span className="block text-xs uppercase tracking-wide">
+                  Referee declined
+                </span>
+                {r.decline_reason ?? r.rejected_reason}
+              </p>
+            )}
+            {(urlsById.get(r.id)?.uploadUrl ||
+              urlsById.get(r.id)?.consentUrl) && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <RefRowActions
+                  id={r.id}
+                  safeguardingDbs={r.safeguarding_dbs}
+                  status={r.status}
+                  uploadUrl={urlsById.get(r.id)?.uploadUrl ?? null}
+                  consentUrl={urlsById.get(r.id)?.consentUrl ?? null}
+                  linksOnly
+                />
+              </div>
+            )}
             {r.admin_notes && (
               <p className="mt-3 text-xs text-brand-ink/70">
                 <strong>Admin notes:</strong> {r.admin_notes}
@@ -250,7 +335,13 @@ export default async function ReferencesQueuePage({
             )}
             {(r.status === "submitted" || r.status === "invited") && (
               <div className="mt-3">
-                <RefRowActions id={r.id} safeguardingDbs={r.safeguarding_dbs} status={r.status} uploadUrl={null} consentUrl={null} />
+                <RefRowActions
+                  id={r.id}
+                  safeguardingDbs={r.safeguarding_dbs}
+                  status={r.status}
+                  uploadUrl={null}
+                  consentUrl={null}
+                />
               </div>
             )}
           </li>
@@ -297,10 +388,12 @@ function AnswerPill({
     value === "yes"
       ? "border-[#B24747]/30 bg-[#F9E9E9] text-[#B24747]"
       : value === "no"
-        ? "border-brand-teal/30 bg-brand-teal/10 text-brand-ink"
-        : "border-brand-peach/40 bg-brand-cream text-brand-ink";
+      ? "border-brand-teal/30 bg-brand-teal/10 text-brand-ink"
+      : "border-brand-peach/40 bg-brand-cream text-brand-ink";
   return (
-    <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${tone}`}>
+    <span
+      className={`rounded-full border px-2 py-1 text-xs font-semibold ${tone}`}
+    >
       {label}: {value ? value.toUpperCase() : "MISSING"}
     </span>
   );
