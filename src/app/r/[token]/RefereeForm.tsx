@@ -20,6 +20,24 @@ type Props = {
 const inputClass =
   "w-full px-3 py-2 rounded-xl border border-brand-ink/15 bg-white text-brand-ink focus:border-brand-teal focus:outline-none focus:ring-2 focus:ring-brand-teal/15";
 
+export const DECLINE_SUBMISSION_NETWORK_ERROR =
+  "Could not submit decline. Please check your connection and try again.";
+
+export async function submitDeclineRequest(
+  request: () => Promise<Response>,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const response = await request();
+    if (response.ok) return { ok: true };
+    const json = (await response.json().catch(() => ({}))) as {
+      error?: string;
+    };
+    return { ok: false, error: prettyError(json.error) };
+  } catch {
+    return { ok: false, error: DECLINE_SUBMISSION_NETWORK_ERROR };
+  }
+}
+
 export default function RefereeForm({
   token,
   carerName,
@@ -124,20 +142,22 @@ export default function RefereeForm({
         return;
       }
       setState("submitting");
-      const res = await fetch("/api/references/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          token,
-          response_mode: "declined",
-          decline_reason: declineReason.trim(),
+      setErrors([]);
+      const result = await submitDeclineRequest(() =>
+        fetch("/api/references/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            token,
+            response_mode: "declined",
+            decline_reason: declineReason.trim(),
+          }),
         }),
-      });
-      if (res.ok) {
+      );
+      if (result.ok) {
         setState("ok");
       } else {
-        const json = await res.json().catch(() => ({}));
-        setErrors([prettyError(json.error)]);
+        setErrors([result.error]);
         setState("err");
       }
       return;

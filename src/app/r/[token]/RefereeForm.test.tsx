@@ -3,7 +3,10 @@ import { test } from "node:test";
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ReferenceType } from "@/lib/vetting/types";
-import RefereeForm from "./RefereeForm";
+import RefereeForm, {
+  DECLINE_SUBMISSION_NETWORK_ERROR,
+  submitDeclineRequest,
+} from "./RefereeForm";
 
 for (const referenceType of [
   "employer",
@@ -40,3 +43,14 @@ for (const referenceType of [
     }
   });
 }
+
+test("decline submission returns a retriable message after a network failure", async () => {
+  const result = await submitDeclineRequest(async () => {
+    throw new Error("Network unavailable");
+  });
+
+  assert.deepEqual(result, {
+    ok: false,
+    error: DECLINE_SUBMISSION_NETWORK_ERROR,
+  });
+});
