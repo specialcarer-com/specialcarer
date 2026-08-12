@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createSubmitHandler } from "./submit/route";
-import { createUploadUrlHandler } from "./upload-url/route";
+import { createSubmitHandler } from "./submit/submit-handler";
+import { createUploadUrlHandler } from "./upload-url/upload-url-handler";
 
 function request(body: unknown) {
   return new Request("https://www.specialcarer.com/api/references/submit", {

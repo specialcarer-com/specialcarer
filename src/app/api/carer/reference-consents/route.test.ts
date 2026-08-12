@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { ReferenceConsent } from "@/lib/references/consent";
-import { createConsentPostHandler } from "./route";
+import { createConsentPostHandler } from "./consent-handler";
 
 const savedConsent: ReferenceConsent = {
   id: "consent-id",
