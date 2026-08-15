@@ -27,15 +27,19 @@ export default async function RefereePage({
   const admin = createAdminClient();
   const { data: row } = await admin
     .from("carer_references")
-    .select("id, carer_id, referee_name, referee_email, reference_type, status, token_expires_at")
+    .select(
+      "id, carer_id, referee_name, referee_email, reference_type, status, token_expires_at"
+    )
     .eq("token", token)
     .maybeSingle<RefRow>();
 
   if (!row) {
     return (
       <Shell title="Reference link not found">
-        <p>This reference link is no longer valid. Please ask the carer who
-        invited you to send a fresh invitation.</p>
+        <p>
+          This reference link is no longer valid. Please ask the carer who
+          invited you to send a fresh invitation.
+        </p>
       </Shell>
     );
   }
@@ -43,19 +47,23 @@ export default async function RefereePage({
   if (expired || row.status === "expired") {
     return (
       <Shell title="This link has expired">
-        <p>This reference link expired on{" "}
-        <strong>
-          {new Date(row.token_expires_at).toLocaleDateString("en-GB")}
-        </strong>
-        . Please ask the carer to invite you again.</p>
+        <p>
+          This reference link expired on{" "}
+          <strong>
+            {new Date(row.token_expires_at).toLocaleDateString("en-GB")}
+          </strong>
+          . Please ask the carer to invite you again.
+        </p>
       </Shell>
     );
   }
   if (row.status !== "invited") {
     return (
       <Shell title="Already submitted">
-        <p>Thank you — we've already received your reference for this carer.
-        You don't need to do anything else.</p>
+        <p>
+          Thank you — we've already received your reference for this carer. You
+          don't need to do anything else.
+        </p>
       </Shell>
     );
   }
@@ -66,14 +74,51 @@ export default async function RefereePage({
     .eq("user_id", row.carer_id)
     .maybeSingle<CarerProfile>();
   const carerName = prof?.display_name ?? "this carer";
+  const { data: consent } = await admin
+    .from("carer_reference_consents")
+    .select("pdf_storage_path, revoked_at, consent_pdf_status")
+    .eq("carer_id", row.carer_id)
+    .eq("consent_pdf_status", "active")
+    .is("revoked_at", null)
+    .maybeSingle<{
+      pdf_storage_path: string | null;
+      revoked_at: string | null;
+      consent_pdf_status: "active";
+    }>();
+  const consentUrl = consent?.pdf_storage_path
+    ? (
+        await admin.storage
+          .from("reference-consents")
+          .createSignedUrl(consent.pdf_storage_path, 10 * 60)
+      ).data?.signedUrl ?? null
+    : null;
 
   return (
     <Shell title={`Reference for ${carerName}`}>
       <p className="mb-4 text-sm text-slate-600">
-        Hi {row.referee_name}, {carerName} has listed you as a reference.
-        Your answers help families know who they're inviting into their
-        homes. This takes ~2 minutes.
+        Hi {row.referee_name}, {carerName} has listed you as a reference. Your
+        answers help families know who they're inviting into their homes. This
+        takes ~2 minutes.
       </p>
+      {consentUrl ? (
+        <a
+          href={consentUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="mb-4 inline-flex rounded-xl border border-[#039EA0] px-3 py-2 text-sm font-semibold text-[#039EA0] hover:bg-[#039EA0]/5"
+        >
+          View candidate’s consent
+        </a>
+      ) : (
+        <div
+          role="status"
+          className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+        >
+          The candidate&apos;s data-sharing consent is not currently available.
+          You may still provide this reference; the candidate will be prompted
+          to sign or complete their consent PDF.
+        </div>
+      )}
       <RefereeForm
         token={token}
         carerName={carerName}

@@ -1,0 +1,24 @@
+export const UK_NI_RE = /^[A-CEGHJ-PR-TW-Z][A-CEGHJ-NPR-TW-Z][0-9]{6}[A-D]$/;
+export const CANDIDATE_CONSENT_DECLARATION = (fullName: string) =>
+  `I, ${fullName}, consent for SpecialCarer to request reference details for the purpose of vetting me as a care worker under CQC Schedule 3. I confirm that SpecialCarer may share my name, date of birth, and National Insurance number with prospective referees where reasonably necessary to help them identify me and provide an accurate reference. I understand my data will be handled per SpecialCarer's Privacy Policy and the UK Data Protection Act 2018.`;
+export type ConsentPdfStatus = "pending" | "active" | "failed";
+
+export type ReferenceConsent = {
+  id: string;
+  carer_id: string;
+  full_name: string;
+  date_of_birth: string;
+  national_insurance_number: string | null;
+  signature_data_url: string;
+  signed_at: string;
+  signed_ip: string | null;
+  signed_ua: string | null;
+  pdf_storage_path: string | null;
+  consent_pdf_status: ConsentPdfStatus;
+  consent_pdf_error: string | null;
+  revoked_at: string | null;
+  created_at: string;
+};
+export function normaliseNationalInsuranceNumber(value: string) {
+  return value.replace(/\s/g, "").toUpperCase();
+}
