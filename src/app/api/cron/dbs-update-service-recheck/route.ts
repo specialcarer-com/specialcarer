@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { requireCronAuth } from "@/lib/cron/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   computeNextUsCheckDueAt,
@@ -26,14 +27,9 @@ export const dynamic = "force-dynamic";
  * Existing allocated bookings are NOT retroactively unassigned (Phase 5
  * follow-up).
  */
-export async function GET(req: Request) {
-  const expected = process.env.CRON_SECRET;
-  if (expected) {
-    const auth = req.headers.get("authorization") ?? "";
-    if (auth !== `Bearer ${expected}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  }
+export async function GET(req: NextRequest) {
+  const authError = requireCronAuth(req);
+  if (authError) return authError;
 
   const admin = createAdminClient();
   const provider = getDbsProvider();

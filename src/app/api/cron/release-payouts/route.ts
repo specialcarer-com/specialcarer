@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { requireCronAuth } from "@/lib/cron/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/server";
 
@@ -13,15 +14,10 @@ export const dynamic = "force-dynamic";
  * Auth: Vercel cron sends Authorization: Bearer ${CRON_SECRET}.
  * For local/manual triggers we fall back to the same env var.
  */
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   // Vercel Cron auth — reject if a secret is configured and doesn't match
-  const expected = process.env.CRON_SECRET;
-  if (expected) {
-    const auth = req.headers.get("authorization") ?? "";
-    if (auth !== `Bearer ${expected}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  }
+  const authError = requireCronAuth(req);
+  if (authError) return authError;
 
   const admin = createAdminClient();
 

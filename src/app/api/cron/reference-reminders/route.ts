@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { requireCronAuth } from "@/lib/cron/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/smtp";
 import {
@@ -11,7 +12,6 @@ import {
   type ReferenceReminderCandidate,
 } from "@/lib/vetting/reference-reminders";
 import type { ReferenceType } from "@/lib/vetting/types";
-import { authoriseReferenceReminderCron } from "./auth";
 
 export const dynamic = "force-dynamic";
 // Vercel serverless per-invocation timeout; keep each daily batch bounded.
@@ -35,17 +35,9 @@ function siteUrl(): string {
 }
 
 /** GET /api/cron/reference-reminders — daily Day 3/7/12 reference nudges. */
-export async function GET(req: Request) {
-  const authorisation = authoriseReferenceReminderCron(
-    req.headers.get("authorization"),
-    process.env.CRON_SECRET,
-  );
-  if (!authorisation.ok) {
-    return NextResponse.json(
-      { error: authorisation.error },
-      { status: authorisation.status },
-    );
-  }
+export async function GET(req: NextRequest) {
+  const authError = requireCronAuth(req);
+  if (authError) return authError;
 
   const admin = createAdminClient();
   const now = new Date();

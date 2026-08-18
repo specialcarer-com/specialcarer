@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { requireCronAuth } from "@/lib/cron/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   SURGE_AUTO_DEMAND_RATIO,
@@ -29,14 +30,9 @@ type Snap = {
  * - Auto-close any open auto-event whose latest snapshot no longer
  *   meets the threshold.
  */
-export async function GET(req: Request) {
-  const expected = process.env.CRON_SECRET;
-  if (expected) {
-    const auth = req.headers.get("authorization") ?? "";
-    if (auth !== `Bearer ${expected}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  }
+export async function GET(req: NextRequest) {
+  const authError = requireCronAuth(req);
+  if (authError) return authError;
   const admin = createAdminClient();
 
   // Pull last hour of snapshots, then keep latest per (city, vertical).
