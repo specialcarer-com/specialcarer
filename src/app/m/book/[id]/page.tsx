@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Avatar,
   Button,
@@ -97,6 +97,9 @@ export default function CreateBookingPage() {
   const [profile, setProfile] = useState<ApiCarerProfile | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  // Retain the UUID across a network retry so the server returns the first
+  // PaymentIntent instead of creating a second booking.
+  const bookingRequestIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (!params?.id) return;
     let cancelled = false;
@@ -278,6 +281,9 @@ export default function CreateBookingPage() {
             caregiver_id: profile.user_id,
             starts_at: startsAt,
             ends_at: endsAt,
+            client_request_id:
+              bookingRequestIdRef.current ??
+              (bookingRequestIdRef.current = crypto.randomUUID()),
             hours,
             hourly_rate_cents: hourlyRateCents,
             currency: currency.toLowerCase(),

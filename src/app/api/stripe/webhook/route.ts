@@ -209,6 +209,27 @@ export async function POST(req: Request) {
                 : "partially_refunded",
             })
             .eq("stripe_payment_intent_id", pid);
+          // Stripe is authoritative for the booking refund state. The admin
+          // route only records that a refund was requested; it must never
+          // claim the booking is refunded before this event arrives.
+          const { data: refundPayment } = await admin
+            .from("payments")
+            .select("booking_id")
+            .eq("stripe_payment_intent_id", pid)
+            .maybeSingle<{ booking_id: string }>();
+          if (refundPayment?.booking_id) {
+            await admin
+              .from("bookings")
+              .update({
+                status:
+                  ch.amount_refunded === ch.amount
+                    ? "refunded"
+                    : "partially_refunded",
+                refunded_amount_cents: ch.amount_refunded,
+                refunded_at: new Date().toISOString(),
+              })
+              .eq("id", refundPayment.booking_id);
+          }
           // Restore any referral credit on the underlying booking. Idempotent
           // — the webhook event log above guarantees this body only runs
           // once per Stripe event id, and `unredeemCreditsForBooking` is
@@ -558,4 +579,3 @@ async function upsertMembershipFromStripeSubscription(
     throw error; // surfaces in the webhook events table for retry
   }
 }
-
