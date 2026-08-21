@@ -216,7 +216,7 @@ export default function CreateBookingPage() {
       : null;
   }, [profile?.hourly_rate_cents, visitingEndsAt, visitingStartsAt]);
   // Keep an ID only for retries of the same booking inputs. Editing the date,
-  // time, caregiver, or amount must create a new idempotency key.
+  // time, caregiver, amount, service, or notes must create a new idempotency key.
   useEffect(() => {
     resetBookingRequestId(bookingRequestIdRef);
   }, [
@@ -224,6 +224,8 @@ export default function CreateBookingPage() {
     visitingAmountCents,
     visitingEndsAt,
     visitingStartsAt,
+    service,
+    notes,
   ]);
 
   // Loading skeleton.
