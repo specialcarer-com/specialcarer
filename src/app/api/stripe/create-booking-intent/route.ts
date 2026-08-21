@@ -3,8 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   stripe,
-  calculatePlatformFeeCents,
-  calculateTotalCents,
 } from "@/lib/stripe/server";
 import {
   isValidPostcode,
@@ -18,6 +16,12 @@ import {
   resolveBookingPayer,
   type PayerChargeAdapter,
 } from "@/lib/family/designated-payer-charge";
+import {
+  bookingIntentIdempotencyKey,
+  isClientRequestId,
+  priceBookingFromServerRate,
+} from "@/lib/bookings/server-pricing";
+import { retrievePaymentIntent } from "@/lib/payments/payment-intent-retrieval";
 
 /**
  * POST /api/stripe/create-booking-intent
@@ -31,14 +35,16 @@ import {
  *   caregiver_id: uuid,
  *   starts_at: ISO,
  *   ends_at: ISO,
- *   hours: number,
- *   hourly_rate_cents: number,
+ *   client_request_id: UUID,
  *   currency: "gbp" | "usd",
  *   service_type: string,
  *   notes?: string,
  *   location_city?: string,
  *   location_country?: "GB" | "US",
  * }
+ *
+ * `hours` and `hourly_rate_cents` are accepted only for backwards-compatible
+ * clients and are ignored. Duration and price are server-authoritative.
  *
  * Returns: { booking_id, client_secret, total_cents, platform_fee_cents }
  */
@@ -63,7 +69,10 @@ export async function POST(req: Request) {
     caregiver_id?: string;
     starts_at?: string;
     ends_at?: string;
+    client_request_id?: string;
+    /** @deprecated Server derives duration from starts_at and ends_at. */
     hours?: number;
+    /** @deprecated Server loads the caregiver's published rate. */
     hourly_rate_cents?: number;
     currency?: "gbp" | "usd";
     service_type?: string;
@@ -111,8 +120,7 @@ export async function POST(req: Request) {
     "caregiver_id",
     "starts_at",
     "ends_at",
-    "hours",
-    "hourly_rate_cents",
+    "client_request_id",
     "currency",
     "service_type",
   ];
@@ -127,7 +135,13 @@ export async function POST(req: Request) {
   if (body.currency !== "gbp" && body.currency !== "usd") {
     return NextResponse.json({ error: "Invalid currency" }, { status: 400 });
   }
-  // SpecialCarers is a single-currency UK business: every booking, payment
+  if (!isClientRequestId(body.client_request_id)) {
+    return NextResponse.json(
+      { error: "client_request_id must be a UUID" },
+      { status: 400 },
+    );
+  }
+  // SpecialCarer is a single-currency UK business: every booking, payment
   // intent and stored row settles in GBP regardless of any stale carer-side
   // currency the client may forward.
   const bookingCurrency = "gbp" as const;
@@ -140,12 +154,152 @@ export async function POST(req: Request) {
 
   const admin = createAdminClient();
 
+  // A retry must retrieve the original PaymentIntent rather than creating
+  // another booking or authorisation. The unique index added in this PR is
+  // the concurrency backstop for two requests arriving at the same time.
+  const { data: existingBooking, error: existingBookingError } = await admin
+    .from("bookings")
+    .select(
+      "id, total_cents, platform_fee_cents, currency, stripe_payment_intent_id",
+    )
+    .eq("seeker_id", user.id)
+    .eq("client_request_id", body.client_request_id)
+    .maybeSingle<{
+      id: string;
+      total_cents: number;
+      platform_fee_cents: number;
+      currency: string;
+      stripe_payment_intent_id: string | null;
+    }>();
+  if (existingBookingError) {
+    console.error(
+      "[create-booking-intent] idempotency booking lookup failed",
+      existingBookingError,
+    );
+    return NextResponse.json({ error: "database_error" }, { status: 503 });
+  }
+  if (existingBooking) {
+    const { data: existingPayment, error: existingPaymentError } = await admin
+      .from("payments")
+      .select("stripe_payment_intent_id, amount_cents")
+      .eq("booking_id", existingBooking.id)
+      .maybeSingle<{
+        stripe_payment_intent_id: string;
+        amount_cents: number;
+      }>();
+    if (existingPaymentError) {
+      console.error(
+        "[create-booking-intent] idempotency payment lookup failed",
+        existingPaymentError,
+      );
+      return NextResponse.json({ error: "database_error" }, { status: 503 });
+    }
+    if (existingPayment) {
+      const retrievedIntent = await retrievePaymentIntent(
+        stripe,
+        existingPayment.stripe_payment_intent_id,
+      );
+      if (!retrievedIntent.ok) {
+        console.error(
+          "[create-booking-intent] existing PaymentIntent lookup failed",
+          retrievedIntent.error,
+        );
+        return NextResponse.json(
+          { error: "Payment initialisation is pending; retry the booking" },
+          { status: 502 },
+        );
+      }
+      const existingIntent = retrievedIntent.intent;
+      return NextResponse.json({
+        booking_id: existingBooking.id,
+        client_secret: existingIntent.client_secret,
+        total_cents: existingBooking.total_cents,
+        platform_fee_cents: existingBooking.platform_fee_cents,
+        referral_credit_applied_cents: Math.max(
+          0,
+          existingBooking.total_cents - existingPayment.amount_cents,
+        ),
+        amount_due_cents: existingPayment.amount_cents,
+        currency: existingBooking.currency,
+        idempotent: true,
+      });
+    }
+    if (existingBooking.stripe_payment_intent_id) {
+      const retrievedIntent = await retrievePaymentIntent(
+        stripe,
+        existingBooking.stripe_payment_intent_id,
+      );
+      if (!retrievedIntent.ok) {
+        console.error(
+          "[create-booking-intent] existing PaymentIntent recovery failed",
+          retrievedIntent.error,
+        );
+        return NextResponse.json(
+          { error: "Payment initialisation is pending; retry the booking" },
+          { status: 502 },
+        );
+      }
+      const existingIntent = retrievedIntent.intent;
+      const destination =
+        typeof existingIntent.transfer_data?.destination === "string"
+          ? existingIntent.transfer_data.destination
+          : existingIntent.transfer_data?.destination?.id;
+      if (!destination) {
+        return NextResponse.json(
+          { error: "Payment initialisation is pending; retry the booking" },
+          { status: 503 },
+        );
+      }
+      const { error: restorePaymentError } = await admin
+        .from("payments")
+        .upsert(
+          {
+            booking_id: existingBooking.id,
+            stripe_payment_intent_id: existingIntent.id,
+            status: "requires_payment_method",
+            amount_cents: existingIntent.amount,
+            application_fee_cents: existingIntent.application_fee_amount ?? 0,
+            currency: existingIntent.currency,
+            destination_account_id: destination,
+            raw: existingIntent as unknown as Record<string, unknown>,
+          },
+          { onConflict: "stripe_payment_intent_id" },
+        );
+      if (!restorePaymentError) {
+        return NextResponse.json({
+          booking_id: existingBooking.id,
+          client_secret: existingIntent.client_secret,
+          total_cents: existingBooking.total_cents,
+          platform_fee_cents: existingBooking.platform_fee_cents,
+          referral_credit_applied_cents: Math.max(
+            0,
+            existingBooking.total_cents - existingIntent.amount,
+          ),
+          amount_due_cents: existingIntent.amount,
+          currency: existingBooking.currency,
+          idempotent: true,
+        });
+      }
+    }
+    return NextResponse.json(
+      { error: "Payment initialisation is pending; retry the booking" },
+      { status: 503 },
+    );
+  }
+
   // Verify caregiver has a Stripe account that can receive transfers
-  const { data: caregiverStripe } = await admin
+  const { data: caregiverStripe, error: caregiverStripeError } = await admin
     .from("caregiver_stripe_accounts")
     .select("stripe_account_id, charges_enabled, payouts_enabled")
     .eq("user_id", body.caregiver_id!)
     .maybeSingle();
+  if (caregiverStripeError) {
+    console.error(
+      "[create-booking-intent] caregiver Stripe account lookup failed",
+      caregiverStripeError,
+    );
+    return NextResponse.json({ error: "database_error" }, { status: 503 });
+  }
   if (!caregiverStripe) {
     return NextResponse.json(
       { error: "Caregiver has not completed payment setup" },
@@ -154,21 +308,59 @@ export async function POST(req: Request) {
   }
 
   // Verify caregiver has cleared all required background checks for their country
-  const { data: caregiverProfile } = await admin
+  const { data: caregiverProfile, error: caregiverProfileError } = await admin
     .from("profiles")
     .select("country")
     .eq("id", body.caregiver_id!)
     .maybeSingle();
+  if (caregiverProfileError) {
+    console.error(
+      "[create-booking-intent] caregiver profile lookup failed",
+      caregiverProfileError,
+    );
+    return NextResponse.json({ error: "database_error" }, { status: 503 });
+  }
   const cgCountry = (caregiverProfile?.country as "GB" | "US") || "GB";
+  const { data: caregiverRate, error: caregiverRateError } = await admin
+    .from("caregiver_profiles")
+    .select("hourly_rate_cents, updated_at")
+    .eq("user_id", body.caregiver_id!)
+    .maybeSingle<{
+      hourly_rate_cents: number | null;
+      updated_at: string | null;
+    }>();
+  if (caregiverRateError) {
+    console.error(
+      "[create-booking-intent] caregiver rate lookup failed",
+      caregiverRateError,
+    );
+    return NextResponse.json({ error: "database_error" }, { status: 503 });
+  }
+  const pricing = priceBookingFromServerRate({
+    startsAt: body.starts_at!,
+    endsAt: body.ends_at!,
+    serverHourlyRateCents: caregiverRate?.hourly_rate_cents ?? Number.NaN,
+    clientHourlyRateCents: body.hourly_rate_cents,
+  });
+  if (!pricing.ok) {
+    return NextResponse.json({ error: pricing.error }, { status: 400 });
+  }
   const requiredChecks =
     cgCountry === "US"
       ? ["us_criminal", "us_healthcare_sanctions"]
       : ["enhanced_dbs_barred", "right_to_work", "digital_id"];
-  const { data: bgRows } = await admin
+  const { data: bgRows, error: bgRowsError } = await admin
     .from("background_checks")
     .select("check_type, status")
     .eq("user_id", body.caregiver_id!)
     .eq("status", "cleared");
+  if (bgRowsError) {
+    console.error(
+      "[create-booking-intent] caregiver checks lookup failed",
+      bgRowsError,
+    );
+    return NextResponse.json({ error: "database_error" }, { status: 503 });
+  }
   const cleared = new Set((bgRows ?? []).map((r) => r.check_type));
   if (!requiredChecks.every((t) => cleared.has(t))) {
     return NextResponse.json(
@@ -184,11 +376,18 @@ export async function POST(req: Request) {
       (id): id is string => typeof id === "string" && id.length > 0,
     );
     if (requested.length > 0) {
-      const { data: ownedRows } = await admin
+      const { data: ownedRows, error: ownedRowsError } = await admin
         .from("household_recipients")
         .select("id")
         .eq("owner_id", user.id)
         .in("id", requested);
+      if (ownedRowsError) {
+        console.error(
+          "[create-booking-intent] recipient ownership lookup failed",
+          ownedRowsError,
+        );
+        return NextResponse.json({ error: "database_error" }, { status: 503 });
+      }
       const ownedSet = new Set((ownedRows ?? []).map((r) => r.id));
       const allOwned = requested.every((id) => ownedSet.has(id));
       if (!allOwned) {
@@ -201,11 +400,13 @@ export async function POST(req: Request) {
     }
   }
 
-  const subtotalCents = Math.round(
-    body.hours! * body.hourly_rate_cents!
-  );
-  const platformFeeCents = calculatePlatformFeeCents(subtotalCents);
-  const totalCents = calculateTotalCents(subtotalCents);
+  const {
+    hours,
+    hourlyRateCents,
+    subtotalCents,
+    platformFeeCents,
+    totalCents,
+  } = pricing;
 
   // Create booking in 'accepted' state — payment is the next gate.
   // Stamp accepted_at so the response-time metric counts this booking;
@@ -219,10 +420,12 @@ export async function POST(req: Request) {
       caregiver_id: body.caregiver_id!,
       status: "accepted",
       accepted_at: acceptedAt,
-      starts_at: body.starts_at!,
-      ends_at: body.ends_at!,
-      hours: body.hours!,
-      hourly_rate_cents: body.hourly_rate_cents!,
+      starts_at: pricing.startsAt,
+      ends_at: pricing.endsAt,
+      hours,
+      hourly_rate_cents: hourlyRateCents,
+      rate_version: `caregiver_profiles:${caregiverRate?.updated_at ?? "unknown"}`,
+      client_request_id: body.client_request_id,
       subtotal_cents: subtotalCents,
       platform_fee_cents: platformFeeCents,
       total_cents: totalCents,
@@ -269,6 +472,14 @@ export async function POST(req: Request) {
     })
     .select()
     .single();
+  if (bookingError?.code === "23505") {
+    // A concurrent request won the unique client_request_id race. Tell the
+    // caller to retry so the top-of-route idempotency lookup returns it.
+    return NextResponse.json(
+      { error: "Booking request is already being processed; retry shortly" },
+      { status: 409 },
+    );
+  }
   if (bookingError || !booking) {
     return NextResponse.json(
       { error: bookingError?.message ?? "Booking creation failed" },
@@ -351,13 +562,16 @@ export async function POST(req: Request) {
   // this resolves to a no-op and the legacy seeker-confirms flow is untouched.
   const payerChargeAdapter: PayerChargeAdapter = {
     async getSavedPaymentMethod(payerUserId) {
-      const { data: sub } = await admin
+      const { data: sub, error: subscriptionLookupError } = await admin
         .from("subscriptions")
         .select("stripe_customer_id")
         .eq("user_id", payerUserId)
         .not("stripe_customer_id", "is", null)
         .limit(1)
         .maybeSingle<{ stripe_customer_id: string | null }>();
+      if (subscriptionLookupError) {
+        throw new Error("designated payer subscription lookup failed");
+      }
       const customerId = sub?.stripe_customer_id;
       if (!customerId) return null;
       try {
@@ -379,45 +593,79 @@ export async function POST(req: Request) {
     },
   };
   const designatedPayerFlagOn = isDesignatedPayerEnabled();
-  const payerResolution = await resolveBookingPayer({
-    seekerId: user.id,
-    designatedPayerUserId:
-      (booking as { designated_payer_user_id?: string | null })
-        .designated_payer_user_id ?? null,
-    flagEnabled: designatedPayerFlagOn,
-    adapter: payerChargeAdapter,
-  });
+  let payerResolution;
+  try {
+    payerResolution = await resolveBookingPayer({
+      seekerId: user.id,
+      designatedPayerUserId:
+        (booking as { designated_payer_user_id?: string | null })
+          .designated_payer_user_id ?? null,
+      flagEnabled: designatedPayerFlagOn,
+      adapter: payerChargeAdapter,
+    });
+  } catch (err) {
+    console.error(
+      "[create-booking-intent] designated payer lookup failed",
+      err,
+    );
+    return NextResponse.json({ error: "database_error" }, { status: 503 });
+  }
 
   // Create PaymentIntent with manual capture — funds held in escrow
-  const intent = await stripe.paymentIntents.create({
-    amount: intentAmount,
-    currency: bookingCurrency,
-    capture_method: "manual",
-    application_fee_amount: intentApplicationFee,
-    transfer_data: {
-      destination: caregiverStripe.stripe_account_id,
-    },
-    metadata: {
-      booking_id: booking.id,
-      seeker_id: user.id,
-      caregiver_id: body.caregiver_id!,
-      // Only stamp the payer audit field when the feature is live so the
-      // PaymentIntent is byte-identical to legacy when the flag is off.
-      ...(designatedPayerFlagOn
-        ? { charged_user_id: payerResolution.chargedUserId }
-        : {}),
-    },
-    ...(payerResolution.override
-      ? {
-          customer: payerResolution.override.customer,
-          payment_method: payerResolution.override.payment_method,
-          off_session: payerResolution.override.off_session,
-          confirm: payerResolution.override.confirm,
-        }
-      : { automatic_payment_methods: { enabled: true } }),
-  });
+  let intent;
+  try {
+    intent = await stripe.paymentIntents.create({
+      amount: intentAmount,
+      currency: bookingCurrency,
+      capture_method: "manual",
+      application_fee_amount: intentApplicationFee,
+      transfer_data: {
+        destination: caregiverStripe.stripe_account_id,
+      },
+      metadata: {
+        booking_id: booking.id,
+        seeker_id: user.id,
+        caregiver_id: body.caregiver_id!,
+        // Only stamp the payer audit field when the feature is live so the
+        // PaymentIntent is byte-identical to legacy when the flag is off.
+        ...(designatedPayerFlagOn
+          ? { charged_user_id: payerResolution.chargedUserId }
+          : {}),
+      },
+      ...(payerResolution.override
+        ? {
+            customer: payerResolution.override.customer,
+            payment_method: payerResolution.override.payment_method,
+            off_session: payerResolution.override.off_session,
+            confirm: payerResolution.override.confirm,
+          }
+        : { automatic_payment_methods: { enabled: true } }),
+    }, {
+      idempotencyKey: bookingIntentIdempotencyKey(body.client_request_id),
+    });
+  } catch (err) {
+    // Keep the draft for reconciliation. Deleting here could lose the link
+    // to an intent Stripe accepted just before a network failure.
+    console.error("[create-booking-intent] Stripe PaymentIntent failed", err);
+    return NextResponse.json(
+      { error: "Could not initialise payment; retry the booking" },
+      { status: 502 },
+    );
+  }
 
-  await admin.from("payments").insert({
+  const { error: intentLinkError } = await admin
+    .from("bookings")
+    .update({ stripe_payment_intent_id: intent.id })
+    .eq("id", booking.id);
+  if (intentLinkError) {
+    console.error("[create-booking-intent] intent link persistence failed", intentLinkError);
+    return NextResponse.json(
+      { error: "Payment initialisation is pending; retry the booking" },
+      { status: 503 },
+    );
+  }
+
+  const { error: paymentError } = await admin.from("payments").insert({
     booking_id: booking.id,
     stripe_payment_intent_id: intent.id,
     status: "requires_payment_method",
@@ -427,6 +675,16 @@ export async function POST(req: Request) {
     destination_account_id: caregiverStripe.stripe_account_id,
     raw: intent as unknown as Record<string, unknown>,
   });
+  if (paymentError) {
+    // Keep the booking and idempotent Stripe PaymentIntent together for the
+    // retry path above; deleting only one side would make reconciliation
+    // impossible. Return a retryable response rather than claiming success.
+    console.error("[create-booking-intent] payment persistence failed", paymentError);
+    return NextResponse.json(
+      { error: "Payment initialisation is pending; retry the booking" },
+      { status: 503 },
+    );
+  }
 
   // Instant bookings: notify the carer right away (best-effort, soft-fail).
   // The booking is in `accepted` state; the seeker still has to authorize

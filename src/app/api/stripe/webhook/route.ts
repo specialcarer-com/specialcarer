@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { unredeemCreditsForBooking } from "@/lib/referrals/redemption";
+import { reconcileChargeRefund } from "@/lib/payments/refund-webhook-reconciliation";
 import { dispatch } from "@/lib/push/notify";
 import {
   isCarerSubscription,
@@ -201,14 +202,74 @@ export async function POST(req: Request) {
             typeof ch.payment_intent === "string"
               ? ch.payment_intent
               : ch.payment_intent.id;
-          await admin
-            .from("payments")
-            .update({
-              status: ch.amount_refunded === ch.amount
-                ? "refunded"
-                : "partially_refunded",
-            })
-            .eq("stripe_payment_intent_id", pid);
+          const stripeRefund = ch.refunds?.data.find(
+            (refund) =>
+              typeof refund.metadata?.refund_request_key === "string" &&
+              refund.metadata.refund_request_key.length > 0,
+          );
+          const claimKey = stripeRefund?.metadata?.refund_request_key;
+          await reconcileChargeRefund({
+            fullyRefunded: ch.amount_refunded === ch.amount,
+            amountCents: ch.amount_refunded,
+            claimedRefund:
+              claimKey && stripeRefund
+                ? { id: stripeRefund.id, requestKey: claimKey }
+                : null,
+            client: {
+              async updatePaymentStatus(status) {
+                return await admin
+                  .from("payments")
+                  .update({ status })
+                  .eq("stripe_payment_intent_id", pid);
+              },
+              async findPayment() {
+                const result = await admin
+                  .from("payments")
+                  .select("booking_id")
+                  .eq("stripe_payment_intent_id", pid)
+                  .maybeSingle<{ booking_id: string }>();
+                return {
+                  data: result.data
+                    ? { bookingId: result.data.booking_id }
+                    : null,
+                  error: result.error,
+                };
+              },
+              async updateBooking({
+                bookingId,
+                status,
+                amountCents,
+                refundedAt,
+              }) {
+                return await admin
+                  .from("bookings")
+                  .update({
+                    status,
+                    refunded_amount_cents: amountCents,
+                    refunded_at: refundedAt,
+                  })
+                  .eq("id", bookingId);
+              },
+              async reconcileClaim({
+                bookingId,
+                claim,
+                amountCents,
+                refundedAt,
+              }) {
+                return await admin
+                  .from("bookings")
+                  .update({
+                    stripe_refund_id: claim.id,
+                    refunded_amount_cents: amountCents,
+                    refunded_at: refundedAt,
+                    refund_request_key: null,
+                    refund_status: "completed",
+                  })
+                  .eq("id", bookingId)
+                  .eq("refund_request_key", claim.requestKey);
+              },
+            },
+          });
           // Restore any referral credit on the underlying booking. Idempotent
           // — the webhook event log above guarantees this body only runs
           // once per Stripe event id, and `unredeemCreditsForBooking` is
@@ -558,4 +619,3 @@ async function upsertMembershipFromStripeSubscription(
     throw error; // surfaces in the webhook events table for retry
   }
 }
-
