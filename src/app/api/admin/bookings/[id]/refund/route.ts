@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { requireAdminApi, logAdminAction } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/server";
-import { createStripeRefund } from "@/lib/payments/refund-handler";
+import {
+  createStripeRefund,
+  isDefinitiveStripeRefundError,
+} from "@/lib/payments/refund-handler";
+import { parseRefundRequest } from "@/lib/payments/refund-request";
 
 export const dynamic = "force-dynamic";
 
@@ -24,26 +28,21 @@ export async function POST(
 
   const me = _adminGuard_me.admin;
   const { id } = await params;
-  let body: unknown = {};
+  let body: unknown;
   try {
     body = await req.json();
   } catch {
     body = {};
   }
-  const p = (body ?? {}) as Record<string, unknown>;
-  const reason =
-    typeof p.reason === "string" ? p.reason.trim().slice(0, 500) : null;
-  const requestedAmount =
-    p.amount_cents === undefined ? undefined : Number(p.amount_cents);
-  if (
-    requestedAmount !== undefined &&
-    (!Number.isSafeInteger(requestedAmount) || requestedAmount <= 0)
-  ) {
+  const parsed = parseRefundRequest(body);
+  if (!parsed) {
     return NextResponse.json({ error: "invalid_refund_amount" }, { status: 400 });
   }
+  const reason = parsed.reason;
+  const requestedAmount = parsed.amountCents;
 
   const admin = createAdminClient();
-  const { data: booking } = await admin
+  const { data: booking, error: bookingError } = await admin
     .from("bookings")
     .select(
       "id, stripe_refund_id, refund_request_key, refunded_amount_cents",
@@ -55,6 +54,10 @@ export async function POST(
       refund_request_key: string | null;
       refunded_amount_cents: number | null;
     }>();
+  if (bookingError) {
+    console.error("[admin.refund] booking lookup failed", bookingError);
+    return NextResponse.json({ error: "database_error" }, { status: 503 });
+  }
   if (!booking) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
@@ -69,16 +72,21 @@ export async function POST(
     );
   }
 
-  const { data: payment } = await admin
+  const { data: payment, error: paymentError } = await admin
     .from("payments")
     .select("stripe_payment_intent_id, amount_cents")
     .eq("booking_id", id)
-    .order("created_at", { ascending: true })
+    .eq("status", "succeeded")
+    .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle<{
       stripe_payment_intent_id: string;
       amount_cents: number;
     }>();
+  if (paymentError) {
+    console.error("[admin.refund] payment lookup failed", paymentError);
+    return NextResponse.json({ error: "database_error" }, { status: 503 });
+  }
   if (!payment) {
     return NextResponse.json({ error: "payment_not_found" }, { status: 400 });
   }
@@ -95,13 +103,18 @@ export async function POST(
     .from("bookings")
     .update({
       refund_request_key: requestKey,
+      refund_status: "pending_stripe",
     })
     .eq("id", id)
     .is("stripe_refund_id", null)
     .is("refund_request_key", null)
     .select("id")
     .maybeSingle();
-  if (claimError || !claim) {
+  if (claimError) {
+    console.error("[admin.refund] refund claim failed", claimError);
+    return NextResponse.json({ error: "database_error" }, { status: 503 });
+  }
+  if (!claim) {
     return NextResponse.json(
       { error: "refund_already_requested" },
       { status: 409 },
@@ -128,21 +141,33 @@ export async function POST(
       stripe,
     );
   } catch (err) {
-    await admin
-      .from("bookings")
-      .update({ refund_request_key: null })
-      .eq("id", id)
-      .eq("refund_request_key", requestKey);
+    if (isDefinitiveStripeRefundError(err)) {
+      await admin
+        .from("bookings")
+        .update({
+          refund_request_key: null,
+          refund_status: "failed_permanent",
+        })
+        .eq("id", id)
+        .eq("refund_request_key", requestKey);
+    }
     console.error("[admin.refund] Stripe refund failed", err);
     return NextResponse.json(
-      { error: "stripe_refund_failed" },
-      { status: 502 },
+      {
+        error: isDefinitiveStripeRefundError(err)
+          ? "stripe_refund_failed"
+          : "stripe_refund_pending",
+      },
+      { status: isDefinitiveStripeRefundError(err) ? 400 : 502 },
     );
   }
   if (!refund.ok) {
     await admin
       .from("bookings")
-      .update({ refund_request_key: null })
+      .update({
+        refund_request_key: null,
+        refund_status: "failed_permanent",
+      })
       .eq("id", id)
       .eq("refund_request_key", requestKey);
     return NextResponse.json({ error: refund.error }, { status: refund.status });
@@ -156,12 +181,25 @@ export async function POST(
       refund_reason: reason,
       refunded_at: new Date().toISOString(),
       refunded_by_admin_id: me.id,
+      refund_request_key: null,
+      refund_status: "completed",
     })
     .eq("id", id)
     .eq("refund_request_key", requestKey);
   if (persistError) {
     console.error("[admin.refund] refund persistence failed", persistError);
-    return NextResponse.json({ error: "refund_record_failed" }, { status: 500 });
+    const { error: reconciliationStatusError } = await admin
+      .from("bookings")
+      .update({ refund_status: "pending_db_reconciliation" })
+      .eq("id", id)
+      .eq("refund_request_key", requestKey);
+    if (reconciliationStatusError) {
+      console.error(
+        "[admin.refund] reconciliation status persistence failed",
+        reconciliationStatusError,
+      );
+    }
+    return NextResponse.json({ error: "refund_record_failed" }, { status: 503 });
   }
 
   await logAdminAction({

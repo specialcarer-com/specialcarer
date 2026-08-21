@@ -35,6 +35,11 @@ export type RefundResult =
   | { ok: true; refundId: string; amountCents: number; idempotencyKey: string }
   | { ok: false; status: 400 | 409; error: string };
 
+type StripeErrorLike = {
+  statusCode?: unknown;
+  status?: unknown;
+};
+
 function stripeReason(
   reason: string | null,
 ): "duplicate" | "fraudulent" | "requested_by_customer" {
@@ -42,9 +47,28 @@ function stripeReason(
   return "requested_by_customer";
 }
 
+export function isDefinitiveStripeRefundError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as StripeErrorLike;
+  const status =
+    typeof candidate.statusCode === "number"
+      ? candidate.statusCode
+      : typeof candidate.status === "number"
+        ? candidate.status
+        : null;
+  return status !== null && status >= 400 && status < 500;
+}
+
+async function wait(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
  * Calls Stripe for a refund. The route owns the database reservation and
  * persistence; keeping the Stripe call here makes its money movement testable.
+ *
+ * A request can time out after Stripe accepts it. Retrying with the same
+ * idempotency key returns that original refund rather than issuing another one.
  */
 export async function createStripeRefund(
   request: RefundRequest,
@@ -64,18 +88,27 @@ export async function createStripeRefund(
   }
 
   const idempotencyKey = `refund-${request.booking.id}-${request.adminId}-${amountCents}`;
-  const refund = await stripe.refunds.create(
-    {
-      payment_intent: request.payment.stripePaymentIntentId,
-      amount: amountCents,
-      reason: stripeReason(request.reason),
-      metadata: {
-        admin_id: request.adminId,
-        booking_id: request.booking.id,
-      },
+  const params = {
+    payment_intent: request.payment.stripePaymentIntentId,
+    amount: amountCents,
+    reason: stripeReason(request.reason),
+    metadata: {
+      admin_id: request.adminId,
+      booking_id: request.booking.id,
+      refund_request_key: idempotencyKey,
     },
-    { idempotencyKey },
-  );
+  };
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const refund = await stripe.refunds.create(params, { idempotencyKey });
+      return { ok: true, refundId: refund.id, amountCents, idempotencyKey };
+    } catch (error) {
+      lastError = error;
+      if (isDefinitiveStripeRefundError(error) || attempt === 2) break;
+      await wait(50 * 2 ** attempt);
+    }
+  }
 
-  return { ok: true, refundId: refund.id, amountCents, idempotencyKey };
+  throw lastError;
 }

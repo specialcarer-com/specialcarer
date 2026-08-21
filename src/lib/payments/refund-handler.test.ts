@@ -60,7 +60,11 @@ describe("createStripeRefund", () => {
         payment_intent: "pi_test_123",
         amount: 2_500,
         reason: "requested_by_customer",
-        metadata: { admin_id: ADMIN_ID, booking_id: BOOKING_ID },
+        metadata: {
+          admin_id: ADMIN_ID,
+          booking_id: BOOKING_ID,
+          refund_request_key: `refund-${BOOKING_ID}-${ADMIN_ID}-2500`,
+        },
       },
       options: { idempotencyKey: `refund-${BOOKING_ID}-${ADMIN_ID}-2500` },
     });
@@ -91,5 +95,38 @@ describe("createStripeRefund", () => {
       error: "refund_already_requested",
     });
     assert.equal(calls.length, 0);
+  });
+
+  it("retries uncertain Stripe errors with the original idempotency key", async () => {
+    const calls: string[] = [];
+    let attempts = 0;
+    const stripe: StripeRefundClient = {
+      refunds: {
+        async create(_params, options) {
+          calls.push(options.idempotencyKey);
+          attempts += 1;
+          if (attempts < 3) throw new Error("connection reset");
+          return { id: "re_recovered" };
+        },
+      },
+    };
+
+    const result = await createStripeRefund(
+      {
+        booking: { id: BOOKING_ID, stripeRefundId: null, refundRequestKey: null },
+        payment: { stripePaymentIntentId: "pi_test_123", amountCents: 7_000 },
+        adminId: ADMIN_ID,
+        reason: null,
+      },
+      stripe,
+    );
+
+    assert.equal(result.ok, true);
+    assert.equal(calls.length, 3);
+    assert.deepEqual(calls, [
+      `refund-${BOOKING_ID}-${ADMIN_ID}-7000`,
+      `refund-${BOOKING_ID}-${ADMIN_ID}-7000`,
+      `refund-${BOOKING_ID}-${ADMIN_ID}-7000`,
+    ]);
   });
 });
