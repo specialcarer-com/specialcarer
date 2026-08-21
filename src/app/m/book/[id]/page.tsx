@@ -15,6 +15,10 @@ import { CARE_FORMAT_BLURB, type CareFormat } from "../../_lib/mock";
 import { serviceLabel, formatMoney } from "@/lib/care/services";
 import { careFormatLabel } from "@/lib/care/formats";
 import { createClient } from "@/lib/supabase/client";
+import {
+  generateUuidV4,
+  resetBookingRequestId,
+} from "@/lib/bookings/client-request-id";
 import type {
   ApiCarerResponse,
   ApiCarerProfile,
@@ -99,7 +103,7 @@ export default function CreateBookingPage() {
   const [notFound, setNotFound] = useState(false);
   // Retain the UUID across a network retry so the server returns the first
   // PaymentIntent instead of creating a second booking.
-  const bookingRequestIdRef = useRef<string | null>(null);
+  const bookingRequestIdRef = useRef<string>(generateUuidV4());
   useEffect(() => {
     if (!params?.id) return;
     let cancelled = false;
@@ -192,6 +196,35 @@ export default function CreateBookingPage() {
     );
     return Math.max(1, Math.ceil(days / 7));
   }, [careType, startDate, endDate]);
+  const visitingStartsAt = useMemo(
+    () => (date && from ? combineLocalDateTime(date, from) : null),
+    [date, from],
+  );
+  const visitingEndsAt = useMemo(
+    () => (date && to ? combineLocalDateTime(date, to) : null),
+    [date, to],
+  );
+  const visitingAmountCents = useMemo(() => {
+    const hourlyRateCents = profile?.hourly_rate_cents;
+    if (!visitingStartsAt || !visitingEndsAt || hourlyRateCents == null) {
+      return null;
+    }
+    const hours =
+      (Date.parse(visitingEndsAt) - Date.parse(visitingStartsAt)) / 3_600_000;
+    return Number.isFinite(hours) && hours > 0
+      ? Math.round(hours * hourlyRateCents)
+      : null;
+  }, [profile?.hourly_rate_cents, visitingEndsAt, visitingStartsAt]);
+  // Keep an ID only for retries of the same booking inputs. Editing the date,
+  // time, caregiver, or amount must create a new idempotency key.
+  useEffect(() => {
+    resetBookingRequestId(bookingRequestIdRef);
+  }, [
+    profile?.user_id,
+    visitingAmountCents,
+    visitingEndsAt,
+    visitingStartsAt,
+  ]);
 
   // Loading skeleton.
   if (!loaded) {
@@ -250,7 +283,6 @@ export default function CreateBookingPage() {
     !submitting &&
     !visitingRateMissing &&
     (careType === "visiting" ? visitingValid : liveInValid);
-
   async function onContinue() {
     if (!canContinue || !profile) return;
     setSubmitError(null);
@@ -261,8 +293,8 @@ export default function CreateBookingPage() {
           setSubmitError("Pick a date, time, and check the rate.");
           return;
         }
-        const startsAt = combineLocalDateTime(date, from);
-        const endsAt = combineLocalDateTime(date, to);
+        const startsAt = visitingStartsAt;
+        const endsAt = visitingEndsAt;
         if (!startsAt || !endsAt) {
           setSubmitError("Invalid time.");
           return;
@@ -281,9 +313,7 @@ export default function CreateBookingPage() {
             caregiver_id: profile.user_id,
             starts_at: startsAt,
             ends_at: endsAt,
-            client_request_id:
-              bookingRequestIdRef.current ??
-              (bookingRequestIdRef.current = crypto.randomUUID()),
+            client_request_id: bookingRequestIdRef.current,
             hours,
             hourly_rate_cents: hourlyRateCents,
             currency: currency.toLowerCase(),
