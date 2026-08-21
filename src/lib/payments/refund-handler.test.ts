@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   createStripeRefund,
+  isDefinitiveStripeRefundError,
   type StripeRefundClient,
 } from "@/lib/payments/refund-handler";
 
@@ -26,6 +27,40 @@ function makeStripe() {
   };
   return { stripe, calls };
 }
+
+describe("isDefinitiveStripeRefundError", () => {
+  it("treats Stripe rate limits as retryable", () => {
+    assert.equal(isDefinitiveStripeRefundError({ statusCode: 429 }), false);
+  });
+
+  it("treats an in-progress idempotency key as retryable", () => {
+    assert.equal(
+      isDefinitiveStripeRefundError({
+        statusCode: 409,
+        code: "idempotency_key_in_use",
+      }),
+      false,
+    );
+  });
+
+  it("keeps idempotency parameter mismatches definitive", () => {
+    assert.equal(
+      isDefinitiveStripeRefundError({
+        statusCode: 400,
+        code: "idempotency_key_reused_with_different_parameters",
+      }),
+      true,
+    );
+  });
+
+  it("keeps other 4xx responses definitive", () => {
+    assert.equal(isDefinitiveStripeRefundError({ status: 402 }), true);
+  });
+
+  it("keeps 5xx responses retryable", () => {
+    assert.equal(isDefinitiveStripeRefundError({ statusCode: 500 }), false);
+  });
+});
 
 describe("createStripeRefund", () => {
   it("calls Stripe refunds.create with server-side idempotency and audit metadata", async () => {

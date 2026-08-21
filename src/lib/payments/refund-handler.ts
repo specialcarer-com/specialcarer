@@ -38,6 +38,7 @@ export type RefundResult =
 type StripeErrorLike = {
   statusCode?: unknown;
   status?: unknown;
+  code?: string;
 };
 
 function stripeReason(
@@ -56,6 +57,15 @@ export function isDefinitiveStripeRefundError(error: unknown): boolean {
       : typeof candidate.status === "number"
         ? candidate.status
         : null;
+  if (candidate.code === "idempotency_key_reused_with_different_parameters") {
+    return true;
+  }
+  if (
+    status === 429 ||
+    (status === 409 && candidate.code === "idempotency_key_in_use")
+  ) {
+    return false;
+  }
   return status !== null && status >= 400 && status < 500;
 }
 
