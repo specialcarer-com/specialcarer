@@ -94,10 +94,27 @@ export async function GET(req: NextRequest) {
       .eq("booking_id", b.id)
       .maybeSingle();
     if (!payment?.stripe_payment_intent_id) {
-      await admin
+      const { error: releaseError } = await admin
         .from("bookings")
         .update({ processing_started_at: null })
         .eq("id", b.id);
+      if (releaseError) {
+        Sentry.addBreadcrumb({
+          category: "cron.payment_capture_claim",
+          level: "warning",
+          message: "failed to release payment capture claim",
+          data: {
+            target: "booking",
+            id: b.id,
+            reason: "no_payment_intent",
+            error: releaseError.message,
+          },
+        });
+        console.warn(
+          "[cron.release-payouts] payment_capture_claim_release_failed",
+          { target: "booking", id: b.id, error: releaseError.message },
+        );
+      }
       continue;
     }
 
@@ -130,10 +147,27 @@ export async function GET(req: NextRequest) {
       if (bookingUpdateError) throw bookingUpdateError;
       released += 1;
     } catch (err) {
-      await admin
+      const { error: releaseError } = await admin
         .from("bookings")
         .update({ processing_started_at: null })
         .eq("id", b.id);
+      if (releaseError) {
+        Sentry.addBreadcrumb({
+          category: "cron.payment_capture_claim",
+          level: "warning",
+          message: "failed to release payment capture claim",
+          data: {
+            target: "booking",
+            id: b.id,
+            reason: "capture_failed",
+            error: releaseError.message,
+          },
+        });
+        console.warn(
+          "[cron.release-payouts] payment_capture_claim_release_failed",
+          { target: "booking", id: b.id, error: releaseError.message },
+        );
+      }
       errors.push({
         booking_id: b.id,
         error: err instanceof Error ? err.message : String(err),
@@ -199,10 +233,31 @@ export async function GET(req: NextRequest) {
       if (updateError) throw updateError;
       suppCaptured += 1;
     } catch (err) {
-      await admin
+      const { error: releaseError } = await admin
         .from("payments")
         .update({ processing_started_at: null })
         .eq("id", p.id);
+      if (releaseError) {
+        Sentry.addBreadcrumb({
+          category: "cron.payment_capture_claim",
+          level: "warning",
+          message: "failed to release payment capture claim",
+          data: {
+            target: "supplemental_payment",
+            id: p.id,
+            reason: "capture_failed",
+            error: releaseError.message,
+          },
+        });
+        console.warn(
+          "[cron.release-payouts] payment_capture_claim_release_failed",
+          {
+            target: "supplemental_payment",
+            id: p.id,
+            error: releaseError.message,
+          },
+        );
+      }
       suppErrors.push({
         payment_id: p.id,
         error: err instanceof Error ? err.message : String(err),
