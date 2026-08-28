@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { claimStripeWebhookEvent } from "@/lib/stripe/webhook-event-claim";
 import { unredeemCreditsForBooking } from "@/lib/referrals/redemption";
 import { reconcileChargeRefund } from "@/lib/payments/refund-webhook-reconciliation";
 import { dispatch } from "@/lib/push/notify";
@@ -88,21 +89,31 @@ export async function POST(req: Request) {
 
   const admin = createAdminClient();
 
-  // Idempotency: log the event, skip if we've seen it
-  const { data: prior } = await admin
-    .from("stripe_webhook_events")
-    .select("id, processed_at")
-    .eq("id", event.id)
-    .maybeSingle();
-  if (prior?.processed_at) {
-    return NextResponse.json({ received: true, idempotent: true });
-  }
-  if (!prior) {
-    await admin.from("stripe_webhook_events").insert({
+  // Atomically insert-to-claim. The event id is the table primary key, so an
+  // ON CONFLICT DO NOTHING result means a prior or concurrent delivery owns it.
+  const claim = await claimStripeWebhookEvent(
+    async (webhookEvent) => {
+      const { data, error } = await admin
+        .from("stripe_webhook_events")
+        .upsert(webhookEvent, {
+          onConflict: "id",
+          ignoreDuplicates: true,
+        })
+        .select("id")
+        .maybeSingle();
+      return { id: data?.id ?? null, error: error?.message ?? null };
+    },
+    {
       id: event.id,
       type: event.type,
       payload: event as unknown as Record<string, unknown>,
-    });
+    },
+  );
+  if (claim.error) {
+    return NextResponse.json({ error: claim.error }, { status: 500 });
+  }
+  if (!claim.claimed) {
+    return NextResponse.json({ received: true, idempotent: true });
   }
 
   try {

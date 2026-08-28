@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { requireCronAuth } from "@/lib/cron/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { KPI_METRICS, type KpiMetric } from "@/lib/admin-ops/types";
 
@@ -21,14 +22,9 @@ export const dynamic = "force-dynamic";
  * varies hour-to-hour but is stable within an hour, so the dashboard
  * stays alive while the real derivations are added.
  */
-async function run(req: Request) {
-  const expected = process.env.CRON_SECRET;
-  if (expected) {
-    const auth = req.headers.get("authorization") ?? "";
-    if (auth !== `Bearer ${expected}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  }
+async function run(req: NextRequest) {
+  const authError = requireCronAuth(req);
+  if (authError) return authError;
 
   let admin: ReturnType<typeof createAdminClient>;
   try {
@@ -135,10 +131,10 @@ async function run(req: Request) {
   });
 }
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   return run(req);
 }
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   return run(req);
 }
 

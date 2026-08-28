@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { requireCronAuth } from "@/lib/cron/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  authorize,
   handleExpire,
   type ExpireClient,
   type ExpiredBooking,
@@ -26,10 +26,9 @@ type ExpireRow = {
  *
  * Idempotent — safe to run every couple of minutes.
  */
-export async function GET(req: Request) {
-  if (!authorize(req.headers.get("authorization"), process.env.CRON_SECRET)) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
+export async function GET(req: NextRequest) {
+  const authError = requireCronAuth(req);
+  if (authError) return authError;
 
   const admin = createAdminClient();
   const client: ExpireClient = {

@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { requireCronAuth } from "@/lib/cron/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -10,14 +11,9 @@ export const dynamic = "force-dynamic";
  * is flipped to status 'overdue'; <= today + 14 days flips to 'due'.
  * Idempotent — only updates rows whose status would actually change.
  */
-export async function GET(req: Request) {
-  const expected = process.env.CRON_SECRET;
-  if (expected) {
-    const auth = req.headers.get("authorization") ?? "";
-    if (auth !== `Bearer ${expected}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  }
+export async function GET(req: NextRequest) {
+  const authError = requireCronAuth(req);
+  if (authError) return authError;
   const admin = createAdminClient();
   const today = new Date().toISOString().slice(0, 10);
   const in14 = new Date();

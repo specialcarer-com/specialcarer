@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { requireCronAuth } from "@/lib/cron/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { authorize, handleRefresh, type RefreshClient } from "./refresh-handler";
+import { handleRefresh, type RefreshClient } from "./refresh-handler";
 
 export const dynamic = "force-dynamic";
 
@@ -12,10 +13,9 @@ export const dynamic = "force-dynamic";
  * refresh_caregiver_rates() and upserts them into caregiver_rates_cache, which
  * the auto-match scorer reads. Idempotent — safe to re-run.
  */
-export async function GET(req: Request) {
-  if (!authorize(req.headers.get("authorization"), process.env.CRON_SECRET)) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
+export async function GET(req: NextRequest) {
+  const authError = requireCronAuth(req);
+  if (authError) return authError;
 
   const admin = createAdminClient();
   const client: RefreshClient = {

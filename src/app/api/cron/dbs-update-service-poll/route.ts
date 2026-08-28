@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { requireCronAuth } from "@/lib/cron/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { US_REGION_ENABLED } from "@/lib/region";
 import { getDbsVendor } from "@/lib/dbs/vendor";
@@ -190,14 +191,9 @@ function makeNotifier(admin: Admin): PollNotifier {
  *
  * Authenticated via CRON_SECRET (Authorization: Bearer <secret>) when set.
  */
-export async function GET(req: Request) {
-  const expected = process.env.CRON_SECRET;
-  if (expected) {
-    const auth = req.headers.get("authorization") ?? "";
-    if (auth !== `Bearer ${expected}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  }
+export async function GET(req: NextRequest) {
+  const authError = requireCronAuth(req);
+  if (authError) return authError;
 
   const admin = createAdminClient();
   const summary = await pollUpdateService({
