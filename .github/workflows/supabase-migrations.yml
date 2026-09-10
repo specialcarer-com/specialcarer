@@ -1,22 +1,33 @@
 name: Apply Supabase migrations
 
-# Manual-only fallback after the 10 Sep 2026 migration-history reconciliation:
-#   • PR #191 renamed drifted files + split bundles into per-ledger-version files.
-#   • PR #193 reconstructed 54 orphan migration files from live prod schema.
-#   • A single zombie migration (20260707113000_profiles_country_fk_to_countries)
-#     was registered in the ledger via a targeted INSERT (10 Sep 2026).
-# Repo files (171) and prod ledger (171 rows) are now fully aligned.
-#
-# This workflow is intentionally manual-only for the first stabilisation
-# window. Re-enable the automatic `push` trigger once several manual runs
-# have completed without drift.
+# Auto-apply migrations on every push to main that touches
+# supabase/migrations/**. Re-enabled 10 Sep 2026 after the second migration-
+# history drift reconciliation:
+#   • PR #191 renamed 35 drifted files and split 3 bundle files into 15
+#     per-ledger-version files.
+#   • PR #193 reconstructed 54 orphan migration files from live prod schema
+#     (38 real reconstructions + 16 empty stubs for now-dropped ahj schema).
+#   • Single zombie migration 20260707113000_profiles_country_fk_to_countries
+#     registered in the ledger via targeted INSERT (10 Sep 2026).
+# Result: 171 repo files = 171 ledger rows (verified). Every filename now
+# matches its ledger version, so supabase db push --include-all treats
+# everything as already-applied and this workflow becomes a no-op.
+# workflow_dispatch is kept as a manual fallback / re-run mechanism.
 on:
+  push:
+    branches: [main]
+    paths: ['supabase/migrations/**']
   workflow_dispatch:
 
-# Prevent two runs from racing each other against prod.
+# Prevent two pushes from racing each other against prod.
 concurrency:
   group: supabase-migrations-prod
   cancel-in-progress: false
+
+# Least-privilege token: this workflow only reads the repo and pushes to
+# Supabase; no repo writes needed.
+permissions:
+  contents: read
 
 jobs:
   apply:
