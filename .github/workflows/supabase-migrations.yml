@@ -1,0 +1,65 @@
+name: Apply Supabase migrations
+
+# Auto-apply migrations on every push to main that touches
+# supabase/migrations/**. Re-enabled 10 Sep 2026 after the second migration-
+# history drift reconciliation:
+#   • PR #191 renamed 35 drifted files and split 3 bundle files into 15
+#     per-ledger-version files.
+#   • PR #193 reconstructed 54 orphan migration files from live prod schema
+#     (38 real reconstructions + 16 empty stubs for now-dropped ahj schema).
+#   • Single zombie migration 20260707113000_profiles_country_fk_to_countries
+#     registered in the ledger via targeted INSERT (10 Sep 2026).
+# Result: 171 repo files = 171 ledger rows (verified). Every filename now
+# matches its ledger version, so supabase db push --include-all treats
+# everything as already-applied and this workflow becomes a no-op.
+# workflow_dispatch is kept as a manual fallback / re-run mechanism.
+on:
+  push:
+    branches: [main]
+    paths: ['supabase/migrations/**']
+  workflow_dispatch:
+
+# Prevent two pushes from racing each other against prod.
+concurrency:
+  group: supabase-migrations-prod
+  cancel-in-progress: false
+
+# Least-privilege token: this workflow only reads the repo and pushes to
+# Supabase; no repo writes needed.
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    name: supabase db push
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: qupjaanyhnuvlexkwtpq
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Verify required secrets are set
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "::error::SUPABASE_ACCESS_TOKEN secret is not set. Add it under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          if [ -z "$SUPABASE_DB_PASSWORD" ]; then
+            echo "::error::SUPABASE_DB_PASSWORD secret is not set. Add it under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+      - name: Link to production project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Apply migrations
+        run: supabase db push --linked --include-all -p "$SUPABASE_DB_PASSWORD"
