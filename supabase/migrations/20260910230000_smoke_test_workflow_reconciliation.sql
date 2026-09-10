@@ -1,0 +1,15 @@
+-- Smoke test: no-op migration to verify the restored
+-- supabase-migrations workflow after the 10 Sep 2026 reconciliation.
+--
+-- This file contains no DDL and no DML. `supabase db push` should:
+--   1. Detect this version (20260910230000) as unapplied.
+--   2. Execute the (empty) statement list against prod.
+--   3. Record a new row in supabase_migrations.schema_migrations with
+--      version='20260910230000' and name='smoke_test_workflow_reconciliation'.
+--
+-- After merge, verify by re-running the alignment check: repo files should
+-- equal ledger rows (172 = 172) and the workflow run under Actions should
+-- show a clean green "supabase db push" step.
+--
+-- Do not extend or repurpose this file; delete it or leave it as a permanent
+-- reconciliation-history marker.
