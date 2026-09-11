@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   TRAINING_PASS_THRESHOLD,
   TRAINING_RETRY_COOLDOWN_MS,
@@ -107,7 +108,15 @@ export async function POST(
   }
 
   // Score against the canonical questions.
-  const { data: questions } = await supabase
+  //
+  // Server-side scoring is a trusted action — the `correct_index` column has
+  // been revoked from anon/authenticated as part of the B1 RLS-audit
+  // remediation (see supabase/migrations/20260911220000_rls_audit_close_leaks.sql),
+  // so this read is deliberately routed through the admin client. All
+  // owner-scoped enrollment reads/writes above continue to use the
+  // user-scope client.
+  const admin = createAdminClient();
+  const { data: questions } = await admin
     .from("training_quiz_questions")
     .select("id, correct_index, sort_order")
     .eq("course_id", course.id)

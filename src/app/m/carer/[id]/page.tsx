@@ -804,17 +804,12 @@ function BlockoutsList({ blockouts }: { blockouts: ApiCarerBlockout[] }) {
     <ul className="space-y-3">
       {blockouts.map((b) => (
         <li
-          key={b.id}
+          key={`${b.starts_on}-${b.ends_on}`}
           className="flex flex-wrap items-baseline justify-between gap-2"
         >
           <span className="text-[13px] font-semibold text-heading">
             {formatBlockoutRange(b.starts_on, b.ends_on)}
           </span>
-          {b.reason && (
-            <span className="text-[12.5px] italic text-subheading">
-              {b.reason}
-            </span>
-          )}
         </li>
       ))}
     </ul>
