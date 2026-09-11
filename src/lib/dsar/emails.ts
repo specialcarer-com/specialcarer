@@ -120,3 +120,62 @@ Integrity digest: ${args.digest}
     text,
   };
 }
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+export function renderDsarRejectedEmail(args: {
+  subject_email: string;
+  request_type: string;
+  reason: string;
+  support_email?: string;
+}): { subject: string; html: string; text: string } {
+  const typeLabel =
+    REQUEST_TYPE_LABEL[args.request_type] ?? args.request_type;
+  const supportEmail = args.support_email ?? "privacy@specialcarer.com";
+  const reasonHtml = escapeHtml(args.reason).replace(/\n/g, "<br>");
+  const inner = `
+      <tr><td style="padding-bottom:12px;color:${BRAND_HEADING};font-size:18px;font-weight:600;">
+        We could not action your ${typeLabel}
+      </td></tr>
+      <tr><td style="padding-bottom:16px;font-size:15px;line-height:1.55;">
+        We received a ${typeLabel} against the email address
+        <strong>${args.subject_email}</strong> but were unable to action it. The reason is
+        below.
+      </td></tr>
+      <tr><td style="padding:0 0 16px 0;">
+        <div style="border-left:3px solid ${BRAND_PRIMARY};padding:12px 16px;background:#F7F7F9;
+                    color:${BRAND_HEADING};font-size:15px;line-height:1.55;">
+          ${reasonHtml}
+        </div>
+      </td></tr>
+      <tr><td style="padding-bottom:8px;font-size:14px;line-height:1.55;">
+        You have the right to challenge this decision. Reply to this email, or
+        contact <a href="mailto:${supportEmail}" style="color:${BRAND_PRIMARY};">${supportEmail}</a>
+        with any supporting information (for example proof of identity or an
+        authority to act on behalf of another person). You can also complain to
+        the Information Commissioner's Office at
+        <a href="https://ico.org.uk/make-a-complaint/" style="color:${BRAND_PRIMARY};">ico.org.uk</a>.
+      </td></tr>`;
+  const text = `We could not action your ${typeLabel}
+
+We received a ${typeLabel} for ${args.subject_email} but were unable to action it.
+
+Reason:
+${args.reason}
+
+You have the right to challenge this decision. Reply to this email, or contact ${supportEmail} with any supporting information (for example proof of identity or an authority to act on behalf of another person). You can also complain to the Information Commissioner's Office at https://ico.org.uk/make-a-complaint/.
+
+— SpecialCarer`;
+  return {
+    subject: `Your SpecialCarer ${typeLabel}`,
+    html: shell(inner, `We could not action your ${typeLabel}`),
+    text,
+  };
+}
