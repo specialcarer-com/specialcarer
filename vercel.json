@@ -68,6 +68,10 @@
     {
       "path": "/api/cron/dbs-change-allocations",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/dsar-fulfil",
+      "schedule": "*/15 * * * *"
     }
   ]
 }
