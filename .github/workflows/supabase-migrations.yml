@@ -44,6 +44,7 @@ jobs:
     env:
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       SUPABASE_PROJECT_REF: qupjaanyhnuvlexkwtpq
+      SUPABASE_REGION: eu-west-1
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -66,8 +67,13 @@ jobs:
         run: |
           # URL-encode the DB password (it may contain special characters).
           ENC_PW=$(python3 -c "import urllib.parse,os; print(urllib.parse.quote(os.environ['SUPABASE_DB_PASSWORD'], safe=''))")
-          # Direct database connection on port 5432 (session mode required
-          # for transactional migration application — 6543 pooler is
-          # transaction mode and rejects many DDL statements).
-          DB_URL="postgresql://postgres:${ENC_PW}@db.${SUPABASE_PROJECT_REF}.supabase.co:5432/postgres"
+          # Supavisor session pooler on port 5432. Required because:
+          #   1. GitHub Actions runners are IPv4-only, and the direct DB
+          #      host db.<ref>.supabase.co is IPv6-only unless the paid
+          #      IPv4 add-on is enabled.
+          #   2. Session mode is required for transactional DDL — the
+          #      transaction-mode pooler on 6543 rejects many migration
+          #      statements.
+          # Region is fixed for this project (eu-west-1).
+          DB_URL="postgresql://postgres.${SUPABASE_PROJECT_REF}:${ENC_PW}@aws-0-${SUPABASE_REGION}.pooler.supabase.com:5432/postgres"
           supabase db push --db-url "$DB_URL" --include-all
