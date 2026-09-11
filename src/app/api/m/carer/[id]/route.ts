@@ -62,10 +62,8 @@ export type ApiCarerAvailabilitySlot = {
 };
 
 export type ApiCarerBlockout = {
-  id: string;
   starts_on: string; // "YYYY-MM-DD"
   ends_on: string;
-  reason: string | null;
 };
 
 export type ApiCarerResponse = {
@@ -323,17 +321,16 @@ export async function GET(
     end_time: r.end_time,
   }));
 
-  // Future block-outs only — public-readable per `blockouts_public_read`.
+  // Future block-outs only. Cross-user reads go via the minimum-necessary
+  // public view: dates only, no free-text reason. See RLS audit 2026-08-18
+  // finding 4 and supabase/migrations/20260911220000_rls_audit_close_leaks.sql.
+  //
+  // The base `caregiver_blockouts` table is now owner-read-only via RLS.
   const today = new Date().toISOString().slice(0, 10);
-  type BlockoutRow = {
-    id: string;
-    starts_on: string;
-    ends_on: string;
-    reason: string | null;
-  };
+  type BlockoutRow = { starts_on: string; ends_on: string };
   const { data: blockoutRows } = await supabase
-    .from("caregiver_blockouts")
-    .select("id, starts_on, ends_on, reason")
+    .from("caregiver_blockouts_public")
+    .select("starts_on, ends_on")
     .eq("user_id", id)
     .gte("ends_on", today)
     .order("starts_on")
@@ -341,10 +338,8 @@ export async function GET(
   const blockouts: ApiCarerBlockout[] = (
     (blockoutRows ?? []) as unknown as BlockoutRow[]
   ).map((r) => ({
-    id: r.id,
     starts_on: r.starts_on,
     ends_on: r.ends_on,
-    reason: r.reason,
   }));
 
   const profile: ApiCarerProfile = {
