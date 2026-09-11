@@ -1,22 +1,56 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getRequestIp } from "@/lib/rate-limit";
+import { verifyInboundSupportSignature } from "@/lib/support/verify-inbound-hmac";
+import { checkInboundSupportRateLimit } from "@/lib/support/inbound-rate-limit";
 
 export const dynamic = "force-dynamic";
 
 /**
  * POST /api/support/inbound
  *
- * Webhook stub for future Intercom / Zendesk inbound forwarding.
+ * Trusted-relay ingest for inbound support emails / forwarded tickets.
  * Accepts JSON: { from_email, subject, body, channel?, priority? }
- * If `from_email` matches a known user, the ticket is filed against them;
- * otherwise the ticket has user_id=null until an admin resolves the
- * sender. No auth required for the stub itself — production should
- * verify a shared HMAC.
+ *
+ * Auth: the caller MUST provide
+ *   x-sc-timestamp: <unix seconds>
+ *   x-sc-signature: <hex hmac-sha256 over "${ts}.${rawBody}" with
+ *                    SUPPORT_INBOUND_HMAC_SECRET>
+ *
+ * If the shared secret is not configured the route fails closed (503) —
+ * a misconfigured deployment must never accept unsigned traffic.
+ *
+ * Rate-limited per source IP and per `from_email` (see
+ * `checkInboundSupportRateLimit`).
  */
 export async function POST(req: Request) {
+  const rawBody = await req.text();
+
+  // Verify signature FIRST — before touching Supabase, before parsing the
+  // body as JSON. That keeps unsigned/replayed traffic from consuming any
+  // downstream capacity.
+  const verification = verifyInboundSupportSignature({
+    rawBody,
+    signatureHeader: req.headers.get("x-sc-signature"),
+    timestampHeader: req.headers.get("x-sc-timestamp"),
+  });
+  if (!verification.valid) {
+    // Fail-closed for missing secret — treat as a hard configuration bug
+    // so ops notice, rather than returning 401 which looks like normal
+    // caller error.
+    if (verification.reason === "secret_missing") {
+      console.error(
+        "[support.inbound] FATAL: SUPPORT_INBOUND_HMAC_SECRET missing — route disabled",
+      );
+      return NextResponse.json({ error: "not_configured" }, { status: 503 });
+    }
+    console.warn("[support.inbound] rejected:", verification.reason);
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
   let body: unknown;
   try {
-    body = await req.json();
+    body = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   }
@@ -29,6 +63,20 @@ export async function POST(req: Request) {
   const priority = typeof p.priority === "string" ? p.priority : "normal";
   if (!subject || !text) {
     return NextResponse.json({ error: "missing_fields" }, { status: 400 });
+  }
+
+  const ip = getRequestIp(req);
+  const limit = checkInboundSupportRateLimit(ip, fromEmail);
+  if (!limit.allowed) {
+    console.warn(
+      "[support.inbound] rate limited",
+      limit.reason,
+      "ip:",
+      ip,
+      "sender:",
+      fromEmail,
+    );
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
   }
 
   const admin = createAdminClient();
