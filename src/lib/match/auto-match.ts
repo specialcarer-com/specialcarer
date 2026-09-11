@@ -112,13 +112,36 @@ export async function runAutoMatch(
 
   if (poolIds.length === 0) return { offers: [], poolSize: 0 };
 
+  // 2b. DBS gate (Phase A / A4). Filter the geographic pool through
+  //     v_agency_opt_in_gates.dbs_ok so a carer whose DBS Update
+  //     Service check just flipped to 'changed' — or whose fresh DBS
+  //     has aged out — cannot be offered new work. The view already
+  //     encodes both the Update Service and fresh-DBS branches; we
+  //     just re-use it here so the two sides can never drift.
+  //     If the view read errors (e.g. transient), we FAIL CLOSED and
+  //     return no offers rather than fall back to an ungated pool.
+  const { data: gated, error: gatedErr } = await admin
+    .from("v_agency_opt_in_gates")
+    .select("user_id")
+    .in("user_id", poolIds)
+    .eq("dbs_ok", true);
+  if (gatedErr) {
+    // Fail closed — safer to miss offers than to offer an untrusted carer.
+    return { offers: [], poolSize: poolIds.length };
+  }
+  const dbsOkIds = new Set((gated ?? []).map((g) => g.user_id as string));
+  const dbsFilteredPoolIds = poolIds.filter((id) => dbsOkIds.has(id));
+  if (dbsFilteredPoolIds.length === 0) {
+    return { offers: [], poolSize: poolIds.length };
+  }
+
   // 3. Profile attributes + vertical match + online gating for "Now".
   const { data: profiles } = await admin
     .from("caregiver_profiles")
     .select(
       "user_id, services, rating_avg, is_published, is_online, last_online_at",
     )
-    .in("user_id", poolIds)
+    .in("user_id", dbsFilteredPoolIds)
     .eq("is_published", true);
 
   const serviceType = booking.service_type as string | null;
