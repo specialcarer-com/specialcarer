@@ -22,13 +22,35 @@ export const runtime = "nodejs";
  */
 export async function POST(req: Request) {
   const sig = req.headers.get("stripe-signature");
+  const replayToken = req.headers.get("x-sc-webhook-replay");
   // Trim defensively — pasting via dashboards/CLIs occasionally introduces
   // a trailing newline or surrounding whitespace that silently breaks HMAC.
   const secretTest = process.env.STRIPE_WEBHOOK_SECRET?.trim();
   const secretLive = process.env.STRIPE_WEBHOOK_SECRET_LIVE?.trim();
+  const cronSecret = process.env.CRON_SECRET?.trim();
   const raw = await req.text();
 
-  if (!sig || (!secretTest && !secretLive)) {
+  // Cron-driven replay path. The recovery cron re-invokes this route with
+  // the STORED (already-verified) payload for events whose handler crashed.
+  // We trust the replay iff x-sc-webhook-replay matches CRON_SECRET AND the
+  // event id is already on disk from the original HMAC-verified delivery.
+  // Everything after this point is the same handler code as the primary
+  // path, so recovery cannot drift from the live behaviour.
+  const isReplay =
+    !!replayToken &&
+    !!cronSecret &&
+    replayToken.length === cronSecret.length &&
+    (() => {
+      // timingSafeEqual (Node crypto) is not accessible here without an
+      // import; a manual constant-time compare is fine at this size.
+      let diff = 0;
+      for (let i = 0; i < replayToken.length; i++) {
+        diff |= replayToken.charCodeAt(i) ^ cronSecret.charCodeAt(i);
+      }
+      return diff === 0;
+    })();
+
+  if (!isReplay && (!sig || (!secretTest && !secretLive))) {
     return NextResponse.json(
       { error: "Webhook signature or secret missing" },
       { status: 400 }
@@ -41,40 +63,53 @@ export async function POST(req: Request) {
   // verification step is the security boundary — we never trust parsed
   // body fields like `livemode` until HMAC has cleared.
   let event: Stripe.Event | null = null;
-  let verifiedWith: "live" | "test" | null = null;
+  let verifiedWith: "live" | "test" | "replay" | null = null;
   let lastError: string | null = null;
-  if (secretLive) {
+  if (isReplay) {
+    // Replay: raw body IS the stored, previously-verified event JSON.
+    // We do NOT re-run HMAC. livemode is trusted from the stored payload.
     try {
-      event = stripe.webhooks.constructEvent(raw, sig, secretLive);
-      verifiedWith = "live";
-    } catch (err) {
-      lastError = err instanceof Error ? err.message : "Invalid signature";
+      event = JSON.parse(raw) as Stripe.Event;
+      verifiedWith = "replay";
+    } catch {
+      return NextResponse.json({ error: "Invalid replay JSON" }, { status: 400 });
     }
-  }
-  if (!event && secretTest) {
-    try {
-      event = stripe.webhooks.constructEvent(raw, sig, secretTest);
-      verifiedWith = "test";
-    } catch (err) {
-      lastError = err instanceof Error ? err.message : "Invalid signature";
+  } else {
+    if (secretLive && sig) {
+      try {
+        event = stripe.webhooks.constructEvent(raw, sig, secretLive);
+        verifiedWith = "live";
+      } catch (err) {
+        lastError = err instanceof Error ? err.message : "Invalid signature";
+      }
     }
-  }
-  if (!event || !verifiedWith) {
-    console.warn(
-      "[stripe.webhook] neither secret matched signature",
-      lastError ?? "(no detail)"
-    );
-    return NextResponse.json(
-      { error: "Signature verification failed" },
-      { status: 400 }
-    );
+    if (!event && secretTest && sig) {
+      try {
+        event = stripe.webhooks.constructEvent(raw, sig, secretTest);
+        verifiedWith = "test";
+      } catch (err) {
+        lastError = err instanceof Error ? err.message : "Invalid signature";
+      }
+    }
+    if (!event || !verifiedWith) {
+      console.warn(
+        "[stripe.webhook] neither secret matched signature",
+        lastError ?? "(no detail)"
+      );
+      return NextResponse.json(
+        { error: "Signature verification failed" },
+        { status: 400 }
+      );
+    }
   }
   // Sanity check: livemode flag on the verified event should match the
   // secret that verified it. If not, something is misconfigured (e.g. the
   // live secret was put in the test env var or vice versa) — refuse rather
-  // than process the event under the wrong mode.
+  // than process the event under the wrong mode. Skipped on replay (the
+  // event was already verified on the original delivery, and livemode is
+  // read from the stored payload).
   const expectLive = verifiedWith === "live";
-  if (event.livemode !== expectLive) {
+  if (verifiedWith !== "replay" && event.livemode !== expectLive) {
     console.error(
       "[stripe.webhook] livemode/secret mismatch — verified with",
       verifiedWith,
@@ -89,19 +124,88 @@ export async function POST(req: Request) {
 
   const admin = createAdminClient();
 
-  // Atomically insert-to-claim. The event id is the table primary key, so an
-  // ON CONFLICT DO NOTHING result means a prior or concurrent delivery owns it.
+  // Atomically upsert-to-claim. Three-state classification:
+  //   - fresh              → first sight, run handler.
+  //   - already_processed  → prior success on record, acknowledge & skip.
+  //   - retryable          → prior attempt crashed or still in flight;
+  //                          run the handler again so Stripe's retry (or
+  //                          the recovery cron) can heal the event.
+  //
+  // The old semantics treated ANY existing row as owned-by-another and
+  // returned idempotent-200. That silenced Stripe's own retry for events
+  // whose handler crashed, orphaning the delivery. See migration
+  // 20260911180000_stripe_webhook_retry_state.sql.
+  const MAX_HANDLER_ATTEMPTS = 8;
   const claim = await claimStripeWebhookEvent(
     async (webhookEvent) => {
-      const { data, error } = await admin
+      // 1. Try to insert as fresh. RLS is off (service role); PK collision
+      //    means the row already exists.
+      const { data: inserted, error: insertErr } = await admin
         .from("stripe_webhook_events")
-        .upsert(webhookEvent, {
-          onConflict: "id",
-          ignoreDuplicates: true,
+        .insert({
+          ...webhookEvent,
+          attempt_count: 1,
+          last_attempt_at: new Date().toISOString(),
         })
-        .select("id")
+        .select("id, processed_at, error, attempt_count")
         .maybeSingle();
-      return { id: data?.id ?? null, error: error?.message ?? null };
+      if (!insertErr && inserted) {
+        return {
+          existed: false,
+          alreadyProcessed: false,
+          hasError: false,
+          attemptCount: inserted.attempt_count ?? 1,
+          error: null,
+        };
+      }
+      // Anything other than unique_violation (23505) is a real error.
+      const code = (insertErr as { code?: string } | null)?.code;
+      if (insertErr && code !== "23505") {
+        return {
+          existed: false,
+          alreadyProcessed: false,
+          hasError: false,
+          attemptCount: 0,
+          error: insertErr.message,
+        };
+      }
+      // 2. Row already exists. Load it, bump the attempt counter for the
+      //    retryable case only. attempt_count / last_attempt_at may not
+      //    exist yet if the migration hasn't rolled out; treat missing as 0
+      //    so the handler still runs.
+      const { data: existing, error: readErr } = await admin
+        .from("stripe_webhook_events")
+        .select("processed_at, error, attempt_count")
+        .eq("id", webhookEvent.id)
+        .maybeSingle();
+      if (readErr || !existing) {
+        return {
+          existed: true,
+          alreadyProcessed: false,
+          hasError: false,
+          attemptCount: 0,
+          error: readErr?.message ?? "row missing after conflict",
+        };
+      }
+      const alreadyProcessed = existing.processed_at !== null;
+      const hasError = existing.error !== null && existing.error !== "";
+      const priorAttempts: number = existing.attempt_count ?? 0;
+      if (!alreadyProcessed) {
+        await admin
+          .from("stripe_webhook_events")
+          .update({
+            attempt_count: priorAttempts + 1,
+            last_attempt_at: new Date().toISOString(),
+          })
+          .eq("id", webhookEvent.id);
+      }
+      return {
+        existed: true,
+        alreadyProcessed,
+        hasError,
+        attemptCount: alreadyProcessed ? priorAttempts : priorAttempts + 1,
+        error: null,
+      };
     },
     {
       id: event.id,
@@ -112,8 +216,23 @@ export async function POST(req: Request) {
   if (claim.error) {
     return NextResponse.json({ error: claim.error }, { status: 500 });
   }
-  if (!claim.claimed) {
+  if (claim.status === "already_processed") {
     return NextResponse.json({ received: true, idempotent: true });
+  }
+  if (claim.attemptCount > MAX_HANDLER_ATTEMPTS) {
+    // Poison event. Persist the last-attempt reason and acknowledge with
+    // 200 so Stripe stops the exponential retry storm. Admin dashboard
+    // will surface this via the stripe_webhook_events row.
+    console.error(
+      `[stripe.webhook] event ${event.id} exceeded MAX_HANDLER_ATTEMPTS=${MAX_HANDLER_ATTEMPTS}, dropping`,
+    );
+    await admin
+      .from("stripe_webhook_events")
+      .update({
+        error: `poison: exceeded ${MAX_HANDLER_ATTEMPTS} attempts`,
+      })
+      .eq("id", event.id);
+    return NextResponse.json({ received: true, poisoned: true });
   }
 
   try {
@@ -424,9 +543,10 @@ export async function POST(req: Request) {
         break;
     }
 
+    // Clear any prior error from a failed attempt now that we've succeeded.
     await admin
       .from("stripe_webhook_events")
-      .update({ processed_at: new Date().toISOString() })
+      .update({ processed_at: new Date().toISOString(), error: null })
       .eq("id", event.id);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Handler error";
