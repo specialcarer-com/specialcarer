@@ -239,6 +239,12 @@ export async function POST(req: Request) {
     switch (event.type) {
       case "account.updated": {
         const acct = event.data.object as Stripe.Account;
+        // Store the full capability blob, disabled_reason and stamp the
+        // freshness marker so the booking-intent readiness gate
+        // (src/lib/stripe/connect-readiness.ts) can serve local without a
+        // round-trip. We deliberately do NOT gate this on a
+        // previously_attributes diff — Stripe re-emits account.updated
+        // for a variety of reasons and staleness is a real cost.
         await admin
           .from("caregiver_stripe_accounts")
           .update({
@@ -247,8 +253,47 @@ export async function POST(req: Request) {
             details_submitted: acct.details_submitted,
             requirements_currently_due:
               acct.requirements?.currently_due ?? [],
-          })
+            capabilities: (acct.capabilities ?? {}) as Record<string, unknown>,
+            disabled_reason: acct.requirements?.disabled_reason ?? null,
+            last_refreshed_at: new Date().toISOString(),
+          } as unknown as Record<string, unknown>)
           .eq("stripe_account_id", acct.id);
+        break;
+      }
+      case "capability.updated": {
+        // A single capability's status flipped (e.g. transfers went from
+        // pending → active or active → inactive). Refetch the whole
+        // account so we rewrite the same fields account.updated writes
+        // — keeps the cache internally consistent.
+        const cap = event.data.object as Stripe.Capability;
+        const acctId =
+          typeof cap.account === "string" ? cap.account : cap.account?.id;
+        if (acctId) {
+          try {
+            const acct = await stripe.accounts.retrieve(acctId);
+            await admin
+              .from("caregiver_stripe_accounts")
+              .update({
+                charges_enabled: acct.charges_enabled,
+                payouts_enabled: acct.payouts_enabled,
+                details_submitted: acct.details_submitted,
+                requirements_currently_due:
+                  acct.requirements?.currently_due ?? [],
+                capabilities: (acct.capabilities ?? {}) as Record<
+                  string,
+                  unknown
+                >,
+                disabled_reason: acct.requirements?.disabled_reason ?? null,
+                last_refreshed_at: new Date().toISOString(),
+              } as unknown as Record<string, unknown>)
+              .eq("stripe_account_id", acctId);
+          } catch (err) {
+            console.error(
+              "[stripe-webhook] capability.updated refetch failed",
+              err,
+            );
+          }
+        }
         break;
       }
       case "payment_intent.amount_capturable_updated": {

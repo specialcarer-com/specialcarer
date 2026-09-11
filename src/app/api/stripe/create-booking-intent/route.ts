@@ -22,6 +22,10 @@ import {
   priceBookingFromServerRate,
 } from "@/lib/bookings/server-pricing";
 import { retrievePaymentIntent } from "@/lib/payments/payment-intent-retrieval";
+import {
+  assertConnectReadyForBooking,
+  friendlyReasonMessage,
+} from "@/lib/stripe/connect-readiness";
 
 /**
  * POST /api/stripe/create-booking-intent
@@ -287,24 +291,44 @@ export async function POST(req: Request) {
     );
   }
 
-  // Verify caregiver has a Stripe account that can receive transfers
+  // Verify the caregiver's Stripe Connect account can actually receive
+  // this booking. Beyond "a row exists" this checks:
+  //   * charges_enabled       (can we take the seeker's card at all)
+  //   * payouts_enabled       (can we push out to the carer's bank)
+  //   * capabilities.transfers.status === "active"
+  //   * no disabled_reason
+  // 60-min cache; live refresh on stale. See
+  // src/lib/stripe/connect-readiness.ts and
+  // supabase/migrations/20260911230000_stripe_connect_capabilities.sql.
+  const readiness = await assertConnectReadyForBooking(
+    { admin, stripe },
+    { carerId: body.caregiver_id! },
+  );
+  if (!readiness.ready) {
+    return NextResponse.json(
+      {
+        error: friendlyReasonMessage(readiness.reason),
+        reason: readiness.reason,
+      },
+      { status: 409 },
+    );
+  }
+
+  // Load the destination account id for the PaymentIntent transfer_data.
+  // Kept as a separate small read now that readiness owns the freshness
+  // decisions — this select is a byte-for-byte compatible replacement of
+  // what the removed block used to hand downstream.
   const { data: caregiverStripe, error: caregiverStripeError } = await admin
     .from("caregiver_stripe_accounts")
-    .select("stripe_account_id, charges_enabled, payouts_enabled")
+    .select("stripe_account_id")
     .eq("user_id", body.caregiver_id!)
     .maybeSingle();
-  if (caregiverStripeError) {
+  if (caregiverStripeError || !caregiverStripe) {
     console.error(
       "[create-booking-intent] caregiver Stripe account lookup failed",
       caregiverStripeError,
     );
     return NextResponse.json({ error: "database_error" }, { status: 503 });
-  }
-  if (!caregiverStripe) {
-    return NextResponse.json(
-      { error: "Caregiver has not completed payment setup" },
-      { status: 400 }
-    );
   }
 
   // Verify caregiver has cleared all required background checks for their country
