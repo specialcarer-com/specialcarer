@@ -1,33 +1,33 @@
 import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/admin/auth";
-import { createAdminClient } from "@/lib/supabase/admin";
 import {
   KPI_METRICS,
   type KpiMetric,
 } from "@/lib/admin-ops/types";
+import { getKpiSnapshots } from "@/lib/admin-ops/kpi-server";
 
 export const dynamic = "force-dynamic";
-
-type Row = {
-  day: string;
-  metric: KpiMetric;
-  value: number;
-};
 
 /**
  * GET /api/admin/analytics/kpis?metrics=bookings,gmv&days=14
  *
  * Returns one entry per requested metric, with:
- *   - series: 14 daily points oldest→newest (national scope only)
- *   - today, yesterday, avg7d
- *   - delta_pct: (today - 7d-avg) / 7d-avg, signed
+ *   - series: N daily points oldest→newest (national scope only), each
+ *     carrying its own state (ok | stale | error | missing)
+ *   - today, yesterday, avg7d: numeric only when the underlying row is
+ *     state='ok'. Stale / error rows do NOT contribute a number.
+ *   - today_state, today_error_code: what to show when the value is
+ *     absent (e.g. "no_derivation_wired", "schema_not_ready").
+ *   - delta_pct: (today - 7d-avg) / 7d-avg, signed. Null when today or
+ *     avg7d isn't an ok number.
  *
  * Reads from kpi_rollups_daily where dimension @> '{"scope":"national"}'.
+ * Deploy-safe against pre-B2 schemas — see getKpiSnapshots for details.
  */
 export async function GET(req: Request) {
   const _adminGuard = await requireAdminApi();
-
   if (!_adminGuard.ok) return _adminGuard.response;
+
   const url = new URL(req.url);
   const metricsParam = url.searchParams.get("metrics");
   const daysParam = url.searchParams.get("days");
@@ -47,68 +47,6 @@ export async function GET(req: Request) {
     return parsed.length > 0 ? parsed : [...KPI_METRICS];
   })();
 
-  const since = new Date();
-  since.setDate(since.getDate() - (days - 1));
-  const sinceDay = since.toISOString().slice(0, 10);
-
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("kpi_rollups_daily")
-    .select("day, metric, value")
-    .in("metric", requested)
-    .gte("day", sinceDay)
-    .contains("dimension", { scope: "national" })
-    .order("day", { ascending: true });
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  const rows = (data ?? []) as Row[];
-  // Build a complete day grid so the sparkline always has `days` slots.
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const grid: string[] = [];
-  for (let i = 0; i < days; i += 1) {
-    const d = new Date();
-    d.setDate(d.getDate() - (days - 1 - i));
-    grid.push(d.toISOString().slice(0, 10));
-  }
-
-  const out = requested.map((metric) => {
-    const byDay = new Map(
-      rows
-        .filter((r) => r.metric === metric)
-        .map((r) => [r.day, Number(r.value)] as const),
-    );
-    const series = grid.map((d) => ({
-      day: d,
-      value: byDay.has(d) ? (byDay.get(d) as number) : null,
-    }));
-    const today = byDay.get(todayIso) ?? null;
-    // Yesterday = day grid[length-2]
-    const yIso = grid[grid.length - 2];
-    const yesterday = byDay.get(yIso) ?? null;
-    // 7-day average over the trailing 7 entries (excluding today)
-    const trailingDays = grid.slice(-8, -1); // last 7 not including today
-    const trailing = trailingDays
-      .map((d) => byDay.get(d))
-      .filter((v): v is number => typeof v === "number");
-    const avg7d =
-      trailing.length > 0
-        ? trailing.reduce((a, b) => a + b, 0) / trailing.length
-        : null;
-    const deltaPct =
-      avg7d != null && avg7d !== 0 && today != null
-        ? ((today - avg7d) / avg7d) * 100
-        : null;
-    return {
-      metric,
-      series,
-      today,
-      yesterday,
-      avg7d,
-      delta_pct: deltaPct,
-    };
-  });
-
-  return NextResponse.json({ kpis: out });
+  const kpis = await getKpiSnapshots(requested, days);
+  return NextResponse.json({ kpis });
 }

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireCronAuth } from "@/lib/cron/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { KPI_METRICS, type KpiMetric } from "@/lib/admin-ops/types";
+import { deriveKpisForDay, type BookingRow } from "./derive";
 
 export const dynamic = "force-dynamic";
 
@@ -9,18 +9,20 @@ export const dynamic = "force-dynamic";
  * /api/cron/kpi-rollup-hourly
  *
  * Recomputes today's national rollup row for each of the 6 KPI metrics
- * and UPSERTs into kpi_rollups_daily. Idempotent — the table has a
- * unique (day, metric, dimension_hash) constraint and we re-stamp
- * `value` + `computed_at`.
+ * and UPSERTs into kpi_rollups_daily.
  *
- * Auth: matches the other crons — `Authorization: Bearer ${CRON_SECRET}`.
- * Both POST (per spec) and GET (Vercel cron default) are accepted so
- * existing cron schedules don't have to change.
+ * B2 (2026-09): The prior implementation emitted a mock-deterministic
+ * value for any metric it couldn't derive, keeping the dashboard "alive"
+ * with fabricated numbers. That's removed. Metrics without a real
+ * derivation now write NULL + state='error' + error_code='no_derivation_wired',
+ * which the reader / UI render honestly as unavailable.
  *
- * Values: where a clean derivation from base tables (bookings, etc.)
- * isn't yet wired, we fall back to a mock-deterministic value that
- * varies hour-to-hour but is stable within an hour, so the dashboard
- * stays alive while the real derivations are added.
+ * Deploy-safe: if the migration adding `state` / `error_code` hasn't
+ * applied yet, upserts fall back to the pre-migration shape (value-only
+ * for ok rows) and non-ok rows are skipped for that hour.
+ *
+ * Auth: `Authorization: Bearer ${CRON_SECRET}`. Accepts POST (spec) and
+ * GET (Vercel cron default).
  */
 async function run(req: NextRequest) {
   const authError = requireCronAuth(req);
@@ -38,87 +40,91 @@ async function run(req: NextRequest) {
 
   const today = new Date().toISOString().slice(0, 10);
   const hour = new Date().getUTCHours();
-
-  // Try to read real bookings + reviews counts for today; fall back
-  // gracefully if the underlying tables aren't reachable.
   const startOfDay = `${today}T00:00:00Z`;
   const endOfDay = `${today}T23:59:59Z`;
 
-  let bookingsCount: number | null = null;
-  let gmvValue: number | null = null;
-  try {
-    const { data: bRows } = await admin
-      .from("bookings")
-      .select("id, total_cents, currency, status, created_at")
-      .gte("created_at", startOfDay)
-      .lte("created_at", endOfDay)
-      .limit(5000);
-    if (bRows) {
-      bookingsCount = bRows.length;
-      // GMV: sum of total_cents where status looks paid-ish.
-      const paidish = new Set([
-        "paid",
-        "in_progress",
-        "completed",
-        "paid_out",
-      ]);
-      let pence = 0;
-      for (const r of bRows) {
-        const status = (r as { status?: string }).status ?? "";
-        const cents =
-          typeof (r as { total_cents?: number }).total_cents === "number"
-            ? (r as { total_cents: number }).total_cents
-            : 0;
-        if (paidish.has(status)) pence += cents;
-      }
-      gmvValue = pence / 100;
-    }
-  } catch {
-    /* swallow — fall back to mock */
-  }
+  const kpis = await deriveKpisForDay(today, {
+    async fetchBookingsForDay() {
+      const { data, error } = await admin
+        .from("bookings")
+        .select("id, total_cents, currency, status, created_at")
+        .gte("created_at", startOfDay)
+        .lte("created_at", endOfDay)
+        .limit(5000);
+      return {
+        rows: (data as BookingRow[] | null) ?? null,
+        error: error?.message ?? null,
+      };
+    },
+  });
 
-  const computed: Record<KpiMetric, number> = {
-    bookings:
-      bookingsCount != null
-        ? bookingsCount
-        : mockFor("bookings", today, hour),
-    gmv: gmvValue != null ? gmvValue : mockFor("gmv", today, hour),
-    nps: mockFor("nps", today, hour),
-    repeat_rate: mockFor("repeat_rate", today, hour),
-    fill_rate: mockFor("fill_rate", today, hour),
-    time_to_match_min: mockFor("time_to_match_min", today, hour),
-  };
-
+  const now = new Date().toISOString();
   let upserts = 0;
-  for (const metric of KPI_METRICS) {
-    // We can't ON CONFLICT through the JS client without specifying the
-    // constraint. Easiest portable path: read first, then update or
-    // insert. This runs once per metric per hour — 6 statements.
+  let schemaNotReady = false;
+
+  for (const k of kpis) {
+    // Read existing row (portable path — the JS client can't target the
+    // named unique constraint via .upsert without a compound `onConflict`
+    // over the generated column, which isn't allowed).
     const { data: existing } = await admin
       .from("kpi_rollups_daily")
       .select("id")
       .eq("day", today)
-      .eq("metric", metric)
+      .eq("metric", k.metric)
       .contains("dimension", { scope: "national" })
       .maybeSingle<{ id: string }>();
+
+    // Preferred: write value + state + error_code. On pre-migration
+    // schemas the state column doesn't exist; catch and downgrade.
+    const patch: Record<string, unknown> = {
+      value: k.value,
+      state: k.state,
+      error_code: k.errorCode ?? null,
+      computed_at: now,
+    };
 
     if (existing) {
       const { error } = await admin
         .from("kpi_rollups_daily")
-        .update({
-          value: computed[metric],
-          computed_at: new Date().toISOString(),
-        })
+        .update(patch)
         .eq("id", existing.id);
-      if (!error) upserts += 1;
+      if (isSchemaNotReady(error?.message)) {
+        schemaNotReady = true;
+        if (k.state === "ok" && k.value != null) {
+          // Best-effort fallback on the old schema — only ok rows.
+          const { error: fbErr } = await admin
+            .from("kpi_rollups_daily")
+            .update({ value: k.value, computed_at: now })
+            .eq("id", existing.id);
+          if (!fbErr) upserts += 1;
+        }
+      } else if (!error) {
+        upserts += 1;
+      }
     } else {
-      const { error } = await admin.from("kpi_rollups_daily").insert({
+      const insert: Record<string, unknown> = {
         day: today,
-        metric,
+        metric: k.metric,
         dimension: { scope: "national" },
-        value: computed[metric],
-      });
-      if (!error) upserts += 1;
+        ...patch,
+      };
+      const { error } = await admin.from("kpi_rollups_daily").insert(insert);
+      if (isSchemaNotReady(error?.message)) {
+        schemaNotReady = true;
+        if (k.state === "ok" && k.value != null) {
+          const { error: fbErr } = await admin
+            .from("kpi_rollups_daily")
+            .insert({
+              day: today,
+              metric: k.metric,
+              dimension: { scope: "national" },
+              value: k.value,
+            });
+          if (!fbErr) upserts += 1;
+        }
+      } else if (!error) {
+        upserts += 1;
+      }
     }
   }
 
@@ -127,8 +133,21 @@ async function run(req: NextRequest) {
     day: today,
     hour,
     upserts,
-    computed,
+    ...(schemaNotReady ? { skippedReason: "schema_not_ready" } : {}),
+    computed: Object.fromEntries(
+      kpis.map((k) => [
+        k.metric,
+        { state: k.state, value: k.value, error_code: k.errorCode ?? null },
+      ]),
+    ),
   });
+}
+
+function isSchemaNotReady(msg: string | undefined | null): boolean {
+  if (!msg) return false;
+  return /column .* does not exist|state.*does not exist|error_code.*does not exist/i.test(
+    msg,
+  );
 }
 
 export async function GET(req: NextRequest) {
@@ -136,38 +155,4 @@ export async function GET(req: NextRequest) {
 }
 export async function POST(req: NextRequest) {
   return run(req);
-}
-
-/**
- * Stable, deterministic mock value that varies hour-to-hour. The seed
- * is `${day}:${hour}` hashed to a small integer. We add base values
- * that mirror what the migration seed produces so the dashboard
- * shows continuity.
- */
-function mockFor(metric: KpiMetric, day: string, hour: number): number {
-  const seed = hashStr(`${day}:${hour}:${metric}`);
-  const drift = seed % 100; // 0..99
-  switch (metric) {
-    case "bookings":
-      return 320 + drift;
-    case "gmv":
-      return 14_500 + drift * 12.5;
-    case "nps":
-      return 48 + (drift % 6);
-    case "repeat_rate":
-      return Number((0.34 + (drift % 7) * 0.005).toFixed(4));
-    case "fill_rate":
-      return Number((0.78 + (drift % 6) * 0.005).toFixed(4));
-    case "time_to_match_min":
-      return 18 - (drift % 4);
-  }
-}
-
-function hashStr(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i += 1) {
-    h = (h << 5) - h + s.charCodeAt(i);
-    h |= 0;
-  }
-  return Math.abs(h);
 }
