@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { claimStripeWebhookEvent } from "@/lib/stripe/webhook-event-claim";
 import { unredeemCreditsForBooking } from "@/lib/referrals/redemption";
 import { reconcileChargeRefund } from "@/lib/payments/refund-webhook-reconciliation";
+import { recordRefundEvent } from "@/lib/payments/refund-ledger";
 import { dispatch } from "@/lib/push/notify";
 import {
   isCarerSubscription,
@@ -383,6 +384,50 @@ export async function POST(req: Request) {
               refund.metadata.refund_request_key.length > 0,
           );
           const claimKey = stripeRefund?.metadata?.refund_request_key;
+
+          // Resolve booking_id up-front so we can also write to the
+          // append-only refund_ledger. reconcileChargeRefund still runs
+          // its own findPayment() below — the two lookups agree by
+          // construction (same pid, same admin client).
+          let ledgerBookingId: string | null = null;
+          try {
+            const { data: pay } = await admin
+              .from("payments")
+              .select("booking_id")
+              .eq("stripe_payment_intent_id", pid)
+              .maybeSingle<{ booking_id: string }>();
+            ledgerBookingId = pay?.booking_id ?? null;
+          } catch (err) {
+            console.error(
+              "[stripe.webhook] ledger booking_id lookup failed",
+              err,
+            );
+          }
+
+          // Write one ledger row per (refund_id, event_type). If the
+          // charge has multiple refunds we write one row per refund.
+          // recordRefundEvent is idempotent via the unique index; a
+          // duplicate delivery is a no-op.
+          if (ledgerBookingId && ch.refunds?.data.length) {
+            for (const r of ch.refunds.data) {
+              await recordRefundEvent(admin, {
+                booking_id: ledgerBookingId,
+                stripe_refund_id: r.id,
+                stripe_event_id: event.id,
+                event_type: "charge.refunded",
+                amount_cents: r.amount,
+                currency: r.currency ?? ch.currency ?? "gbp",
+                status: (r.status ?? "succeeded") as
+                  | "succeeded"
+                  | "failed"
+                  | "pending"
+                  | "canceled"
+                  | "requires_action",
+                reason: r.reason ?? null,
+                raw: r as unknown as Record<string, unknown>,
+              });
+            }
+          }
           await reconcileChargeRefund({
             fullyRefunded: ch.amount_refunded === ch.amount,
             amountCents: ch.amount_refunded,
@@ -463,6 +508,87 @@ export async function POST(req: Request) {
             }
           } catch (err) {
             console.error("[stripe.webhook] unredeem on refund failed", err);
+          }
+        }
+        break;
+      }
+      case "charge.refund.updated": {
+        // Stripe emits this when an already-created refund transitions —
+        // notably to `failed` after an ACH bounce or when reason
+        // changes. Fold into the ledger as a fresh row so the projection
+        // reflects the newest known state without overwriting history.
+        const r = event.data.object as Stripe.Refund;
+        const pid =
+          typeof r.payment_intent === "string"
+            ? r.payment_intent
+            : r.payment_intent?.id ?? null;
+        if (pid) {
+          const { data: pay } = await admin
+            .from("payments")
+            .select("booking_id")
+            .eq("stripe_payment_intent_id", pid)
+            .maybeSingle<{ booking_id: string }>();
+          if (pay?.booking_id) {
+            await recordRefundEvent(admin, {
+              booking_id: pay.booking_id,
+              stripe_refund_id: r.id,
+              stripe_event_id: event.id,
+              event_type: "charge.refund.updated",
+              amount_cents: r.amount,
+              currency: r.currency ?? "gbp",
+              status: (r.status ?? "pending") as
+                | "succeeded"
+                | "failed"
+                | "pending"
+                | "canceled"
+                | "requires_action",
+              reason: r.failure_reason ?? r.reason ?? null,
+              raw: r as unknown as Record<string, unknown>,
+            });
+            // If it flipped to failed, mirror onto the cached booking
+            // fields so reads that still consult the counter aren't
+            // stuck on the earlier optimistic success.
+            if (r.status === "failed") {
+              await admin
+                .from("bookings")
+                .update({ refund_status: "failed" })
+                .eq("id", pay.booking_id);
+            }
+          }
+        }
+        break;
+      }
+      case "refund.failed": {
+        // Direct failed-refund event (some Stripe accounts emit this
+        // instead of / alongside charge.refund.updated). Record as a
+        // distinct event_type so both deliveries coexist in the ledger.
+        const r = event.data.object as Stripe.Refund;
+        const pid =
+          typeof r.payment_intent === "string"
+            ? r.payment_intent
+            : r.payment_intent?.id ?? null;
+        if (pid) {
+          const { data: pay } = await admin
+            .from("payments")
+            .select("booking_id")
+            .eq("stripe_payment_intent_id", pid)
+            .maybeSingle<{ booking_id: string }>();
+          if (pay?.booking_id) {
+            await recordRefundEvent(admin, {
+              booking_id: pay.booking_id,
+              stripe_refund_id: r.id,
+              stripe_event_id: event.id,
+              event_type: "refund.failed",
+              amount_cents: r.amount,
+              currency: r.currency ?? "gbp",
+              status: "failed",
+              reason: r.failure_reason ?? r.reason ?? null,
+              raw: r as unknown as Record<string, unknown>,
+            });
+            await admin
+              .from("bookings")
+              .update({ refund_status: "failed" })
+              .eq("id", pay.booking_id);
           }
         }
         break;

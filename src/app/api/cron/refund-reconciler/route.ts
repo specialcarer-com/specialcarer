@@ -9,6 +9,10 @@ import {
   type StripeRefundView,
   type StuckClaim,
 } from "./reconciler";
+import {
+  detectLedgerCacheDiscrepancy,
+  projectRefundState,
+} from "@/lib/payments/refund-ledger";
 
 export const dynamic = "force-dynamic";
 
@@ -155,7 +159,53 @@ export async function GET(req: NextRequest) {
   } else {
     console.error("[cron.refund-reconciler] failed:", res.body.error);
   }
-  return NextResponse.json(res.body, { status: res.status });
+
+  // B4: after reconciliation, sweep recently-touched bookings and log
+  // any disagreement between the ledger projection and the cached
+  // `bookings.refunded_amount_cents` counter. The ledger is
+  // authoritative; the counter is a denormalised cache. Disagreement
+  // is surfaced as a warning — the alerting infra can page on it —
+  // rather than silently corrected here.
+  let discrepancies = 0;
+  try {
+    const cutoff = new Date(
+      Date.now() - DEFAULT_STALE_AFTER_MS,
+    ).toISOString();
+    const { data: recent } = await admin
+      .from("bookings")
+      .select("id, refunded_amount_cents, refund_status, updated_at")
+      .in("refund_status", ["completed", "failed_permanent", "failed"])
+      .gt("updated_at", cutoff)
+      .limit(200);
+    for (const row of recent ?? []) {
+      const projection = await projectRefundState(admin, row.id as string);
+      if (projection.event_count === 0) continue;
+      const d = detectLedgerCacheDiscrepancy({
+        bookingId: row.id as string,
+        ledger: projection,
+        cached_refunded_amount_cents:
+          (row.refunded_amount_cents as number | null) ?? null,
+      });
+      if (d) {
+        discrepancies += 1;
+        console.warn(
+          `[cron.refund-reconciler] ledger/cache discrepancy booking=${d.booking_id} ledger=${d.ledger_total_cents} cache=${d.cache_total_cents} delta=${d.delta_cents}`,
+        );
+      }
+    }
+    if (discrepancies > 0) {
+      console.warn(
+        `[cron.refund-reconciler] surfaced ${discrepancies} ledger/cache discrepancy(ies) — ledger is authoritative, cache is stale`,
+      );
+    }
+  } catch (err) {
+    console.error("[cron.refund-reconciler] discrepancy sweep failed", err);
+  }
+
+  return NextResponse.json(
+    { ...res.body, ledger_discrepancies: discrepancies },
+    { status: res.status },
+  );
 }
 
 function toView(r: {
