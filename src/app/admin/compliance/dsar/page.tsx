@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import DsarRejectButton from "./dsar-reject-button";
+
+const NON_TERMINAL_STATES = new Set(["submitted", "verifying", "in_progress"]);
 
 export const dynamic = "force-dynamic";
 
@@ -38,10 +41,9 @@ const ALLOWED_STATES = new Set([
 /**
  * Read-only admin queue view for UK-GDPR data-subject requests.
  *
- * Read-only in this PR: the schema exists and the fulfilment pipeline
- * runs on its own; rejection/erasure workflows land in a follow-up so
- * this ships surgical. A rejection today is done by admin update via
- * the SQL console.
+ * Rejection is an inline action per non-terminal row (see
+ * dsar-reject-button.tsx). Erasure PII-nulling still needs a retention
+ * policy decision and lands in a follow-up.
  */
 export default async function DsarQueuePage(
   props: { searchParams?: Promise<{ state?: string }> },
@@ -124,6 +126,7 @@ export default async function DsarQueuePage(
                 <th className="text-left px-3 py-2">Verified</th>
                 <th className="text-left px-3 py-2">Delivered</th>
                 <th className="text-left px-3 py-2">Linked</th>
+                <th className="text-left px-3 py-2">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -154,6 +157,17 @@ export default async function DsarQueuePage(
                   <td className="px-3 py-2 text-slate-600 text-xs">
                     {row.subject_user_id ? "yes" : "no account"}
                   </td>
+                  <td className="px-3 py-2">
+                    {NON_TERMINAL_STATES.has(row.state) ? (
+                      <DsarRejectButton
+                        requestId={row.id}
+                        subjectEmail={row.subject_email}
+                        requestType={row.request_type}
+                      />
+                    ) : (
+                      <span className="text-xs text-slate-400">—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -162,8 +176,8 @@ export default async function DsarQueuePage(
       )}
 
       <footer className="text-xs text-slate-500">
-        Showing up to 200 most recent. Rejection with reason and erasure
-        approval land in a follow-up PR.
+        Showing up to 200 most recent. Erasure PII-nulling lands in a
+        follow-up (needs retention policy alignment).
       </footer>
     </div>
   );
