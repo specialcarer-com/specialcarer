@@ -4,6 +4,7 @@ import { paymentCaptureClaimFilter } from "@/lib/cron/payment-capture-claim";
 import * as Sentry from "@sentry/nextjs";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/server";
+import { fetchDueBookings } from "./fetch-due-bookings";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -56,13 +57,12 @@ export async function GET(req: NextRequest) {
   // /api/cron/release-org-payouts. Defensive filter: even though org
   // bookings won't have a Stripe payment_intent in `payments`, exclude
   // them explicitly so this cron's scan stats stay clean.
-  const { data: due, error } = await admin
-    .from("bookings")
-    .select("id, status, payout_eligible_at")
-    .eq("status", "completed")
-    .neq("booking_source", "org")
-    .lte("payout_eligible_at", new Date().toISOString())
-    .limit(100);
+  //
+  // Also excludes bookings with a non-null `carer_payout_hold_reason`
+  // (PR #218 dispute workflow). Deploy-safe: falls back to the
+  // un-filtered query with a logged warning if the column hasn't been
+  // added yet — see fetchDueBookings for the schema-not-ready path.
+  const { data: due, error } = await fetchDueBookings(admin);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
