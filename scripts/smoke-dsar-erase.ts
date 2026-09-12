@@ -217,7 +217,7 @@ check(
   store.dsar_deferred_erasure_queue.length === result.deferred.length,
   `deferred rows persisted to store (count=${result.deferred.length}; expected 0 today because current manifest has no soft-delete steps)`,
 );
-check(result.digest.length === 16, "digest is 16 hex chars");
+check(/^[0-9a-f]{16}$/i.test(result.digest), `digest is 16 hex chars: ${result.digest}`);
 check(result.version === DSAR_ERASE_CONSTANTS.ERASE_VERSION, "handler version matches constant");
 
 // audit sanity — every audit row should have a request_id + email + action
