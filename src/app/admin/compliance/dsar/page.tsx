@@ -45,8 +45,13 @@ function RowActions({ row }: { row: Row }) {
   // subject-email column, not a block.
   const showErase =
     eraseCheck === "eligible" || eraseCheck === "no_account";
+  // Once the erasure has been fulfilled, offer the downloadable
+  // audit ZIP (manifest + audit.csv + deferred.csv). Only meaningful
+  // for erasure requests in the terminal 'erased' state.
+  const showAuditDownload =
+    row.request_type === "erasure" && row.state === "erased";
 
-  if (!showReject && !showErase) {
+  if (!showReject && !showErase && !showAuditDownload) {
     return <span className="text-xs text-slate-400">—</span>;
   }
   return (
@@ -63,6 +68,15 @@ function RowActions({ row }: { row: Row }) {
           requestId={row.id}
           subjectEmail={row.subject_email}
         />
+      )}
+      {showAuditDownload && (
+        <a
+          href={`/api/admin/dsar/${row.id}/audit.zip`}
+          className="inline-flex items-center rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+          title="Download the erasure audit bundle (manifest + audit.csv + deferred.csv)"
+        >
+          Download audit
+        </a>
       )}
     </div>
   );
