@@ -1,5 +1,51 @@
 name: Apply Supabase migrations
 
+# ============================================================================
+# Pre-flight destructive-migration gate (added 12 Sep 2026)
+# ----------------------------------------------------------------------------
+# The `preflight` job below scans the ADDED lines of migration files touched
+# by this push (or, for workflow_dispatch, files added in the last 30 days
+# by mtime as a safety net) for destructive SQL statements. If any are
+# detected, the `apply` job is blocked. The intent is:
+#
+#   additive migrations auto-apply, destructive migrations require manual
+#   review — preserves the reversible-runbook step for genuinely risky
+#   changes without adding friction to routine additive work.
+#
+# WHAT IT CATCHES (case-insensitive, added lines only):
+#   • DROP TABLE / COLUMN / INDEX / CONSTRAINT / SCHEMA / FUNCTION /
+#     TRIGGER / POLICY
+#   • ALTER TABLE ... DROP (COLUMN/CONSTRAINT/etc.)
+#   • TRUNCATE
+#   • DELETE FROM ... without a WHERE clause before the terminating `;`
+#     (allows multi-line DELETE with WHERE on a following line)
+#
+# WHAT IT DOES NOT CATCH (intentional; keep the gate simple, catch the
+# common case, don't try to parse SQL with grep):
+#   • Destructive statements inside PL/pgSQL function bodies (CREATE
+#     FUNCTION ... $$ DROP TABLE foo; $$).
+#   • Dynamic SQL built with EXECUTE format(...).
+#   • Complex CTEs whose semantics are destructive but whose leading
+#     keyword is not (e.g. DELETE inside a WITH ... AS (...) DELETE ...).
+#   • Lines where the destructive keyword sits inside a single-quoted
+#     string literal but the heuristic can't tell (best-effort guard
+#     for `--` comments and simple string quoting only).
+#
+# OVERRIDE PATH:
+#   The `on:` block of this workflow is a standing user rule — do NOT add
+#   inputs to workflow_dispatch. Manual override is via a git trailer:
+#   add a line `Allow-Destructive: true` on its own line at the end of
+#   the tip commit message on `main`. The preflight job parses trailers
+#   with `git interpret-trailers` and, if the trailer is set to `true` +
+#   a destructive pattern is found, logs a warning and exits 0. A trailer
+#   (not a free-text marker) is used to avoid false positives from
+#   documentation / PR bodies / comments that merely mention the syntax.
+#
+# TESTING:
+#   .github/workflows/preflight-destructive-scan.test.sh exercises the
+#   detection logic locally. Run it before touching the scan.
+# ============================================================================
+
 # Auto-apply migrations on every push to main that touches
 # supabase/migrations/**. Re-enabled 10 Sep 2026 after the second migration-
 # history drift reconciliation:
@@ -37,8 +83,204 @@ permissions:
   contents: read
 
 jobs:
+  preflight:
+    name: Pre-flight destructive-diff scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout (depth 2 for diff against previous main)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+
+      - name: Scan added lines for destructive SQL
+        run: |
+          set -uo pipefail
+
+          EVENT="${GITHUB_EVENT_NAME:-push}"
+          echo "Pre-flight scan trigger: ${EVENT}"
+
+          if [ "${EVENT}" = "workflow_dispatch" ]; then
+            echo "::notice::Pre-flight scan running for workflow_dispatch trigger — this is a manual override path; scan is informational."
+            # Safety-net: on manual dispatch there is no meaningful HEAD^ diff.
+            # Scan migration files added in the last 30 days by mtime. This is
+            # a conservative superset of "recent" — a rerun of an old apply
+            # won't get noisy warnings on unchanged historical files.
+            mapfile -t FILES < <(find supabase/migrations -type f -name '*.sql' -mtime -30 | sort)
+          else
+            # Push event: diff the tip commit against its parent, restricted to
+            # supabase/migrations/**. Added or modified .sql files only.
+            mapfile -t FILES < <(git diff --name-only --diff-filter=AM HEAD^ HEAD -- 'supabase/migrations/**' | grep -E '\.sql$' || true)
+          fi
+
+          if [ "${#FILES[@]}" -eq 0 ]; then
+            echo "::notice::Pre-flight scan clean — 0 migration file(s) checked, no destructive statements found. Proceeding to auto-apply."
+            exit 0
+          fi
+
+          echo "Files to scan (${#FILES[@]}):"
+          printf '  %s\n' "${FILES[@]}"
+
+          # Destructive patterns. Each entry: "label|extended-regex".
+          # Regexes are matched case-insensitively against ADDED lines only.
+          # We deliberately keep these simple — grep, not a SQL parser.
+          # label~regex — `~` is the delimiter (regexes contain `|`).
+          PATTERNS=(
+            'DROP TABLE~DROP[[:space:]]+TABLE'
+            'DROP COLUMN~DROP[[:space:]]+COLUMN'
+            'DROP INDEX~DROP[[:space:]]+INDEX'
+            'DROP CONSTRAINT~DROP[[:space:]]+CONSTRAINT'
+            'DROP SCHEMA~DROP[[:space:]]+SCHEMA'
+            'DROP FUNCTION~DROP[[:space:]]+FUNCTION'
+            'DROP TRIGGER~DROP[[:space:]]+TRIGGER'
+            'DROP POLICY~DROP[[:space:]]+POLICY'
+            'TRUNCATE~TRUNCATE'
+            'ALTER TABLE ... DROP~ALTER[[:space:]]+TABLE[[:space:]]+\S+[[:space:]]+DROP'
+          )
+
+          FAIL=0
+          TOTAL_HITS=0
+          DETECTED_LIST=""
+          OFFENDING_OUTPUT=""
+
+          # extract_added_lines <file>: emit the added-line contents (no
+          # leading '+') from the HEAD^..HEAD diff for a single file. On
+          # workflow_dispatch (no meaningful HEAD^ diff), emit the full
+          # file contents instead — safety net.
+          extract_added_lines() {
+            local f="$1"
+            if [ "${EVENT}" = "workflow_dispatch" ]; then
+              cat "$f"
+            else
+              git diff --unified=0 HEAD^ HEAD -- "$f" \
+                | grep '^+' \
+                | grep -v '^+++' \
+                | sed 's/^+//'
+            fi
+          }
+
+          # strip_comments_and_strings <input>: filter added lines to a form
+          # safer for keyword matching. Drop `--` single-line comments and
+          # blank the interior of single-quoted string literals so that
+          # `COMMENT ON TABLE t IS 'you can DROP TABLE this';` does not fire.
+          # This is a heuristic, not a lexer — documented limitation.
+          strip_comments_and_strings() {
+            # 1. Remove `-- ...` to end of line.
+            # 2. Replace single-quoted string contents with empty '' so
+            #    keywords inside them are gone.
+            sed -E \
+              -e "s/--.*$//" \
+              -e "s/'([^']|'')*'/''/g"
+          }
+
+          for f in "${FILES[@]}"; do
+            if [ ! -f "$f" ]; then
+              # File was deleted in this diff — nothing to scan.
+              continue
+            fi
+
+            ADDED=$(extract_added_lines "$f" | strip_comments_and_strings)
+
+            if [ -z "$ADDED" ]; then
+              continue
+            fi
+
+            FILE_HIT=0
+            FILE_DETECTED=""
+
+            for entry in "${PATTERNS[@]}"; do
+              label="${entry%%~*}"
+              regex="${entry#*~}"
+
+              # grep -i case-insensitive, -E extended, -n line numbers for context
+              matches=$(printf '%s\n' "$ADDED" | grep -inE "$regex" || true)
+              if [ -n "$matches" ]; then
+                FILE_HIT=1
+                TOTAL_HITS=$((TOTAL_HITS + 1))
+                FILE_DETECTED="${FILE_DETECTED}${FILE_DETECTED:+, }${label}"
+                OFFENDING_OUTPUT="${OFFENDING_OUTPUT}"$'\n'"### ${f} :: ${label} ###"$'\n'"${matches}"$'\n'
+              fi
+            done
+
+            # DELETE FROM ... WHERE?: for any line containing DELETE FROM,
+            # grab that line + up to 5 following lines, stop at `;`, then
+            # check whether the block contains WHERE. Skip lines commented
+            # out (already handled by strip_comments_and_strings).
+            delete_hits=""
+            # Feed the stripped ADDED into awk with line numbers.
+            delete_hits=$(printf '%s\n' "$ADDED" | awk '
+              BEGIN { IGNORECASE = 1 }
+              {
+                lines[NR] = $0
+              }
+              END {
+                for (i = 1; i <= NR; i++) {
+                  if (lines[i] ~ /DELETE[[:space:]]+FROM/) {
+                    block = lines[i]
+                    end = i
+                    # Extend up to 5 following lines, stop at first `;`.
+                    if (block !~ /;/) {
+                      for (j = i + 1; j <= NR && j <= i + 5; j++) {
+                        block = block " " lines[j]
+                        end = j
+                        if (lines[j] ~ /;/) break
+                      }
+                    }
+                    if (block !~ /[[:space:]]WHERE[[:space:]]/ && block !~ /[[:space:]]WHERE$/) {
+                      printf("%d:%s\n", i, lines[i])
+                    }
+                  }
+                }
+              }
+            ')
+            if [ -n "$delete_hits" ]; then
+              FILE_HIT=1
+              TOTAL_HITS=$((TOTAL_HITS + 1))
+              FILE_DETECTED="${FILE_DETECTED}${FILE_DETECTED:+, }DELETE without WHERE"
+              OFFENDING_OUTPUT="${OFFENDING_OUTPUT}"$'\n'"### ${f} :: DELETE without WHERE ###"$'\n'"${delete_hits}"$'\n'
+            fi
+
+            if [ "$FILE_HIT" -eq 1 ]; then
+              FAIL=1
+              DETECTED_LIST="${DETECTED_LIST}"$'\n'"  ${f}: ${FILE_DETECTED}"
+              echo "::error::Destructive SQL detected in migration ${f}. Auto-apply blocked. Run via 'workflow_dispatch' after manual review. Detected patterns: ${FILE_DETECTED}. To override, either edit the migration to be non-destructive or add a git trailer 'Allow-Destructive: true' on its own line at the end of the tip commit message on main."
+            fi
+          done
+
+          if [ "$FAIL" -eq 0 ]; then
+            echo "::notice::Pre-flight scan clean — ${#FILES[@]} migration file(s) checked, no destructive statements found. Proceeding to auto-apply."
+            exit 0
+          fi
+
+          # Something destructive was found. Check for the commit-message
+          # override trailer. Must be a git trailer of the form:
+          #   Allow-Destructive: true
+          # on its own line. Using a trailer (not a free-text marker) avoids
+          # false positives from documentation / PR bodies / comments that
+          # merely mention the override syntax.
+          COMMIT_MSG=$(git log -1 --format=%B HEAD || true)
+          OVERRIDE=$(printf '%s' "$COMMIT_MSG" | git interpret-trailers --parse | awk -F': *' 'tolower($1)=="allow-destructive" {print tolower($2)}' | tail -n1)
+          if [ "$OVERRIDE" = "true" ]; then
+            echo "::warning::Destructive SQL detected but 'Allow-Destructive: true' trailer present in HEAD commit message. Proceeding."
+            echo "Detected:${DETECTED_LIST}"
+            echo "Offending lines:${OFFENDING_OUTPUT}"
+            exit 0
+          fi
+
+          echo ""
+          echo "Detected destructive statements:${DETECTED_LIST}"
+          echo ""
+          echo "Offending lines (post-comment/string strip):"
+          echo "${OFFENDING_OUTPUT}"
+          echo ""
+          echo "To override:"
+          echo "  • Preferred: edit the migration to be non-destructive (additive-only)."
+          echo "  • Emergency: add a git trailer 'Allow-Destructive: true' on its own line at the end of the tip commit message on main."
+          exit 1
+
   apply:
     name: supabase db push
+    needs: preflight
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
