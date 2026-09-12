@@ -179,3 +179,151 @@ You have the right to challenge this decision. Reply to this email, or contact $
     text,
   };
 }
+
+// --------------------------------------------------------------------------
+// Erasure completion email (Article 17)
+// --------------------------------------------------------------------------
+
+export type DsarErasedEmailArgs = {
+  subject_email: string;
+  request_id: string;
+  nulled: { label: string; row_count: number }[];
+  retained: {
+    label: string;
+    legal_basis: string;
+    retained_until: string | null;
+  }[];
+  max_retained_until: string | null;
+  digest: string;
+};
+
+/**
+ * Renders the Article-17 completion email. The wording matches the
+ * template in `specialcarer_dsar_erasure_retention_map.md` §6 — every
+ * change here must also update that spec, and vice-versa.
+ */
+export function renderDsarErasedEmail(
+  args: DsarErasedEmailArgs,
+): { subject: string; html: string; text: string } {
+  const nulledList = args.nulled.length
+    ? args.nulled
+        .map(
+          (n) =>
+            `<li>${escapeHtml(n.label)}${n.row_count > 0 ? ` (${n.row_count} row${n.row_count === 1 ? "" : "s"})` : ""}</li>`,
+        )
+        .join("")
+    : "<li>No fields required nulling in this environment.</li>";
+
+  const retainedList = args.retained.length
+    ? args.retained
+        .map(
+          (r) =>
+            `<li><strong>${escapeHtml(r.label)}</strong> — ${escapeHtml(r.legal_basis)}${r.retained_until ? ` (until ${escapeHtml(r.retained_until)})` : ""}</li>`,
+        )
+        .join("")
+    : "<li>Nothing was retained.</li>";
+
+  const inner = `
+      <tr><td style="padding-bottom:12px;color:${BRAND_HEADING};font-size:18px;font-weight:600;">
+        Your erasure request — completed
+      </td></tr>
+      <tr><td style="padding-bottom:16px;font-size:15px;line-height:1.55;">
+        We have processed your erasure request (reference
+        <code style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#f2f2f2;padding:1px 6px;border-radius:4px;">${escapeHtml(args.request_id)}</code>)
+        under Article 17 of the UK GDPR. This email sets out exactly what we
+        have done and what we are required to keep.
+      </td></tr>
+      <tr><td style="padding-bottom:8px;color:${BRAND_HEADING};font-size:15px;font-weight:600;">
+        What we have erased today
+      </td></tr>
+      <tr><td style="padding-bottom:16px;font-size:14px;line-height:1.55;">
+        <ul style="margin:0;padding-left:18px;">${nulledList}</ul>
+      </td></tr>
+      <tr><td style="padding-bottom:8px;color:${BRAND_HEADING};font-size:15px;font-weight:600;">
+        What we are required to keep, and for how long
+      </td></tr>
+      <tr><td style="padding-bottom:12px;font-size:14px;line-height:1.55;">
+        UK law requires us to retain certain records for a defined period
+        even after you exercise your right to erasure. These are held under
+        Article 17(3)(b) (compliance with a legal obligation) and
+        Article 17(3)(e) (establishment, exercise or defence of legal claims).
+      </td></tr>
+      <tr><td style="padding-bottom:16px;font-size:14px;line-height:1.55;">
+        <ul style="margin:0;padding-left:18px;">${retainedList}</ul>
+      </td></tr>
+      ${
+        args.max_retained_until
+          ? `<tr><td style="padding-bottom:16px;font-size:14px;line-height:1.55;">
+        When each retention period ends, the records will be automatically
+        deleted by our systems. The latest date on which any of your data
+        will be held is <strong>${escapeHtml(args.max_retained_until)}</strong>.
+      </td></tr>`
+          : ""
+      }
+      <tr><td style="padding-bottom:8px;color:${BRAND_HEADING};font-size:15px;font-weight:600;">
+        The audit trail
+      </td></tr>
+      <tr><td style="padding-bottom:16px;font-size:14px;line-height:1.55;">
+        We keep a record of the fact that you asked for erasure and of what
+        we did in response, so we can prove to the Information Commissioner's
+        Office that your request was honoured. This audit record is retained
+        for six years. The audit fingerprint for your request is
+        <code style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#f2f2f2;padding:1px 6px;border-radius:4px;">${escapeHtml(args.digest)}</code>.
+      </td></tr>
+      <tr><td style="padding-bottom:8px;color:${BRAND_HEADING};font-size:15px;font-weight:600;">
+        If you disagree
+      </td></tr>
+      <tr><td style="padding-bottom:16px;font-size:14px;line-height:1.55;">
+        If you believe we should have erased more than we did, you can
+        (1) reply to this email and we will re-review, (2) email
+        <a href="mailto:complaints@specialcarer.com" style="color:${BRAND_PRIMARY};">complaints@specialcarer.com</a>,
+        or (3) complain to the Information Commissioner's Office at
+        <a href="https://ico.org.uk/make-a-complaint/" style="color:${BRAND_PRIMARY};">ico.org.uk/make-a-complaint</a>
+        or on 0303 123 1113.
+      </td></tr>`;
+
+  const nulledText = args.nulled.length
+    ? args.nulled
+        .map(
+          (n) =>
+            `  - ${n.label}${n.row_count > 0 ? ` (${n.row_count} row${n.row_count === 1 ? "" : "s"})` : ""}`,
+        )
+        .join("\n")
+    : "  - No fields required nulling in this environment.";
+
+  const retainedText = args.retained.length
+    ? args.retained
+        .map(
+          (r) =>
+            `  - ${r.label} — ${r.legal_basis}${r.retained_until ? ` (until ${r.retained_until})` : ""}`,
+        )
+        .join("\n")
+    : "  - Nothing was retained.";
+
+  const text = `Your erasure request — completed
+
+We have processed your erasure request (reference ${args.request_id}) under Article 17 of the UK GDPR.
+
+What we have erased today:
+${nulledText}
+
+What we are required to keep, and for how long:
+UK law requires us to retain certain records for a defined period even after you exercise your right to erasure, under Article 17(3)(b) and Article 17(3)(e).
+${retainedText}
+${args.max_retained_until ? `\nThe latest date on which any of your data will be held is ${args.max_retained_until}.\n` : ""}
+The audit trail:
+We keep a record of the fact that you asked for erasure and of what we did in response. This audit record is retained for six years. Audit fingerprint: ${args.digest}.
+
+If you disagree:
+(1) reply to this email, (2) email complaints@specialcarer.com, or (3) complain to the ICO at https://ico.org.uk/make-a-complaint/ or on 0303 123 1113.
+
+— SpecialCarer
+All Care 4 U Group Ltd, trading as Special Carer
+Data Protection: dpo@specialcarer.com`;
+
+  return {
+    subject: "Your SpecialCarer erasure request — completed",
+    html: shell(inner, "Your erasure request — completed"),
+    text,
+  };
+}
