@@ -154,7 +154,7 @@ export default async function DsarQueuePage(
         </p>
       </header>
 
-      <nav className="flex flex-wrap gap-2 text-sm">
+      <nav className="flex flex-wrap items-center gap-2 text-sm">
         <FilterLink label="All" active={!filterState} href="/admin/compliance/dsar" />
         {[
           "submitted",
@@ -172,6 +172,13 @@ export default async function DsarQueuePage(
             href={`/admin/compliance/dsar?state=${s}`}
           />
         ))}
+        <span className="mx-1 text-slate-300">|</span>
+        <Link
+          href="/admin/compliance/dsar/deferred"
+          className="px-3 py-1 rounded-full border border-slate-200 text-slate-700 hover:bg-slate-50"
+        >
+          Deferred queue →
+        </Link>
       </nav>
 
       {schemaMissing ? (
