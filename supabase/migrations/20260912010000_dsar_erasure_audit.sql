@@ -192,7 +192,13 @@ begin
      where n.nspname = 'public'
        and cls.relname = 'dsar_requests'
        and con.contype = 'c'
-       and pg_get_constraintdef(con.oid) ilike '%state%in%submitted%'
+       and (
+         -- pg pretty-prints `state IN (...)` as `state = ANY (ARRAY[...])`
+         -- on modern versions; match either shape by looking for
+         -- 'state' and 'submitted' both appearing anywhere in the def.
+         pg_get_constraintdef(con.oid) ilike '%state%in%submitted%'
+         or pg_get_constraintdef(con.oid) ilike '%state%submitted%'
+       )
   loop
     execute format('alter table public.dsar_requests drop constraint %I', cons.conname);
   end loop;
