@@ -6,6 +6,7 @@ import { claimStripeWebhookEvent } from "@/lib/stripe/webhook-event-claim";
 import { unredeemCreditsForBooking } from "@/lib/referrals/redemption";
 import { reconcileChargeRefund } from "@/lib/payments/refund-webhook-reconciliation";
 import { recordRefundEvent } from "@/lib/payments/refund-ledger";
+import { handleDisputeEvent } from "@/lib/stripe/dispute-webhook";
 import { dispatch } from "@/lib/push/notify";
 import {
   isCarerSubscription,
@@ -590,6 +591,27 @@ export async function POST(req: Request) {
               .update({ refund_status: "failed" })
               .eq("id", pay.booking_id);
           }
+        }
+        break;
+      }
+      // -----------------------------------------------------------
+      // Dispute lifecycle (C1). Delegates to the dedicated handler.
+      // The handler is idempotent on (stripe_dispute_id + event_type)
+      // via stripe_dispute_cases.unique(stripe_dispute_id) and
+      // refund_ledger.unique(stripe_refund_id, event_type), so
+      // re-delivery here is a no-op. If the migration is unapplied
+      // the handler returns {ok:true, skippedReason:"schema_not_ready"}
+      // and we mark processed_at — Stripe stops retrying and prior
+      // events can be replayed from the dashboard post-migration.
+      // -----------------------------------------------------------
+      case "charge.dispute.created":
+      case "charge.dispute.updated":
+      case "charge.dispute.closed":
+      case "charge.dispute.funds_withdrawn":
+      case "charge.dispute.funds_reinstated": {
+        const res = await handleDisputeEvent(admin, event);
+        if (!res.ok) {
+          throw new Error(res.error);
         }
         break;
       }
