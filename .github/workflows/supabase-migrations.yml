@@ -33,11 +33,13 @@ name: Apply Supabase migrations
 #
 # OVERRIDE PATH:
 #   The `on:` block of this workflow is a standing user rule — do NOT add
-#   inputs to workflow_dispatch. Manual override is via commit message:
-#   include the marker string `[allow-destructive]` in the tip commit
-#   message on `main`. The preflight job greps
-#   `git log -1 --format=%B HEAD` for that marker and, if present + a
-#   destructive pattern is found, logs a warning and exits 0.
+#   inputs to workflow_dispatch. Manual override is via a git trailer:
+#   add a line `Allow-Destructive: true` on its own line at the end of
+#   the tip commit message on `main`. The preflight job parses trailers
+#   with `git interpret-trailers` and, if the trailer is set to `true` +
+#   a destructive pattern is found, logs a warning and exits 0. A trailer
+#   (not a free-text marker) is used to avoid false positives from
+#   documentation / PR bodies / comments that merely mention the syntax.
 #
 # TESTING:
 #   .github/workflows/preflight-destructive-scan.test.sh exercises the
@@ -241,7 +243,7 @@ jobs:
             if [ "$FILE_HIT" -eq 1 ]; then
               FAIL=1
               DETECTED_LIST="${DETECTED_LIST}"$'\n'"  ${f}: ${FILE_DETECTED}"
-              echo "::error::Destructive SQL detected in migration ${f}. Auto-apply blocked. Run via 'workflow_dispatch' after manual review. Detected patterns: ${FILE_DETECTED}. To override, either edit the migration to be non-destructive or add [allow-destructive] to the commit message on main."
+              echo "::error::Destructive SQL detected in migration ${f}. Auto-apply blocked. Run via 'workflow_dispatch' after manual review. Detected patterns: ${FILE_DETECTED}. To override, either edit the migration to be non-destructive or add a git trailer 'Allow-Destructive: true' on its own line at the end of the tip commit message on main."
             fi
           done
 
@@ -251,10 +253,15 @@ jobs:
           fi
 
           # Something destructive was found. Check for the commit-message
-          # override marker.
+          # override trailer. Must be a git trailer of the form:
+          #   Allow-Destructive: true
+          # on its own line. Using a trailer (not a free-text marker) avoids
+          # false positives from documentation / PR bodies / comments that
+          # merely mention the override syntax.
           COMMIT_MSG=$(git log -1 --format=%B HEAD || true)
-          if printf '%s' "$COMMIT_MSG" | grep -qF '[allow-destructive]'; then
-            echo "::warning::Destructive SQL detected but [allow-destructive] override marker present in HEAD commit message. Proceeding."
+          OVERRIDE=$(printf '%s' "$COMMIT_MSG" | git interpret-trailers --parse | awk -F': *' 'tolower($1)=="allow-destructive" {print tolower($2)}' | tail -n1)
+          if [ "$OVERRIDE" = "true" ]; then
+            echo "::warning::Destructive SQL detected but 'Allow-Destructive: true' trailer present in HEAD commit message. Proceeding."
             echo "Detected:${DETECTED_LIST}"
             echo "Offending lines:${OFFENDING_OUTPUT}"
             exit 0
@@ -268,7 +275,7 @@ jobs:
           echo ""
           echo "To override:"
           echo "  • Preferred: edit the migration to be non-destructive (additive-only)."
-          echo "  • Emergency: land a commit on main whose message contains '[allow-destructive]'."
+          echo "  • Emergency: add a git trailer 'Allow-Destructive: true' on its own line at the end of the tip commit message on main."
           exit 1
 
   apply:
