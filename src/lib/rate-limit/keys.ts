@@ -58,3 +58,16 @@ export function calendarFeedIp(ip: string): string {
 export function supportInboundVendor(vendor: string): string {
   return `support:inbound:vendor:${normVendor(vendor)}`;
 }
+
+/**
+ * Candour case open — per authenticated user id.
+ *
+ * A carer legitimately filing a fresh notifiable-event report should not
+ * be doing more than a handful in a short window; the 5-per-hour ceiling
+ * is deliberately generous. If a real incident cluster needs more, admin
+ * can file on behalf of the carer (that path does not go through this
+ * limiter).
+ */
+export function candourOpenUser(userId: string): string {
+  return `candour:open:user:${userId.trim()}`;
+}
