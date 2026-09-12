@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getRequestIp } from "@/lib/rate-limit";
+import { check as rlCheck } from "@/lib/rate-limit/distributed";
+import { rateLimitHeaders } from "@/lib/rate-limit/headers";
+import { waitlistEmail, waitlistIp } from "@/lib/rate-limit/keys";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** IP: 10 waitlist submits per hour (blast protection). */
+const IP_LIMIT = 10;
+/** Email: 5 submits per hour across IPs (per-address flood protection). */
+const EMAIL_LIMIT = 5;
+const HOUR_SEC = 60 * 60;
 
 async function readPayload(
   req: NextRequest
@@ -46,6 +56,32 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // Distributed limiter (PR C2): IP bucket AND email bucket. Both must pass.
+  // On over-limit → 429 with Retry-After + no DB write.
+  const ip = getRequestIp(req);
+  const ipCheck = await rlCheck({
+    key: waitlistIp(ip),
+    limit: IP_LIMIT,
+    windowSec: HOUR_SEC,
+  });
+  if (!ipCheck.ok) {
+    return NextResponse.json(
+      { ok: false, error: "rate_limited" },
+      { status: 429, headers: rateLimitHeaders(ipCheck) },
+    );
+  }
+  const emailCheck = await rlCheck({
+    key: waitlistEmail(email),
+    limit: EMAIL_LIMIT,
+    windowSec: HOUR_SEC,
+  });
+  if (!emailCheck.ok) {
+    return NextResponse.json(
+      { ok: false, error: "rate_limited" },
+      { status: 429, headers: rateLimitHeaders(emailCheck) },
+    );
+  }
+
   try {
     const supabase = await createClient();
     const { error } = await supabase.from("waitlist").insert({
@@ -79,10 +115,13 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // Surface remaining budget on success too, so ops dashboards can log it.
+  const headers = rateLimitHeaders(emailCheck);
   if (isJson) {
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true }, { headers });
   }
   return NextResponse.redirect(new URL("/?waitlist=success", req.url), {
     status: 303,
+    headers,
   });
 }
