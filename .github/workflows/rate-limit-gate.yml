@@ -1,0 +1,30 @@
+name: rate-limit-gate
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+jobs:
+  no-bespoke-limiters:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Grep gate — no bespoke rate limiters under src/app/api
+        # PR C2 replaced every per-route counter with the shared distributed
+        # limiter (`@/lib/rate-limit/distributed`). If a new endpoint reaches
+        # for one of these ad-hoc patterns instead we want CI to fail loudly.
+        run: |
+          set -e
+          FOUND=0
+          for pattern in inMemoryCounter rateLimitMap 'checkInboundSupportRateLimit'; do
+            if grep -R -n --include='*.ts' --include='*.tsx' "$pattern" src/app/api; then
+              echo "::error::Forbidden bespoke rate-limit pattern found: $pattern"
+              FOUND=1
+            fi
+          done
+          if [ $FOUND -ne 0 ]; then
+            echo "Use @/lib/rate-limit/distributed + @/lib/rate-limit/keys instead."
+            exit 1
+          fi
+          echo "Rate-limit gate passed."
