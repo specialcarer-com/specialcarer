@@ -7,6 +7,7 @@ import { unredeemCreditsForBooking } from "@/lib/referrals/redemption";
 import { reconcileChargeRefund } from "@/lib/payments/refund-webhook-reconciliation";
 import { recordRefundEvent } from "@/lib/payments/refund-ledger";
 import { handleDisputeEvent } from "@/lib/stripe/dispute-webhook";
+import { handlePayoutAlertEvent } from "@/lib/stripe/payout-webhook";
 import { dispatch } from "@/lib/push/notify";
 import {
   isCarerSubscription,
@@ -675,6 +676,12 @@ export async function POST(req: Request) {
         } catch (e) {
           console.error("[stripe.webhook] payout dispatch failed", e);
         }
+        // Resolve any open payout_alerts for this Stripe payout (C4).
+        // Deploy-safe: no-op if payout_alerts table is missing.
+        {
+          const res = await handlePayoutAlertEvent(admin, event);
+          if (!res.ok) throw new Error(res.error);
+        }
         break;
       }
       case "payout.failed": {
@@ -686,6 +693,21 @@ export async function POST(req: Request) {
             failure_reason: po.failure_message ?? "stripe_payout_failed",
           })
           .eq("stripe_payout_id", po.id);
+        // Open a payout_alerts row + fire carer/admin notifications (C4).
+        // Deploy-safe: no-op if payout_alerts table is missing.
+        {
+          const res = await handlePayoutAlertEvent(admin, event);
+          if (!res.ok) throw new Error(res.error);
+        }
+        break;
+      }
+      case "payout.canceled": {
+        // Delegate to the alert handler only; the router doesn't
+        // maintain a 'canceled' state on payout_intents today (Stripe
+        // cancel is rare — typically a same-day admin action). Add
+        // ops-facing accounting projection separately if that changes.
+        const res = await handlePayoutAlertEvent(admin, event);
+        if (!res.ok) throw new Error(res.error);
         break;
       }
 

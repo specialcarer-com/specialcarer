@@ -7,6 +7,93 @@ import ReleaseButton from "./ReleaseButton";
 
 export const dynamic = "force-dynamic";
 
+// Postgres error code for undefined_table — the payout_alerts table
+// (C4 migration 20260912154500) may not yet exist during the deploy
+// window. When absent, the alerts panel simply hides itself.
+const PG_UNDEFINED_TABLE = "42P01";
+
+type AlertAggregate = {
+  alert_type: string;
+  count: number;
+};
+
+type AlertDetailRow = {
+  id: string;
+  carer_id: string;
+  alert_type: string;
+  state: string;
+  created_at: string;
+  amount_cents: number | null;
+  currency: string;
+};
+
+async function loadAlertsPanel(
+  admin: ReturnType<typeof createAdminClient>,
+): Promise<{
+  aggregate: AlertAggregate[];
+  recent: AlertDetailRow[];
+  nameById: Map<string, string | null>;
+  schemaMissing: boolean;
+} | null> {
+  // Pull all open (non-resolved) alerts in one small query — the
+  // partial index (carer_id, state, created_at desc) makes this cheap.
+  // We cap the projection so a runaway table doesn't OOM the render.
+  const { data, error } = await admin
+    .from("payout_alerts")
+    .select(
+      "id, carer_id, alert_type, state, created_at, amount_cents, currency",
+    )
+    .neq("state", "resolved")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) {
+    const code = (error as { code?: string }).code;
+    if (code === PG_UNDEFINED_TABLE) {
+      return { aggregate: [], recent: [], nameById: new Map(), schemaMissing: true };
+    }
+    console.warn("[admin/finance/payouts] alerts read failed", error);
+    return null;
+  }
+  const rows = (data ?? []) as AlertDetailRow[];
+  const byType = new Map<string, number>();
+  for (const r of rows) {
+    byType.set(r.alert_type, (byType.get(r.alert_type) ?? 0) + 1);
+  }
+  const aggregate = Array.from(byType.entries())
+    .map(([alert_type, count]) => ({ alert_type, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const carerIds = Array.from(new Set(rows.map((r) => r.carer_id)));
+  const nameById = new Map<string, string | null>();
+  if (carerIds.length > 0) {
+    const { data: profiles } = await admin
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", carerIds);
+    for (const p of (profiles ?? []) as Array<{
+      id: string;
+      full_name: string | null;
+    }>) {
+      nameById.set(p.id, p.full_name ?? null);
+    }
+  }
+
+  return {
+    aggregate,
+    recent: rows.slice(0, 25),
+    nameById,
+    schemaMissing: false,
+  };
+}
+
+function formatMoneyPence(pence: number | null, currency: string): string {
+  if (pence == null) return "—";
+  const up = (currency ?? "gbp").toUpperCase();
+  const symbol =
+    up === "GBP" ? "£" : up === "USD" ? "$" : up === "EUR" ? "€" : `${up} `;
+  return `${symbol}${(pence / 100).toFixed(2)}`;
+}
+
 type Row = {
   id: string;
   caregiver_id: string;
@@ -47,6 +134,10 @@ export default async function PayoutsPage({
   const status = sp.status ?? "all";
 
   const admin = createAdminClient();
+
+  // C4 alerts panel — deploy-safe if the table isn't there yet.
+  const alertsPanel = await loadAlertsPanel(admin);
+
   let q = admin
     .from("payouts")
     .select(
@@ -91,6 +182,66 @@ export default async function PayoutsPage({
           movement happens via the Stripe pipeline.
         </p>
       </div>
+
+      {alertsPanel && !alertsPanel.schemaMissing && alertsPanel.recent.length > 0 ? (
+        <section
+          aria-labelledby="payout-alerts-heading"
+          className="rounded-2xl border border-rose-200 bg-rose-50 p-4"
+        >
+          <div className="flex items-baseline justify-between">
+            <h2
+              id="payout-alerts-heading"
+              className="text-sm font-semibold text-rose-900"
+            >
+              Payout alerts — open
+            </h2>
+            <span className="text-xs text-rose-700">
+              {alertsPanel.recent.length} shown
+            </span>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {alertsPanel.aggregate.map((a) => (
+              <span
+                key={a.alert_type}
+                className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-white px-2.5 py-0.5 text-[11px] font-semibold text-rose-800"
+              >
+                {a.alert_type}: {a.count}
+              </span>
+            ))}
+          </div>
+          <div className="mt-3 overflow-x-auto rounded-lg border border-rose-100 bg-white">
+            <table className="min-w-full text-xs">
+              <thead className="bg-rose-50/60 text-[10px] uppercase tracking-wide text-rose-700">
+                <tr>
+                  <th className="text-left px-3 py-2">Carer</th>
+                  <th className="text-left px-3 py-2">Type</th>
+                  <th className="text-right px-3 py-2">Amount</th>
+                  <th className="text-left px-3 py-2">State</th>
+                  <th className="text-left px-3 py-2">Opened</th>
+                </tr>
+              </thead>
+              <tbody>
+                {alertsPanel.recent.map((r) => (
+                  <tr key={r.id} className="border-t border-rose-100">
+                    <td className="px-3 py-2 text-slate-800">
+                      {alertsPanel.nameById.get(r.carer_id) ??
+                        r.carer_id.slice(0, 8)}
+                    </td>
+                    <td className="px-3 py-2 text-slate-700">{r.alert_type}</td>
+                    <td className="px-3 py-2 text-right text-slate-700">
+                      {formatMoneyPence(r.amount_cents, r.currency)}
+                    </td>
+                    <td className="px-3 py-2 text-slate-700">{r.state}</td>
+                    <td className="px-3 py-2 text-slate-500">
+                      {new Date(r.created_at).toLocaleString("en-GB")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
 
       <div className="flex flex-wrap gap-1.5">
         {(["all", ...PAYOUT_STATUSES] as const).map((s) => (
