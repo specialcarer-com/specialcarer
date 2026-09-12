@@ -2,9 +2,21 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getRequestIp } from "@/lib/rate-limit";
 import { verifyInboundSupportSignature } from "@/lib/support/verify-inbound-hmac";
-import { checkInboundSupportRateLimit } from "@/lib/support/inbound-rate-limit";
+import { check as rlCheck } from "@/lib/rate-limit/distributed";
+import { rateLimitHeaders } from "@/lib/rate-limit/headers";
+import { supportInboundVendor } from "@/lib/rate-limit/keys";
 
 export const dynamic = "force-dynamic";
+
+/** 30 deliveries per minute per vendor — preserves PR #199's ceiling. */
+const VENDOR_LIMIT_PER_MIN = 30;
+const MIN_SEC = 60;
+
+/** Vendor label from the signed request (falls back to "unknown"). Keeps
+ *  key builders happy without leaking IP into vendor keyspace. */
+function vendorLabel(req: Request): string {
+  return req.headers.get("x-sc-vendor") ?? "default";
+}
 
 /**
  * POST /api/support/inbound
@@ -20,8 +32,8 @@ export const dynamic = "force-dynamic";
  * If the shared secret is not configured the route fails closed (503) —
  * a misconfigured deployment must never accept unsigned traffic.
  *
- * Rate-limited per source IP and per `from_email` (see
- * `checkInboundSupportRateLimit`).
+ * Rate-limited per vendor label (`x-sc-vendor` header) via the shared
+ * distributed limiter (PR C2). Preserves PR #199's 30/min per-vendor ceiling.
  */
 export async function POST(req: Request) {
   const rawBody = await req.text();
@@ -65,18 +77,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "missing_fields" }, { status: 400 });
   }
 
+  // Distributed limiter (PR C2): per-vendor bucket, 30/min. Replaces the
+  // bespoke per-IP + per-sender counters added in PR #199 — same ceiling,
+  // one shared implementation across every public write endpoint.
+  const vendor = vendorLabel(req);
   const ip = getRequestIp(req);
-  const limit = checkInboundSupportRateLimit(ip, fromEmail);
-  if (!limit.allowed) {
+  const vendorCheck = await rlCheck({
+    key: supportInboundVendor(vendor),
+    limit: VENDOR_LIMIT_PER_MIN,
+    windowSec: MIN_SEC,
+  });
+  if (!vendorCheck.ok) {
     console.warn(
-      "[support.inbound] rate limited",
-      limit.reason,
+      "[support.inbound] rate limited vendor:",
+      vendor,
       "ip:",
       ip,
       "sender:",
       fromEmail,
     );
-    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+    return NextResponse.json(
+      { error: "rate_limited" },
+      { status: 429, headers: rateLimitHeaders(vendorCheck) },
+    );
   }
 
   const admin = createAdminClient();
