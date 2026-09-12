@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { checkErasePreconditions } from "@/lib/dsar/erase-confirmation";
 import DsarRejectButton from "./dsar-reject-button";
+import DsarEraseButton from "./dsar-erase-button";
 
 const NON_TERMINAL_STATES = new Set(["submitted", "verifying", "in_progress"]);
 
@@ -20,11 +22,58 @@ type Row = {
   notes: string | null;
 };
 
+/**
+ * Renders the per-row action cell.
+ *
+ * Non-terminal rows always get "Reject" (any request type). Verified
+ * in-progress erasure rows additionally get "Erase…" — the button
+ * itself gates on the same preconditions the API route checks, but
+ * we suppress it in the UI unless it would succeed, to keep the
+ * table calm.
+ */
+function RowActions({ row }: { row: Row }) {
+  const showReject = NON_TERMINAL_STATES.has(row.state);
+  const eraseCheck = checkErasePreconditions({
+    request_type: row.request_type,
+    state: row.state,
+    verified_at: row.verified_at,
+    subject_user_id: row.subject_user_id,
+  });
+  // Show the button for both 'eligible' and 'no_account' — the route
+  // handler can still run without a linked user_id (matches on
+  // subject_email); 'no_account' is a soft flag we surface in the
+  // subject-email column, not a block.
+  const showErase =
+    eraseCheck === "eligible" || eraseCheck === "no_account";
+
+  if (!showReject && !showErase) {
+    return <span className="text-xs text-slate-400">—</span>;
+  }
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {showReject && (
+        <DsarRejectButton
+          requestId={row.id}
+          subjectEmail={row.subject_email}
+          requestType={row.request_type}
+        />
+      )}
+      {showErase && (
+        <DsarEraseButton
+          requestId={row.id}
+          subjectEmail={row.subject_email}
+        />
+      )}
+    </div>
+  );
+}
+
 const STATE_TONE: Record<string, string> = {
   submitted: "bg-slate-100 text-slate-700 border-slate-200",
   verifying: "bg-amber-50 text-amber-800 border-amber-200",
   in_progress: "bg-sky-50 text-sky-800 border-sky-200",
   delivered: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  erased: "bg-purple-50 text-purple-800 border-purple-200",
   rejected: "bg-rose-50 text-rose-800 border-rose-200",
   cancelled: "bg-slate-100 text-slate-500 border-slate-200",
 };
@@ -34,6 +83,7 @@ const ALLOWED_STATES = new Set([
   "verifying",
   "in_progress",
   "delivered",
+  "erased",
   "rejected",
   "cancelled",
 ]);
@@ -92,16 +142,22 @@ export default async function DsarQueuePage(
 
       <nav className="flex flex-wrap gap-2 text-sm">
         <FilterLink label="All" active={!filterState} href="/admin/compliance/dsar" />
-        {["submitted", "verifying", "in_progress", "delivered", "rejected", "cancelled"].map(
-          (s) => (
-            <FilterLink
-              key={s}
-              label={s}
-              active={filterState === s}
-              href={`/admin/compliance/dsar?state=${s}`}
-            />
-          ),
-        )}
+        {[
+          "submitted",
+          "verifying",
+          "in_progress",
+          "delivered",
+          "erased",
+          "rejected",
+          "cancelled",
+        ].map((s) => (
+          <FilterLink
+            key={s}
+            label={s}
+            active={filterState === s}
+            href={`/admin/compliance/dsar?state=${s}`}
+          />
+        ))}
       </nav>
 
       {schemaMissing ? (
@@ -158,15 +214,7 @@ export default async function DsarQueuePage(
                     {row.subject_user_id ? "yes" : "no account"}
                   </td>
                   <td className="px-3 py-2">
-                    {NON_TERMINAL_STATES.has(row.state) ? (
-                      <DsarRejectButton
-                        requestId={row.id}
-                        subjectEmail={row.subject_email}
-                        requestType={row.request_type}
-                      />
-                    ) : (
-                      <span className="text-xs text-slate-400">—</span>
-                    )}
+                    <RowActions row={row} />
                   </td>
                 </tr>
               ))}
@@ -176,8 +224,10 @@ export default async function DsarQueuePage(
       )}
 
       <footer className="text-xs text-slate-500">
-        Showing up to 200 most recent. Erasure PII-nulling lands in a
-        follow-up (needs retention policy alignment).
+        Showing up to 200 most recent. Erasure runs the fixed Article-17
+        manifest and queues deferred hard-deletes for retention-locked
+        tables; the nightly retention-sweep cron completes those when
+        their timers expire.
       </footer>
     </div>
   );
