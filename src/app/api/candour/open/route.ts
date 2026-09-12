@@ -233,7 +233,7 @@ async function fanoutToAdmins(
         type: "candour.opened",
         title: `New notifiable event: ${args.type} (${args.severity})`,
         body: "A carer has filed a new duty-of-candour / notifiable event. Open the admin queue to triage.",
-        deeplink: `/admin/candour/${args.event_id}`,
+        deeplink: `/admin/safeguarding/candour/${args.event_id}`,
         payload: {
           event_id: args.event_id,
           notifiable_type: args.type,
