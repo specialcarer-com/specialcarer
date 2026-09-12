@@ -43,6 +43,7 @@ const store: Record<string, Row[]> = {
   dsar_request_files: [],
 };
 
+/** Apply a Supabase-style update to matching rows in the in-memory store. */
 function fakeUpdate(table: string, values: Row, col: string, val: string) {
   const rows = store[table];
   if (!rows) {
@@ -151,6 +152,7 @@ console.log("  dsar_requests.state:", store.dsar_requests[0].state);
 console.log();
 
 // ------------- run (wrapped in main() because tsx CJS mode disallows top-level await)
+/** Run the happy-path erasure smoke test and exit with its assertion status. */
 async function main() {
 const result = await handleDsarErase(client, {
   dsar_request_id: REQUEST_UUID,
@@ -180,6 +182,7 @@ console.log();
 
 // ------------- assertions
 const errors: string[] = [];
+/** Record and print the result of a smoke-test assertion. */
 function check(cond: boolean, msg: string) {
   if (!cond) errors.push("FAIL: " + msg);
   else console.log("PASS:", msg);

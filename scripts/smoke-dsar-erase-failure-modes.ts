@@ -18,6 +18,7 @@ const SUBJECT_UUID = "aaaaaaaa-bbbb-cccc-dddd-000000000001";
 const REQUEST_UUID = "aaaaaaaa-bbbb-cccc-dddd-000000000002";
 
 // ---------- Scenario 1: missing table -----------------------------
+/** Verify that a missing manifest table is skipped without aborting erasure. */
 async function scenario1_missingTable() {
   console.log("--- SCENARIO 1: caregiver_profiles table missing ---");
   const store: Record<string, Row[]> = {
@@ -72,6 +73,7 @@ async function scenario1_missingTable() {
 }
 
 // ---------- Scenario 2: audit insert fails ------------------------
+/** Verify that an audit insert failure is reported without undoing erasure. */
 async function scenario2_auditInsertFailure() {
   console.log("--- SCENARIO 2: dsar_erasure_audit insert fails ---");
   const store: Record<string, Row[]> = {
@@ -122,6 +124,7 @@ async function scenario2_auditInsertFailure() {
   return pass;
 }
 
+/** Run both failure-mode scenarios and exit with their combined status. */
 async function main() {
   const p1 = await scenario1_missingTable();
   console.log();
