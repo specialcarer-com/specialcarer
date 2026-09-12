@@ -72,6 +72,10 @@
     {
       "path": "/api/cron/dsar-fulfil",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/dsar-retention-sweep",
+      "schedule": "0 4 * * *"
     }
   ]
 }
