@@ -4,6 +4,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getMyOrgMembership, getOrg } from "@/lib/org/server";
 import { requireBookerRole } from "@/lib/org/booking-authz";
 import {
+  checkOverdueInvoices,
+  isOverdueInvoiceError,
+} from "@/lib/org/overdue-block";
+import {
   SLEEP_IN_ORG_CHARGE_DEFAULT,
   SLEEP_IN_CARER_PAY_DEFAULT,
   type CareCategory,
@@ -236,10 +240,34 @@ export async function POST(req: Request) {
     );
   }
 
-  // TODO(d5-billing-guard): call assertOrgBillingCurrent(admin, org.id)
-  // here once D5 lands. If billing status is 'overdue' or 'suspended',
-  // return 402 { error: 'billing_overdue' } and skip the booking
-  // create. D5 will insert the helper + the response mapping.
+  // D5 billing guard: hard-stop new bookings when the org has
+  // overdue invoices. Gated behind the shared Phase D flag so we can
+  // land the DB-level pieces (helper function + RPC modification)
+  // immediately without changing the API surface until we're ready
+  // to flip. Note this route currently uses an explicit INSERT path
+  // rather than calling create_org_booking_with_offer, so we call
+  // has_overdue_invoices directly here in addition to the RPC's
+  // own internal check — belt-and-braces to keep the response
+  // predictable regardless of which INSERT path a future refactor
+  // ends up using.
+  if (orgInvitationsEnabled()) {
+    const overdue = await checkOverdueInvoices(admin, member.organization_id);
+    if (overdue.blocked) {
+      return NextResponse.json(
+        {
+          error: "org_overdue_invoices",
+          message:
+            "Cannot create bookings while organisation has overdue invoices",
+          hint: "Pay outstanding invoices at /m/org/billing before booking",
+        },
+        { status: 402 },
+      );
+    }
+    // schema_not_ready falls through silently — the helper function
+    // may not exist yet in preview environments that haven't run the
+    // D5 migration. We prefer letting the INSERT proceed over
+    // blocking legitimate bookings on a transient schema state.
+  }
 
   const bookingBase = {
     organization_id: member.organization_id,
@@ -298,6 +326,22 @@ export async function POST(req: Request) {
     .single();
 
   if (bookingError) {
+    // D5: if the DB-level trigger (or a future RPC call path) raises
+    // the ORG_HAS_OVERDUE_INVOICES sentinel, map to HTTP 402. The
+    // route already runs its own has_overdue_invoices check above,
+    // but this is the safety net if a race lands an invoice between
+    // the check and the INSERT.
+    if (isOverdueInvoiceError(bookingError)) {
+      return NextResponse.json(
+        {
+          error: "org_overdue_invoices",
+          message:
+            "Cannot create bookings while organisation has overdue invoices",
+          hint: "Pay outstanding invoices at /m/org/billing before booking",
+        },
+        { status: 402 },
+      );
+    }
     return NextResponse.json({ error: bookingError.message }, { status: 500 });
   }
 
