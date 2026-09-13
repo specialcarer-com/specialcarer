@@ -71,3 +71,17 @@ export function supportInboundVendor(vendor: string): string {
 export function candourOpenUser(userId: string): string {
   return `candour:open:user:${userId.trim()}`;
 }
+
+/**
+ * Account-deletion submit — per authenticated user id.
+ *
+ * A legitimate user submits a deletion at most once (before verifying).
+ * The 5-per-hour ceiling matches C3a's candour surface and is
+ * deliberately generous — a user retrying after a validation error or
+ * a stale form should still succeed. A hostile session spamming
+ * submissions is prevented from firing arbitrary verification emails
+ * to the user's inbox.
+ */
+export function accountDeletionSubmitUser(userId: string): string {
+  return `account-deletion:submit:user:${userId.trim()}`;
+}

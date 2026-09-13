@@ -80,6 +80,10 @@
     {
       "path": "/api/cron/payout-digest-weekly",
       "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/cron/account-deletion-worker",
+      "schedule": "0 * * * *"
     }
   ]
 }
