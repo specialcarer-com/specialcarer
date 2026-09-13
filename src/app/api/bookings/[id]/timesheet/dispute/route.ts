@@ -70,7 +70,12 @@ export async function POST(
         .eq("organization_id", booking.organization_id)
         .eq("user_id", user.id)
         .maybeSingle<{ role: string }>();
-      authorised = !!member && ["owner", "admin"].includes(member.role);
+      // D3: bookers can dispute — they own the schedule and are the
+      // natural counterparty to the carer's timesheet claim.
+      // Finance + viewer cannot dispute (finance handles invoices
+      // after resolution; viewer is read-only). See
+      // src/lib/org/authz.ts for the hierarchy.
+      authorised = !!member && ["owner", "admin", "booker"].includes(member.role);
     }
   } else {
     authorised = booking.seeker_id === user.id;
