@@ -15,6 +15,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { handleAccept } from "@/lib/org/invitations";
 import { makeSupabaseInvitationsDb } from "@/lib/org/invitations-db";
 import { sendEmail } from "@/lib/email/smtp";
+import { auditInvitationLifecycle } from "@/lib/org/members";
+import { makeSupabaseMembersDb } from "@/lib/org/members-db";
+import { hashToken } from "@/lib/org/invitation-token";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +68,29 @@ export async function POST(
       }),
     },
   );
+
+  // D2 audit hook: on successful accept, append an `accepted` audit
+  // row. Re-reads the invitation by token_hash to recover the
+  // invitation_id for the metadata field — the handler's response
+  // body doesn't include it. Best-effort: schema_not_ready + missing
+  // row both no-op the audit.
+  if (result.status === 200) {
+    const orgId = (result.body as { ok: true; orgId: string; role: string }).orgId;
+    const role = (result.body as { ok: true; orgId: string; role: string }).role;
+    const looked = await db.findByTokenHash(hashToken(token));
+    const invitationId =
+      "row" in looked && looked.row ? looked.row.id : null;
+    const membersDb = makeSupabaseMembersDb(admin);
+    await auditInvitationLifecycle(membersDb, {
+      organization_id: orgId,
+      actor_user_id: user.id,
+      target_user_id: user.id,
+      action: "accepted",
+      from_role: null,
+      to_role: role,
+      metadata: invitationId ? { invitation_id: invitationId } : null,
+    });
+  }
 
   return NextResponse.json(result.body, { status: result.status });
 }

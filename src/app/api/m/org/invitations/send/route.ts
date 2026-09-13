@@ -18,6 +18,8 @@ import { sendEmail } from "@/lib/email/smtp";
 import { handleSend } from "@/lib/org/invitations";
 import type { InvitationRole } from "@/lib/org/invitations";
 import { makeSupabaseInvitationsDb } from "@/lib/org/invitations-db";
+import { auditInvitationLifecycle } from "@/lib/org/members";
+import { makeSupabaseMembersDb } from "@/lib/org/members-db";
 
 export const dynamic = "force-dynamic";
 
@@ -92,6 +94,26 @@ export async function POST(req: NextRequest) {
       },
     },
   );
+
+  // D2 audit hook: on successful invite, append an `invited` audit row.
+  // The audit table is append-only via service_role and its adapter is
+  // deploy-safe (returns ok on 42P01 so a pre-migration send doesn't
+  // block). Uses the actor as target_user_id since no user has been
+  // linked to the invited email yet — the accept path rewrites this
+  // to the accepting user.
+  if (result.status === 200) {
+    const invitationId = (result.body as { ok: true; id: string }).id;
+    const membersDb = makeSupabaseMembersDb(admin);
+    await auditInvitationLifecycle(membersDb, {
+      organization_id: organizationId,
+      actor_user_id: user.id,
+      target_user_id: user.id,
+      action: "invited",
+      from_role: null,
+      to_role: body.role as InvitationRole,
+      metadata: { invitation_id: invitationId, invited_email: (typeof body.email === "string" ? body.email.trim().toLowerCase() : "") },
+    });
+  }
 
   return NextResponse.json(result.body, {
     status: result.status,
