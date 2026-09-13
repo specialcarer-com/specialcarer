@@ -84,6 +84,10 @@
     {
       "path": "/api/cron/account-deletion-worker",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/expire-org-invitations",
+      "schedule": "0 3 * * *"
     }
   ]
 }
