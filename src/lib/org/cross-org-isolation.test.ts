@@ -1,25 +1,34 @@
 /**
- * Cross-org RLS isolation tests (Phase D — PR D4).
+ * Cross-org RLS isolation tests (Phase D — PR D4 + D4-fix).
  *
- * Expands D3's `booking-cross-org.test.ts` pattern to the eleven `public.*`
- * org tables that D4's `20260913201000_org_rls_lockdown.sql` migration
- * touches (or verifies as already-correct).
+ * Expands D3's `booking-cross-org.test.ts` pattern to the org tables
+ * touched by the corrected D4 migration
+ * (`20260913205050_org_rls_lockdown_fix.sql`).
  *
- * Real RLS is enforced by PostgreSQL — these tests model each D4 SELECT
+ * Real RLS is enforced by PostgreSQL — these tests model each SELECT
  * policy against a mock dataset. When the integration harness lands (see
  * the D3a concurrency test TODO), these graduate to real supabase-js
  * queries against a freshly-seeded schema.
+ *
+ * NOTE (D4-fix, 13 Sep 2026): the two bucket-D suites for
+ * `org_carer_payouts` and `org_carer_payout_items` have been REMOVED.
+ * These tables carry no `organization_id` column and no FK to any org
+ * table — they are org-agnostic platform-wide payroll tables. The
+ * original D4 migration failed on statement 15 because it assumed
+ * otherwise. Org-side finance visibility for payouts is deferred to a
+ * future PR pending a schema decision (see runbook §7 post-mortem).
+ * Existing carer-read + SC-admin coverage is unchanged and correct.
  *
  * Fixture:
  *   • Two orgs (A + B).
  *   • Users per D4 role: A_OWNER, A_ADMIN, A_BOOKER, A_FINANCE, A_VIEWER
  *     + the same set for B.
  *   • A_CARER — a user with no org membership but assigned as the carer
- *     on an offer/payout in Org A (models the external-carer case).
+ *     on an offer in Org A (models the external-carer case).
  *   • SC_ADMIN — a profiles.role = 'admin' platform admin.
  *   • ORPHAN — no memberships, no rows anywhere.
  *
- * The D4 policy matrix — one predicate per (table, role) pair — is
+ * The policy matrix — one predicate per (table, role) pair — is
  * codified in `rlsAllows(...)` at the top of each describe block.
  *
  * Every case: `(table, role, org)` — assert the correct row set is
@@ -97,8 +106,6 @@ type BillingRow = { organization_id: string; stripe_bank_last4: string };
 type ContractRow = { id: string; organization_id: string; signed_by_user_id: string };
 type DocumentRow = { id: string; organization_id: string; kind: string };
 type InvoiceRow = { id: string; organization_id: string; total_cents: number };
-type PayoutRow = { id: string; organization_id: string; carer_id: string; amount_cents: number };
-type PayoutItemRow = { id: string; payout_id: string; amount_cents: number };
 type BookingRow = { id: string; organization_id: string };
 type OfferRow = { id: string; booking_id: string; carer_id: string };
 type CancellationRow = { id: string; booking_id: string; reason: string };
@@ -138,17 +145,6 @@ const DOCUMENTS: DocumentRow[] = [
 const INVOICES: InvoiceRow[] = [
   { id: "inv-A-1", organization_id: ORG_A, total_cents: 100_000 },
   { id: "inv-B-1", organization_id: ORG_B, total_cents: 200_000 },
-];
-
-const PAYOUTS: PayoutRow[] = [
-  { id: "po-A-1", organization_id: ORG_A, carer_id: A_CARER, amount_cents: 50_000 },
-  { id: "po-B-1", organization_id: ORG_B, carer_id: "u-B-carer-external", amount_cents: 30_000 },
-];
-
-const PAYOUT_ITEMS: PayoutItemRow[] = [
-  { id: "poi-A-1", payout_id: "po-A-1", amount_cents: 25_000 },
-  { id: "poi-A-2", payout_id: "po-A-1", amount_cents: 25_000 },
-  { id: "poi-B-1", payout_id: "po-B-1", amount_cents: 30_000 },
 ];
 
 const BOOKINGS: BookingRow[] = [
@@ -204,20 +200,6 @@ function allowsOrganizationDocuments(userId: string, row: DocumentRow): boolean 
 function allowsOrgInvoices(userId: string, row: InvoiceRow): boolean {
   if (isScAdmin(userId)) return true;
   return isMemberOfWithRoles(userId, row.organization_id, ["owner", "admin", "finance"]);
-}
-
-function allowsOrgCarerPayouts(userId: string, row: PayoutRow): boolean {
-  if (isScAdmin(userId)) return true;
-  if (row.carer_id === userId) return true;
-  return isMemberOfWithRoles(userId, row.organization_id, ["owner", "admin", "finance"]);
-}
-
-function allowsOrgCarerPayoutItems(userId: string, row: PayoutItemRow): boolean {
-  if (isScAdmin(userId)) return true;
-  const parent = PAYOUTS.find((p) => p.id === row.payout_id);
-  if (!parent) return false;
-  if (parent.carer_id === userId) return true;
-  return isMemberOfWithRoles(userId, parent.organization_id, ["owner", "admin", "finance"]);
 }
 
 function allowsOrgBookingOffers(userId: string, row: OfferRow): boolean {
@@ -282,24 +264,6 @@ function selectInvoices(userId: string, filterOrgId?: string): InvoiceRow[] {
     (r) =>
       allowsOrgInvoices(userId, r) &&
       (filterOrgId ? r.organization_id === filterOrgId : true),
-  );
-}
-
-function selectPayouts(userId: string, filterOrgId?: string): PayoutRow[] {
-  return PAYOUTS.filter(
-    (r) =>
-      allowsOrgCarerPayouts(userId, r) &&
-      (filterOrgId ? r.organization_id === filterOrgId : true),
-  );
-}
-
-function selectPayoutItems(userId: string, filterOrgId?: string): PayoutItemRow[] {
-  return PAYOUT_ITEMS.filter(
-    (r) =>
-      allowsOrgCarerPayoutItems(userId, r) &&
-      (filterOrgId
-        ? PAYOUTS.find((p) => p.id === r.payout_id)?.organization_id === filterOrgId
-        : true),
   );
 }
 
@@ -465,52 +429,12 @@ describe("D4 RLS — org_invoices (HIGH fix)", () => {
   });
 });
 
-describe("D4 RLS — org_carer_payouts (MEDIUM additive)", () => {
-  it("owner + admin + finance of Org A see Org A payouts (NEW org-side coverage)", () => {
-    for (const u of [A_OWNER, A_ADMIN, A_FINANCE]) {
-      const rows = selectPayouts(u, ORG_A);
-      assert.equal(rows.length, 1);
-      assert.equal(rows[0]!.id, "po-A-1");
-    }
-  });
-
-  it("carer sees their own payout regardless of org membership", () => {
-    const rows = selectPayouts(A_CARER);
-    assert.deepEqual(rows.map((r) => r.id).sort(), ["po-A-1"]);
-  });
-
-  it("viewer + booker do NOT see payouts (finance/admin-scoped)", () => {
-    assert.deepEqual(selectPayouts(A_VIEWER), []);
-    assert.deepEqual(selectPayouts(A_BOOKER), []);
-  });
-
-  it("Org A finance does NOT see Org B payouts (cross-org)", () => {
-    assert.deepEqual(selectPayouts(A_FINANCE, ORG_B), []);
-  });
-});
-
-describe("D4 RLS — org_carer_payout_items (MEDIUM additive)", () => {
-  it("owner + admin + finance of Org A see Org A payout items", () => {
-    for (const u of [A_OWNER, A_ADMIN, A_FINANCE]) {
-      const rows = selectPayoutItems(u, ORG_A);
-      assert.equal(rows.length, 2);
-    }
-  });
-
-  it("carer sees own payout items (join via payouts)", () => {
-    const rows = selectPayoutItems(A_CARER);
-    assert.deepEqual(rows.map((r) => r.id).sort(), ["poi-A-1", "poi-A-2"]);
-  });
-
-  it("viewer + booker do NOT see payout items", () => {
-    assert.deepEqual(selectPayoutItems(A_VIEWER), []);
-    assert.deepEqual(selectPayoutItems(A_BOOKER), []);
-  });
-
-  it("Org A admin does NOT see Org B payout items", () => {
-    assert.deepEqual(selectPayoutItems(A_ADMIN, ORG_B), []);
-  });
-});
+// D4-fix (13 Sep 2026): the `org_carer_payouts` and `org_carer_payout_items`
+// suites were removed. Both tables lack an `organization_id` column, so no
+// org-scoped RLS policy is possible without a schema denormalisation that
+// belongs in a separate PR. Existing carer-read + SC-admin coverage stays
+// in place at the DB layer; it's the correct RLS shape for these tables
+// today. See /workspace/phase_d/org_rls_matrix.md §7 post-mortem.
 
 describe("D4 RLS — org_booking_offers (MEDIUM audit + fix)", () => {
   it("owner + admin + booker of Org A see Org A offers", () => {
@@ -573,8 +497,6 @@ describe("D4 RLS — cross-org isolation (composite)", () => {
     { name: "organization_contracts", runA: () => selectContracts(A_VIEWER, ORG_B).length, runB: () => selectContracts(B_VIEWER, ORG_A).length },
     { name: "organization_documents", runA: () => selectDocuments(A_FINANCE, ORG_B).length, runB: () => selectDocuments(B_FINANCE, ORG_A).length },
     { name: "org_invoices", runA: () => selectInvoices(A_FINANCE, ORG_B).length, runB: () => selectInvoices(B_FINANCE, ORG_A).length },
-    { name: "org_carer_payouts", runA: () => selectPayouts(A_FINANCE, ORG_B).length, runB: () => selectPayouts(B_FINANCE, ORG_A).length },
-    { name: "org_carer_payout_items", runA: () => selectPayoutItems(A_FINANCE, ORG_B).length, runB: () => selectPayoutItems(B_FINANCE, ORG_A).length },
     { name: "org_booking_offers", runA: () => selectOffers(A_BOOKER, ORG_B).length, runB: () => selectOffers(B_BOOKER, ORG_A).length },
     { name: "org_booking_cancellations", runA: () => selectCancellations(A_BOOKER, ORG_B).length, runB: () => selectCancellations(B_BOOKER, ORG_A).length },
   ];
@@ -590,30 +512,26 @@ describe("D4 RLS — cross-org isolation (composite)", () => {
 });
 
 describe("D4 RLS — ORPHAN user sees nothing anywhere", () => {
-  it("orphan across all 10 tables returns 0 rows", () => {
+  it("orphan across all 8 covered tables returns 0 rows", () => {
     assert.deepEqual(selectOrganizations(ORPHAN), []);
     assert.deepEqual(selectMembers(ORPHAN), []);
     assert.deepEqual(selectBilling(ORPHAN), []);
     assert.deepEqual(selectContracts(ORPHAN), []);
     assert.deepEqual(selectDocuments(ORPHAN), []);
     assert.deepEqual(selectInvoices(ORPHAN), []);
-    assert.deepEqual(selectPayouts(ORPHAN), []);
-    assert.deepEqual(selectPayoutItems(ORPHAN), []);
     assert.deepEqual(selectOffers(ORPHAN), []);
     assert.deepEqual(selectCancellations(ORPHAN), []);
   });
 });
 
 describe("D4 RLS — SC platform admin sees everything", () => {
-  it("SC admin queries all 10 tables and sees both orgs' rows", () => {
+  it("SC admin queries all 8 covered tables and sees both orgs' rows", () => {
     assert.equal(selectOrganizations(SC_ADMIN).length, 2);
     assert.equal(selectMembers(SC_ADMIN).length, MEMBERS.length);
     assert.equal(selectBilling(SC_ADMIN).length, 2);
     assert.equal(selectContracts(SC_ADMIN).length, 3);
     assert.equal(selectDocuments(SC_ADMIN).length, 3);
     assert.equal(selectInvoices(SC_ADMIN).length, 2);
-    assert.equal(selectPayouts(SC_ADMIN).length, 2);
-    assert.equal(selectPayoutItems(SC_ADMIN).length, 3);
     assert.equal(selectOffers(SC_ADMIN).length, 2);
     assert.equal(selectCancellations(SC_ADMIN).length, 2);
   });
