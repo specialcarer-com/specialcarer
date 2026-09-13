@@ -122,11 +122,7 @@ GRANT EXECUTE ON FUNCTION public.has_overdue_invoices(uuid)
   TO authenticated, service_role;
 
 COMMENT ON FUNCTION public.has_overdue_invoices(uuid) IS
-  'D5: returns true when the org has at least one invoice in ' ||
-  'status open|uncollectible with a due_date strictly in the past ' ||
-  'and amount_paid_cents < amount_due_cents. Called from ' ||
-  'create_org_booking_with_offer to block new bookings and from ' ||
-  'POST /api/m/org/bookings to short-circuit with HTTP 402.';
+  'D5: returns true when the org has at least one invoice in status open|uncollectible with a due_date strictly in the past and amount_paid_cents < amount_due_cents. Called from create_org_booking_with_offer to block new bookings and from POST /api/m/org/bookings to short-circuit with HTTP 402.';
 
 
 -- ---------------------------------------------------------------------------
@@ -313,9 +309,7 @@ CREATE SEQUENCE IF NOT EXISTS public.org_receipt_number_seq
 GRANT USAGE ON SEQUENCE public.org_receipt_number_seq TO service_role;
 
 COMMENT ON SEQUENCE public.org_receipt_number_seq IS
-  'D5: monotonic-forever sequence for org receipt numbers. Rendered ' ||
-  'as SC-R-YYYY-NNNNNN in generate_org_receipt_on_completion. Never ' ||
-  'reset.';
+  'D5: monotonic-forever sequence for org receipt numbers. Rendered as SC-R-YYYY-NNNNNN in generate_org_receipt_on_completion. Never reset.';
 
 
 CREATE TABLE IF NOT EXISTS public.org_receipts (
@@ -349,11 +343,7 @@ CREATE INDEX IF NOT EXISTS org_receipts_invoice_idx
 ALTER TABLE public.org_receipts ENABLE ROW LEVEL SECURITY;
 
 COMMENT ON TABLE public.org_receipts IS
-  'D5: one row per completed org booking. Written by the ' ||
-  'generate_org_receipt_on_completion trigger (SECURITY DEFINER). ' ||
-  'No INSERT/UPDATE/DELETE policies for org members — trigger + ' ||
-  'service_role only. Downstream: receipt_pdf_url is filled by a ' ||
-  'PDF-generation job (out of scope for D5).';
+  'D5: one row per completed org booking. Written by the generate_org_receipt_on_completion trigger (SECURITY DEFINER). No INSERT/UPDATE/DELETE policies for org members — trigger + service_role only. Downstream: receipt_pdf_url is filled by a PDF-generation job (out of scope for D5).';
 
 
 -- ── RLS policies ─────────────────────────────────────────────────────
@@ -520,9 +510,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.generate_org_receipt_on_completion() IS
-  'D5: writes one org_receipts row on booking transition INTO ' ||
-  'completed. SECURITY DEFINER. Idempotent via the EXISTS check + ' ||
-  'UNIQUE (booking_id) backstop.';
+  'D5: writes one org_receipts row on booking transition INTO completed. SECURITY DEFINER. Idempotent via the EXISTS check + UNIQUE (booking_id) backstop.';
 
 
 -- Trigger. WHEN clause narrows the firing surface at the executor
