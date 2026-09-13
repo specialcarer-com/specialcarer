@@ -1,24 +1,53 @@
 -- ============================================================================
--- SpecialCarer — D4 / Org RLS lockdown + cross-org leak fixes
+-- SpecialCarer — D4-fix / Org RLS lockdown (corrected)
 --
--- Phase D's fourth PR: closes the five confirmed authorisation gaps
--- across the 11 remaining `public.*` org tables after D3's `bookings`
--- lockdown. Verified via Supabase Management API on 13 Sep 2026 against
--- project qupjaanyhnuvlexkwtpq.
+-- REPLACES: 20260913201000_org_rls_lockdown.sql  (deleted from git in the
+-- same commit; never landed in prod — the original transaction aborted on
+-- statement 15 with `column org_carer_payouts.organization_id does not
+-- exist` and Supabase rolled the whole file back atomically. Verified via
+-- Management API on 13 Sep 2026: `SELECT version FROM
+-- supabase_migrations.schema_migrations WHERE version = '20260913201000'`
+-- returned 0 rows. All 6 original permissive policies are still in place;
+-- no D4 v2 policies exist. See /workspace/phase_d/org_rls_matrix.md §7
+-- post-mortem for the full narrative.)
 --
--- Read + write matrices, per-table risk notes, and the full audit query
--- results live in /workspace/phase_d/org_rls_matrix.md (attached to the
--- PR description).
+-- This migration is the FULL corrected version of D4. Prod is at the D3
+-- baseline (migration tip `20260913192500`), so we establish the intended
+-- state in one atomic file — everything the original D4 did EXCEPT the
+-- two broken bucket-D policies that assumed a non-existent
+-- `org_carer_payouts.organization_id` column.
 --
--- Role hierarchy (D2 recap):
+-- Root cause of the original failure: the D4 authoring subagent assumed
+-- `org_carer_payouts` and `org_carer_payout_items` carried an
+-- `organization_id` column (both were misleadingly prefixed `org_`).
+-- They do not. Verified via `information_schema.columns`:
 --
---     owner  (rank 4)
---     admin  (rank 3)
---     booker (2)  finance (2)   ← parallel siblings, neither ranks above
---     viewer (1)
+--   org_carer_payouts  : id, carer_id, period_start, period_end,
+--                        booking_count, total_pay_cents, currency, status,
+--                        bank_reference, notes, processed_at, created_at,
+--                        updated_at, gross_pay_cents, paye_deducted_cents,
+--                        ni_employee_cents, ni_employer_cents,
+--                        holiday_accrued_cents, net_pay_cents,
+--                        payslip_pdf_url, tax_year, tax_code, run_id,
+--                        dispute_reason, dispute_flagged_at,
+--                        dispute_resolved_at, dispute_resolved_by,
+--                        holiday_payout_cents, holiday_payout_request_ids
+--   org_carer_payout_items : id, payout_id, booking_id, carer_pay_cents,
+--                            created_at
+--
+-- Neither carries `organization_id`, and neither has an FK to any org
+-- table. These are org-AGNOSTIC platform-wide payroll tables — carers
+-- get paid for bookings regardless of whether the booking is an org or
+-- seeker booking. The existing `carer_id = auth.uid()` + SC-admin
+-- coverage is correct at the RLS layer. Org-side visibility (payroll
+-- reconciliation for an org's finance role) is only reachable by
+-- joining `org_carer_payout_items.booking_id → bookings.organization_id`;
+-- that's a report query, not a table-level RLS need, and the schema
+-- change to denormalise `organization_id` onto payouts is out of scope
+-- for an RLS lockdown PR. Deferred to a future PR.
 --
 -- ---------------------------------------------------------------------------
--- What this migration does (five buckets):
+-- What this migration does (buckets A, B, C, E — bucket D SKIPPED):
 --
 --   BUCKET A — CRITICAL: strip the two "member_rw" ALL policies that let
 --   viewers write to Stripe billing config + org documents.
@@ -33,19 +62,18 @@
 --     * org_invoices  → drop `org_invoices_member_read`; add
 --                       `org_invoices_admin_finance_read_v2`
 --
---   BUCKET C — MEDIUM (audit inline): the two `*_read` policies on
---   org_booking_offers + org_booking_cancellations are the same
---   permissive shape ("any org member sees any row on any booking of
---   their org"). Verified expression on 13 Sep 2026 — see runbook §4.
---   Replace with role-gated variants (owner/admin/booker read; carer
---   sees their own offer; SC admin reads all).
+--   BUCKET C — MEDIUM: the two `*_read` policies on org_booking_offers +
+--   org_booking_cancellations are the same permissive shape ("any org
+--   member sees any row on any booking of their org"). Replace with
+--   role-gated variants (owner/admin/booker read; carer sees their own
+--   offer; SC admin reads all).
 --
---   BUCKET D — MEDIUM (additive): org_carer_payouts +
---   org_carer_payout_items have no org-side SELECT coverage — carers see
---   their own row, but the org's finance/admin has no policy at all
---   (they can only read via SC-admin escalation). Add
---   `*_admin_finance_read_v2` policies. Existing carer-read policy is
---   kept.
+--   BUCKET D — SKIPPED. See preamble. Existing policies preserved:
+--     * org_carer_payouts_carer_read   (carer sees own row + SC admin all)
+--     * org_carer_payout_items_read    (payout_id in caller's payouts + SC admin)
+--   No changes here. Org-side finance visibility deferred pending
+--   schema decision (denormalise `organization_id` onto payouts, OR
+--   route via `bookings` for a reporting-only view).
 --
 --   BUCKET E — LOW (parity): organization_contracts SELECT is already
 --   correct (matches the read matrix). Add
@@ -53,20 +81,24 @@
 --   `organization_contracts_admin_update_v2` for parity with future
 --   admin-managed contract edits. No drops.
 --
--- Not touched by D4 (see runbook §5):
+-- Not touched (see runbook §5):
 --   * bookings                 — D3 handled
 --   * org_leads                — already SC-admin-only, matches matrix
 --   * organization_invitations — D1 correct
 --   * org_membership_audit     — D2 correct
 --   * organization_members     — existing self+team read policy already
---                                matches the D4 matrix (see runbook §4).
---                                Documented as a NOOP-with-rationale.
+--                                matches the D4 matrix. NOOP-with-rationale.
+--
+-- Totals (vs original 20260913201000):
+--   * v2 policies created:  16   (was 18 — 2 payouts policies removed)
+--   * DROP POLICY statements: 6  (unchanged)
+--   * TODO(rm-ni-split): markers: 16 (was 18)
 --
 -- ---------------------------------------------------------------------------
--- DESTRUCTIVE steps (5 total) — one per bucket-A/B/C policy that gets
--- replaced. Preflight destructive-migration gate at PR #220 keys on the
--- regex `DROP[[:space:]]+POLICY`. The tip commit carries the trailer
--- `Allow-Destructive: true` so the auto-apply gate allows the merge.
+-- DESTRUCTIVE steps (6 total). Preflight destructive-migration gate at
+-- PR #220 keys on the regex `DROP[[:space:]]+POLICY`. The tip commit
+-- carries the trailer `Allow-Destructive: true` so the auto-apply gate
+-- allows the merge.
 --
 --   DROP POLICY organizations_members_update ON public.organizations;
 --   DROP POLICY organization_billing_member_rw ON public.organization_billing;
@@ -75,14 +107,12 @@
 --   DROP POLICY org_booking_offers_read ON public.org_booking_offers;
 --   DROP POLICY org_booking_cancellations_read ON public.org_booking_cancellations;
 --
--- Note: six drops (not five) — the offers+cancellations pair together
--- makes bucket C. All are explicit `DROP POLICY name ON table;` — never
+-- All are explicit `DROP POLICY name ON table;` — never
 -- `DROP POLICY IF EXISTS` (per D4 operating rules).
 --
 -- Ordering per table: CREATE the v2 policies first, THEN drop the
--- predecessor. This preserves read + write access throughout the
--- migration — there's no window where a legitimate member loses access
--- to a row they saw before.
+-- predecessor. Preserves read + write access throughout — no window
+-- where a legitimate member loses access to a row they saw before.
 --
 -- `TODO(rm-ni-split):` markers flag every admin-set literal that will
 -- expand to include the RM + NI roles when the regional-manager split
@@ -90,13 +120,6 @@
 --
 -- Freeze-respectful: no ALTER TABLE. No new columns, indexes, or
 -- functions. Only policy CREATE / DROP.
---
--- Deploy-safe fallbacks: NOT needed. RLS is DB-level, not API-level;
--- the tightened policies take effect the moment the migration runs.
--- Feature flag `NEXT_PUBLIC_ORG_INVITATIONS_ENABLED` is still `false`
--- in Vercel prod, so the D1/D2/D3 API surfaces remain 404 — no consumer
--- of a tightened path is unflagged today. Any regression appears as a
--- 500 in the Vercel logs; D4 will not attempt any API-layer fixes.
 -- ============================================================================
 
 
@@ -330,48 +353,28 @@ drop policy org_invoices_member_read on public.org_invoices;
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- BUCKET D.1 — org_carer_payouts (additive)
--- Old: org_carer_payouts_carer_read — carer sees own payout row + SC
---      admin reads all. No org-side visibility at all.
--- New: add org_carer_payouts_admin_finance_read_v2 (SELECT for
---      owner/admin/finance of the org the payout belongs to). Carer
---      read policy KEPT.
+-- BUCKET D — SKIPPED (org_carer_payouts + org_carer_payout_items)
+--
+-- These tables have NO `organization_id` column and NO FK to any org
+-- table. The original D4 migration assumed otherwise and failed on
+-- statement 15 (`column org_carer_payouts.organization_id does not
+-- exist`). Existing policies stay in place and are already correct at
+-- the RLS layer:
+--
+--   * org_carer_payouts_carer_read  — carer sees own payout row; SC admin
+--                                     sees all.
+--   * org_carer_payout_items_read   — items where payout_id belongs to a
+--                                     payout the caller owns; SC admin
+--                                     sees all.
+--
+-- Org-side finance visibility (payroll reconciliation for the paying
+-- org's finance role) is only reachable via
+-- `org_carer_payout_items.booking_id → bookings.organization_id`. That's
+-- a reporting-time query, not an RLS-time need; the schema decision
+-- (denormalise `organization_id` onto payouts vs route reads via
+-- `bookings`) is deferred to a future PR. See runbook §7 for the
+-- post-mortem.
 -- ═══════════════════════════════════════════════════════════════════════════
-
-create policy org_carer_payouts_admin_finance_read_v2 on public.org_carer_payouts
-  for select to authenticated
-  using (
-    exists (
-      select 1 from public.organization_members om
-      where om.organization_id = org_carer_payouts.organization_id
-        and om.user_id = (select auth.uid())
-        and om.role in ('owner', 'admin', 'finance')
-        -- TODO(rm-ni-split): expand admin set.
-    )
-  );
-
-
--- ═══════════════════════════════════════════════════════════════════════════
--- BUCKET D.2 — org_carer_payout_items (additive)
--- Same shape as payouts. `payout_id` joins back to `org_carer_payouts`
--- which has `organization_id`. We resolve the org via the parent
--- payout row.
--- ═══════════════════════════════════════════════════════════════════════════
-
-create policy org_carer_payout_items_admin_finance_read_v2 on public.org_carer_payout_items
-  for select to authenticated
-  using (
-    exists (
-      select 1
-      from public.org_carer_payouts p
-      join public.organization_members om
-        on om.organization_id = p.organization_id
-      where p.id = org_carer_payout_items.payout_id
-        and om.user_id = (select auth.uid())
-        and om.role in ('owner', 'admin', 'finance')
-        -- TODO(rm-ni-split): expand admin set.
-    )
-  );
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
