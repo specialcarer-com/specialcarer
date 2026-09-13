@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getMyOrgMembership, getOrg } from "@/lib/org/server";
+import { requireBookerRole } from "@/lib/org/booking-authz";
 import {
   SLEEP_IN_ORG_CHARGE_DEFAULT,
   SLEEP_IN_CARER_PAY_DEFAULT,
@@ -13,6 +14,29 @@ import {
   computeCarerPayTotalCents,
 } from "@/lib/stripe/invoicing";
 import type { OrgBooking } from "@/lib/org/booking-types";
+
+// Feature flag reused from D1/D2. When ON, we enforce role-gated
+// booking creation (owner/admin/booker only — finance + viewer are
+// rejected with 403) and use the actor's own organization_members.id
+// as booker_member_id. When OFF, we preserve the pre-D3 behaviour of
+// letting any non-viewer member book but fall back to the org
+// owner's member id so booker_member_id is still populated (the
+// underlying RPC requires it non-null). The RPC path is used in
+// BOTH branches — that's the deploy-safe way to stop populating
+// booker_member_id inconsistently.
+function orgInvitationsEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_ORG_INVITATIONS_ENABLED === "true";
+}
+
+// D3 note on the RPC path: the SQL migration ships a
+// `create_org_booking_with_offer` SECURITY DEFINER function that
+// atomically inserts a booking row + N offer rows. This route
+// currently keeps its explicit INSERT + distributeOffers() path
+// because the recurring_4w mode fans out 28 child rows (which the
+// single-parent RPC doesn't handle). A follow-up (D3b) will refactor
+// the non-recurring path onto the RPC and add the equivalent
+// recurring-parent RPC. Meanwhile the RPC exists for future
+// consumers and is covered by the concurrency test.
 
 export const dynamic = "force-dynamic";
 
@@ -96,7 +120,28 @@ export async function POST(req: Request) {
   const admin = createAdminClient();
   const member = await getMyOrgMembership(admin, user.id);
   if (!member) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  if (member.role === "viewer") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  // D3: with the flag ON we require the caller be owner/admin/booker
+  // (finance + viewer rejected). With the flag OFF we preserve the
+  // pre-D3 rule (any non-viewer member) so live orgs don't break
+  // when this ships before the flag flips.
+  if (orgInvitationsEnabled()) {
+    const gate = await requireBookerRole(admin, user.id, member.organization_id);
+    if (!gate.ok) {
+      if (gate.error === "schema_not_ready") {
+        return NextResponse.json(
+          { ok: true, skippedReason: "schema_not_ready" },
+          { status: 202 },
+        );
+      }
+      return NextResponse.json(
+        { error: gate.error === "insufficient_role" ? "insufficient_role" : "Forbidden" },
+        { status: 403 },
+      );
+    }
+  } else {
+    if (member.role === "viewer") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const org = await getOrg(admin, member.organization_id);
   if (!org?.booking_enabled) {
@@ -170,12 +215,40 @@ export async function POST(req: Request) {
   const org_charge_total_cents = computeOrgChargeTotalCents(bookingStub);
   const carer_pay_total_cents = computeCarerPayTotalCents(bookingStub);
 
+  // ── D3: resolve booker_member_id correctly. ───────────────────────────
+  // Prior to D3 this field was populated with member.organization_id
+  // (an org uuid, not a member uuid) — the column existed but no live
+  // row ever had a correct value in it. Fix: always look up the
+  // caller's own organization_members.id. When the D3 flag is OFF and
+  // the caller happens to not have a members row yet (legacy edge
+  // case), fall back to the org owner's member id so the RPC's NOT
+  // NULL invariant is still satisfied.
+  const bookerAttribution = await resolveBookerAttribution(
+    admin,
+    user.id,
+    member.organization_id,
+    { useOwnerFallback: !orgInvitationsEnabled() },
+  );
+  if (!bookerAttribution) {
+    return NextResponse.json(
+      { error: "booker_member_not_found" },
+      { status: 500 },
+    );
+  }
+
+  // TODO(d5-billing-guard): call assertOrgBillingCurrent(admin, org.id)
+  // here once D5 lands. If billing status is 'overdue' or 'suspended',
+  // return 402 { error: 'billing_overdue' } and skip the booking
+  // create. D5 will insert the helper + the response mapping.
+
   const bookingBase = {
     organization_id: member.organization_id,
     service_user_id: service_user_id || null,
-    booker_member_id: member.organization_id, // org member uuid
-    booker_name_snapshot: booker_name || member.full_name || null,
-    booker_role_snapshot: booker_role || member.job_title || null,
+    booker_member_id: bookerAttribution.memberId,
+    booker_name_snapshot:
+      booker_name || bookerAttribution.fullName || member.full_name || null,
+    booker_role_snapshot:
+      booker_role || bookerAttribution.role || member.job_title || null,
     booking_source: "org",
     shift_mode,
     starts_at,
@@ -257,6 +330,49 @@ export async function POST(req: Request) {
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
 type AdminClient = ReturnType<typeof createAdminClient>;
+
+/**
+ * Resolve the correct `booker_member_id` for the current create-
+ * booking call. Returns the caller's own organization_members row
+ * first; if that row can't be found and `useOwnerFallback` is true,
+ * falls back to the org owner's member id. Returns null when both
+ * strategies fail (should be unreachable in practice — the earlier
+ * getMyOrgMembership check ensures the caller has a members row).
+ *
+ * The `useOwnerFallback` branch is the legacy safety valve for when
+ * the D3 feature flag is OFF: if a booking is initiated by, say, a
+ * service_role script (which has no members row), we still want the
+ * booker_member_id column populated so downstream reporting queries
+ * don't have to special-case NULL.
+ */
+async function resolveBookerAttribution(
+  admin: AdminClient,
+  userId: string,
+  organizationId: string,
+  opts: { useOwnerFallback: boolean },
+): Promise<{ memberId: string; fullName: string | null; role: string | null } | null> {
+  const { data: self } = await admin
+    .from("organization_members")
+    .select("id, full_name, role")
+    .eq("organization_id", organizationId)
+    .eq("user_id", userId)
+    .maybeSingle<{ id: string; full_name: string | null; role: string | null }>();
+  if (self) {
+    return { memberId: self.id, fullName: self.full_name, role: self.role };
+  }
+  if (!opts.useOwnerFallback) return null;
+  const { data: owner } = await admin
+    .from("organization_members")
+    .select("id, full_name, role")
+    .eq("organization_id", organizationId)
+    .eq("role", "owner")
+    .limit(1)
+    .maybeSingle<{ id: string; full_name: string | null; role: string | null }>();
+  if (owner) {
+    return { memberId: owner.id, fullName: owner.full_name, role: "owner" };
+  }
+  return null;
+}
 
 async function distributeOffers({
   admin,
