@@ -73,6 +73,22 @@ export function candourOpenUser(userId: string): string {
 }
 
 /**
+ * Organisation-invitation send — per organisation id.
+ *
+ * The invite-send endpoint is admin-facing (an org admin creating
+ * seats for their team), but the abuse we care about is per-org
+ * rather than per-user: an admin could legitimately invite dozens
+ * of teammates on onboarding day, whereas a compromised admin
+ * account spamming a foreign org's inbox looks the same at the user
+ * axis. Keying on `organization_id` scopes the 20/hour budget to
+ * the outbound email cost of one org, not to the actor. See Phase D
+ * plan §D1 acceptance criteria ("20/hour/org").
+ */
+export function orgInviteSend(organizationId: string): string {
+  return `org:invite:send:${organizationId.trim()}`;
+}
+
+/**
  * Account-deletion submit — per authenticated user id.
  *
  * A legitimate user submits a deletion at most once (before verifying).
