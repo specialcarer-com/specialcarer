@@ -37,15 +37,14 @@ export const INVITATION_ROLES: readonly InvitationRole[] = [
 ] as const;
 
 /**
- * `finance` invites can be minted today, but `organization_members`'s
- * CHECK constraint doesn't accept `finance` until D2 broadens it. The
- * accept handler rejects `finance` explicitly with
- * `error: 'role_pending_d2'` so we never attempt an insert that would
- * fail against the CHECK.
+ * D2 (this PR) broadens `organization_members.role`'s CHECK to include
+ * `finance`, so every invite role now round-trips through the accept
+ * path. The D1 `role_pending_d2` branch is removed.
  */
 export const ROLES_ACCEPTED_INTO_MEMBERS: readonly InvitationRole[] = [
   "admin",
   "booker",
+  "finance",
   "viewer",
 ] as const;
 
@@ -483,8 +482,7 @@ export type AcceptResult =
         error:
           | "cancelled"
           | "already_accepted"
-          | "already_member"
-          | "role_pending_d2";
+          | "already_member";
       };
     }
   | { status: 410; body: { ok: false; error: "expired" } }
@@ -526,11 +524,16 @@ export async function handleAccept(
   if (actorEmail === "" || actorEmail !== row.email) {
     return { status: 403, body: { ok: false, error: "email_mismatch" } };
   }
-  // D1 hand-off to D2: `finance` role isn't in
-  // organization_members.role CHECK yet. Reject explicitly so the RPC
-  // insert doesn't fail against the CHECK.
+  // D2 broadened organization_members.role CHECK to include `finance`,
+  // so every invitation role is now insertable. The old
+  // `role_pending_d2` branch has been removed; the
+  // ROLES_ACCEPTED_INTO_MEMBERS set is retained as a defensive
+  // whitelist in case a future invite role is added without
+  // corresponding CHECK expansion.
   if (!ROLES_ACCEPTED_INTO_MEMBERS.includes(row.role)) {
-    return { status: 409, body: { ok: false, error: "role_pending_d2" } };
+    // Should never happen with current role sets; treat as an
+    // internal error rather than a user-facing one.
+    return { status: 500, body: { ok: false, error: "accept_failed" } };
   }
 
   const memberCheck = await deps.db.memberExists(

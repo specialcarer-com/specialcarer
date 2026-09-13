@@ -7,7 +7,7 @@
  *   send:    auth, admin gate, rate-limit, dedupe, email send, deploy-safe
  *   preview: token invalid, not found, cancelled 409, expired 410, ok 200
  *   accept:  auth, expired, cancelled, already-accepted, email mismatch,
- *            already-member, role_pending_d2, ok 200
+ *            already-member, finance-role acceptance (D2), ok 200
  *   cancel:  auth, not-found, admin gate, already-accepted, ok 200
  *   cron:    happy, deploy-safe
  */
@@ -567,15 +567,18 @@ describe("handleAccept()", () => {
     if (res.status === 403) assert.equal(res.body.error, "email_mismatch");
   });
 
-  it("409 role_pending_d2 when invite role is finance", async () => {
+  it("200 finance role is accepted (D2 broadened members CHECK)", async () => {
     const s = makeFakeDb();
     seedPending(s, "raw", "e@x.com", "finance");
     const res = await handleAccept(
       { rawToken: "raw", actor: { id: "u1", email: "e@x.com" } },
       makeDeps(s),
     );
-    assert.equal(res.status, 409);
-    if (res.status === 409) assert.equal(res.body.error, "role_pending_d2");
+    assert.equal(res.status, 200);
+    if (res.status === 200) assert.equal(res.body.role, "finance");
+    // Membership was created with role='finance' — this used to 409
+    // as role_pending_d2 in D1 and now succeeds.
+    assert.equal(s.members.get("o1::u1")?.role, "finance");
   });
 
   it("409 already_member when actor is already in the org", async () => {
