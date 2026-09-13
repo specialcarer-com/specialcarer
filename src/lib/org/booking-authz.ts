@@ -247,3 +247,52 @@ export function applyProjectionForScope<T extends Record<string, unknown>>(
 ): T {
   return scope === "viewer" ? redactForViewer(row) : row;
 }
+
+// ---------------------------------------------------------------------------
+// Timesheet-route role gates (Phase D — PR D3)
+// ---------------------------------------------------------------------------
+
+/**
+ * Roles allowed to approve / dispute / adjust an org booking's
+ * timesheet. Bookers scheduled the shift and are the natural
+ * counterparty to the carer's timesheet claim; finance handles
+ * invoices AFTER resolution (they need to see the outcome, not
+ * decide it); viewer is read-only.
+ *
+ * Kept as a single source of truth so the 3 route handlers agree.
+ * The routes still spell the array inline for readability, but the
+ * unit tests import this constant so a drift shows up as a test
+ * failure rather than a subtle bug.
+ */
+export const TIMESHEET_ACT_ROLES: readonly OrgRole[] = Object.freeze([
+  "owner",
+  "admin",
+  "booker",
+]);
+
+/**
+ * Roles allowed to trigger payment actions on an org booking
+ * timesheet (retry a failed PI, list pending confirmations, etc.).
+ * Finance is the intended operator; owner + admin get access
+ * because they can do everything below them. Bookers are
+ * intentionally excluded — they see the schedule but not the money.
+ */
+export const TIMESHEET_PAYMENT_ROLES: readonly OrgRole[] = Object.freeze([
+  "owner",
+  "admin",
+  "finance",
+]);
+
+/**
+ * Small pure helper for tests. Returns true when the given role
+ * appears in `allowed`. Not exported for route consumers (they
+ * keep the inline array + membership check for readability) —
+ * exists to make the test assertions less repetitive.
+ */
+export function isRoleAllowed(
+  role: string,
+  allowed: readonly OrgRole[],
+): boolean {
+  if (!isOrgRole(role)) return false;
+  return (allowed as readonly string[]).includes(role);
+}

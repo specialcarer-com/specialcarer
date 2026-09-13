@@ -86,7 +86,10 @@ export async function POST(
       .eq("organization_id", booking.organization_id)
       .eq("user_id", user.id)
       .maybeSingle<{ role: string }>();
-    if (member && ["owner", "admin"].includes(member.role)) role = "org_member";
+    // D3: bookers can raise adjustments — they scheduled the shift
+    // and are the natural counterparty. Finance + viewer cannot.
+    if (member && ["owner", "admin", "booker"].includes(member.role))
+      role = "org_member";
   }
   if (!role) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
@@ -156,7 +159,10 @@ export async function POST(
           .from("organization_members")
           .select("user_id, role")
           .eq("organization_id", booking.organization_id)
-          .in("role", ["owner", "admin"]);
+          // D3: notify anyone who can act on the adjustment. Bookers
+          // can respond (see the authz check above); notifying them
+          // keeps the response window from silently expiring.
+          .in("role", ["owner", "admin", "booker"]);
         for (const m of (members ?? []) as { user_id: string }[]) {
           otherUserIds.push(m.user_id);
         }

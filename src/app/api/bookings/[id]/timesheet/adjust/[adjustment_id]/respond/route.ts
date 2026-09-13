@@ -103,7 +103,10 @@ export async function POST(
         .eq("organization_id", booking.organization_id)
         .eq("user_id", user.id)
         .maybeSingle<{ role: string }>();
-      isOpposite = !!member && ["owner", "admin"].includes(member.role);
+      // D3: bookers can respond to carer-proposed adjustments —
+      // the adjust workflow lives in the schedule surface.
+      isOpposite =
+        !!member && ["owner", "admin", "booker"].includes(member.role);
     } else {
       isOpposite = booking.seeker_id === user.id;
     }

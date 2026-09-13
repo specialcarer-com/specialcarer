@@ -52,7 +52,12 @@ export async function GET(
         .eq("organization_id", booking.organization_id)
         .eq("user_id", user.id)
         .maybeSingle<{ role: string }>();
-      authorised = !!member && ["owner", "admin"].includes(member.role);
+      // D3: payment-flow actions are finance-side — finance role
+      // gets access alongside owner + admin. Bookers do not have
+      // payment authority (they see the schedule, not the money
+      // movement). Viewer is read-only.
+      authorised =
+        !!member && ["owner", "admin", "finance"].includes(member.role);
     }
   } else {
     authorised = booking.seeker_id === user.id;

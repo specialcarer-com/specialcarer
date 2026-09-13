@@ -22,8 +22,11 @@ import assert from "node:assert/strict";
 import {
   applyProjectionForScope,
   getBookingVisibilityScope,
+  isRoleAllowed,
   redactForViewer,
   requireBookerRole,
+  TIMESHEET_ACT_ROLES,
+  TIMESHEET_PAYMENT_ROLES,
   VIEWER_HIDDEN_BOOKING_FIELDS,
 } from "./booking-authz";
 
@@ -410,5 +413,99 @@ describe("VIEWER_HIDDEN_BOOKING_FIELDS contract", () => {
         `${k} missing from hidden set`,
       );
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Timesheet role-gate constants
+// ---------------------------------------------------------------------------
+
+describe("TIMESHEET_ACT_ROLES", () => {
+  it("is frozen and non-empty", () => {
+    assert.equal(Object.isFrozen(TIMESHEET_ACT_ROLES), true);
+    assert.ok(TIMESHEET_ACT_ROLES.length > 0);
+  });
+
+  it("includes owner, admin, and booker", () => {
+    assert.ok(TIMESHEET_ACT_ROLES.includes("owner"));
+    assert.ok(TIMESHEET_ACT_ROLES.includes("admin"));
+    assert.ok(TIMESHEET_ACT_ROLES.includes("booker"));
+  });
+
+  it("excludes finance and viewer", () => {
+    assert.equal(TIMESHEET_ACT_ROLES.includes("finance"), false);
+    assert.equal(TIMESHEET_ACT_ROLES.includes("viewer"), false);
+  });
+});
+
+describe("TIMESHEET_PAYMENT_ROLES", () => {
+  it("is frozen and non-empty", () => {
+    assert.equal(Object.isFrozen(TIMESHEET_PAYMENT_ROLES), true);
+    assert.ok(TIMESHEET_PAYMENT_ROLES.length > 0);
+  });
+
+  it("includes owner, admin, and finance", () => {
+    assert.ok(TIMESHEET_PAYMENT_ROLES.includes("owner"));
+    assert.ok(TIMESHEET_PAYMENT_ROLES.includes("admin"));
+    assert.ok(TIMESHEET_PAYMENT_ROLES.includes("finance"));
+  });
+
+  it("excludes booker and viewer", () => {
+    assert.equal(TIMESHEET_PAYMENT_ROLES.includes("booker"), false);
+    assert.equal(TIMESHEET_PAYMENT_ROLES.includes("viewer"), false);
+  });
+});
+
+describe("isRoleAllowed", () => {
+  it("accepts a valid role that appears in the allowed set", () => {
+    assert.equal(isRoleAllowed("booker", TIMESHEET_ACT_ROLES), true);
+    assert.equal(isRoleAllowed("finance", TIMESHEET_PAYMENT_ROLES), true);
+  });
+
+  it("rejects a valid role missing from the allowed set", () => {
+    assert.equal(isRoleAllowed("finance", TIMESHEET_ACT_ROLES), false);
+    assert.equal(isRoleAllowed("booker", TIMESHEET_PAYMENT_ROLES), false);
+    assert.equal(isRoleAllowed("viewer", TIMESHEET_ACT_ROLES), false);
+    assert.equal(isRoleAllowed("viewer", TIMESHEET_PAYMENT_ROLES), false);
+  });
+
+  it("rejects unknown role strings without throwing", () => {
+    assert.equal(isRoleAllowed("root", TIMESHEET_ACT_ROLES), false);
+    assert.equal(isRoleAllowed("", TIMESHEET_PAYMENT_ROLES), false);
+    assert.equal(isRoleAllowed("Owner", TIMESHEET_ACT_ROLES), false);
+  });
+});
+
+// D3 policy invariant: bookers scheduled the shift and act on it;
+// finance handles the money. The two sets share owner + admin (both
+// can do everything below them) but diverge on the operator role.
+describe("D3 timesheet policy invariants", () => {
+  it("owner and admin appear in both sets", () => {
+    for (const role of ["owner", "admin"] as const) {
+      assert.ok(
+        TIMESHEET_ACT_ROLES.includes(role),
+        `act set missing ${role}`,
+      );
+      assert.ok(
+        TIMESHEET_PAYMENT_ROLES.includes(role),
+        `payment set missing ${role}`,
+      );
+    }
+  });
+
+  it("booker and finance are on exactly one side", () => {
+    const inAct = new Set(TIMESHEET_ACT_ROLES);
+    const inPay = new Set(TIMESHEET_PAYMENT_ROLES);
+    // booker acts on shifts, not payments.
+    assert.equal(inAct.has("booker"), true);
+    assert.equal(inPay.has("booker"), false);
+    // finance runs payments, does not adjudicate shift disputes.
+    assert.equal(inAct.has("finance"), false);
+    assert.equal(inPay.has("finance"), true);
+  });
+
+  it("viewer is read-only — excluded from every action set", () => {
+    assert.equal(TIMESHEET_ACT_ROLES.includes("viewer"), false);
+    assert.equal(TIMESHEET_PAYMENT_ROLES.includes("viewer"), false);
   });
 });
