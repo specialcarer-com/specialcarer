@@ -15,6 +15,14 @@ export type Candidate = {
   response_rate: number | null;
   last_active_at: string | null;
   completion_rate: number | null;
+  /**
+   * Optional commute-time signal (E3). null / undefined = unknown →
+   * neutral 0.3 in the scorer. Auto-match populates this only when
+   * the E3 commute flag is on AND the current booking's experiment
+   * variant is 'treatment'; the search-side rerank leaves it undefined,
+   * which is a no-op while the flag is off.
+   */
+  commute_minutes?: number | null;
 };
 
 export type RankedOffer = {
@@ -42,6 +50,7 @@ export function rankCandidates(
         response_rate: c.response_rate,
         last_active_at: c.last_active_at,
         completion_rate: c.completion_rate,
+        commute_minutes: c.commute_minutes ?? null,
       },
       now,
     );

@@ -1,6 +1,9 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { rankCandidates, type Candidate, type RankedOffer } from "./ranker";
+import { isCommuteScoringEnabled } from "./flag";
+import { getCommuteMinutes } from "@/lib/mapbox/matrix";
+import { assignExperimentVariant } from "@/lib/experiments/assign";
 
 export type { Candidate, RankedOffer } from "./ranker";
 export { rankCandidates } from "./ranker";
@@ -17,6 +20,16 @@ export { rankCandidates } from "./ranker";
  */
 
 const TOP_N = 5;
+// Top-K carers eligible for a Mapbox commute lookup after crow-flies
+// filter. K = TOP_N * 2 keeps the Mapbox bill bounded (we never look
+// up more carers than we might plausibly offer to). Only used when
+// the E3 commute scoring flag is on AND the booking landed in the
+// treatment arm of `commute_scoring_v1`.
+const COMMUTE_TOP_K = TOP_N * 2;
+// Hardcoded per the E3 brief (YAGNI — no admin UI for experiment
+// selection yet). Add a second experiment id here if / when a
+// concurrent test lands.
+const COMMUTE_EXPERIMENT_ID = "commute_scoring_v1";
 // "Now" bookings expire fast; scheduled get an hour.
 const NOW_EXPIRY_MIN = 10;
 const SCHEDULED_EXPIRY_MIN = 60;
@@ -168,6 +181,17 @@ export async function runAutoMatch(
 
   const eligibleIds = eligible.map((p) => p.user_id as string);
 
+  // 3b. Experiment assignment. `assignExperimentVariant` returns null
+  //     if the experiment doesn't exist or is inactive; treatment is
+  //     the only variant that triggers a commute-time lookup. When
+  //     `variant === null` OR variant is 'control' OR the E3 flag is
+  //     off, we skip Mapbox entirely (zero API cost).
+  const flagOn = isCommuteScoringEnabled();
+  const variant = flagOn
+    ? await assignExperimentVariant(COMMUTE_EXPERIMENT_ID, bookingId)
+    : null;
+  const useCommute = flagOn && variant === "treatment";
+
   // 4. Track-record signals (response_rate, completion_rate) from the
   //    daily-refreshed caregiver_rates_cache (see
   //    supabase/migrations/20260611120000_caregiver_rates_v1.sql + the
@@ -189,6 +213,67 @@ export async function runAutoMatch(
     };
   });
 
+  // 4b. Commute-time lookup for the top-K crow-flies candidates.
+  //     Only when the flag is on AND the booking is in the treatment
+  //     arm. Failures → null commute_minutes → neutral 0.3 signal.
+  //     Note we do this BEFORE the final rank so the commute signal
+  //     actually enters the scorer.
+  if (useCommute && origin) {
+    // Pick the top-K by crow-flies distance first (cheapest signal we
+    // have); Mapbox is billed per lookup so we cap here.
+    const byDistance = [...candidates].sort((a, b) => {
+      const da = a.distance_km ?? Number.POSITIVE_INFINITY;
+      const db = b.distance_km ?? Number.POSITIVE_INFINITY;
+      return da - db;
+    });
+    const topK = byDistance.slice(0, COMMUTE_TOP_K);
+
+    // Look up each carer's home_point once (batched read).
+    const { data: homes } = await admin
+      .from("caregiver_profiles")
+      .select("user_id, home_lat, home_lng")
+      .in(
+        "user_id",
+        topK.map((c) => c.carer_id),
+      );
+    const homeById = new Map<string, { lat: number; lng: number }>();
+    for (const h of homes ?? []) {
+      const lat = h.home_lat != null ? Number(h.home_lat) : NaN;
+      const lng = h.home_lng != null ? Number(h.home_lng) : NaN;
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        homeById.set(h.user_id as string, { lat, lng });
+      }
+    }
+
+    const results = await Promise.allSettled(
+      topK.map(async (c) => {
+        const home = homeById.get(c.carer_id);
+        if (!home) return { carerId: c.carer_id, minutes: null as number | null };
+        const minutes = await getCommuteMinutes({
+          carerId: c.carer_id,
+          origin: { lat: origin.lat, lng: origin.lng },
+          destination: home,
+          distanceKm: c.distance_km ?? undefined,
+        });
+        return { carerId: c.carer_id, minutes };
+      }),
+    );
+
+    const minutesById = new Map<string, number | null>();
+    for (const r of results) {
+      if (r.status === "fulfilled") {
+        minutesById.set(r.value.carerId, r.value.minutes);
+      }
+      // Rejected → no entry → stays null on the candidate.
+    }
+
+    for (const c of candidates) {
+      if (minutesById.has(c.carer_id)) {
+        c.commute_minutes = minutesById.get(c.carer_id) ?? null;
+      }
+    }
+  }
+
   // 5. Rank + take top N.
   const offers = rankCandidates(candidates, maxRadiusKm, TOP_N, now);
   if (offers.length === 0) return { offers: [], poolSize: poolIds.length };
@@ -196,6 +281,13 @@ export async function runAutoMatch(
   // 6. Persist offers (idempotent on (booking_id, carer_id)).
   const expiryMin = nowBooking ? NOW_EXPIRY_MIN : SCHEDULED_EXPIRY_MIN;
   const expiresAt = new Date(now + expiryMin * 60 * 1000).toISOString();
+  // Only stamp experiment attribution when a variant was actually
+  // resolved (flag on + experiment active). Otherwise leave both
+  // columns null so the rollup cron correctly excludes this offer.
+  const experimentAttribution =
+    variant != null
+      ? { experiment_id: COMMUTE_EXPERIMENT_ID, variant }
+      : { experiment_id: null as string | null, variant: null as string | null };
   const rows = offers.map((o) => ({
     booking_id: bookingId,
     carer_id: o.carer_id,
@@ -204,6 +296,8 @@ export async function runAutoMatch(
     status: "pending",
     offered_at: new Date(now).toISOString(),
     expires_at: expiresAt,
+    experiment_id: experimentAttribution.experiment_id,
+    variant: experimentAttribution.variant,
   }));
   await admin
     .from("booking_match_offers")
