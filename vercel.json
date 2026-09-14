@@ -92,6 +92,10 @@
     {
       "path": "/api/cron/expire-org-invitations",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/experiment-rollup",
+      "schedule": "0 5 * * *"
     }
   ]
 }

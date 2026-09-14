@@ -172,3 +172,87 @@ describe("scoreCarer (smart rerank / gap 19)", () => {
     );
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// E3 — commute-aware scoring
+//
+// The flag NEXT_PUBLIC_COMMUTE_SCORING_ENABLED is OFF in the test env
+// (see .env.example — it's absent, which resolves to !== "true" → false).
+// That means SCORING_WEIGHTS is the baseline profile and passing a
+// `commute_minutes` value has no effect on the final score. This is the
+// bit-identical fallback guarantee the E3 brief calls for.
+//
+// Coverage of the ON-flag branch is by inspection: the module is a
+// pure `if (flagOn) { ... }`, and the ON-state weights are declared as
+// a plain const literal in scoring.ts:COMMUTE_WEIGHTS. A runtime test
+// of the ON branch would require monkey-patching process.env and
+// re-importing the module through the ts-node loader, which is more
+// fragile than useful for a flag this simple.
+// ─────────────────────────────────────────────────────────────────────────
+
+describe("scoreCarer — flag OFF baseline (E3 bit-identical guarantee)", () => {
+  it("exposes the pre-E3 weight values under the four legacy keys", () => {
+    assert.equal(SCORING_WEIGHTS.distance, 0.4);
+    assert.equal(SCORING_WEIGHTS.rating, 0.3);
+    assert.equal(SCORING_WEIGHTS.response_rate, 0.15);
+    assert.equal(SCORING_WEIGHTS.recency, 0.1);
+    assert.equal(SCORING_WEIGHTS.completion_rate, 0.05);
+    // The new commute key exists but weighs 0 in the baseline.
+    assert.equal(SCORING_WEIGHTS.commute, 0);
+  });
+
+  it("score is unchanged whether commute_minutes is 0, 30, 60, or null", () => {
+    const base = scoreCarer(
+      signals({ distance_km: 5, rating: 3, response_rate: 0.5 }),
+      NOW,
+    );
+    for (const cm of [0, 30, 60, null, undefined] as const) {
+      const withCommute = scoreCarer(
+        signals({
+          distance_km: 5,
+          rating: 3,
+          response_rate: 0.5,
+          commute_minutes: cm,
+        }),
+        NOW,
+      );
+      assert.equal(
+        withCommute.score,
+        base.score,
+        `flag-off score changed for commute_minutes=${String(cm)}`,
+      );
+    }
+  });
+});
+
+describe("scoreCarer — commute signal shape (pure)", () => {
+  // These assert the shape of the commute breakdown value only. Because
+  // SCORING_WEIGHTS.commute = 0 in the flag-off default, the value goes
+  // into the breakdown but doesn't move the final score. That's exactly
+  // the property the ON-branch will exploit later.
+
+  it("full credit at ≤10 min", () => {
+    const b = scoreCarer(signals({ commute_minutes: 5 }), NOW).breakdown;
+    assert.equal(b.commute, 1);
+  });
+
+  it("zero at ≥60 min", () => {
+    const b = scoreCarer(signals({ commute_minutes: 60 }), NOW).breakdown;
+    assert.equal(b.commute, 0);
+    const b2 = scoreCarer(signals({ commute_minutes: 90 }), NOW).breakdown;
+    assert.equal(b2.commute, 0);
+  });
+
+  it("linear decay between 10 and 60 min", () => {
+    const b = scoreCarer(signals({ commute_minutes: 35 }), NOW).breakdown;
+    // (35 - 10) / (60 - 10) = 0.5 → signal = 0.5
+    assert.equal(b.commute, 0.5);
+  });
+
+  it("null / undefined commute → neutral 0.3", () => {
+    const b1 = scoreCarer(signals({ commute_minutes: null }), NOW).breakdown;
+    assert.equal(b1.commute, 0.3);
+    const b2 = scoreCarer(signals({}), NOW).breakdown;
+    assert.equal(b2.commute, 0.3);
+  });
+});

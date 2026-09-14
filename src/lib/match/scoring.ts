@@ -7,20 +7,75 @@
  * trivially unit-testable and safe to import on client or server.
  *
  * Weights (sum to 1.0):
- *   distance        40%  closer is better, linear over the radius
- *   rating          30%  avg rating / 5
- *   response_rate   15%  share of past offers the carer accepted (>70% ideal)
- *   recency         10%  recently active carers float up
- *   completion_rate  5%  share of accepted bookings completed
+ *
+ *   Pre-E3 baseline (commute flag OFF — the default today):
+ *     distance        40%  closer is better, linear over the radius
+ *     rating          30%  avg rating / 5
+ *     response_rate   15%  share of past offers the carer accepted (>70% ideal)
+ *     recency         10%  recently active carers float up
+ *     completion_rate  5%  share of accepted bookings completed
+ *
+ *   Commute-aware (commute flag ON — E3, treatment arm of
+ *   `commute_scoring_v1` A/B):
+ *     distance        20%  crow-flies (kept as a coarse safety net)
+ *     commute         25%  driving-time via Mapbox Matrix; London urban
+ *                          reality is dominated by traffic + rivers
+ *     rating          25%
+ *     response_rate   15%
+ *     recency         10%
+ *     completion_rate  5%
+ *
+ * The flag lives in src/lib/match/flag.ts. When off, this module is
+ * bit-identical to the pre-E3 behaviour (see the guard test in
+ * scoring.test.ts).
  */
 
-export const SCORING_WEIGHTS = {
+import { isCommuteScoringEnabled } from "./flag";
+
+// Baseline / control weights — the pre-E3 profile.
+const BASELINE_WEIGHTS = {
   distance: 0.4,
   rating: 0.3,
   response_rate: 0.15,
   recency: 0.1,
   completion_rate: 0.05,
+  // commute is present as 0 in the baseline so the type stays
+  // consistent regardless of the flag. Zero-weight means the commute
+  // signal is computed but ignored, matching the pre-E3 output.
+  commute: 0,
 } as const;
+
+// Commute-aware / treatment weights — the E3 profile.
+const COMMUTE_WEIGHTS = {
+  distance: 0.2,
+  commute: 0.25,
+  rating: 0.25,
+  response_rate: 0.15,
+  recency: 0.1,
+  completion_rate: 0.05,
+} as const;
+
+/**
+ * Public weights. When the E3 commute flag is off (default), these are
+ * bit-identical to the pre-E3 shape *for the existing four keys*: the
+ * extra `commute` key is a zero-weighted no-op. Consumers that iterate
+ * this object (there's just one — the scoring.test.ts sum-to-1 test)
+ * still see a total of 1.0.
+ *
+ * Note this is exported as a plain frozen object rather than a
+ * `const`-asserted literal so the flag-driven branch typechecks
+ * cleanly.
+ */
+export const SCORING_WEIGHTS: {
+  readonly distance: number;
+  readonly commute: number;
+  readonly rating: number;
+  readonly response_rate: number;
+  readonly recency: number;
+  readonly completion_rate: number;
+} = Object.freeze(
+  isCommuteScoringEnabled() ? { ...COMMUTE_WEIGHTS } : { ...BASELINE_WEIGHTS },
+);
 
 export type ScoringWeightKey = keyof typeof SCORING_WEIGHTS;
 
@@ -38,6 +93,17 @@ export type ScoreSignals = {
   last_active_at: string | null;
   /** Completed / accepted ratio, 0..1. null = no history. */
   completion_rate: number | null;
+  /**
+   * Driving-time commute from booking origin to the carer's home,
+   * in minutes. null = unknown / not looked up (matcher didn't call
+   * Mapbox for this candidate, or the call failed). Treated as
+   * neutral (0.3) by the signal transform — same convention as
+   * distance.
+   *
+   * Optional so pre-E3 callers (search rerank, tests that predate
+   * commute) don't need to change to pass explicit `null`.
+   */
+  commute_minutes?: number | null;
 };
 
 export type ScoreBreakdown = Record<ScoringWeightKey, number>;
@@ -80,6 +146,22 @@ function distanceSignal(distanceKm: number | null, maxKm: number): number {
   return clamp01(1 - distanceKm / maxKm);
 }
 
+// Commute: full credit at ≤10 min, decaying linearly to 0 at 60 min.
+// Null = unknown → neutral 0.3 (same convention as distance). London
+// urban reality: under 10 min commute is genuinely great; over an hour
+// is a hard sell for a same-day shift.
+const COMMUTE_FULL_MIN = 10;
+const COMMUTE_ZERO_MIN = 60;
+
+function commuteSignal(commuteMinutes: number | null | undefined): number {
+  if (commuteMinutes == null || !Number.isFinite(commuteMinutes)) return 0.3;
+  if (commuteMinutes <= COMMUTE_FULL_MIN) return 1;
+  if (commuteMinutes >= COMMUTE_ZERO_MIN) return 0;
+  return clamp01(
+    1 - (commuteMinutes - COMMUTE_FULL_MIN) / (COMMUTE_ZERO_MIN - COMMUTE_FULL_MIN),
+  );
+}
+
 /**
  * Compute the per-carer normalised signals + final 0..100 score.
  * `now` is injectable so tests are deterministic.
@@ -90,6 +172,7 @@ export function scoreCarer(
 ): ScoreResult {
   const breakdown: ScoreBreakdown = {
     distance: distanceSignal(signals.distance_km, signals.max_distance_km),
+    commute: commuteSignal(signals.commute_minutes ?? null),
     rating: clamp01((signals.rating ?? 0) / 5),
     response_rate: clamp01(signals.response_rate ?? 0),
     recency: recencySignal(signals.last_active_at, now),
@@ -98,6 +181,7 @@ export function scoreCarer(
 
   const weighted =
     breakdown.distance * SCORING_WEIGHTS.distance +
+    breakdown.commute * SCORING_WEIGHTS.commute +
     breakdown.rating * SCORING_WEIGHTS.rating +
     breakdown.response_rate * SCORING_WEIGHTS.response_rate +
     breakdown.recency * SCORING_WEIGHTS.recency +
