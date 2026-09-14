@@ -1,11 +1,21 @@
 /**
  * POST /api/dsar/submit
  *
- * Public, unauthenticated. Accepts a UK-GDPR data-subject request,
- * writes a `dsar_requests` row in state `submitted`, and mails a
- * one-time verification link to the submitted email. State only
- * advances to `in_progress` after the recipient clicks that link
- * (see /api/dsar/verify/[token]).
+ * Accepts a UK-GDPR data-subject request. Two paths, decided by the
+ * pure handler in `src/lib/dsar/submit-handler.ts`:
+ *
+ *   - **Anonymous**: writes a `dsar_requests` row in state
+ *     `verifying`, emails a one-time verification link. State only
+ *     advances to `in_progress` after the recipient clicks the link
+ *     (see /api/dsar/verify/[token]). Unchanged from PR #210.
+ *
+ *   - **Authenticated fast-path** (added in PR E2): when the caller
+ *     is signed in AND `body.subject_user_id` matches `auth.uid()`
+ *     AND `body.subject_email` matches `auth.user.email` (case-
+ *     insensitive), skip the email-verification round trip and go
+ *     straight to `in_progress`, so the `dsar-fulfil` cron can pick
+ *     it up on its next tick. Still emails a confirmation for the
+ *     subject's records.
  *
  * Deploy-safe: if the `dsar_requests` table is not yet present
  * (migration deferred), the route responds 503
@@ -15,22 +25,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { rateLimit, getRequestIp } from "@/lib/rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/smtp";
-import { renderDsarVerifyEmail } from "@/lib/dsar/emails";
-import { generateVerificationToken } from "@/lib/dsar/token";
+import {
+  handleDsarSubmit,
+  type SubmitBody,
+} from "@/lib/dsar/submit-handler";
 
 export const dynamic = "force-dynamic";
-
-const ALLOWED_TYPES = [
-  "access",
-  "erasure",
-  "rectification",
-  "portability",
-] as const;
-type RequestType = (typeof ALLOWED_TYPES)[number];
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const UNDEFINED_TABLE = "42P01";
 
 export async function POST(req: NextRequest) {
   // Rate limit: 5 submissions / hour / IP. Deliberately conservative —
@@ -44,9 +46,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let body: Record<string, unknown>;
+  let body: SubmitBody;
   try {
-    body = (await req.json()) as Record<string, unknown>;
+    body = (await req.json()) as SubmitBody;
   } catch {
     return NextResponse.json(
       { ok: false, code: "invalid_json" },
@@ -54,89 +56,37 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const emailRaw = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
-  const type = typeof body.type === "string" ? body.type : "";
-  const notes = typeof body.notes === "string" ? body.notes.slice(0, 2000) : null;
-
-  if (!EMAIL_RE.test(emailRaw)) {
-    return NextResponse.json(
-      { ok: false, code: "invalid_email" },
-      { status: 400 },
-    );
-  }
-  if (!ALLOWED_TYPES.includes(type as RequestType)) {
-    return NextResponse.json(
-      { ok: false, code: "invalid_type" },
-      { status: 400 },
-    );
+  // Try to resolve a signed-in user. This is best-effort — failure
+  // (or an anonymous request) simply routes to the anonymous flow.
+  let authedUser: { id: string; email: string | null | undefined } | null =
+    null;
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase.auth.getUser();
+    if (data.user) {
+      authedUser = { id: data.user.id, email: data.user.email };
+    }
+  } catch {
+    // Cookie-parsing / server-client failure — treat as anonymous.
+    authedUser = null;
   }
 
   const admin = createAdminClient();
-
-  // Look up the subject user id, if any, so admin queue can see them
-  // linked. `.maybeSingle()` — nulls are fine, we still accept the
-  // submission.
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("id")
-    .eq("email", emailRaw)
-    .maybeSingle();
-  const subject_user_id = profile?.id ?? null;
-
-  const token = generateVerificationToken();
-
-  const insertRes = await admin
-    .from("dsar_requests")
-    .insert({
-      subject_user_id,
-      subject_email: emailRaw,
-      requested_by: subject_user_id, // best-effort attribution
-      request_type: type,
-      state: "verifying",
-      verification_token_hash: token.hash,
-      verification_token_issued_at: new Date().toISOString(),
-      notes,
-    })
-    .select("id")
-    .single();
-
-  if (insertRes.error) {
-    const code = insertRes.error.code;
-    if (
-      code === UNDEFINED_TABLE ||
-      /relation .* does not exist/i.test(insertRes.error.message ?? "")
-    ) {
-      return NextResponse.json(
-        { ok: false, code: "schema_not_ready" },
-        { status: 503 },
-      );
-    }
-    return NextResponse.json(
-      { ok: false, code: "insert_failed" },
-      { status: 500 },
-    );
-  }
-
-  // Compose the verification link. Prefer NEXT_PUBLIC_APP_URL, then the
-  // request's own origin as fallback.
   const origin =
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
     new URL(req.url).origin;
-  const verify_url = `${origin}/api/dsar/verify/${token.raw}`;
 
-  const mail = renderDsarVerifyEmail({
-    subject_email: emailRaw,
-    request_type: type,
-    verify_url,
-  });
-  await sendEmail({
-    to: emailRaw,
-    subject: mail.subject,
-    html: mail.html,
-    text: mail.text,
+  const result = await handleDsarSubmit(body, {
+    admin,
+    authedUser,
+    sendEmail,
+    origin,
   });
 
-  // Deliberately return the same shape whether or not a matching profile
-  // was found — response must not reveal whether an email has an account.
-  return NextResponse.json({ ok: true }, { status: 202 });
+  // Deliberately return the same 202 whether or not a matching profile
+  // was found for anonymous submissions — response must not reveal
+  // whether an email has an account. For the fast-path we also return
+  // 202 with `fast_path: true` so the client can render "we're already
+  // processing this" rather than "check your email".
+  return NextResponse.json(result.body, { status: result.status });
 }
