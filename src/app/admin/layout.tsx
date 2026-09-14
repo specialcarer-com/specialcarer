@@ -76,6 +76,7 @@ const SECTIONS: NavSection[] = [
       { href: "/admin/compliance", label: "Compliance dashboard" },
       { href: "/admin/compliance/dsar", label: "DSAR queue" },
       { href: "/admin/dbs", label: "DBS applications" },
+      { href: "/admin/care-plans/reviews", label: "Care-plan reviews" },
     ],
   },
 ];

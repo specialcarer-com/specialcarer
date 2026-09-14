@@ -96,6 +96,10 @@
     {
       "path": "/api/cron/experiment-rollup",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/care-plan-review-reminder",
+      "schedule": "0 6 * * *"
     }
   ]
 }

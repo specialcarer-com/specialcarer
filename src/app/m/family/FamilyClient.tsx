@@ -13,12 +13,15 @@ import {
   IconCheck,
   IconMail,
 } from "../_components/ui";
+import Link from "next/link";
 import type {
   FamilyOverview,
   FamilyMember,
   FamilyInvite,
 } from "@/lib/family/types";
 import { FAMILY_MAX_MEMBERS } from "@/lib/family/types";
+import type { FamilyRecipientTile } from "@/lib/care-plan/family-view";
+import { reviewStatusBadge } from "@/lib/care-plan/reviews";
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return "";
@@ -43,9 +46,18 @@ function memberDisplayName(m: FamilyMember): string {
 export default function FamilyClient({
   overview,
   welcome,
+  recipients = [],
+  familyViewFlag = false,
+  reviewsFlag = false,
 }: {
   overview: FamilyOverview | null;
   welcome: boolean;
+  /** Per-recipient tiles for the family care-plan viewer (E4). */
+  recipients?: FamilyRecipientTile[];
+  /** NEXT_PUBLIC_FAMILY_CARE_PLAN_VIEW_ENABLED — hides tiles when off. */
+  familyViewFlag?: boolean;
+  /** NEXT_PUBLIC_REG9_REVIEW_CADENCE_ENABLED — hides review badge when off. */
+  reviewsFlag?: boolean;
 }) {
   const [data, setData] = useState(overview);
   const [error, setError] = useState<string | null>(null);
@@ -315,6 +327,78 @@ export default function FamilyClient({
         </Card>
       )}
 
+      {/* Recipients (E4: family care-plan viewer) */}
+      {familyViewFlag && recipients.length > 0 && (
+        <Card className="p-0 overflow-hidden">
+          <div className="px-5 pt-4 pb-2 flex items-center justify-between">
+            <h2 className="text-[15px] font-bold text-heading">Care recipients</h2>
+            {reviewsFlag && (
+              <Link
+                href="/settings/care-plan/reviews"
+                className="text-[12px] font-semibold text-primary"
+              >
+                Reviews
+              </Link>
+            )}
+          </div>
+          <ul className="divide-y divide-slate-100">
+            {recipients.map((r) => {
+              const now = new Date();
+              const badge =
+                reviewsFlag && r.next_review
+                  ? reviewStatusBadge(r.next_review, now)
+                  : null;
+              const hasPlan = !!r.latest_care_plan_id;
+              const inner = (
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-slate-200 overflow-hidden flex-shrink-0">
+                    {r.photo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={r.photo_url}
+                        alt={r.display_name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : null}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[14px] font-semibold text-heading truncate">
+                      {r.display_name}
+                    </p>
+                    <p className="text-[12px] text-subheading truncate">
+                      {hasPlan ? "Care plan available" : "No care plan yet"}
+                    </p>
+                    {badge ? (
+                      <span
+                        className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${badgeToneClassMobile(
+                          badge.tone,
+                        )}`}
+                      >
+                        {badge.label}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              );
+              return (
+                <li key={r.id} className="px-5 py-3">
+                  {hasPlan ? (
+                    <Link
+                      href={`/m/family/recipients/${r.id}/care-plan`}
+                      className="block"
+                    >
+                      {inner}
+                    </Link>
+                  ) : (
+                    inner
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      )}
+
       {/* Invite form (primary only) */}
       {is_primary && (
         <Card className="p-5">
@@ -388,4 +472,19 @@ export default function FamilyClient({
       )}
     </div>
   );
+}
+
+function badgeToneClassMobile(tone: string): string {
+  switch (tone) {
+    case "danger":
+      return "bg-rose-100 text-rose-800";
+    case "warn":
+      return "bg-amber-100 text-amber-800";
+    case "info":
+      return "bg-sky-100 text-sky-800";
+    case "success":
+      return "bg-emerald-100 text-emerald-800";
+    default:
+      return "bg-slate-100 text-slate-700";
+  }
 }
