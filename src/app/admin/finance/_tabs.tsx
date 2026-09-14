@@ -1,12 +1,24 @@
 import Link from "next/link";
 
-const TABS = [
+type Tab = { href: string; label: string };
+
+const BASE_TABS: Tab[] = [
   { href: "/admin/finance", label: "Overview" },
   { href: "/admin/finance/payouts", label: "Payouts" },
   { href: "/admin/finance/disputes", label: "Disputes" },
   { href: "/admin/finance/fraud", label: "Fraud signals" },
   { href: "/admin/finance/tax-docs", label: "Tax documents" },
-] as const;
+];
+
+// E1 admin dashboard is behind a flag; the route itself is protected by
+// requireAdmin(), the flag just hides the nav link. Default off.
+function buildTabs(): Tab[] {
+  const tabs = [...BASE_TABS];
+  if (process.env.NEXT_PUBLIC_ADMIN_FINANCE_V2 === "true") {
+    tabs.push({ href: "/admin/finance/refunds", label: "Refunds" });
+  }
+  return tabs;
+}
 
 /**
  * Sub-tab navigation for the Finance section. Receives the active tab
@@ -14,9 +26,10 @@ const TABS = [
  * Finance sub-page.
  */
 export default function FinanceTabs({ active }: { active: string }) {
+  const tabs = buildTabs();
   return (
     <nav className="flex flex-wrap gap-1.5" aria-label="Finance sections">
-      {TABS.map((t) => (
+      {tabs.map((t) => (
         <Link
           key={t.href}
           href={t.href}

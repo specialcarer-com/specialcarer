@@ -3,6 +3,12 @@ import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { claimStripeWebhookEvent } from "@/lib/stripe/webhook-event-claim";
+import {
+  markWebhookEventCompleted,
+  markWebhookEventFailed,
+  markWebhookEventProcessing,
+  sweepStuckProcessingRows,
+} from "@/lib/stripe/webhook-state";
 import { unredeemCreditsForBooking } from "@/lib/referrals/redemption";
 import { reconcileChargeRefund } from "@/lib/payments/refund-webhook-reconciliation";
 import { recordRefundEvent } from "@/lib/payments/refund-ledger";
@@ -127,6 +133,13 @@ export async function POST(req: Request) {
 
   const admin = createAdminClient();
 
+  // E1: release any rows a previous invocation left stuck in `processing`
+  // (crashed before writing `completed`/`failed`). Cheap single UPDATE
+  // pass, deploy-safe (schema_not_ready when migration hasn't landed).
+  // Runs BEFORE the claim so a stuck row on this same event id becomes
+  // available for re-claim in this invocation.
+  await sweepStuckProcessingRows(admin);
+
   // Atomically upsert-to-claim. Three-state classification:
   //   - fresh              → first sight, run handler.
   //   - already_processed  → prior success on record, acknowledge & skip.
@@ -222,6 +235,13 @@ export async function POST(req: Request) {
   if (claim.status === "already_processed") {
     return NextResponse.json({ received: true, idempotent: true });
   }
+
+  // E1: explicit `pending` → `processing` transition. Done here (after
+  // the claim, before the handler switch) so a mid-handler crash leaves
+  // the row in `processing` for the 5-minute sweeper above to release.
+  // Deploy-safe — no-op if the state column doesn't exist yet.
+  await markWebhookEventProcessing(admin, event.id);
+
   if (claim.attemptCount > MAX_HANDLER_ATTEMPTS) {
     // Poison event. Persist the last-attempt reason and acknowledge with
     // 200 so Stripe stops the exponential retry storm. Admin dashboard
@@ -235,6 +255,9 @@ export async function POST(req: Request) {
         error: `poison: exceeded ${MAX_HANDLER_ATTEMPTS} attempts`,
       })
       .eq("id", event.id);
+    // E1: mark poisoned events failed so the sweeper / dashboard both
+    // reflect the terminal state. Deploy-safe.
+    await markWebhookEventFailed(admin, event.id);
     return NextResponse.json({ received: true, poisoned: true });
   }
 
@@ -763,12 +786,18 @@ export async function POST(req: Request) {
       .from("stripe_webhook_events")
       .update({ processed_at: new Date().toISOString(), error: null })
       .eq("id", event.id);
+    // E1: explicit `processing` → `completed`. Alongside the legacy
+    // processed_at/error write above. Deploy-safe.
+    await markWebhookEventCompleted(admin, event.id);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Handler error";
     await admin
       .from("stripe_webhook_events")
       .update({ error: message })
       .eq("id", event.id);
+    // E1: explicit `processing` → `failed`. Alongside the legacy error
+    // write above. Deploy-safe.
+    await markWebhookEventFailed(admin, event.id);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 
