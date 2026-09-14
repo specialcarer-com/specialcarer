@@ -9,18 +9,38 @@ import {
   platformTakeCents,
 } from "@/lib/fees/config";
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error("STRIPE_SECRET_KEY is not set");
+// Lazy singleton: previously constructed at module load, which threw
+// ("STRIPE_SECRET_KEY is not set") during Vercel's "Collecting page data"
+// build step whenever the preview environment lacked the key — failing
+// the whole build even for PRs that don't touch Stripe. We now defer
+// instantiation until first property access via a Proxy, so the module
+// is safe to import at build time; missing-secret errors surface only
+// when a request actually hits Stripe. Public shape (`import { stripe }`)
+// is unchanged for all 23 call sites.
+let _stripe: Stripe | null = null;
+function getStripe(): Stripe {
+  if (_stripe) return _stripe;
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("STRIPE_SECRET_KEY is not set");
+  }
+  _stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    // Pin a stable, recent API version so SDK upgrades don't break behavior.
+    apiVersion: "2026-04-22.dahlia",
+    typescript: true,
+    appInfo: {
+      name: "SpecialCarers",
+      version: "0.1.0",
+      url: "https://www.specialcarer.com",
+    },
+  });
+  return _stripe;
 }
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  // Pin a stable, recent API version so SDK upgrades don't break behavior.
-  apiVersion: "2026-04-22.dahlia",
-  typescript: true,
-  appInfo: {
-    name: "SpecialCarers",
-    version: "0.1.0",
-    url: "https://www.specialcarer.com",
+export const stripe = new Proxy({} as Stripe, {
+  get(_target, prop, receiver) {
+    const target = getStripe() as unknown as Record<string | symbol, unknown>;
+    const value = Reflect.get(target, prop, receiver);
+    return typeof value === "function" ? value.bind(target) : value;
   },
 });
 
