@@ -81,6 +81,44 @@ If you did not make this request, ignore this email — no action will be taken.
   };
 }
 
+export function renderDsarConfirmationEmail(args: {
+  subject_email: string;
+  request_type: string;
+}): { subject: string; html: string; text: string } {
+  // Sent when an authenticated user submits a DSAR from /settings/data.
+  // Because the session already proves ownership of the email address
+  // we skip the "click to confirm" step, but we still send this so the
+  // subject has a paper trail — matches Article 12(3) UK GDPR (confirm
+  // receipt).
+  const typeLabel =
+    REQUEST_TYPE_LABEL[args.request_type] ?? args.request_type;
+  const inner = `
+      <tr><td style="padding-bottom:12px;color:${BRAND_HEADING};font-size:18px;font-weight:600;">
+        We received your ${typeLabel}
+      </td></tr>
+      <tr><td style="padding-bottom:16px;font-size:15px;line-height:1.55;">
+        Because you submitted this request while signed in as
+        <strong>${args.subject_email}</strong> we have already verified your
+        identity — no confirmation link is needed. We aim to respond within
+        one calendar month (Article 12(3) UK GDPR).
+      </td></tr>
+      <tr><td style="padding-bottom:16px;font-size:14px;line-height:1.55;color:${BRAND_MUTED};">
+        You can review the status of this request at any time from
+        <strong>Settings &rarr; Your data</strong> inside SpecialCarer.
+      </td></tr>`;
+  const text = `We received your ${typeLabel}
+
+Because you submitted this request while signed in as ${args.subject_email} we have already verified your identity — no confirmation link is needed. We aim to respond within one calendar month (Article 12(3) UK GDPR).
+
+You can review the status of this request at any time from Settings > Your data inside SpecialCarer.
+— SpecialCarer`;
+  return {
+    subject: `We received your SpecialCarer ${typeLabel}`,
+    html: shell(inner, `We received your ${typeLabel}`),
+    text,
+  };
+}
+
 export function renderDsarDeliveredEmail(args: {
   subject_email: string;
   request_type: string;

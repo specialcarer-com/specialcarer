@@ -373,6 +373,15 @@ export default function PrivacyPage() {
         email <a href="mailto:privacy@allcare4u.co.uk">privacy@allcare4u.co.uk</a>{" "}
         and we will respond within one calendar month.
       </p>
+      {process.env.NEXT_PUBLIC_SELF_SERVICE_DATA_RIGHTS_ENABLED === "true" ? (
+        <p>
+          Signed in? You can exercise access, rectification and
+          portability rights directly from{" "}
+          <a href="/settings/data">Settings &rarr; Your data</a>. Signed-in
+          requests skip the email confirmation step because your session
+          already proves it's you.
+        </p>
+      ) : null}
 
       <h2 id="security">Security</h2>
       <ul>
