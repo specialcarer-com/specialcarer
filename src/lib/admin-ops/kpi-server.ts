@@ -4,6 +4,16 @@ import {
   KPI_METRICS,
   type KpiMetric,
 } from "@/lib/admin-ops/types";
+import {
+  toneForMinutes,
+  type KpiFreshness,
+} from "@/lib/admin-ops/kpi-freshness";
+
+export type {
+  KpiFreshness,
+  KpiFreshnessTone,
+} from "@/lib/admin-ops/kpi-freshness";
+export { toneForMinutes } from "@/lib/admin-ops/kpi-freshness";
 
 /**
  * State of a single KPI daily rollup row. Mirrors the `state` column
@@ -216,3 +226,47 @@ function emptySnap(metric: KpiMetric): KpiSnapshot {
     delta_pct: null,
   };
 }
+
+// ── freshness (E5) ─────────────────────────────────────────────────
+
+/**
+ * Global freshness of the KPI rollup pipeline. Read from the max
+ * `computed_at` across all rows of `kpi_rollups_daily`. Rendered as a
+ * banner at the top of `/admin/analytics` so a stuck cron can't hide
+ * behind honest-looking per-metric cards (E5 root cause: the cron ran
+ * for 0 hours across 4 months and nothing flagged it).
+ */
+export async function getKpiFreshness(): Promise<KpiFreshness> {
+  let admin: ReturnType<typeof createAdminClient>;
+  try {
+    admin = createAdminClient();
+  } catch {
+    return { last_rollup_at: null, minutes_since: null, tone: "unknown" };
+  }
+
+  const { data, error } = await admin
+    .from("kpi_rollups_daily")
+    .select("computed_at")
+    .order("computed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ computed_at: string | null }>();
+
+  if (error || !data || !data.computed_at) {
+    return { last_rollup_at: null, minutes_since: null, tone: "unknown" };
+  }
+
+  const lastAt = new Date(data.computed_at);
+  const minutesSince = Math.max(
+    0,
+    Math.round((Date.now() - lastAt.getTime()) / 60000),
+  );
+  return {
+    last_rollup_at: data.computed_at,
+    minutes_since: minutesSince,
+    tone: toneForMinutes(minutesSince),
+  };
+}
+
+// toneForMinutes is defined in kpi-freshness.ts (pure, no server-only
+// import) and re-exported at the top of this module for consumers that
+// import it from here.

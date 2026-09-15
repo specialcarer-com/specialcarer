@@ -98,6 +98,10 @@
       "schedule": "0 5 * * *"
     },
     {
+      "path": "/api/cron/kpi-rollup-hourly",
+      "schedule": "5 * * * *"
+    },
+    {
       "path": "/api/cron/care-plan-review-reminder",
       "schedule": "0 6 * * *"
     }

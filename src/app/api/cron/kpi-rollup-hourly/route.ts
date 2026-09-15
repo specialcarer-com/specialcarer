@@ -1,7 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { requireCronAuth } from "@/lib/cron/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { deriveKpisForDay, type BookingRow } from "./derive";
+import {
+  deriveKpisForDay,
+  type BookingRow,
+  type BookingRangeRow,
+  type ReviewRow,
+} from "./derive";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +58,30 @@ async function run(req: NextRequest) {
         .limit(5000);
       return {
         rows: (data as BookingRow[] | null) ?? null,
+        error: error?.message ?? null,
+      };
+    },
+    async fetchBookingsForRange(fromDay, toDay) {
+      const { data, error } = await admin
+        .from("bookings")
+        .select("id, seeker_id, caregiver_id, created_at, status")
+        .gte("created_at", `${fromDay}T00:00:00Z`)
+        .lte("created_at", `${toDay}T23:59:59Z`)
+        .limit(20000);
+      return {
+        rows: (data as BookingRangeRow[] | null) ?? null,
+        error: error?.message ?? null,
+      };
+    },
+    async fetchReviewsForRange(fromDay, toDay) {
+      const { data, error } = await admin
+        .from("reviews")
+        .select("rating, hidden_at, created_at")
+        .gte("created_at", `${fromDay}T00:00:00Z`)
+        .lte("created_at", `${toDay}T23:59:59Z`)
+        .limit(20000);
+      return {
+        rows: (data as ReviewRow[] | null) ?? null,
         error: error?.message ?? null,
       };
     },

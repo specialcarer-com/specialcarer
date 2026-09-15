@@ -171,10 +171,15 @@ export const TAX_DOC_STATUSES = [
 export type TaxDocStatus = (typeof TAX_DOC_STATUSES)[number];
 
 // ── Gap 8: KPIs ───────────────────────────────────────────────────
+//
+// E5 (2026-09): renamed `nps` → `avg_review_rating`. The underlying data
+// is a 1-5 star review, which cannot honestly be reported as NPS (a 0-10
+// promoter methodology). A real NPS metric can be added later as a
+// separate slug when a survey is wired.
 export const KPI_METRICS = [
   "bookings",
   "gmv",
-  "nps",
+  "avg_review_rating",
   "repeat_rate",
   "fill_rate",
   "time_to_match_min",
@@ -184,7 +189,7 @@ export type KpiMetric = (typeof KPI_METRICS)[number];
 export const KPI_METRIC_LABEL: Record<KpiMetric, string> = {
   bookings: "Bookings",
   gmv: "GMV",
-  nps: "NPS",
+  avg_review_rating: "Avg review rating",
   repeat_rate: "Repeat rate",
   fill_rate: "Fill rate",
   time_to_match_min: "Time to match (min)",
@@ -201,8 +206,8 @@ export function formatKpi(m: KpiMetric, v: number | null | undefined): string {
   switch (m) {
     case "gmv":
       return `£${Math.round(v).toLocaleString("en-GB")}`;
-    case "nps":
-      return `${Math.round(v)}`;
+    case "avg_review_rating":
+      return `${v.toFixed(1)} / 5`;
     case "repeat_rate":
     case "fill_rate":
       return `${(v * 100).toFixed(1)}%`;

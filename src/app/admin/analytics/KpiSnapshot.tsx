@@ -5,7 +5,9 @@ import {
   type KpiMetric,
 } from "@/lib/admin-ops/types";
 import {
+  getKpiFreshness,
   getKpiSnapshots,
+  type KpiFreshness,
   type KpiSnapshot,
   type KpiPointState,
 } from "@/lib/admin-ops/kpi-server";
@@ -22,7 +24,10 @@ import Sparkline from "./Sparkline";
  * Server component. Reads kpi_rollups_daily via getKpiSnapshots().
  */
 export default async function KpiSnapshot() {
-  const kpis = await getKpiSnapshots();
+  const [kpis, freshness] = await Promise.all([
+    getKpiSnapshots(),
+    getKpiFreshness(),
+  ]);
 
   return (
     <section className="space-y-3">
@@ -36,6 +41,8 @@ export default async function KpiSnapshot() {
           filled with placeholder numbers.
         </p>
       </div>
+
+      <FreshnessBanner freshness={freshness} />
 
       {kpis.length === 0 ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
@@ -132,6 +139,83 @@ function KpiCard({ snap }: { snap: KpiSnapshot }) {
       </dl>
     </div>
   );
+}
+
+/**
+ * Freshness banner (E5). Renders above the KPI grid to surface a stuck
+ * cron globally — the E5 root cause was that the cron never ran for 4
+ * months and every per-metric card looked plausibly fine.
+ */
+function FreshnessBanner({ freshness }: { freshness: KpiFreshness }) {
+  const { tone, minutes_since, last_rollup_at } = freshness;
+
+  if (tone === "unknown") {
+    return (
+      <div
+        className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700"
+        data-freshness-tone="unknown"
+      >
+        No KPI rollups yet —{" "}
+        <code className="text-[11px]">/api/cron/kpi-rollup-hourly</code>{" "}
+        hasn&apos;t run.
+      </div>
+    );
+  }
+
+  if (tone === "green") {
+    return (
+      <div
+        className="inline-flex items-center rounded-full border border-green-200 bg-green-50 px-2.5 py-0.5 text-[11px] text-green-800"
+        data-freshness-tone="green"
+      >
+        KPI rollup ran {formatMinutes(minutes_since)} ago
+      </div>
+    );
+  }
+
+  if (tone === "amber") {
+    return (
+      <div
+        className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"
+        data-freshness-tone="amber"
+      >
+        KPI rollup is {formatMinutes(minutes_since)} stale — check Vercel
+        cron.
+      </div>
+    );
+  }
+
+  // red
+  const hhmm = last_rollup_at ? formatHHMM(last_rollup_at) : "unknown time";
+  const hours =
+    minutes_since != null
+      ? (minutes_since / 60).toFixed(minutes_since >= 6000 ? 0 : 1)
+      : "?";
+  return (
+    <div
+      className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800"
+      data-freshness-tone="red"
+    >
+      KPI rollup last ran {hours} hours ago at {hhmm} —{" "}
+      <code className="text-[11px]">/api/cron/kpi-rollup-hourly</code> may
+      be failing.
+    </div>
+  );
+}
+
+function formatMinutes(m: number | null): string {
+  if (m == null) return "? minutes";
+  if (m < 90) return `${m} minute${m === 1 ? "" : "s"}`;
+  const h = Math.round(m / 60);
+  return `${h} hour${h === 1 ? "" : "s"}`;
+}
+
+function formatHHMM(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "unknown time";
+  const hh = String(d.getUTCHours()).padStart(2, "0");
+  const mm = String(d.getUTCMinutes()).padStart(2, "0");
+  return `${hh}:${mm} UTC`;
 }
 
 /** A stale/error/missing point is rendered as a gap in the sparkline. */
