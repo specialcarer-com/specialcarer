@@ -1,0 +1,42 @@
+-- ============================================================================
+-- SpecialCarer — F1 / DSAR Exports Storage Bucket
+--
+-- Adds a private Supabase Storage bucket `dsar-exports`, the destination
+-- for `dsar-fulfil` cron uploads (subject-export.json for each fulfilled
+-- Article-15/16/20 DSAR).
+--
+-- Discovered during Phase F end-to-end exercise of the DSAR round-trip
+-- (see phase_f/dsar_prod_gap_audit.md): the bucket was referenced by
+-- code (src/app/api/cron/dsar-fulfil/route.ts:37 and
+-- src/app/api/dsar/[id]/download/route.ts:26) since PR #210 but never
+-- created — only mentioned in a comment in
+-- 20260911234500_dsar_requests.sql. Without this bucket the cron
+-- writes an `error` state to every fulfilled request and the subject
+-- never gets their data.
+--
+-- Bucket policy
+-- ─────────────
+-- Private (public=false). 25 MiB per file — DSAR exports are JSON
+-- assembled by exportSubject(), which pulls the caller's rows across
+-- profiles, bookings, care plans, messages, timesheets, etc. 25 MiB
+-- is generous headroom without allowing accidental bulk uploads if
+-- the admin client is misused.
+--
+-- No RLS policies on storage.objects for this bucket by design:
+--   * Uploads happen via the service-role admin client (bypasses RLS).
+--   * Downloads happen via short-lived signed URLs minted by the
+--     admin client on `/api/dsar/[id]/download` after re-verifying
+--     ownership on public.dsar_requests. RLS on the requests table
+--     already scopes visibility; the signed URL is the retrieval
+--     credential and does not require row-level RLS on the object.
+--
+-- Freeze-respectful / additive-only
+-- ─────────────────────────────────
+-- * `insert ... on conflict do nothing` — idempotent bucket create.
+-- * No policy adds or drops (see design note above).
+-- * No touch of any other schema — only `storage.buckets`.
+-- ============================================================================
+
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('dsar-exports', 'dsar-exports', false, 26214400) -- 25 MiB
+on conflict (id) do nothing;
