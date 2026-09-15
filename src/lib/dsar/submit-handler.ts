@@ -52,12 +52,39 @@ export const UNDEFINED_TABLE = "42P01";
 
 export type AuthedUser = { id: string; email: string | null | undefined };
 
+export type SubmitEmailResult =
+  | { ok: true; messageId?: string }
+  | { ok: false; error: string };
+
 export type SubmitEmailFn = (args: {
   to: string;
   subject: string;
   html: string;
   text: string;
-}) => Promise<unknown>;
+}) => Promise<SubmitEmailResult | unknown>;
+
+/**
+ * The verification email path can fail after we've inserted the row
+ * (invalid RESEND_API_KEY, provider outage, bad from-address). If we
+ * ignore that, the row sits in state='verifying' forever with nothing
+ * to signal it — this cost hours of prod debugging on 15 Sep 2026.
+ * We treat any thrown error or ok:false result as a hard failure:
+ * mark the row state='failed' and record the error in
+ * verification_error (added by migration 20260915235500).
+ *
+ * The fast-path (authenticated) branch's confirmation email is
+ * best-effort — the row is already in in_progress and the cron will
+ * pick it up regardless, so a bounced "we received your request"
+ * mail does not need to fail the request. We still log it.
+ */
+function isEmailResult(v: unknown): v is SubmitEmailResult {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    "ok" in (v as Record<string, unknown>) &&
+    typeof (v as Record<string, unknown>).ok === "boolean"
+  );
+}
 
 export type SubmitBody = {
   email?: unknown;
@@ -205,12 +232,37 @@ export async function handleDsarSubmit(
       request_type: type,
       verify_url,
     });
-    await deps.sendEmail({
-      to: emailRaw,
-      subject: mail.subject,
-      html: mail.html,
-      text: mail.text,
-    });
+    let sendError: string | null = null;
+    try {
+      const result = await deps.sendEmail({
+        to: emailRaw,
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text,
+      });
+      if (isEmailResult(result) && !result.ok) {
+        sendError = result.error;
+      }
+    } catch (err) {
+      sendError = err instanceof Error ? err.message : String(err);
+    }
+
+    if (sendError) {
+      // Row is stuck in state='verifying' with no way for the subject
+      // to complete the flow. Flip to state='failed' and stamp the
+      // reason so the admin queue can surface it.
+      await (admin
+        .from("dsar_requests")
+        .update({
+          state: "failed",
+          verification_error: sendError.slice(0, 500),
+        })
+        .eq("id", id) as unknown as Promise<unknown>);
+      return {
+        status: 502,
+        body: { ok: false, code: "verification_email_failed" },
+      };
+    }
   }
 
   return { status: 202, body: { ok: true, fast_path: isFastPath, id } };
