@@ -33,6 +33,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -86,9 +89,13 @@ jobs:
           # Reduce actual failures to their unique tail (after the
           # last ` - `). Normalise absolute paths to workspace-relative
           # so the gate is stable across runners.
+          # Occurrence-matched sort (NOT sort -u) so a NEW failing test
+          # that shares a description tail with an allow-listed one still
+          # trips the gate. If two different tests both end in the same
+          # ` - description`, encode both in expected.txt.
           awk -F' - ' '{ print $NF }' failures.txt \
             | sed "s|^$GITHUB_WORKSPACE/||" \
-            | sort -u > actual.txt
+            | sort > actual.txt
 
           # Fail if actual != expected (missing OR extra failures)
           if ! diff -u expected.txt actual.txt; then
