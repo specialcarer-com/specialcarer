@@ -52,6 +52,7 @@ jobs:
         id: test
         run: |
           set +e
+          set -o pipefail
           npm test 2>&1 | tee test-output.log
           echo "exit_code=$?" >> "$GITHUB_OUTPUT"
 
