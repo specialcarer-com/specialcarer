@@ -1,0 +1,116 @@
+# SpecialCarer CI test gate
+#
+# Runs `npm test` on every PR and every push to main. Enforces a strict
+# allow-list of the 6 known pre-existing failures — any new failure will
+# fail the job. If any of the 6 listed failures stops failing (i.e. gets
+# fixed by an unrelated change), the job will ALSO fail, forcing the
+# allow-list to be updated in the same commit.
+#
+# Encoded snapshot (as of PR #239 / commit af05ce9 / 16 Sep 2026):
+#   - buildIcs.test.ts subtests (4 subtests inside 2 parent suites):
+#     * builds a stable UID from the booking id
+#     * embeds the deep link in DESCRIPTION and URL
+#     * emits multiple VEVENT blocks for a feed of several bookings
+#     * download mode produces a single REQUEST event with the booking sequence
+#   - buildIcs.test.ts suite-level aggregates (2 lines):
+#     * buildIcs
+#     * buildBookingIcs / buildFeedIcs
+#   - grace-period-blast.test.ts: file-level ERR_TEST_FAILURE (setup/teardown)
+#   - bacs18.test.ts: file-level ERR_TEST_FAILURE (setup/teardown; internal
+#     tests pass 8/8 — the failure is at the file level only)
+#
+# The node --test runner reports "# fail 6" in its summary because it
+# counts the 4 subtest failures + 2 file-level failures. It emits 8
+# `not ok` TAP lines total (4 subtests + 2 parent suite aggregates + 2
+# file-level). We match on all 8 for the strictest gate.
+#
+# Standing rule: do NOT investigate why these six fail; encode them and
+# gate everything else.
+
+name: test
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Run test suite
+        id: test
+        run: |
+          set +e
+          set -o pipefail
+          npm test 2>&1 | tee test-output.log
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Verify failure allow-list
+        run: |
+          set -euo pipefail
+
+          # Extract all `not ok` lines from the TAP output. Include both
+          # top-level and nested subtests so a new failing subtest inside
+          # a previously-passing suite still trips the gate.
+          grep -E '^\s*not ok ' test-output.log > failures.txt || true
+
+          # Expected snapshot: 8 unique `not ok` lines across 3 files.
+          # See file header for the breakdown.
+          # Keep this list SORTED (`sort`) and match on the stable
+          # description tail (immune to renumbering).
+          cat > expected.txt <<'EXPECTED'
+          buildBookingIcs / buildFeedIcs
+          buildIcs
+          builds a stable UID from the booking id
+          download mode produces a single REQUEST event with the booking sequence
+          embeds the deep link in DESCRIPTION and URL
+          emits multiple VEVENT blocks for a feed of several bookings
+          src/lib/email/grace-period-blast.test.ts
+          src/lib/payroll/__tests__/bacs18.test.ts
+          EXPECTED
+
+          # Trim heredoc's YAML-block leading whitespace from expected.
+          sed -i 's/^[[:space:]]*//' expected.txt
+
+          # Reduce actual failures to their unique tail (after the
+          # last ` - `). Normalise absolute paths to workspace-relative
+          # so the gate is stable across runners.
+          # Occurrence-matched sort (NOT sort -u) so a NEW failing test
+          # that shares a description tail with an allow-listed one still
+          # trips the gate. If two different tests both end in the same
+          # ` - description`, encode both in expected.txt.
+          awk -F' - ' '{ print $NF }' failures.txt \
+            | sed "s|^$GITHUB_WORKSPACE/||" \
+            | sort > actual.txt
+
+          # Fail if actual != expected (missing OR extra failures)
+          if ! diff -u expected.txt actual.txt; then
+            echo ""
+            echo "::error::Test failure allow-list mismatch."
+            echo "::error::If a new test is failing: fix it or update the allow-list here."
+            echo "::error::If a listed failure now passes: remove it from the allow-list."
+            exit 1
+          fi
+
+          echo "✓ 8 known-failure lines present (6 test cases across 3 files), no new regressions"
+
+      - name: Fail on unexpected exit
+        if: steps.test.outputs.exit_code != '1'
+        run: |
+          echo "::error::npm test exited with ${{ steps.test.outputs.exit_code }} but 1 was expected (6 known failing test cases)."
+          echo "::error::If failures were fixed the exit code may now be 0 — update the allow-list here."
+          exit 1
