@@ -1,15 +1,14 @@
 /**
- * Source-shape tests for /settings/data (PR E2).
+ * Source-shape tests for /settings/data (PR E2; flag removed in F1c).
  *
  * Same static-check harness as src/app/m/onboarding/page.test.tsx —
  * the page itself is a server component that imports Supabase and
  * next/navigation, both of which need a Next runtime to execute. We
  * assert the contract by reading the file text and looking for the
- * three guarantees:
+ * two guarantees:
  *
- *   1. Flag off  -> notFound()
- *   2. Flag on + unauthenticated -> redirect("/login?...")
- *   3. Flag on + authenticated -> renders the client with the caller's
+ *   1. Unauthenticated -> redirect("/login?...")
+ *   2. Authenticated -> renders the client with the caller's
  *      dsar_requests + account_deletion_jobs
  *
  * We also spot-check the client component surface so a rename would
@@ -26,25 +25,14 @@ const CLIENT = readFileSync(
   "utf8",
 );
 
-test("flag off -> notFound()", () => {
-  // The feature-gate helper reads the exact env key.
-  assert.match(
-    PAGE,
-    /process\.env\.NEXT_PUBLIC_SELF_SERVICE_DATA_RIGHTS_ENABLED === "true"/,
-  );
-  // And the page short-circuits with notFound() when it is off, BEFORE
-  // touching auth or the database.
-  assert.match(PAGE, /if \(!featureEnabled\(\)\) notFound\(\)/);
-});
-
-test("flag on + unauthenticated -> redirect to signin with return path", () => {
+test("unauthenticated -> redirect to signin with return path", () => {
   assert.match(
     PAGE,
     /if \(!user\) redirect\("\/login\?redirect=\/settings\/data"\)/,
   );
 });
 
-test("flag on + authenticated -> loads caller's dsar_requests via subject_user_id filter", () => {
+test("authenticated -> loads caller's dsar_requests via subject_user_id filter", () => {
   // The select goes through RLS (dsar_requests_subject_read policy),
   // so the .eq() call is defence in depth. Assert both are present so
   // a refactor can't accidentally drop the filter.
@@ -56,7 +44,7 @@ test("flag on + authenticated -> loads caller's dsar_requests via subject_user_i
   );
 });
 
-test("flag on + authenticated -> also loads account_deletion_jobs read-only", () => {
+test("authenticated -> also loads account_deletion_jobs read-only", () => {
   assert.match(PAGE, /\.from\("account_deletion_jobs"\)/);
   assert.match(PAGE, /\.eq\("user_id", user\.id\)/);
 });

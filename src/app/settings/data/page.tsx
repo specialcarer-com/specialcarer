@@ -5,13 +5,10 @@
  * `access`, `rectification` or `portability` here; erasure lives at
  * /settings/danger-zone (linked from the client component).
  *
- * Gated behind NEXT_PUBLIC_SELF_SERVICE_DATA_RIGHTS_ENABLED (default
- * false) — flag-off returns notFound(), matching the dark-ship pattern
- * used for /settings/danger-zone.
+ * Generally available as of Phase F1c.
  *
  * All interactive state lives in <DataRightsClient>. This server
  * component only:
- *   - checks the flag
  *   - checks the caller is signed in
  *   - loads the caller's existing dsar_requests (via the
  *     `dsar_requests_subject_read` RLS policy — `subject_user_id =
@@ -20,7 +17,7 @@
  *     user can see them without leaving the page.
  */
 
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
@@ -34,13 +31,7 @@ export const metadata = {
   title: "Your data — SpecialCarer",
 };
 
-function featureEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_SELF_SERVICE_DATA_RIGHTS_ENABLED === "true";
-}
-
 export default async function DataRightsPage() {
-  if (!featureEnabled()) notFound();
-
   const supabase = await createClient();
   const {
     data: { user },
