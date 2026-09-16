@@ -41,6 +41,11 @@ export type FulfilStatus =
   | "error"
   | "skipped_no_matching_user";
 
+export type UserLookupOutcome =
+  | { kind: "found"; id: string }
+  | { kind: "not_found" }
+  | { kind: "lookup_failed"; reason: string };
+
 export type FulfilResult = {
   id: string;
   status: FulfilStatus;
@@ -55,9 +60,11 @@ export type QueuedRequest = {
   request_type: string;
 };
 
+// Narrow the sendEmail dep to the concrete result type. `SendEmailResult |
+// unknown` collapses to `unknown` and would silently swallow ok:false.
 export type FulfilSendEmail = (
   input: SendEmailInput,
-) => Promise<SendEmailResult | unknown>;
+) => Promise<SendEmailResult>;
 
 export type FulfilAdmin = Pick<SupabaseClient, "from" | "storage" | "auth">;
 
@@ -68,32 +75,64 @@ export type FulfilDeps = {
 };
 
 /**
- * Look up an auth.users row by email (case-insensitive). Returns the
- * user id or null. Falls back gracefully — a failure to page never
- * throws out to the caller (we log-and-return-null so a transient
- * admin API blip doesn't take down the whole cron tick).
+ * Look up an auth.users row by email (case-insensitive). Returns a
+ * discriminated outcome so the caller can distinguish:
+ *
+ *   - `found`         — matched an existing auth.users row; use `id`.
+ *   - `not_found`     — paging terminated naturally (short page or
+ *                       reached the end) without a match. This means
+ *                       no auth.users row exists for this email.
+ *   - `lookup_failed` — listUsers returned an error, or we exhausted
+ *                       LIST_USERS_MAX_PAGES without terminating
+ *                       (i.e. more than 2,000 users exist and none
+ *                       matched inside that window). The caller MUST
+ *                       treat this as a transient error and retry on
+ *                       the next cron tick, not downgrade it to
+ *                       "user doesn't exist".
+ *
+ * The function does not throw so a single bad listUsers response
+ * cannot take down a whole cron tick — the tick continues with the
+ * next row.
  */
 export async function resolveUserIdByEmail(
   admin: FulfilAdmin,
   email: string,
-): Promise<string | null> {
+): Promise<UserLookupOutcome> {
   const target = email.trim().toLowerCase();
-  if (!target) return null;
+  if (!target) {
+    return { kind: "lookup_failed", reason: "empty_email" };
+  }
   let page = 1;
   for (let i = 0; i < LIST_USERS_MAX_PAGES; i++) {
     const { data, error } = await admin.auth.admin.listUsers({
       page,
       perPage: LIST_USERS_PAGE_SIZE,
     });
-    if (error || !data?.users) return null;
+    if (error || !data?.users) {
+      return {
+        kind: "lookup_failed",
+        reason: `listUsers:${error?.message ?? "missing_users_payload"}`,
+      };
+    }
     const match = data.users.find(
       (u) => (u.email ?? "").toLowerCase() === target,
     );
-    if (match) return match.id;
-    if (data.users.length < LIST_USERS_PAGE_SIZE) return null;
+    if (match) return { kind: "found", id: match.id };
+    // A short page means Supabase returned fewer than perPage rows,
+    // i.e. we've reached the end of the user table without a match.
+    if (data.users.length < LIST_USERS_PAGE_SIZE) {
+      return { kind: "not_found" };
+    }
     page += 1;
   }
-  return null;
+  // We paged all the way to LIST_USERS_MAX_PAGES without terminating
+  // or matching. Treat this as a lookup failure (not a confirmed
+  // no-match) so we retry on the next tick and surface it in the
+  // errors count.
+  return {
+    kind: "lookup_failed",
+    reason: `exceeded_max_pages:${LIST_USERS_MAX_PAGES}`,
+  };
 }
 
 export async function processDsarQueue(
@@ -110,19 +149,34 @@ export async function processDsarQueue(
     // F1a: retry auth.users lookup for anonymous submissions that
     // arrived with a null subject_user_id.
     if (!subject_user_id) {
-      const found = await resolveUserIdByEmail(deps.admin, row.subject_email);
-      if (!found) {
+      const outcome = await resolveUserIdByEmail(
+        deps.admin,
+        row.subject_email,
+      );
+      if (outcome.kind === "lookup_failed") {
+        // Do NOT downgrade this to skipped_no_matching_user — that
+        // would hide API failures and treat users beyond the lookup
+        // window as non-existent. Surface as an error so the summary
+        // log has the right tally and the row is retried next tick.
+        results.push({
+          id: row.id,
+          status: "error",
+          reason: `resolve:${outcome.reason}`,
+        });
+        continue;
+      }
+      if (outcome.kind === "not_found") {
         results.push({ id: row.id, status: "skipped_no_matching_user" });
         continue;
       }
-      subject_user_id = found;
-      resolved = found;
+      subject_user_id = outcome.id;
+      resolved = outcome.id;
 
       // Backfill the row so the admin queue reflects the linkage. Not
       // fatal if this update fails; we still proceed with the export.
       const { error: backfillError } = await deps.admin
         .from("dsar_requests")
-        .update({ subject_user_id: found })
+        .update({ subject_user_id: outcome.id })
         .eq("id", row.id)
         .eq("state", "in_progress");
       if (backfillError) {
@@ -186,12 +240,30 @@ export async function processDsarQueue(
         expires_in_hours: SIGNED_URL_TTL_SECONDS / 3600,
         digest: exportDoc.subject.digest,
       });
-      await deps.sendEmail({
+      // sendEmail does NOT throw on transport failure — it resolves
+      // to { ok: false, error }. If we don't check .ok here we flip
+      // the row to `delivered` with the subject never receiving the
+      // signed URL. That is exactly the class of silent-failure bug
+      // this PR is meant to fix, so replicating it in the cron would
+      // defeat the purpose.
+      const sent = await deps.sendEmail({
         to: row.subject_email,
         subject: mail.subject,
         html: mail.html,
         text: mail.text,
       });
+      if (!sent.ok) {
+        results.push({
+          id: row.id,
+          status: "error",
+          reason: `email:${sent.error || "unknown_send_failure"}`,
+          resolved_subject_user_id: resolved,
+        });
+        // Do NOT flip to delivered. Leave the row in in_progress so
+        // the next tick retries. The storage object is idempotent
+        // (upsert:true), so a retry re-uploads and re-signs cleanly.
+        continue;
+      }
 
       const { error: updateError } = await deps.admin
         .from("dsar_requests")

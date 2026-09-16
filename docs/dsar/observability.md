@@ -3,7 +3,7 @@
 Every cron in `src/app/api/cron/**` must emit a summary log line at
 the end of a tick, in the same shape as the working examples:
 
-```
+```text
 [cron.<name>] scanned N, <verb1> M, <verb2> K, errors E
 ```
 
@@ -25,7 +25,8 @@ one-line bug.
 The following crons currently emit no `[cron.<name>]` summary line
 and should be brought into line in follow-up PRs (one per cron, or
 grouped by domain). This PR is deliberately surgical and only fixes
-`dsar-fulfil`.
+`dsar-fulfil`. To reproduce the list, `grep -L "\[cron\." src/app/api/cron/*/route.ts`
+against the schedules registered in `vercel.json`.
 
 - `dsar-fulfil` — **fixed in F1a (this PR)**
 - `dsar-retention-sweep`
@@ -39,8 +40,9 @@ grouped by domain). This PR is deliberately surgical and only fixes
 - `dbs-update-service-reminder`
 - `kpi-rollup-hourly`
 
-(11 offenders. Source: Phase F plan §F1a — see
-`/home/user/workspace/phase_f/phase_f_plan.md`.)
+(11 offenders. Sourced from the F1 discovery pass; the working notes
+for Phase F are kept outside the repository by the RI — mirror them
+into `docs/roadmap/` or a GitHub issue when a follow-up PR is opened.)
 
 ## Style guide
 

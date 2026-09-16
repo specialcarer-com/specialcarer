@@ -144,4 +144,8 @@ in `src/lib/dsar/export.ts` → `SubjectExport`.
 - `src/app/api/cron/dsar-fulfil/fulfil-handler.ts` — the row-
   processing logic (unit-tested)
 - `src/lib/dsar/submit-handler.ts` — the submit path (unit-tested)
-- Phase F plan: `/home/user/workspace/phase_f/phase_f_plan.md`
+- `supabase/migrations/20260915170000_dsar_exports_bucket.sql` —
+  private storage bucket the export lands in
+- `supabase/migrations/20260915235500_dsar_requests_verification_error.sql`
+  — `verification_error` column + `failed` state used by the submit
+  handler on bounced sends

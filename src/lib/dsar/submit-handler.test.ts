@@ -45,6 +45,7 @@ function makeAdmin(opts: {
   inserts: Insert[];
   updates?: Update[];
   insertError?: { code?: string; message: string } | null;
+  updateError?: { code?: string; message: string } | null;
   profileId?: string | null;
 }) {
   const admin = {
@@ -95,6 +96,9 @@ function makeAdmin(opts: {
             opts.updates?.push({ table, patch });
             return {
               async eq() {
+                if (opts.updateError) {
+                  return { error: opts.updateError };
+                }
                 return { error: null };
               },
             };
@@ -114,6 +118,7 @@ function makeDeps(opts: {
   authedUser?: AuthedUser | null;
   profileId?: string | null;
   insertError?: { code?: string; message: string } | null;
+  updateError?: { code?: string; message: string } | null;
   sendEmailImpl?: (m: MailCall) => Promise<unknown>;
 }): {
   deps: SubmitDeps;
@@ -131,6 +136,7 @@ function makeDeps(opts: {
         updates,
         profileId: opts.profileId ?? null,
         insertError: opts.insertError ?? null,
+        updateError: opts.updateError ?? null,
       }),
       authedUser: opts.authedUser ?? null,
       sendEmail: async (m) => {
@@ -405,5 +411,72 @@ describe("handleDsarSubmit", () => {
     assert.equal(updates.length, 1);
     const err = updates[0].patch.verification_error as string;
     assert.equal(err.length, 500);
+  });
+
+  it("F1a: sendEmail returns ok:false with empty error -> fallback message stamped", async () => {
+    // Regression: SubmitEmailResult permits error:"". If we don't
+    // fall back to a truthy string the failure branch is silently
+    // skipped and the row stays in `verifying` forever.
+    const { deps, updates } = makeDeps({
+      sendEmailImpl: async () => ({ ok: false, error: "" }),
+    });
+    const res = await handleDsarSubmit(
+      { email: EMAIL, type: "access" },
+      deps,
+    );
+    assert.equal(res.status, 502);
+    assert.deepEqual(res.body, {
+      ok: false,
+      code: "verification_email_failed",
+    });
+    assert.equal(updates.length, 1);
+    assert.equal(updates[0].patch.state, "failed");
+    assert.equal(
+      updates[0].patch.verification_error,
+      "unknown_send_failure",
+    );
+  });
+
+  it("F1a: send fails AND row-update also fails -> distinct code + no false-success", async () => {
+    // Regression: previously the update result was discarded, so if
+    // the failure-state persistence itself failed we still returned
+    // verification_email_failed while the row was left in `verifying`
+    // — recreating the exact stuck-row condition this PR fixes.
+    const originalError = console.error;
+    const captured: unknown[][] = [];
+    console.error = (...args: unknown[]) => {
+      captured.push(args);
+    };
+    try {
+      const { deps, updates } = makeDeps({
+        sendEmailImpl: async () => ({ ok: false, error: "resend 500" }),
+        updateError: { message: "deadline exceeded" },
+      });
+      const res = await handleDsarSubmit(
+        { email: EMAIL, type: "access" },
+        deps,
+      );
+      assert.equal(res.status, 502);
+      assert.deepEqual(res.body, {
+        ok: false,
+        code: "verification_email_failed_and_row_update_failed",
+      });
+      // The update was attempted (recorded once) even though it
+      // errored.
+      assert.equal(updates.length, 1);
+      assert.equal(updates[0].patch.state, "failed");
+      // Loud console.error surfaced for on-call.
+      assert.equal(captured.length, 1);
+      assert.match(String(captured[0][0]), /CRITICAL/);
+      const meta = captured[0][1] as {
+        rowId: string;
+        sendError: string;
+        updateError: string;
+      };
+      assert.match(meta.sendError, /resend 500/);
+      assert.match(meta.updateError, /deadline exceeded/);
+    } finally {
+      console.error = originalError;
+    }
   });
 });

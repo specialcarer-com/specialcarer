@@ -22,11 +22,13 @@ import {
   processDsarQueue,
   tallyResults,
   resolveUserIdByEmail,
+  LIST_USERS_PAGE_SIZE,
   STORAGE_BUCKET,
   type FulfilAdmin,
   type FulfilDeps,
   type QueuedRequest,
 } from "./fulfil-handler";
+import type { SendEmailResult } from "@/lib/email/smtp";
 
 const USER_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
 const SUBJECT_EMAIL = "familytest@specialcarer.com";
@@ -66,7 +68,7 @@ type UploadCall = {
  */
 function makeAdmin(opts: {
   authUsers?: Array<{ id: string; email: string | null }>;
-  pageSize?: number;
+  listUsersError?: { message: string } | null;
   uploadError?: { message: string } | null;
   signError?: { message: string } | null;
   updateError?: { message: string } | null;
@@ -77,7 +79,6 @@ function makeAdmin(opts: {
   const users = opts.authUsers ?? [];
   const updates = opts.updates ?? [];
   const uploads = opts.uploads ?? [];
-  const pageSize = opts.pageSize ?? 200;
 
   const admin = {
     from(table: string) {
@@ -121,6 +122,9 @@ function makeAdmin(opts: {
     auth: {
       admin: {
         async listUsers(args: { page: number; perPage: number }) {
+          if (opts.listUsersError) {
+            return { data: null, error: opts.listUsersError };
+          }
           const start = (args.page - 1) * args.perPage;
           const slice = users.slice(start, start + args.perPage);
           return { data: { users: slice }, error: null };
@@ -153,31 +157,19 @@ function makeAdmin(opts: {
     },
   } as unknown as FulfilAdmin;
 
-  // Also expose pageSize into the listUsers slice by monkey-patching
-  // above (pageSize is already used via args.perPage). The `pageSize`
-  // opts field is available for tests that want to force a small page
-  // size — passing pageSize into listUsers is a test-only knob so we
-  // just re-slice using it.
-  if (opts.pageSize && opts.pageSize < pageSize) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (admin as any).auth.admin.listUsers = async (args: {
-      page: number;
-      perPage: number;
-    }) => {
-      const start = (args.page - 1) * opts.pageSize!;
-      const slice = users.slice(start, start + opts.pageSize!);
-      return { data: { users: slice }, error: null };
-    };
-  }
-
   return admin;
 }
 
 function makeDeps(opts: {
   admin: FulfilAdmin;
   mails?: MailCall[];
+  sendEmailResult?: SendEmailResult;
 }): FulfilDeps {
   const mails = opts.mails ?? [];
+  const defaultResult: SendEmailResult = {
+    ok: true,
+    messageId: "test-msg-id",
+  };
   return {
     admin: opts.admin,
     sendEmail: async (m) => {
@@ -187,7 +179,7 @@ function makeDeps(opts: {
         html: m.html,
         text: m.text,
       });
-      return { ok: true, messageId: "test-msg-id" };
+      return opts.sendEmailResult ?? defaultResult;
     },
     now: () => new Date("2026-09-15T23:15:00.000Z"),
   };
@@ -308,26 +300,139 @@ describe("processDsarQueue", () => {
     assert.equal(updates.length, 0);
   });
 
-  it("email match is case-insensitive across pages of listUsers", async () => {
-    // Two pages of 2 users each. Match is on page 2, mixed-case email.
-    const admin = makeAdmin({
-      authUsers: [
-        { id: "u1", email: "a@example.com" },
-        { id: "u2", email: "b@example.com" },
-        { id: USER_ID, email: SUBJECT_EMAIL.toUpperCase() },
-        { id: "u4", email: "c@example.com" },
-      ],
-      pageSize: 2,
-    });
+  it("email match is case-insensitive across a real page-2 lookup", async () => {
+    // Fill an entire production-sized page (LIST_USERS_PAGE_SIZE = 200)
+    // with non-matching users so the match is only reachable via page
+    // 2. If a regression stopped pagination after page 1 this test
+    // would fail. We also verify a genuine no-match on the same admin
+    // to exercise the short-page termination branch on page 2.
+    const authUsers = Array.from(
+      { length: LIST_USERS_PAGE_SIZE },
+      (_, i) => ({ id: `u${i}`, email: `user${i}@example.com` }),
+    );
+    authUsers.push({ id: USER_ID, email: SUBJECT_EMAIL.toUpperCase() });
+    const admin = makeAdmin({ authUsers });
 
-    const resolved = await resolveUserIdByEmail(admin, SUBJECT_EMAIL);
-    assert.equal(resolved, USER_ID);
+    const outcome = await resolveUserIdByEmail(admin, SUBJECT_EMAIL);
+    assert.deepEqual(outcome, { kind: "found", id: USER_ID });
+
+    const missing = await resolveUserIdByEmail(admin, "missing@example.com");
+    assert.deepEqual(missing, { kind: "not_found" });
   });
 
-  it("resolveUserIdByEmail returns null when email is empty", async () => {
+  it("resolveUserIdByEmail lookup_failed when email is empty", async () => {
     const admin = makeAdmin({});
-    const resolved = await resolveUserIdByEmail(admin, "");
-    assert.equal(resolved, null);
+    const outcome = await resolveUserIdByEmail(admin, "");
+    assert.deepEqual(outcome, { kind: "lookup_failed", reason: "empty_email" });
+  });
+
+  it("resolveUserIdByEmail lookup_failed when listUsers errors", async () => {
+    const admin = makeAdmin({
+      listUsersError: { message: "connection refused" },
+    });
+    const outcome = await resolveUserIdByEmail(admin, SUBJECT_EMAIL);
+    assert.equal(outcome.kind, "lookup_failed");
+    if (outcome.kind === "lookup_failed") {
+      assert.match(outcome.reason, /connection refused/);
+    }
+  });
+
+  it("anonymous row + listUsers error -> status 'error' (NOT skipped)", async () => {
+    // Regression: previously resolveUserIdByEmail returned null both
+    // for genuine no-match AND for API errors, so processDsarQueue
+    // marked API failures as skipped_no_matching_user — hiding
+    // outages from the summary log and never surfacing them in the
+    // errors count.
+    const updates: UpdateCall[] = [];
+    const uploads: UploadCall[] = [];
+    const admin = makeAdmin({
+      listUsersError: { message: "upstream 503" },
+      updates,
+      uploads,
+    });
+    const mails: MailCall[] = [];
+    const deps = makeDeps({ admin, mails });
+
+    const results = await processDsarQueue(
+      [
+        {
+          id: REQUEST_ID,
+          subject_user_id: null,
+          subject_email: SUBJECT_EMAIL,
+          request_type: "access",
+        },
+      ],
+      deps,
+    );
+
+    assert.equal(results.length, 1);
+    assert.equal(results[0].status, "error");
+    assert.match(results[0].reason ?? "", /resolve:listUsers:upstream 503/);
+    assert.equal(uploads.length, 0);
+    assert.equal(mails.length, 0);
+    assert.equal(updates.length, 0);
+  });
+
+  it("row with subject_user_id + sendEmail returns ok:false -> error, NOT delivered", async () => {
+    // Regression: cron previously discarded the sendEmail result and
+    // flipped the row to `delivered` even when Resend rejected the
+    // send. Subject never saw the signed URL and the row was hidden
+    // from the next tick by the state='in_progress' filter.
+    const updates: UpdateCall[] = [];
+    const uploads: UploadCall[] = [];
+    const admin = makeAdmin({ updates, uploads });
+    const mails: MailCall[] = [];
+    const deps = makeDeps({
+      admin,
+      mails,
+      sendEmailResult: { ok: false, error: "resend: 422 invalid from" },
+    });
+
+    const results = await processDsarQueue(
+      [
+        {
+          id: REQUEST_ID,
+          subject_user_id: USER_ID,
+          subject_email: SUBJECT_EMAIL,
+          request_type: "access",
+        },
+      ],
+      deps,
+    );
+
+    assert.equal(results.length, 1);
+    assert.equal(results[0].status, "error");
+    assert.match(results[0].reason ?? "", /email:resend: 422 invalid from/);
+
+    // Upload happened (idempotent, safe to retry) but state was NOT
+    // flipped to delivered — the row remains in in_progress so the
+    // next tick retries.
+    assert.equal(uploads.length, 1);
+    assert.equal(mails.length, 1);
+    assert.equal(updates.length, 0);
+  });
+
+  it("sendEmail ok:false with empty error string -> unknown_send_failure fallback", async () => {
+    const admin = makeAdmin({});
+    const deps = makeDeps({
+      admin,
+      sendEmailResult: { ok: false, error: "" },
+    });
+
+    const results = await processDsarQueue(
+      [
+        {
+          id: REQUEST_ID,
+          subject_user_id: USER_ID,
+          subject_email: SUBJECT_EMAIL,
+          request_type: "access",
+        },
+      ],
+      deps,
+    );
+
+    assert.equal(results[0].status, "error");
+    assert.match(results[0].reason ?? "", /email:unknown_send_failure/);
   });
 });
 
