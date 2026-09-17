@@ -80,8 +80,8 @@ describe("exportSubject", () => {
           { id: "bk-2", carer_id: "user-1" },
         ],
       },
-      references: { rows: [] },
-      caregiver_documents: { rows: [{ user_id: "user-1" }] },
+      carer_references: { rows: [] },
+      compliance_documents: { rows: [{ caregiver_id: "user-1" }] },
       dbs_change_events: { rows: [] },
       care_plans: { rows: [{ seeker_id: "user-1" }] },
       reviews: { rows: [{ reviewer_id: "user-1", body: "hi" }] },
@@ -114,8 +114,8 @@ describe("exportSubject", () => {
         profiles: { rows: [] },
         caregiver_profiles: { rows: [] },
         bookings: { rows: [] },
-        references: { rows: [] },
-        caregiver_documents: { rows: [] },
+        carer_references: { rows: [] },
+        compliance_documents: { rows: [] },
         dbs_change_events: { rows: [] },
         care_plans: { rows: [] },
         reviews: { rows: [] },
@@ -152,8 +152,8 @@ describe("exportSubject", () => {
       profiles: { rows: [{ id: "user-1" }] },
       caregiver_profiles: { rows: [] },
       bookings: { rows: [{ id: "bk-1", seeker_id: "user-1" }] },
-      references: { rows: [] },
-      caregiver_documents: { rows: [] },
+      carer_references: { rows: [] },
+      compliance_documents: { rows: [] },
       dbs_change_events: { rows: [] },
       care_plans: { rows: [] },
       reviews: { rows: [] },
@@ -185,8 +185,8 @@ describe("exportSubject", () => {
         profiles: { rows: [] },
         caregiver_profiles: { rows: [] },
         bookings: { rows: [] },
-        references: { rows: [] },
-        caregiver_documents: { rows: [] },
+        carer_references: { rows: [] },
+        compliance_documents: { rows: [] },
         dbs_change_events: { rows: [] },
         care_plans: { rows: [] },
         reviews: { rows: [] },
@@ -215,6 +215,8 @@ describe("exportSubject", () => {
   });
 
   it("payments projection uses the safe column list, not '*'", async () => {
+    // Payments is a booking-linked lookup since v1.1.0 — it only
+    // runs when bookings returned at least one row, so we seed one.
     let capturedColumns: string | null = null;
     const admin: ExportAdminClient = {
       from(table: string) {
@@ -223,9 +225,15 @@ describe("exportSubject", () => {
             if (table === "payments") capturedColumns = columns;
             return {
               async eq(_c: string, _v: string) {
+                if (table === "bookings") {
+                  return { data: [{ id: "bk-1" }], error: null };
+                }
                 return { data: [], error: null };
               },
               async or(_f: string) {
+                if (table === "bookings") {
+                  return { data: [{ id: "bk-1" }], error: null };
+                }
                 return { data: [], error: null };
               },
             };
@@ -237,6 +245,9 @@ describe("exportSubject", () => {
     assert.ok(capturedColumns, "payments select must have been called");
     assert.match(String(capturedColumns), /amount_cents/);
     assert.doesNotMatch(String(capturedColumns), /^\*$/);
+    // Refund columns no longer live on `payments` — they moved to
+    // `bookings` and `refund_ledger` in the 17 Sep schema drift fix.
+    assert.doesNotMatch(String(capturedColumns), /refunded_amount_cents/);
   });
 
   it("includes an integrity digest that is stable for identical manifests", async () => {
@@ -244,8 +255,8 @@ describe("exportSubject", () => {
       profiles: { rows: [{ id: "user-1" }] },
       caregiver_profiles: { rows: [] },
       bookings: { rows: [] },
-      references: { rows: [] },
-      caregiver_documents: { rows: [] },
+      carer_references: { rows: [] },
+      compliance_documents: { rows: [] },
       dbs_change_events: { rows: [] },
       care_plans: { rows: [] },
       reviews: { rows: [] },
