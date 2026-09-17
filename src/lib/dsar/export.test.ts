@@ -77,11 +77,11 @@ describe("exportSubject", () => {
       bookings: {
         rows: [
           { id: "bk-1", seeker_id: "user-1" },
-          { id: "bk-2", carer_id: "user-1" },
+          { id: "bk-2", caregiver_id: "user-1" },
         ],
       },
-      references: { rows: [] },
-      caregiver_documents: { rows: [{ user_id: "user-1" }] },
+      carer_references: { rows: [] },
+      compliance_documents: { rows: [{ caregiver_id: "user-1" }] },
       dbs_change_events: { rows: [] },
       care_plans: { rows: [{ seeker_id: "user-1" }] },
       reviews: { rows: [{ reviewer_id: "user-1", body: "hi" }] },
@@ -114,8 +114,8 @@ describe("exportSubject", () => {
         profiles: { rows: [] },
         caregiver_profiles: { rows: [] },
         bookings: { rows: [] },
-        references: { rows: [] },
-        caregiver_documents: { rows: [] },
+        carer_references: { rows: [] },
+        compliance_documents: { rows: [] },
         dbs_change_events: { rows: [] },
         care_plans: { rows: [] },
         reviews: { rows: [] },
@@ -152,8 +152,8 @@ describe("exportSubject", () => {
       profiles: { rows: [{ id: "user-1" }] },
       caregiver_profiles: { rows: [] },
       bookings: { rows: [{ id: "bk-1", seeker_id: "user-1" }] },
-      references: { rows: [] },
-      caregiver_documents: { rows: [] },
+      carer_references: { rows: [] },
+      compliance_documents: { rows: [] },
       dbs_change_events: { rows: [] },
       care_plans: { rows: [] },
       reviews: { rows: [] },
@@ -185,8 +185,8 @@ describe("exportSubject", () => {
         profiles: { rows: [] },
         caregiver_profiles: { rows: [] },
         bookings: { rows: [] },
-        references: { rows: [] },
-        caregiver_documents: { rows: [] },
+        carer_references: { rows: [] },
+        compliance_documents: { rows: [] },
         dbs_change_events: { rows: [] },
         care_plans: { rows: [] },
         reviews: { rows: [] },
@@ -215,17 +215,33 @@ describe("exportSubject", () => {
   });
 
   it("payments projection uses the safe column list, not '*'", async () => {
-    let capturedColumns: string | null = null;
+    // Payments is a booking-linked lookup since v1.1.0 — it only
+    // runs when bookings returned at least one row where the subject
+    // holds a known role (seeker or caregiver), so we seed one where
+    // the subject is the seeker.
+    const capturedColumns: string[] = [];
     const admin: ExportAdminClient = {
       from(table: string) {
         return {
           select(columns: string) {
-            if (table === "payments") capturedColumns = columns;
+            if (table === "payments") capturedColumns.push(columns);
             return {
               async eq(_c: string, _v: string) {
+                if (table === "bookings") {
+                  return {
+                    data: [{ id: "bk-1", seeker_id: subject.user_id }],
+                    error: null,
+                  };
+                }
                 return { data: [], error: null };
               },
               async or(_f: string) {
+                if (table === "bookings") {
+                  return {
+                    data: [{ id: "bk-1", seeker_id: subject.user_id }],
+                    error: null,
+                  };
+                }
                 return { data: [], error: null };
               },
             };
@@ -234,9 +250,67 @@ describe("exportSubject", () => {
       },
     };
     await exportSubject(admin, subject);
-    assert.ok(capturedColumns, "payments select must have been called");
-    assert.match(String(capturedColumns), /amount_cents/);
-    assert.doesNotMatch(String(capturedColumns), /^\*$/);
+    assert.ok(
+      capturedColumns.length > 0,
+      "payments select must have been called",
+    );
+    for (const columns of capturedColumns) {
+      assert.match(columns, /amount_cents/);
+      assert.doesNotMatch(columns, /^\*$/);
+      // Refund columns no longer live on `payments` — they moved to
+      // `bookings` and `refund_ledger` in the 17 Sep schema drift fix.
+      assert.doesNotMatch(columns, /refunded_amount_cents/);
+      // Platform-owned fee never appears in a subject export from
+      // v1.2.0 onwards.
+      assert.doesNotMatch(columns, /application_fee_cents/);
+    }
+  });
+
+  it("propagates a bookings failure to every booking-linked table", async () => {
+    // If bookings itself errors, the subject would otherwise see
+    // { care_plans: row_count:0, payments: row_count:0, ... } which
+    // silently misrepresents "we couldn't ask" as "you have nothing".
+    const admin: ExportAdminClient = {
+      from(table: string) {
+        return {
+          select(_c: string) {
+            return {
+              async eq(_col: string, _v: string) {
+                if (table === "bookings") {
+                  return {
+                    data: null,
+                    error: { code: "XX000", message: "bookings blew up" },
+                  };
+                }
+                return { data: [], error: null };
+              },
+              async or(_f: string) {
+                if (table === "bookings") {
+                  return {
+                    data: null,
+                    error: { code: "XX000", message: "bookings blew up" },
+                  };
+                }
+                return { data: [], error: null };
+              },
+            };
+          },
+        };
+      },
+    };
+    const out = await exportSubject(admin, subject);
+    const bookings = out.tables.find((t) => t.table === "bookings");
+    assert.equal(bookings?.error, "bookings blew up");
+    for (const t of ["care_plans", "payments", "refund_ledger"]) {
+      const entry = out.tables.find((x) => x.table === t);
+      assert.ok(entry, `${t} must appear in the manifest`);
+      assert.equal(
+        entry?.error,
+        "bookings blew up",
+        `${t} must inherit the bookings failure rather than silently claim zero rows`,
+      );
+      assert.equal(entry?.row_count, 0);
+    }
   });
 
   it("includes an integrity digest that is stable for identical manifests", async () => {
@@ -244,8 +318,8 @@ describe("exportSubject", () => {
       profiles: { rows: [{ id: "user-1" }] },
       caregiver_profiles: { rows: [] },
       bookings: { rows: [] },
-      references: { rows: [] },
-      caregiver_documents: { rows: [] },
+      carer_references: { rows: [] },
+      compliance_documents: { rows: [] },
       dbs_change_events: { rows: [] },
       care_plans: { rows: [] },
       reviews: { rows: [] },
