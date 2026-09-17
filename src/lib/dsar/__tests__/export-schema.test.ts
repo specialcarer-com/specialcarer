@@ -110,8 +110,263 @@ describe("DSAR exporter — schema drift regression", () => {
     }
   });
 
-  it("exporter version is 1.1.0", async () => {
+  it("exporter version is 1.2.0", async () => {
     const doc = await exportSubject(makeSeededAdmin(), subject);
-    assert.equal(doc.subject.exporter_version, "dsar-export/1.1.0");
+    assert.equal(doc.subject.exporter_version, "dsar-export/1.2.0");
+  });
+});
+
+/**
+ * Role-aware projection guards — v1.2.0.
+ *
+ * Care plans and payments straddle two parties (seeker and carer)
+ * whereas UK-GDPR Article 15 only entitles the subject to *their own*
+ * personal data. The tests below seed a booking where the subject
+ * takes exactly one role and check that the exported row exposes
+ * only the fields attributable to that role.
+ */
+
+// A fake admin that lets each test tailor the rows returned per
+// table without also having to open-code the eq/or PostgREST surface.
+// `payments` and `care_plans` also record the `select` column string
+// so a test can assert which projection was applied.
+function makeAdminFromRows(
+  rows: Record<string, unknown[]>,
+  captures?: { columnsByTable: Record<string, string[]> },
+): ExportAdminClient {
+  return {
+    from(table: string) {
+      return {
+        select(columns: string) {
+          if (captures) {
+            captures.columnsByTable[table] =
+              captures.columnsByTable[table] ?? [];
+            captures.columnsByTable[table].push(columns);
+          }
+          const respond = () => {
+            if (!(table in rows)) {
+              return {
+                data: null,
+                error: {
+                  code: "42P01",
+                  message: `relation "${table}" does not exist`,
+                },
+              };
+            }
+            return { data: rows[table], error: null };
+          };
+          return {
+            async eq(_c: string, _v: string) {
+              return respond();
+            },
+            async or(_f: string) {
+              return respond();
+            },
+          };
+        },
+      };
+    },
+  };
+}
+
+describe("DSAR exporter — role-aware projections (v1.2.0)", () => {
+  const SUBJECT_ID = "sub-1";
+  const OTHER_ID = "other-1";
+  const subject = { user_id: SUBJECT_ID, email: "sub@example.com" };
+
+  // Every row a care_plan might carry; the exporter's job is to
+  // redact the ones that identify the recipient when the subject is
+  // the carer, not the seeker.
+  const fullCarePlanRow = {
+    id: "cp-1",
+    booking_id: "bk-1",
+    recipient_name: "Aunt Mabel",
+    recipient_dob: "1942-03-17",
+    address_line1: "1 Elm Street",
+    address_line2: "Flat B",
+    city: "Bristol",
+    postcode: "BS1 1AA",
+    goals: "Support with mobility",
+    special_instructions: "Coffee, no sugar",
+    routine_notes: "Prefers morning visits",
+    created_by: OTHER_ID,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-02T00:00:00Z",
+  };
+
+  // Every payment field we care about for role-awareness. Seeker gets
+  // payer-side (`stripe_payment_intent_id`, `stripe_charge_id`,
+  // `hsa_*`), carer gets payee-side (`stripe_transfer_id`,
+  // `destination_account_id`), neither gets `application_fee_cents`.
+  const fullPaymentRow = {
+    id: "pay-1",
+    booking_id: "bk-1",
+    stripe_payment_intent_id: "pi_test",
+    stripe_charge_id: "ch_test",
+    stripe_transfer_id: "tr_test",
+    destination_account_id: "acct_test",
+    status: "succeeded",
+    amount_cents: 5000,
+    application_fee_cents: 500,
+    currency: "gbp",
+    kind: "charge",
+    parent_payment_id: null,
+    timesheet_id: null,
+    hsa_eligible: false,
+    hsa_tagged_at: null,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-02T00:00:00Z",
+  };
+
+  const baseFixture = {
+    profiles: [{ id: SUBJECT_ID, email: subject.email }],
+    caregiver_profiles: [],
+    carer_references: [],
+    compliance_documents: [],
+    dbs_change_events: [],
+    reviews: [],
+    saved_caregivers: [],
+    refund_ledger: [],
+  };
+
+  it("care_plans redacts recipient PII when subject is only the carer", async () => {
+    // Subject is `caregiver_id`; someone else is the seeker.
+    const rows = {
+      ...baseFixture,
+      bookings: [
+        {
+          id: "bk-1",
+          seeker_id: OTHER_ID,
+          caregiver_id: SUBJECT_ID,
+        },
+      ],
+      care_plans: [fullCarePlanRow],
+      payments: [],
+    };
+    const captures = { columnsByTable: {} as Record<string, string[]> };
+    const admin = makeAdminFromRows(rows, captures);
+    const doc = await exportSubject(admin, subject);
+
+    // The carer-scoped projection must have been what we selected.
+    const carePlanColumns = captures.columnsByTable.care_plans ?? [];
+    assert.equal(
+      carePlanColumns.length,
+      1,
+      "care_plans should be queried exactly once (carer scope only)",
+    );
+    const cols = carePlanColumns[0];
+    assert.doesNotMatch(cols, /recipient_name/);
+    assert.doesNotMatch(cols, /recipient_dob/);
+    assert.doesNotMatch(cols, /address_line1/);
+    assert.doesNotMatch(cols, /postcode/);
+    assert.doesNotMatch(cols, /created_by/);
+    assert.match(cols, /goals/);
+    assert.match(cols, /special_instructions/);
+
+    // And the fake echoes back whatever the fixture holds, so a
+    // real Postgres would only return the requested columns. The
+    // manifest entry still exists with the row present.
+    const carePlansEntry = doc.tables.find((t) => t.table === "care_plans");
+    assert.ok(carePlansEntry, "care_plans entry must appear in the manifest");
+    assert.equal(carePlansEntry?.row_count, 1);
+  });
+
+  it("care_plans includes full recipient PII when subject is the seeker", async () => {
+    // Subject is `seeker_id`; a different person is the carer.
+    const rows = {
+      ...baseFixture,
+      bookings: [
+        {
+          id: "bk-1",
+          seeker_id: SUBJECT_ID,
+          caregiver_id: OTHER_ID,
+        },
+      ],
+      care_plans: [fullCarePlanRow],
+      payments: [],
+    };
+    const captures = { columnsByTable: {} as Record<string, string[]> };
+    const admin = makeAdminFromRows(rows, captures);
+    await exportSubject(admin, subject);
+
+    const carePlanColumns = captures.columnsByTable.care_plans ?? [];
+    assert.equal(
+      carePlanColumns.length,
+      1,
+      "care_plans should be queried exactly once (seeker scope only)",
+    );
+    const cols = carePlanColumns[0];
+    assert.match(cols, /recipient_name/);
+    assert.match(cols, /recipient_dob/);
+    assert.match(cols, /address_line1/);
+    assert.match(cols, /postcode/);
+    assert.match(cols, /goals/);
+    assert.match(cols, /special_instructions/);
+  });
+
+  it("payments projects seeker-only fields when subject is the seeker", async () => {
+    const rows = {
+      ...baseFixture,
+      bookings: [
+        {
+          id: "bk-1",
+          seeker_id: SUBJECT_ID,
+          caregiver_id: OTHER_ID,
+        },
+      ],
+      care_plans: [],
+      payments: [fullPaymentRow],
+    };
+    const captures = { columnsByTable: {} as Record<string, string[]> };
+    const admin = makeAdminFromRows(rows, captures);
+    await exportSubject(admin, subject);
+
+    const paymentColumns = captures.columnsByTable.payments ?? [];
+    assert.equal(
+      paymentColumns.length,
+      1,
+      "payments should be queried exactly once (seeker scope only)",
+    );
+    const cols = paymentColumns[0];
+    assert.match(cols, /stripe_payment_intent_id/);
+    assert.match(cols, /stripe_charge_id/);
+    assert.match(cols, /hsa_eligible/);
+    assert.doesNotMatch(cols, /stripe_transfer_id/);
+    assert.doesNotMatch(cols, /destination_account_id/);
+    assert.doesNotMatch(cols, /application_fee_cents/);
+  });
+
+  it("payments projects caregiver-only fields when subject is the caregiver", async () => {
+    const rows = {
+      ...baseFixture,
+      bookings: [
+        {
+          id: "bk-1",
+          seeker_id: OTHER_ID,
+          caregiver_id: SUBJECT_ID,
+        },
+      ],
+      care_plans: [],
+      payments: [fullPaymentRow],
+    };
+    const captures = { columnsByTable: {} as Record<string, string[]> };
+    const admin = makeAdminFromRows(rows, captures);
+    await exportSubject(admin, subject);
+
+    const paymentColumns = captures.columnsByTable.payments ?? [];
+    assert.equal(
+      paymentColumns.length,
+      1,
+      "payments should be queried exactly once (carer scope only)",
+    );
+    const cols = paymentColumns[0];
+    assert.match(cols, /stripe_transfer_id/);
+    assert.match(cols, /destination_account_id/);
+    assert.doesNotMatch(cols, /stripe_payment_intent_id/);
+    assert.doesNotMatch(cols, /stripe_charge_id/);
+    assert.doesNotMatch(cols, /application_fee_cents/);
+    // HSA fields are seeker-side tax categorisation.
+    assert.doesNotMatch(cols, /hsa_eligible/);
+    assert.doesNotMatch(cols, /hsa_tagged_at/);
   });
 });
