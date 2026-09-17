@@ -1,21 +1,40 @@
 /**
  * POST /api/dsar/submit
  *
- * Accepts a UK-GDPR data-subject request. Two paths, decided by the
- * pure handler in `src/lib/dsar/submit-handler.ts`:
+ * Accepts a UK-GDPR data-subject request. All routing logic lives in
+ * the pure handler at `src/lib/dsar/submit-handler.ts`; this file wires
+ * it up to the real Supabase clients + email transport.
  *
- *   - **Anonymous**: writes a `dsar_requests` row in state
- *     `verifying`, emails a one-time verification link. State only
- *     advances to `in_progress` after the recipient clicks the link
- *     (see /api/dsar/verify/[token]). Unchanged from PR #210.
+ * ------------------------------------------------------------------
+ * F1d SOFT PAUSE (17 Sep 2026):
  *
- *   - **Authenticated fast-path** (added in PR E2): when the caller
- *     is signed in AND `body.subject_user_id` matches `auth.uid()`
- *     AND `body.subject_email` matches `auth.user.email` (case-
- *     insensitive), skip the email-verification round trip and go
- *     straight to `in_progress`, so the `dsar-fulfil` cron can pick
- *     it up on its next tick. Still emails a confirmation for the
- *     subject's records.
+ * The automated exporter (`dsar-export/1.0.0`) has schema drift and
+ * would deliver a JSON export missing 8 of 11 subject-data tables.
+ * Full finding:
+ *   /home/user/workspace/phase_f/dsar_exporter_schema_drift_17sep.md
+ *
+ * Until the exporter fix ships in a parallel PR, EVERY submission
+ * (anonymous or authenticated) is routed to the new
+ * `awaiting_manual_fulfilment` state. The row is still created so the
+ * UK-GDPR one-calendar-month clock starts (Article 12(3)), no
+ * verification email is sent, and Ops receive an out-of-band alert to
+ * fulfil manually from /admin/compliance/dsar. Response is:
+ *   { ok: true, id, manual_fulfilment: true, message: "..." }
+ *
+ * When the exporter fix ships this pause should be reverted: the
+ * handler returns to sending verification / confirmation emails and
+ * inserting rows in `verifying` / `in_progress`.
+ * ------------------------------------------------------------------
+ *
+ * Pre-pause behaviour, for reference / revert:
+ *
+ *   - **Anonymous**: row in state `verifying`, one-time verification
+ *     link emailed. Advances to `in_progress` on click.
+ *
+ *   - **Authenticated fast-path** (PR E2): caller signed in AND
+ *     `body.subject_user_id === auth.uid()` AND `body.subject_email ===
+ *     auth.user.email` (case-insensitive) → skip verification, insert
+ *     `in_progress`, send a confirmation email.
  *
  * Deploy-safe: if the `dsar_requests` table is not yet present
  * (migration deferred), the route responds 503
@@ -83,10 +102,11 @@ export async function POST(req: NextRequest) {
     origin,
   });
 
-  // Deliberately return the same 202 whether or not a matching profile
-  // was found for anonymous submissions — response must not reveal
-  // whether an email has an account. For the fast-path we also return
-  // 202 with `fast_path: true` so the client can render "we're already
-  // processing this" rather than "check your email".
+  // Response shape during F1d soft-pause: 202 with
+  //   { ok: true, id, manual_fulfilment: true, message: "..." }
+  // regardless of whether the caller is anonymous or authenticated,
+  // and regardless of whether a matching profile exists. Uniformity
+  // preserves the pre-pause property that the endpoint never reveals
+  // whether an email address has an account.
   return NextResponse.json(result.body, { status: result.status });
 }

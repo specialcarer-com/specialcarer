@@ -5,6 +5,12 @@ import { checkErasePreconditions } from "@/lib/dsar/erase-confirmation";
 import DsarRejectButton from "./dsar-reject-button";
 import DsarEraseButton from "./dsar-erase-button";
 
+// `awaiting_manual_fulfilment` (F1d soft-pause) is deliberately NOT in
+// NON_TERMINAL_STATES: rejection from this page would send the
+// subject-facing rejection email, which is wrong — these rows need
+// Ops to fulfil out-of-band, then flip to 'delivered' from Supabase.
+// If ops decide a request is invalid they can still reject it via the
+// existing rejection API by first moving the row to 'submitted'.
 const NON_TERMINAL_STATES = new Set(["submitted", "verifying", "in_progress"]);
 
 export const dynamic = "force-dynamic";
@@ -86,6 +92,7 @@ const STATE_TONE: Record<string, string> = {
   submitted: "bg-slate-100 text-slate-700 border-slate-200",
   verifying: "bg-amber-50 text-amber-800 border-amber-200",
   in_progress: "bg-sky-50 text-sky-800 border-sky-200",
+  awaiting_manual_fulfilment: "bg-orange-50 text-orange-800 border-orange-200",
   delivered: "bg-emerald-50 text-emerald-800 border-emerald-200",
   erased: "bg-purple-50 text-purple-800 border-purple-200",
   rejected: "bg-rose-50 text-rose-800 border-rose-200",
@@ -96,6 +103,7 @@ const ALLOWED_STATES = new Set([
   "submitted",
   "verifying",
   "in_progress",
+  "awaiting_manual_fulfilment",
   "delivered",
   "erased",
   "rejected",
@@ -152,6 +160,14 @@ export default async function DsarQueuePage(
           verified requests linked to an account. Rows without a linked
           account require manual handling.
         </p>
+        <p className="text-sm text-orange-800 max-w-3xl border border-orange-200 bg-orange-50 rounded-md px-3 py-2">
+          <strong>Soft-pause active (F1d, 17 Sep 2026):</strong> the automated
+          exporter has known schema drift and is paused pending a fix.
+          New submissions land in{" "}
+          <code>awaiting_manual_fulfilment</code>; fulfil them by hand
+          from Supabase and flip the row to <code>delivered</code> within
+          one calendar month of <em>Received</em>.
+        </p>
       </header>
 
       <nav className="flex flex-wrap items-center gap-2 text-sm">
@@ -160,6 +176,7 @@ export default async function DsarQueuePage(
           "submitted",
           "verifying",
           "in_progress",
+          "awaiting_manual_fulfilment",
           "delivered",
           "erased",
           "rejected",

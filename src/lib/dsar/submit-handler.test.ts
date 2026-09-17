@@ -1,27 +1,41 @@
 /**
  * Unit tests for the pure DSAR submit handler.
  *
- * Covers the four flows required by PR E2:
+ * ---------------------------------------------------------------------------
+ * F1d SOFT PAUSE (17 Sep 2026):
  *
- *   1. Anonymous + valid payload  -> row inserted in `verifying`,
- *      verification email sent, state stays `verifying`.
- *   2. Authenticated + subject_user_id matches auth.uid + email
- *      matches -> row inserted, `verified_at` set, state =
- *      `in_progress`, confirmation email (not verification) sent.
- *   3. Authenticated + subject_user_id mismatch -> treated as
- *      anonymous (email-verify path).
- *   4. Authenticated + subject_email mismatch -> treated as
- *      anonymous (email-verify path). Choice documented in the
- *      delivery report §7: fall-through rather than 400, so a
- *      signed-in user pasting the wrong email doesn't blow up.
+ * These tests cover the soft-paused behaviour. The pre-pause tests
+ * (verifying/in_progress + verification/confirmation emails, F1a
+ * failure-mode coverage) will come back when the parallel exporter-fix
+ * PR reverts the pause. Do NOT delete the "revert checklist" comment
+ * at the bottom of this file — it's the recovery contract.
+ * ---------------------------------------------------------------------------
  *
- * Plus regression coverage for validation (bad email / bad type)
- * and `schema_not_ready`.
+ * Covered during pause:
+ *
+ *   1. Anonymous submission -> row inserted in
+ *      `awaiting_manual_fulfilment`, NO verification email, ops alert
+ *      dispatched, response body includes `manual_fulfilment: true`
+ *      and the British-English message.
+ *   2. Authenticated fast-path submission -> same state, `verified_at`
+ *      IS stamped so the audit trail records session-proven ownership.
+ *   3. Auth mismatch (uid or email) -> handled as anonymous (no
+ *      `verified_at`), still paused.
+ *   4. Notes column: bot marker appended; caller-supplied notes are
+ *      preserved and prefixed.
+ *   5. Ops mailbox: defaults to `ops@specialcarer.com`, respects
+ *      injected `opsMailbox`, does NOT fail the request if send fails.
+ *   6. Validation: invalid email / invalid type still 400.
+ *   7. Schema-not-ready still 503; generic insert error still 500.
+ *   8. `type` OR `request_type` still accepted; notes still capped at
+ *      2000 chars (pre-existing invariants).
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   handleDsarSubmit,
+  MANUAL_FULFILMENT_STATE,
+  MANUAL_FULFILMENT_MESSAGE,
   type SubmitBody,
   type SubmitDeps,
   type AuthedUser,
@@ -120,6 +134,8 @@ function makeDeps(opts: {
   insertError?: { code?: string; message: string } | null;
   updateError?: { code?: string; message: string } | null;
   sendEmailImpl?: (m: MailCall) => Promise<unknown>;
+  opsMailbox?: string;
+  pauseReference?: string;
 }): {
   deps: SubmitDeps;
   inserts: Insert[];
@@ -145,7 +161,9 @@ function makeDeps(opts: {
         return { ok: true, messageId: "test-msg" };
       },
       origin: "https://specialcarer.com",
-      now: () => new Date("2026-09-14T12:00:00.000Z"),
+      now: () => new Date("2026-09-17T12:00:00.000Z"),
+      opsMailbox: opts.opsMailbox,
+      pauseReference: opts.pauseReference,
     },
     inserts,
     updates,
@@ -153,27 +171,47 @@ function makeDeps(opts: {
   };
 }
 
-describe("handleDsarSubmit", () => {
-  it("anonymous + valid payload -> verifying state + verification email", async () => {
+describe("handleDsarSubmit — F1d soft-pause", () => {
+  it("anonymous + valid payload -> awaiting_manual_fulfilment, NO verification email, ops alert dispatched", async () => {
     const { deps, inserts, mails } = makeDeps({});
     const body: SubmitBody = { email: EMAIL, type: "access" };
     const res = await handleDsarSubmit(body, deps);
+
     assert.equal(res.status, 202);
-    if (!("fast_path" in res.body)) {
-      throw new Error("expected success body");
+    if (!("manual_fulfilment" in res.body)) {
+      throw new Error("expected soft-pause body shape");
     }
-    assert.equal(res.body.fast_path, false);
+    assert.equal(res.body.ok, true);
+    assert.equal(res.body.manual_fulfilment, true);
+    assert.equal(res.body.message, MANUAL_FULFILMENT_MESSAGE);
+    assert.equal(typeof res.body.id, "string");
+
     assert.equal(inserts.length, 1);
-    assert.equal(inserts[0].row.state, "verifying");
-    assert.equal(inserts[0].row.subject_email, EMAIL);
-    assert.equal(inserts[0].row.verified_at, undefined);
-    assert.ok(inserts[0].row.verification_token_hash);
+    const row = inserts[0].row;
+    assert.equal(row.state, MANUAL_FULFILMENT_STATE);
+    assert.equal(row.subject_email, EMAIL);
+    assert.equal(
+      row.verified_at,
+      undefined,
+      "anonymous path must NOT stamp verified_at",
+    );
+    assert.equal(
+      row.verification_token_hash,
+      undefined,
+      "no verification token is issued during the pause",
+    );
+    assert.match(row.notes as string, /Automated exporter paused/);
+    assert.match(row.notes as string, /Fulfil manually via admin/);
+
+    // Exactly one email: the ops alert. NO subject-facing verification.
     assert.equal(mails.length, 1);
-    assert.match(mails[0].subject, /Confirm your SpecialCarer/);
-    assert.match(mails[0].html, /api\/dsar\/verify\//);
+    assert.equal(mails[0].to, "ops@specialcarer.com");
+    assert.match(mails[0].subject, /Manual fulfilment needed/);
+    assert.match(mails[0].text, /anonymous/);
+    assert.match(mails[0].text, new RegExp(EMAIL));
   });
 
-  it("authenticated + matching id + matching email -> fast path, in_progress + confirmation email", async () => {
+  it("authenticated + matching id + matching email -> awaiting_manual_fulfilment, verified_at IS set, ops alert marks source=authenticated", async () => {
     const authed: AuthedUser = { id: USER_ID, email: EMAIL };
     const { deps, inserts, mails } = makeDeps({ authedUser: authed });
     const body: SubmitBody = {
@@ -183,49 +221,50 @@ describe("handleDsarSubmit", () => {
       notes: "please include chat transcripts",
     };
     const res = await handleDsarSubmit(body, deps);
+
     assert.equal(res.status, 202);
-    if (!("fast_path" in res.body)) throw new Error("expected success body");
-    assert.equal(res.body.fast_path, true);
+    if (!("manual_fulfilment" in res.body)) {
+      throw new Error("expected soft-pause body shape");
+    }
+    assert.equal(res.body.manual_fulfilment, true);
 
     assert.equal(inserts.length, 1);
     const row = inserts[0].row;
-    assert.equal(row.state, "in_progress");
-    assert.ok(typeof row.verified_at === "string" && row.verified_at.length > 0);
+    assert.equal(row.state, MANUAL_FULFILMENT_STATE);
+    assert.ok(
+      typeof row.verified_at === "string" && row.verified_at.length > 0,
+      "fast-path must still stamp verified_at even during pause",
+    );
     assert.equal(row.subject_user_id, USER_ID);
     assert.equal(row.requested_by, USER_ID);
     assert.equal(row.request_type, "portability");
-    assert.equal(row.notes, "please include chat transcripts");
-    assert.equal(
-      row.verification_token_hash,
-      undefined,
-      "fast path must not issue a verification token",
-    );
+    // Caller-supplied notes preserved AND bot marker appended.
+    const notes = row.notes as string;
+    assert.match(notes, /please include chat transcripts/);
+    assert.match(notes, /Automated exporter paused/);
 
     assert.equal(mails.length, 1);
-    assert.match(mails[0].subject, /We received your/);
-    assert.doesNotMatch(mails[0].html, /api\/dsar\/verify\//);
+    assert.match(mails[0].text, /authenticated/);
   });
 
-  it("authenticated + email casing mismatch (Same after lowercasing) still fast-paths", async () => {
+  it("authenticated + email casing mismatch (same after lowercasing) still stamps verified_at", async () => {
     const authed: AuthedUser = {
       id: USER_ID,
       email: EMAIL.toUpperCase(),
     };
-    const { deps, inserts, mails } = makeDeps({ authedUser: authed });
+    const { deps, inserts } = makeDeps({ authedUser: authed });
     const body: SubmitBody = {
-      subject_email: EMAIL, // already lower-case
+      subject_email: EMAIL,
       subject_user_id: USER_ID,
       request_type: "access",
     };
     const res = await handleDsarSubmit(body, deps);
     assert.equal(res.status, 202);
-    if (!("fast_path" in res.body)) throw new Error("expected success body");
-    assert.equal(res.body.fast_path, true);
-    assert.equal(inserts[0].row.state, "in_progress");
-    assert.equal(mails[0].subject.includes("Confirm"), false);
+    assert.equal(inserts[0].row.state, MANUAL_FULFILMENT_STATE);
+    assert.ok(inserts[0].row.verified_at, "case-insensitive match still fast-paths");
   });
 
-  it("authenticated + subject_user_id mismatch -> treated as anonymous", async () => {
+  it("authenticated + subject_user_id mismatch -> handled as anonymous (no verified_at), still paused", async () => {
     const authed: AuthedUser = { id: USER_ID, email: EMAIL };
     const { deps, inserts, mails } = makeDeps({ authedUser: authed });
     const body: SubmitBody = {
@@ -235,13 +274,12 @@ describe("handleDsarSubmit", () => {
     };
     const res = await handleDsarSubmit(body, deps);
     assert.equal(res.status, 202);
-    if (!("fast_path" in res.body)) throw new Error("expected success body");
-    assert.equal(res.body.fast_path, false);
-    assert.equal(inserts[0].row.state, "verifying");
-    assert.match(mails[0].subject, /Confirm your SpecialCarer/);
+    assert.equal(inserts[0].row.state, MANUAL_FULFILMENT_STATE);
+    assert.equal(inserts[0].row.verified_at, undefined);
+    assert.match(mails[0].text, /anonymous/);
   });
 
-  it("authenticated + subject_email mismatch -> treated as anonymous (does NOT 400)", async () => {
+  it("authenticated + subject_email mismatch -> handled as anonymous, ops alert still fires (does NOT go to subject)", async () => {
     const authed: AuthedUser = { id: USER_ID, email: EMAIL };
     const { deps, inserts, mails } = makeDeps({ authedUser: authed });
     const body: SubmitBody = {
@@ -251,13 +289,56 @@ describe("handleDsarSubmit", () => {
     };
     const res = await handleDsarSubmit(body, deps);
     assert.equal(res.status, 202);
-    if (!("fast_path" in res.body)) throw new Error("expected success body");
-    assert.equal(res.body.fast_path, false);
-    assert.equal(inserts[0].row.state, "verifying");
-    // The verification email goes to the OTHER email address, so the
-    // signed-in user can't actually complete the flow unless they own
-    // it too. Safe fallback.
-    assert.equal(mails[0].to, OTHER_EMAIL);
+    assert.equal(inserts[0].row.state, MANUAL_FULFILMENT_STATE);
+    assert.equal(inserts[0].row.verified_at, undefined);
+    // The single email is the OPS alert, NOT a subject-facing mail
+    // sent to OTHER_EMAIL — during the pause we never email the
+    // subject directly from this handler.
+    assert.equal(mails.length, 1);
+    assert.equal(mails[0].to, "ops@specialcarer.com");
+  });
+
+  it("ops mailbox: respects injected opsMailbox", async () => {
+    const { deps, mails } = makeDeps({ opsMailbox: "dpo@example.com" });
+    await handleDsarSubmit({ email: EMAIL, type: "access" }, deps);
+    assert.equal(mails.length, 1);
+    assert.equal(mails[0].to, "dpo@example.com");
+  });
+
+  it("ops mailbox: request still succeeds if ops alert send fails", async () => {
+    const { deps, inserts } = makeDeps({
+      sendEmailImpl: async () => ({ ok: false, error: "resend 500" }),
+    });
+    const res = await handleDsarSubmit(
+      { email: EMAIL, type: "access" },
+      deps,
+    );
+    // Row exists, statutory clock is ticking, subject sees the 202.
+    assert.equal(res.status, 202);
+    assert.equal(inserts.length, 1);
+    assert.equal(inserts[0].row.state, MANUAL_FULFILMENT_STATE);
+  });
+
+  it("ops mailbox: request still succeeds if ops alert throws", async () => {
+    const { deps, inserts } = makeDeps({
+      sendEmailImpl: async () => {
+        throw new Error("ECONNREFUSED");
+      },
+    });
+    const res = await handleDsarSubmit(
+      { email: EMAIL, type: "access" },
+      deps,
+    );
+    assert.equal(res.status, 202);
+    assert.equal(inserts.length, 1);
+  });
+
+  it("pauseReference is embedded in the notes column", async () => {
+    const { deps, inserts } = makeDeps({
+      pauseReference: "PR #241",
+    });
+    await handleDsarSubmit({ email: EMAIL, type: "access" }, deps);
+    assert.match(inserts[0].row.notes as string, /PR #241/);
   });
 
   it("rejects invalid email", async () => {
@@ -294,6 +375,7 @@ describe("handleDsarSubmit", () => {
     );
     assert.equal(res.status, 503);
     assert.deepEqual(res.body, { ok: false, code: "schema_not_ready" });
+    // No ops alert if we can't even insert the row.
     assert.equal(mails.length, 0);
   });
 
@@ -320,16 +402,21 @@ describe("handleDsarSubmit", () => {
     assert.equal(inserts[0].row.request_type, "rectification");
   });
 
-  it("caps notes to 2000 chars", async () => {
+  it("caps user notes to 2000 chars before appending pause marker", async () => {
     const { deps, inserts } = makeDeps({});
-    const long = "x".repeat(2500);
+    // Use a character that does NOT appear in the pause marker so we
+    // can count exactly what the caller supplied.
+    const long = "Q".repeat(2500);
     const res = await handleDsarSubmit(
       { email: EMAIL, type: "access", notes: long },
       deps,
     );
     assert.equal(res.status, 202);
     const notes = inserts[0].row.notes as string;
-    assert.equal(notes.length, 2000);
+    // 2000 Q's from the caller, then separator + pause marker.
+    assert.equal((notes.match(/Q/g) ?? []).length, 2000);
+    assert.ok(notes.startsWith("Q".repeat(2000)));
+    assert.match(notes, /Automated exporter paused/);
   });
 
   it("anonymous with matching profile lookup fills subject_user_id", async () => {
@@ -341,142 +428,29 @@ describe("handleDsarSubmit", () => {
     assert.equal(res.status, 202);
     assert.equal(inserts[0].row.subject_user_id, USER_ID);
   });
-
-  it("F1a: verification email returns ok:false -> row flipped to failed, 502", async () => {
-    const { deps, inserts, updates, mails } = makeDeps({
-      sendEmailImpl: async () => ({
-        ok: false,
-        error: "resend rejected: invalid `from` field",
-      }),
-    });
-    const res = await handleDsarSubmit(
-      { email: EMAIL, type: "access" },
-      deps,
-    );
-    assert.equal(res.status, 502);
-    assert.deepEqual(res.body, {
-      ok: false,
-      code: "verification_email_failed",
-    });
-
-    // Row was inserted (state=verifying) and then updated to failed
-    // with the error captured in verification_error.
-    assert.equal(inserts.length, 1);
-    assert.equal(inserts[0].row.state, "verifying");
-    assert.equal(mails.length, 1);
-    assert.equal(updates.length, 1);
-    assert.equal(updates[0].patch.state, "failed");
-    assert.match(
-      updates[0].patch.verification_error as string,
-      /invalid `from` field/,
-    );
-  });
-
-  it("F1a: verification email throws -> row flipped to failed, 502", async () => {
-    const { deps, updates } = makeDeps({
-      sendEmailImpl: async () => {
-        throw new Error("ECONNREFUSED smtp.ionos.co.uk:587");
-      },
-    });
-    const res = await handleDsarSubmit(
-      { email: EMAIL, type: "access" },
-      deps,
-    );
-    assert.equal(res.status, 502);
-    assert.equal(updates.length, 1);
-    assert.equal(updates[0].patch.state, "failed");
-    assert.match(
-      updates[0].patch.verification_error as string,
-      /ECONNREFUSED/,
-    );
-  });
-
-  it("F1a: verification email ok:true -> no failed update", async () => {
-    const { deps, updates } = makeDeps({});
-    const res = await handleDsarSubmit(
-      { email: EMAIL, type: "access" },
-      deps,
-    );
-    assert.equal(res.status, 202);
-    // No update calls — the row stays in verifying awaiting the click.
-    assert.equal(updates.length, 0);
-  });
-
-  it("F1a: verification_error is capped at 500 chars", async () => {
-    const long = "x".repeat(1000);
-    const { deps, updates } = makeDeps({
-      sendEmailImpl: async () => ({ ok: false, error: long }),
-    });
-    await handleDsarSubmit({ email: EMAIL, type: "access" }, deps);
-    assert.equal(updates.length, 1);
-    const err = updates[0].patch.verification_error as string;
-    assert.equal(err.length, 500);
-  });
-
-  it("F1a: sendEmail returns ok:false with empty error -> fallback message stamped", async () => {
-    // Regression: SubmitEmailResult permits error:"". If we don't
-    // fall back to a truthy string the failure branch is silently
-    // skipped and the row stays in `verifying` forever.
-    const { deps, updates } = makeDeps({
-      sendEmailImpl: async () => ({ ok: false, error: "" }),
-    });
-    const res = await handleDsarSubmit(
-      { email: EMAIL, type: "access" },
-      deps,
-    );
-    assert.equal(res.status, 502);
-    assert.deepEqual(res.body, {
-      ok: false,
-      code: "verification_email_failed",
-    });
-    assert.equal(updates.length, 1);
-    assert.equal(updates[0].patch.state, "failed");
-    assert.equal(
-      updates[0].patch.verification_error,
-      "unknown_send_failure",
-    );
-  });
-
-  it("F1a: send fails AND row-update also fails -> distinct code + no false-success", async () => {
-    // Regression: previously the update result was discarded, so if
-    // the failure-state persistence itself failed we still returned
-    // verification_email_failed while the row was left in `verifying`
-    // — recreating the exact stuck-row condition this PR fixes.
-    const originalError = console.error;
-    const captured: unknown[][] = [];
-    console.error = (...args: unknown[]) => {
-      captured.push(args);
-    };
-    try {
-      const { deps, updates } = makeDeps({
-        sendEmailImpl: async () => ({ ok: false, error: "resend 500" }),
-        updateError: { message: "deadline exceeded" },
-      });
-      const res = await handleDsarSubmit(
-        { email: EMAIL, type: "access" },
-        deps,
-      );
-      assert.equal(res.status, 502);
-      assert.deepEqual(res.body, {
-        ok: false,
-        code: "verification_email_failed_and_row_update_failed",
-      });
-      // The update was attempted (recorded once) even though it
-      // errored.
-      assert.equal(updates.length, 1);
-      assert.equal(updates[0].patch.state, "failed");
-      // Loud console.error surfaced for on-call.
-      assert.equal(captured.length, 1);
-      assert.match(String(captured[0][0]), /CRITICAL/);
-      const meta = captured[0][1] as {
-        rowId: string;
-        sendError: string;
-        updateError: string;
-      };
-      assert.match(meta.sendError, /resend 500/);
-      assert.match(meta.updateError, /deadline exceeded/);
-    } finally {
-      console.error = originalError;
-    }
-  });
 });
+
+/*
+ * ---------------------------------------------------------------------------
+ * REVERT CHECKLIST — when the parallel DSAR exporter-fix PR ships:
+ *
+ * 1. Revert this test file to the pre-pause version at commit before F1d
+ *    landed (or restore the following coverage manually):
+ *      - anonymous -> state=verifying + verification email sent
+ *      - fast-path -> state=in_progress + confirmation email + verified_at
+ *      - id/email mismatch -> falls through to anonymous
+ *      - F1a: verification-email failure -> row flipped to `failed`
+ *      - F1a: send fails AND row-update fails -> distinct error code +
+ *        loud console.error CRITICAL log
+ *      - F1a: cap `verification_error` at 500 chars
+ *      - F1a: ok:false with empty error -> fallback message stamped
+ *
+ * 2. Revert src/lib/dsar/submit-handler.ts, src/app/api/dsar/submit/route.ts,
+ *    src/app/api/cron/dsar-fulfil/route.ts, and the admin queue chip changes.
+ *
+ * 3. Remove the `awaiting_manual_fulfilment` state from
+ *    supabase/migrations/20260917000000_dsar_manual_fulfilment_state.sql
+ *    (or add a follow-up migration that drops it from the CHECK once no
+ *    rows in the state remain).
+ * ---------------------------------------------------------------------------
+ */

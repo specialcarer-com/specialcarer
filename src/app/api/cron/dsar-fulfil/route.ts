@@ -33,6 +33,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireCronAuth } from "@/lib/cron/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/smtp";
+import { MANUAL_FULFILMENT_STATE } from "@/lib/dsar/submit-handler";
 import {
   processDsarQueue,
   tallyResults,
@@ -49,10 +50,18 @@ export async function GET(req: NextRequest) {
 
   const admin = createAdminClient();
 
+  // The primary filter is `state = 'in_progress'`, so rows in the
+  // F1d soft-pause state (`awaiting_manual_fulfilment`) are already
+  // excluded. We ALSO add an explicit `.neq(state, ...)` guard so a
+  // future refactor that widens the primary filter (e.g. to include a
+  // retry state) cannot accidentally hand a paused row to the broken
+  // exporter. Once the exporter fix ships and the soft-pause is
+  // reverted, this neq guard can be removed alongside the constant.
   const { data: queue, error: queueError } = await admin
     .from("dsar_requests")
-    .select("id, subject_user_id, subject_email, request_type")
+    .select("id, subject_user_id, subject_email, request_type, state")
     .eq("state", "in_progress")
+    .neq("state", MANUAL_FULFILMENT_STATE)
     .order("created_at", { ascending: true })
     .limit(BATCH_LIMIT);
 
@@ -77,7 +86,28 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const rows = (queue ?? []) as QueuedRequest[];
+  // Defensive in-memory filter: if a paused row ever slips past the
+  // SQL filter (e.g. Supabase client changes semantics of chained
+  // neq(), or the primary filter is widened), skip it here rather than
+  // sending a broken export. Logged loudly so the on-call notices.
+  const rawRows = (queue ?? []) as (QueuedRequest & { state?: string })[];
+  const rows: QueuedRequest[] = [];
+  for (const r of rawRows) {
+    if (r.state === MANUAL_FULFILMENT_STATE) {
+      console.warn(
+        "[cron.dsar-fulfil] refusing to process manual-fulfilment row " +
+          `(F1d soft-pause) id=${r.id}`,
+      );
+      continue;
+    }
+    rows.push({
+      id: r.id,
+      subject_user_id: r.subject_user_id,
+      subject_email: r.subject_email,
+      request_type: r.request_type,
+    });
+  }
+
   const results = await processDsarQueue(rows, {
     admin,
     sendEmail,
