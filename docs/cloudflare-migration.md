@@ -1,6 +1,7 @@
 # SpecialCarer Cloudflare migration: preview scaffold
 
-Status: DRAFT, NOT BUILD-VERIFIED. No Cloudflare deployment or production cutover has occurred.
+Status: DRAFT. GitHub compatibility build and packaging passed; deployment is
+blocked by bundle size. No Cloudflare deployment or production cutover has occurred.
 
 ## Scope
 
@@ -30,10 +31,30 @@ Missing integration credentials mean a local build or route may fail; that is
 not a reason to copy production secrets into local files.
 
 The sandbox installation was time-limited twice during slow package downloads.
-An offline lockfile-only resolution succeeded. Neither the application build,
-typecheck, Workers packaging nor runtime smoke tests has run successfully.
-The six previously reported main-branch test failures were not investigated.
-Do not describe this scaffold as a validated migration.
+An offline lockfile-only resolution succeeded.
+
+On 17 September 2026, one actual GitHub Actions compatibility build completed:
+https://github.com/specialcarer-com/specialcarer/actions/runs/35263872288
+
+- Node 22 locked dependency installation: passed.
+- OpenNext Workers build: passed.
+- Wrangler packaging dry run: passed; no deployment performed.
+- Total Upload: 77,357.48 KiB uncompressed (approximately 75.54 MiB).
+- Gzip size: 11,403.56 KiB (reported for reference).
+- Cloudflare's documentation checked on this date specifies a 64 MiB
+  uncompressed Worker-size limit for both Free and Paid plans. This bundle
+  exceeds it; paying alone does not resolve the size blocker.
+- Existing test, typecheck and rate-limit workflows also passed on the build
+  commit. Previously reported unrelated failures were not investigated.
+- Workers runtime and authenticated integration smoke tests remain unperformed.
+- Sentry release/source-map upload warnings were expected because no production
+  secrets were supplied.
+
+An earlier workflow submission was rejected for YAML formatting before a job
+started. Correcting its conditional enabled the one actual build above; the
+application build was not retried.
+
+Do not describe this as a deployment-ready or runtime-validated migration.
 
 ## Preview safety
 
