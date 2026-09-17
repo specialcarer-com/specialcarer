@@ -89,8 +89,8 @@ type TableSpec =
  *   - `interview_rooms` / `whereby_*` — recordings held for a
  *     retention window with the vendor; export links, not blobs.
  *   - `payments` — the raw Stripe rows leak counterparty ids. Instead
- *     we expose a purpose-built projection (see PAYMENT_PROJECTION
- *     below) rather than dumping the row.
+ *     we expose role-aware projections (see PAYMENT_PROJECTION_SEEKER
+ *     and PAYMENT_PROJECTION_CARER below) rather than dumping the row.
  *
  * When new user-owned tables land, add them here in the same PR that
  * creates the table so the DSAR export doesn't silently omit them.
@@ -175,13 +175,31 @@ export const DSAR_TABLES: TableSpec[] = [
 // `care_plans` and `payments` are enumerated via a booking-id join
 // rather than a direct owner column, because neither table carries a
 // subject FK. See the two-step handling in `exportSubject` below.
+//
+// Both tables carry data that spans TWO parties (a seeker and a
+// caregiver). Under UK-GDPR Article 15 the subject is entitled to
+// their own personal data only — not the counterparty's. So each
+// booking-linked lookup runs role-aware: we track whether the subject
+// appears on the parent booking as seeker or caregiver and apply the
+// projection that maps to that role. See ICO right-of-access
+// guidance (subject's own data only, not third parties).
 
-// Care-plan projection: every column is safe to release to the
-// subject (contact address of the recipient, care goals and routine
-// notes are all information the subject already provided or is
-// otherwise entitled to under Article 15).
-const CARE_PLAN_PROJECTION =
+// Care plans carry the *recipient's* identity (name, DoB, home
+// address) alongside operational care instructions. When the subject
+// is the seeker they entered — and are entitled to — the full row;
+// when the subject is only the carer on the booking, the recipient
+// identity/address belongs to the seeker (or their family member),
+// not the carer.
+//
+// Rationale: "A carer is entitled to know the operational care
+// instructions on plans they delivered against, but the recipient's
+// identity, DoB, and address are personal data belonging to the
+// seeker/recipient and are not disclosable to the carer under
+// Article 15."
+const CARE_PLAN_PROJECTION_SEEKER =
   "id, booking_id, recipient_name, recipient_dob, address_line1, address_line2, city, postcode, goals, special_instructions, routine_notes, created_by, created_at, updated_at";
+const CARE_PLAN_PROJECTION_CARER =
+  "id, booking_id, goals, special_instructions, routine_notes, created_at, updated_at";
 
 // `carer_references` has 47 columns; rather than hand-maintaining an
 // allow-list, we fetch everything and strip these secrets/forensic
@@ -200,8 +218,16 @@ const CARER_REFERENCES_EXCLUDED = [
 // live on `payments`; the refund state is exposed via `bookings`
 // (`refunded_amount_cents`, `refund_reason`, `refund_status`) and the
 // per-event `refund_ledger`, both already in the manifest.
-const PAYMENT_PROJECTION =
-  "id, booking_id, stripe_payment_intent_id, stripe_charge_id, stripe_transfer_id, status, amount_cents, application_fee_cents, currency, destination_account_id, kind, parent_payment_id, timesheet_id, hsa_eligible, hsa_tagged_at, created_at, updated_at";
+//
+// Payment records span two parties; a DSAR subject sees only the
+// fields attributable to their role on the payment (payer OR payee),
+// not the counterparty's Stripe identifiers or the platform's fee.
+// `application_fee_cents` is platform-owned and excluded from both
+// projections. HSA fields are seeker-side tax categorisation.
+const PAYMENT_PROJECTION_SEEKER =
+  "id, booking_id, stripe_payment_intent_id, stripe_charge_id, status, amount_cents, currency, kind, parent_payment_id, timesheet_id, hsa_eligible, hsa_tagged_at, created_at, updated_at";
+const PAYMENT_PROJECTION_CARER =
+  "id, booking_id, stripe_transfer_id, destination_account_id, status, amount_cents, currency, kind, parent_payment_id, timesheet_id, created_at, updated_at";
 
 function stripReferenceSecrets(rows: unknown[]): unknown[] {
   return rows.map((row) => {
@@ -244,7 +270,12 @@ export type SubjectExport = {
 //     `reviews.subject_user_id`; moved `care_plans` and `payments`
 //     to booking-linked enumeration. Prior versions silently emitted
 //     `row_count: 0` with an `error` field for 8 of 11 tables.
-const EXPORTER_VERSION = "dsar-export/1.1.0";
+//   1.2.0 — role-aware `care_plans` and `payments` projections
+//     (17 Sep 2026). A carer on a booking no longer receives the
+//     seeker/recipient's identity, DoB or address on care plans, and
+//     payments now project only fields attributable to the subject's
+//     role on the parent booking (payer vs payee Stripe ids).
+const EXPORTER_VERSION = "dsar-export/1.2.0";
 
 const UNDEFINED_TABLE = "42P01"; // Postgres error code
 
@@ -256,20 +287,70 @@ function isSchemaNotReady(err: { code?: string; message?: string }): boolean {
 }
 
 /**
+ * Fetch a booking-linked table filtered to a set of booking ids. The
+ * caller decides which booking ids belong to which role (seeker vs
+ * carer) and which projection to apply per role.
+ *
+ * Returns a discriminated result so the caller can merge multiple
+ * role-scoped fetches into a single manifest entry (or surface the
+ * failure once, not twice).
+ */
+type BookingLinkedFetch =
+  | { kind: "empty" }
+  | { kind: "ok"; rows: unknown[] }
+  | { kind: "schema_not_ready" }
+  | { kind: "error"; message: string };
+
+async function fetchBookingLinkedRows(
+  admin: ExportAdminClient,
+  table: string,
+  columns: string,
+  bookingIds: string[],
+): Promise<BookingLinkedFetch> {
+  if (bookingIds.length === 0) return { kind: "empty" };
+  const filter = bookingIds.map((id) => `booking_id.eq.${id}`).join(",");
+  const { data, error } = await admin.from(table).select(columns).or(filter);
+  if (error) {
+    if (isSchemaNotReady(error)) return { kind: "schema_not_ready" };
+    return { kind: "error", message: error.message };
+  }
+  return { kind: "ok", rows: data ?? [] };
+}
+
+/**
  * Enumerate a table that has no direct subject FK by joining on the
  * subject's booking ids. We use an OR of `booking_id.eq.X` clauses —
  * this compiles to `WHERE booking_id IN (...)` at PostgREST and keeps
  * the narrow `ExportAdminClient` interface (only `eq` / `or`) intact,
  * which matters for the fake-client tests.
+ *
+ * For role-aware tables (care_plans, payments) the caller provides a
+ * seeker projection and a carer projection with the booking ids the
+ * subject appears on in each role. We run one fetch per non-empty
+ * role-scope, apply the role-specific projection, and merge rows
+ * (deduplicated by `id`) into a single manifest entry so the subject
+ * sees one care_plans/payments table rather than two.
+ *
+ * For role-blind tables (refund_ledger) the caller provides only a
+ * single scope with the union of booking ids.
  */
 async function enumerateBookingLinked(
   admin: ExportAdminClient,
   tables: ExportedTable[],
   notes: string[],
-  bookingIds: string[],
-  spec: { table: string; label: string; columns: string },
+  spec: {
+    table: string;
+    label: string;
+    // At least one scope; each scope defines a projection and the
+    // booking ids it applies to.
+    scopes: Array<{ columns: string; bookingIds: string[] }>;
+  },
 ): Promise<void> {
-  if (bookingIds.length === 0) {
+  // If none of the role-scoped booking sets have anything to query,
+  // the exporter still needs to emit a manifest entry with 0 rows so
+  // the subject knows we considered the table.
+  const totalIds = spec.scopes.reduce((n, s) => n + s.bookingIds.length, 0);
+  if (totalIds === 0) {
     tables.push({
       table: spec.table,
       label: spec.label,
@@ -278,13 +359,17 @@ async function enumerateBookingLinked(
     });
     return;
   }
-  const filter = bookingIds.map((id) => `booking_id.eq.${id}`).join(",");
-  const { data, error } = await admin
-    .from(spec.table)
-    .select(spec.columns)
-    .or(filter);
-  if (error) {
-    if (isSchemaNotReady(error)) {
+
+  const merged: unknown[] = [];
+  const seenIds = new Set<string>();
+  for (const scope of spec.scopes) {
+    const result = await fetchBookingLinkedRows(
+      admin,
+      spec.table,
+      scope.columns,
+      scope.bookingIds,
+    );
+    if (result.kind === "schema_not_ready") {
       tables.push({
         table: spec.table,
         label: spec.label,
@@ -294,22 +379,42 @@ async function enumerateBookingLinked(
       notes.push(
         `${spec.table} not yet present in this environment; skipped.`,
       );
-    } else {
+      return;
+    }
+    if (result.kind === "error") {
       tables.push({
         table: spec.table,
         label: spec.label,
         row_count: 0,
-        error: error.message,
+        error: result.message,
       });
+      return;
     }
-    return;
+    if (result.kind === "empty") continue;
+    for (const row of result.rows) {
+      // Deduplicate by row id when the same row could match both a
+      // seeker-scoped and carer-scoped fetch (shouldn't happen in
+      // practice — a subject can't be both seeker and carer on the
+      // same booking — but be defensive; take the FIRST projection
+      // seen so the seeker-scoped columns win when we later choose to
+      // order scopes seeker-first).
+      const id =
+        row && typeof row === "object" && "id" in row
+          ? String((row as { id: unknown }).id)
+          : undefined;
+      if (id !== undefined) {
+        if (seenIds.has(id)) continue;
+        seenIds.add(id);
+      }
+      merged.push(row);
+    }
   }
-  const rows = data ?? [];
+
   tables.push({
     table: spec.table,
     label: spec.label,
-    row_count: rows.length,
-    rows,
+    row_count: merged.length,
+    rows: merged,
   });
 }
 
@@ -393,29 +498,81 @@ export async function exportSubject(
       : bookingsRow?.note !== undefined
         ? { note: bookingsRow.note }
         : null;
-  const bookingIds = bookingsFailure
-    ? []
-    : ((bookingsRow?.rows ?? []) as Array<{ id?: string }>)
-        .map((b) => b.id)
-        .filter((id): id is string => typeof id === "string");
 
-  const bookingLinked = [
+  // Split the subject's bookings by the role they hold on each one.
+  // The bookings query already OR-joined on `seeker_id` and
+  // `caregiver_id`, so every row here has the subject on at least one
+  // side; a defensive check drops any row where neither side matches
+  // (shouldn't happen, but a stale RLS policy is exactly the kind of
+  // thing that would surface here).
+  type BookingParties = {
+    id?: string;
+    seeker_id?: string;
+    caregiver_id?: string;
+  };
+  const bookingRows = bookingsFailure
+    ? []
+    : ((bookingsRow?.rows ?? []) as BookingParties[]);
+  const seekerBookingIds: string[] = [];
+  const carerBookingIds: string[] = [];
+  for (const b of bookingRows) {
+    if (typeof b.id !== "string") continue;
+    if (b.seeker_id === args.user_id) seekerBookingIds.push(b.id);
+    if (b.caregiver_id === args.user_id) carerBookingIds.push(b.id);
+  }
+  const allBookingIds = [
+    ...new Set([...seekerBookingIds, ...carerBookingIds]),
+  ];
+
+  const bookingLinked: Array<{
+    table: string;
+    label: string;
+    scopes: Array<{ columns: string; bookingIds: string[] }>;
+  }> = [
     {
       table: "care_plans",
       label: "Care plans on the subject's bookings",
-      columns: CARE_PLAN_PROJECTION,
+      // Seeker scope first: when the subject is the seeker they get
+      // the full row (recipient identity, address, care goals).
+      // Carer scope second: a subject who is only the carer sees the
+      // operational instructions without the recipient's PII.
+      scopes: [
+        {
+          columns: CARE_PLAN_PROJECTION_SEEKER,
+          bookingIds: seekerBookingIds,
+        },
+        {
+          columns: CARE_PLAN_PROJECTION_CARER,
+          bookingIds: carerBookingIds,
+        },
+      ],
     },
     {
       table: "payments",
       label: "Payments (linked via the subject's bookings)",
-      columns: PAYMENT_PROJECTION,
+      // Same seeker-first ordering: payer-facing Stripe ids for the
+      // seeker, payee-facing Stripe ids for the carer. Neither role
+      // sees `application_fee_cents` (platform-owned).
+      scopes: [
+        {
+          columns: PAYMENT_PROJECTION_SEEKER,
+          bookingIds: seekerBookingIds,
+        },
+        {
+          columns: PAYMENT_PROJECTION_CARER,
+          bookingIds: carerBookingIds,
+        },
+      ],
     },
     {
+      // Refund events are role-blind — both parties are entitled to
+      // know a refund happened on their booking. One scope with the
+      // union of booking ids.
       table: "refund_ledger",
       label: "Refund events (via bookings)",
-      columns: "*",
+      scopes: [{ columns: "*", bookingIds: allBookingIds }],
     },
-  ] as const;
+  ];
 
   for (const spec of bookingLinked) {
     if (bookingsFailure) {
@@ -427,7 +584,7 @@ export async function exportSubject(
       });
       continue;
     }
-    await enumerateBookingLinked(admin, tables, notes, bookingIds, spec);
+    await enumerateBookingLinked(admin, tables, notes, spec);
   }
 
   // Sanity fingerprint. Not a cryptographic commitment — just something

@@ -77,7 +77,7 @@ describe("exportSubject", () => {
       bookings: {
         rows: [
           { id: "bk-1", seeker_id: "user-1" },
-          { id: "bk-2", carer_id: "user-1" },
+          { id: "bk-2", caregiver_id: "user-1" },
         ],
       },
       carer_references: { rows: [] },
@@ -216,23 +216,31 @@ describe("exportSubject", () => {
 
   it("payments projection uses the safe column list, not '*'", async () => {
     // Payments is a booking-linked lookup since v1.1.0 — it only
-    // runs when bookings returned at least one row, so we seed one.
-    let capturedColumns: string | null = null;
+    // runs when bookings returned at least one row where the subject
+    // holds a known role (seeker or caregiver), so we seed one where
+    // the subject is the seeker.
+    const capturedColumns: string[] = [];
     const admin: ExportAdminClient = {
       from(table: string) {
         return {
           select(columns: string) {
-            if (table === "payments") capturedColumns = columns;
+            if (table === "payments") capturedColumns.push(columns);
             return {
               async eq(_c: string, _v: string) {
                 if (table === "bookings") {
-                  return { data: [{ id: "bk-1" }], error: null };
+                  return {
+                    data: [{ id: "bk-1", seeker_id: subject.user_id }],
+                    error: null,
+                  };
                 }
                 return { data: [], error: null };
               },
               async or(_f: string) {
                 if (table === "bookings") {
-                  return { data: [{ id: "bk-1" }], error: null };
+                  return {
+                    data: [{ id: "bk-1", seeker_id: subject.user_id }],
+                    error: null,
+                  };
                 }
                 return { data: [], error: null };
               },
@@ -242,12 +250,20 @@ describe("exportSubject", () => {
       },
     };
     await exportSubject(admin, subject);
-    assert.ok(capturedColumns, "payments select must have been called");
-    assert.match(String(capturedColumns), /amount_cents/);
-    assert.doesNotMatch(String(capturedColumns), /^\*$/);
-    // Refund columns no longer live on `payments` — they moved to
-    // `bookings` and `refund_ledger` in the 17 Sep schema drift fix.
-    assert.doesNotMatch(String(capturedColumns), /refunded_amount_cents/);
+    assert.ok(
+      capturedColumns.length > 0,
+      "payments select must have been called",
+    );
+    for (const columns of capturedColumns) {
+      assert.match(columns, /amount_cents/);
+      assert.doesNotMatch(columns, /^\*$/);
+      // Refund columns no longer live on `payments` — they moved to
+      // `bookings` and `refund_ledger` in the 17 Sep schema drift fix.
+      assert.doesNotMatch(columns, /refunded_amount_cents/);
+      // Platform-owned fee never appears in a subject export from
+      // v1.2.0 onwards.
+      assert.doesNotMatch(columns, /application_fee_cents/);
+    }
   });
 
   it("propagates a bookings failure to every booking-linked table", async () => {
