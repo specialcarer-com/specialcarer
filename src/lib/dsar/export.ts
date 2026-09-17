@@ -380,26 +380,55 @@ export async function exportSubject(
   // in step 1. This keeps the `ExportAdminClient` interface narrow
   // (only `eq` / `or` are needed) and gives the same fake-client
   // support the tests rely on.
+  //
+  // If the bookings query itself failed in step 1 (error or
+  // schema_not_ready), we surface that on every dependent table —
+  // otherwise the subject would see `refund_ledger: { row_count: 0 }`
+  // for a payments dispute they know they have, which is worse than
+  // a visible error.
   const bookingsRow = tables.find((t) => t.table === "bookings");
-  const bookingIds = ((bookingsRow?.rows ?? []) as Array<{ id?: string }>)
-    .map((b) => b.id)
-    .filter((id): id is string => typeof id === "string");
+  const bookingsFailure: { error?: string; note?: string } | null =
+    bookingsRow?.error !== undefined
+      ? { error: bookingsRow.error }
+      : bookingsRow?.note !== undefined
+        ? { note: bookingsRow.note }
+        : null;
+  const bookingIds = bookingsFailure
+    ? []
+    : ((bookingsRow?.rows ?? []) as Array<{ id?: string }>)
+        .map((b) => b.id)
+        .filter((id): id is string => typeof id === "string");
 
-  await enumerateBookingLinked(admin, tables, notes, bookingIds, {
-    table: "care_plans",
-    label: "Care plans on the subject's bookings",
-    columns: CARE_PLAN_PROJECTION,
-  });
-  await enumerateBookingLinked(admin, tables, notes, bookingIds, {
-    table: "payments",
-    label: "Payments (linked via the subject's bookings)",
-    columns: PAYMENT_PROJECTION,
-  });
-  await enumerateBookingLinked(admin, tables, notes, bookingIds, {
-    table: "refund_ledger",
-    label: "Refund events (via bookings)",
-    columns: "*",
-  });
+  const bookingLinked = [
+    {
+      table: "care_plans",
+      label: "Care plans on the subject's bookings",
+      columns: CARE_PLAN_PROJECTION,
+    },
+    {
+      table: "payments",
+      label: "Payments (linked via the subject's bookings)",
+      columns: PAYMENT_PROJECTION,
+    },
+    {
+      table: "refund_ledger",
+      label: "Refund events (via bookings)",
+      columns: "*",
+    },
+  ] as const;
+
+  for (const spec of bookingLinked) {
+    if (bookingsFailure) {
+      tables.push({
+        table: spec.table,
+        label: spec.label,
+        row_count: 0,
+        ...bookingsFailure,
+      });
+      continue;
+    }
+    await enumerateBookingLinked(admin, tables, notes, bookingIds, spec);
+  }
 
   // Sanity fingerprint. Not a cryptographic commitment — just something
   // the subject can quote back if they later say "the export was

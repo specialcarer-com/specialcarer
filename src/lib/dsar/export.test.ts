@@ -250,6 +250,53 @@ describe("exportSubject", () => {
     assert.doesNotMatch(String(capturedColumns), /refunded_amount_cents/);
   });
 
+  it("propagates a bookings failure to every booking-linked table", async () => {
+    // If bookings itself errors, the subject would otherwise see
+    // { care_plans: row_count:0, payments: row_count:0, ... } which
+    // silently misrepresents "we couldn't ask" as "you have nothing".
+    const admin: ExportAdminClient = {
+      from(table: string) {
+        return {
+          select(_c: string) {
+            return {
+              async eq(_col: string, _v: string) {
+                if (table === "bookings") {
+                  return {
+                    data: null,
+                    error: { code: "XX000", message: "bookings blew up" },
+                  };
+                }
+                return { data: [], error: null };
+              },
+              async or(_f: string) {
+                if (table === "bookings") {
+                  return {
+                    data: null,
+                    error: { code: "XX000", message: "bookings blew up" },
+                  };
+                }
+                return { data: [], error: null };
+              },
+            };
+          },
+        };
+      },
+    };
+    const out = await exportSubject(admin, subject);
+    const bookings = out.tables.find((t) => t.table === "bookings");
+    assert.equal(bookings?.error, "bookings blew up");
+    for (const t of ["care_plans", "payments", "refund_ledger"]) {
+      const entry = out.tables.find((x) => x.table === t);
+      assert.ok(entry, `${t} must appear in the manifest`);
+      assert.equal(
+        entry?.error,
+        "bookings blew up",
+        `${t} must inherit the bookings failure rather than silently claim zero rows`,
+      );
+      assert.equal(entry?.row_count, 0);
+    }
+  });
+
   it("includes an integrity digest that is stable for identical manifests", async () => {
     const fx: Fixture = {
       profiles: { rows: [{ id: "user-1" }] },
