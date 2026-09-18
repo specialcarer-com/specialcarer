@@ -17,7 +17,7 @@
  *   sees the request, so a client cannot forge it.
  *
  * Trust order: `CF-Connecting-IP` (Cloudflare, unspoofable) >
- * `X-Forwarded-For`'s first entry (Vercel/Node) > `X-Real-IP` (legacy
+ * `X-Forwarded-For`'s first non-empty entry (Vercel/Node) > `X-Real-IP` (legacy
  * reverse-proxy convention, kept for parity with the existing call sites).
  *
  * Returns `null` when none are present. Callers decide their own fallback
@@ -35,7 +35,7 @@ export function extractClientIp(headers: ClientIpHeaders): string | null {
 
   const forwarded = headers.get("x-forwarded-for");
   if (forwarded) {
-    const first = forwarded.split(",")[0]?.trim();
+    const first = forwarded.split(",").map((entry) => entry.trim()).find((entry) => entry.length > 0);
     if (first) return first;
   }
 

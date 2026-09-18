@@ -37,6 +37,27 @@ test("trims whitespace and ignores blank/whitespace-only header values", () => {
   assert.equal(extractClientIp(headersFrom({ "CF-Connecting-IP": "   ", "X-Forwarded-For": " , 203.0.113.9" })), "203.0.113.9");
 });
 
+test("skips multiple empty forwarded entries and keeps the first non-empty address", () => {
+  assert.equal(
+    extractClientIp(headersFrom({ "X-Forwarded-For": " , , 203.0.113.9 , 198.51.100.1" })),
+    "203.0.113.9",
+  );
+});
+
+test("falls back to X-Real-IP when every forwarded entry is blank", () => {
+  assert.equal(
+    extractClientIp(headersFrom({ "X-Forwarded-For": " , , ", "X-Real-IP": " 203.0.113.9 " })),
+    "203.0.113.9",
+  );
+});
+
+test("returns null when all forwarding headers are blank", () => {
+  assert.equal(
+    extractClientIp(headersFrom({ "CF-Connecting-IP": " ", "X-Forwarded-For": " , , ", "X-Real-IP": " " })),
+    null,
+  );
+});
+
 test("returns null, not a placeholder string, when nothing is present", () => {
   assert.equal(extractClientIp(headersFrom({})), null);
   assert.equal(extractClientIp(headersFrom({ "X-Forwarded-For": "" })), null);
