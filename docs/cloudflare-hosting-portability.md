@@ -115,6 +115,32 @@ asserts the spoofing scenario directly and that no call site re-parses the
 header itself. This is address-selection only; it does not add IP-based
 blocking, geolocation or new logging destinations.
 
+### Persistent incremental cache
+
+`wrangler.jsonc` binds a Workers KV namespace (`NEXT_INC_CACHE_KV`) created
+directly in the same `bthogroup` account as `specialcarer-preview`, and
+`open-next.config.ts` selects OpenNext's KV-backed `incrementalCache`
+override. Previously the config used OpenNext's default (effectively no
+persistent ISR/data cache on Workers — every isolate/cold start recomputed
+what Vercel would have served from cache). This reuses the existing
+`WORKER_SELF_REFERENCE` service binding that OpenNext's KV cache re-render
+path requires; no new service binding was added.
+
+This is the incremental cache only. Tag cache (for on-demand
+`revalidateTag`/`revalidatePath`) and the background revalidation queue are
+separate OpenNext config options, currently unset, meaning they fall back to
+OpenNext's built-in defaults rather than a Cloudflare-native implementation
+(D1/Durable-Object-backed tag cache, queue-backed background revalidation).
+Decide and configure those as their own bounded change if the app relies on
+on-demand revalidation; do not assume this change covers them. Workers KV is
+eventually consistent (up to ~60s propagation on the default TTL), which is
+unchanged from Vercel's own ISR staleness window in most configurations but
+should be verified against this app's actual `revalidate` usage.
+
+No other Cloudflare resource (R2, D1, Durable Objects, Queues) was
+provisioned. The KV namespace was created directly via the Cloudflare
+account's API; it is empty until first written to by a request.
+
 ## Build-time versus runtime integration configuration
 
 - All client-used `NEXT_PUBLIC_*` values are build inputs and may be inlined
@@ -184,12 +210,14 @@ alignment question, so payment readiness must stay unproven until reconciled.
    authentication, contract rendering, asset headers, PDFs, integrations and
    webhooks. Existing consent-PDF logo filesystem fallback remains outside
    this narrow change.
-5. Separately design persistent cache/revalidation, image optimisation,
-   runtime SMTP support, monitoring and deployment CI. No cache resources or
-   paid services were provisioned here. Client-IP trust for the six existing
-   audit/rate-limit call sites is now handled by `src/lib/hosting/client-ip.ts`
-   (see above); this does not cover any future call site added without using
-   that helper, and does not add distributed (cross-instance) rate limiting.
+5. Separately design image optimisation, runtime SMTP support, monitoring
+   and deployment CI. Client-IP trust for the six existing audit/rate-limit
+   call sites is now handled by `src/lib/hosting/client-ip.ts` (see above);
+   this does not cover any future call site added without using that helper,
+   and does not add distributed (cross-instance) rate limiting. The
+   incremental cache now persists via Workers KV (see above); tag cache and
+   the background revalidation queue are still unresolved and default to
+   OpenNext's built-in behaviour, not a Cloudflare-native implementation.
 6. Plan and rehearse a monitored, single-scheduler handover with rollback.
    Preserve original schedules; deletion remains subject to its own approval.
 7. Reproduce canonical host redirects and preserve mail/verification DNS before

@@ -12,6 +12,16 @@
   "vars": {
     "APP_ENV": "preview"
   },
+  // Workers KV-backed incremental cache (ISR/data cache) for OpenNext.
+  // Persists across isolates/cold starts, unlike the prior no-op default.
+  // Tag cache / background revalidation queue selection is a separate,
+  // later decision — see docs/cloudflare-hosting-portability.md.
+  "kv_namespaces": [
+    {
+      "binding": "NEXT_INC_CACHE_KV",
+      "id": "3a67972a34164a86aeddb6bc691d21a2"
+    }
+  ],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
