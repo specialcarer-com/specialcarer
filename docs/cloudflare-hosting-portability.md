@@ -141,6 +141,23 @@ No other Cloudflare resource (R2, D1, Durable Objects, Queues) was
 provisioned. The KV namespace was created directly via the Cloudflare
 account's API; it is empty until first written to by a request.
 
+### Image optimization (deliberately deferred, not missing)
+
+Cloudflare has no bundled equivalent of Vercel's built-in Next.js image
+optimization. Two real options exist: bind Cloudflare Images (a separate
+paid product — per-stored-image and per-transformation billing) via an
+`IMAGES` binding, or serve images unoptimized. This change takes the
+zero-cost option for now: `next.config.ts` sets `images.unoptimized = true`,
+but only when `CLOUDFLARE_BUILD=1` is set — which `cf:build` and
+`cf:preview` now set — so Vercel's build is completely unaffected and keeps
+using Next's default built-in optimizer.
+
+This is a placeholder, not a final decision. Revisit before go-live: if
+image-heavy pages (caregiver profile photos, in particular) need
+optimization on Cloudflare, switch to the Cloudflare Images binding then,
+once real traffic/cost tradeoffs can be weighed. No Cloudflare Images
+product was enabled and no related cost was incurred by this change.
+
 ## Build-time versus runtime integration configuration
 
 - All client-used `NEXT_PUBLIC_*` values are build inputs and may be inlined
@@ -210,14 +227,16 @@ alignment question, so payment readiness must stay unproven until reconciled.
    authentication, contract rendering, asset headers, PDFs, integrations and
    webhooks. Existing consent-PDF logo filesystem fallback remains outside
    this narrow change.
-5. Separately design image optimisation, runtime SMTP support, monitoring
-   and deployment CI. Client-IP trust for the six existing audit/rate-limit
-   call sites is now handled by `src/lib/hosting/client-ip.ts` (see above);
-   this does not cover any future call site added without using that helper,
-   and does not add distributed (cross-instance) rate limiting. The
-   incremental cache now persists via Workers KV (see above); tag cache and
-   the background revalidation queue are still unresolved and default to
-   OpenNext's built-in behaviour, not a Cloudflare-native implementation.
+5. Separately design runtime SMTP support, monitoring and deployment CI.
+   Client-IP trust for the six existing audit/rate-limit call sites is now
+   handled by `src/lib/hosting/client-ip.ts` (see above); this does not
+   cover any future call site added without using that helper, and does not
+   add distributed (cross-instance) rate limiting. The incremental cache now
+   persists via Workers KV (see above); tag cache and the background
+   revalidation queue are still unresolved and default to OpenNext's
+   built-in behaviour, not a Cloudflare-native implementation. Image
+   optimization is deliberately deferred to unoptimized (see above) pending
+   a real cost/traffic decision on Cloudflare Images.
 6. Plan and rehearse a monitored, single-scheduler handover with rollback.
    Preserve original schedules; deletion remains subject to its own approval.
 7. Reproduce canonical host redirects and preserve mail/verification DNS before
