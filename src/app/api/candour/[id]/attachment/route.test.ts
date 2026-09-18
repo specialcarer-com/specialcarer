@@ -7,7 +7,7 @@ import {
   handleAttachment,
   sanitizeFilename,
   type StorageUploader,
-} from "./route";
+} from "./handler";
 import { makeFakeCaseDb, seedEvent } from "../__helpers__/fake-case-db";
 
 const EVENT_ID = "evt_1";

@@ -1,8 +1,11 @@
 # SpecialCarer Cloudflare migration: preview scaffold
 
 Status: DRAFT. GitHub compatibility build and minified packaging passed within
-Cloudflare's Worker-size limit. No Cloudflare deployment or production cutover
-has occurred.
+Cloudflare's Worker-size limit. The orchestrator subsequently confirmed
+acceptance of that earlier synthetic bundle by the private
+`specialcarer-preview` Worker, with URL exposure disabled and no schedules.
+That acceptance does not include the newer local portability changes and is
+not an integration test or production cutover.
 
 ## Scope
 
@@ -10,9 +13,16 @@ Replace Vercel hosting only. Keep Supabase, Stripe, Resend/IONOS, verification
 providers, Mapbox, Whereby, Sentry and GitHub. Preserve existing app behaviour,
 branding, payment controls and account-deletion flags.
 
-This change adds OpenNext and Wrangler, pinned in the lockfile, plus an isolated
-preview configuration. It does not change the existing Next.js build command or
-the Vercel schedule. It does not implement the production scheduler migration.
+The original scaffold adds OpenNext and Wrangler, pinned in the lockfile, plus
+an isolated preview configuration. The bounded local follow-up adds immutable
+contract bundling checks, provider-neutral production guards, static-asset
+controls and a separate **disabled** scheduler dispatcher. See
+[`cloudflare-hosting-portability.md`](./cloudflare-hosting-portability.md) for
+its environment contract and tests. The Vercel schedule is unchanged; no
+production scheduler migration has been activated.
+
+For isolated, placeholder-only rebuild instructions and the narrow Next route
+export fix, see [`cloudflare-synthetic-rebuild.md`](./cloudflare-synthetic-rebuild.md).
 
 ## Local compatibility test
 
@@ -87,9 +97,10 @@ Do not describe this as a deployment-ready or runtime-validated migration.
   Never activate both hosts' payout/email schedules simultaneously.
 - Assess the Workers plan using measured bundle size and runtime CPU usage.
   User permits assessing a paid plan but has NOT approved activating one.
-- Configure Cloudflare deployment access and approved secret provisioning.
-  The currently connected DNS-oriented connector returned an auth-header error;
-  dashboard access was available. Do not extract production environment secrets.
+- Configure approved integration secret provisioning. The private compatibility
+  upload established a working transfer path but did not transfer application
+  credentials or validate their runtime behaviour. Do not extract hidden
+  production environment secrets through app/build code.
 - Confirm the domain's authoritative DNS, preserve all mail and verification
   records, and obtain approval before any nameserver or traffic cutover.
   The checked Cloudflare account did not contain a `specialcarer.com` zone.

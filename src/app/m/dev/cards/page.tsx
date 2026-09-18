@@ -1,5 +1,6 @@
 import * as React from "react";
 import { notFound } from "next/navigation";
+import { isProductionDeployment } from "@/lib/hosting/environment";
 import {
   CarerCard,
   CarerCardSkeleton,
@@ -21,8 +22,8 @@ import {
  * Pass ?carerId=<uuid> to render a real carer; with no id (or the flag off)
  * the section is skipped and only the static samples render.
  *
- * Hard-gated: 404 only on real prod (VERCEL_ENV=production), available on dev
- * + Vercel previews. Not linked from any nav. No production carer-card
+ * Hard-gated: 404 in production (APP_ENV, with VERCEL_ENV fallback), available
+ * on explicit previews and local dev. Not linked from any nav. No production carer-card
  * renderer is touched — that is PR-R4.
  */
 export const dynamic = "force-dynamic";
@@ -114,8 +115,8 @@ export default async function CardsDevPage({
 }: {
   searchParams: Promise<{ carerId?: string }>;
 }) {
-  // 404 on real production (Vercel target = 'production'). Allowed on dev + Vercel previews.
-  if (process.env.VERCEL_ENV === "production") notFound();
+  // Preview is explicit; NODE_ENV=production alone cannot distinguish a preview build.
+  if (isProductionDeployment()) notFound();
 
   const { carerId } = await searchParams;
   const live =
