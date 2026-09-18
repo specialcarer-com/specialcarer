@@ -158,6 +158,42 @@ optimization on Cloudflare, switch to the Cloudflare Images binding then,
 once real traffic/cost tradeoffs can be weighed. No Cloudflare Images
 product was enabled and no related cost was incurred by this change.
 
+### Email transport — SMTP fallback guarded, not fixed
+
+`src/lib/email/smtp.ts`'s SMTP fallback (used only when `RESEND_API_KEY` is
+missing) relies on nodemailer's SMTP transport, which requires raw TCP/TLS
+sockets. This is a fundamental Cloudflare Workers runtime limitation, not a
+missing config value — Workers does not provide raw sockets the way Node.js
+does, so nodemailer's SMTP transport cannot function there regardless of
+configuration. Separately, nodemailer has a known history of breaking
+Workers' build step entirely in some versions/bundler combinations (imports
+of Node built-ins without the `node:` prefix); this repo has not run an
+actual `cf:build` to confirm whether that specific issue affects this
+dependency's pinned version, since sandbox review has no network access to
+install dependencies or run a real build.
+
+This change: adds `src/lib/hosting/runtime.ts` (`isCloudflareWorkersRuntime()`,
+using Cloudflare's own documented `navigator.userAgent === "Cloudflare-Workers"`
+detection) and uses it in `getSmtp()` to skip the SMTP path entirely on
+Cloudflare, logging once and returning `null` so `sendEmail()` falls through
+to its existing "no transport configured" result rather than attempting a
+socket connection that cannot succeed. Also changes the top-level
+`import nodemailer from "nodemailer"` to a dynamic `await import("nodemailer")`
+inside the branch that never executes on Cloudflare, which is the correct
+direction for avoiding nodemailer's own code in that runtime's bundle, though
+whether OpenNext/Wrangler's single-file Worker bundling actually tree-shakes
+it out is exactly the kind of thing that needs a real `cf:build` to confirm,
+not something resolvable by static review alone.
+
+**Practical implication**: as long as `RESEND_API_KEY` is configured for the
+Cloudflare deployment (as it already is intended to be — see the environment
+variable inventory), this fallback is never exercised and email sending
+works normally. The residual risk is specifically the scenario where Resend
+is ever misconfigured *and* the Cloudflare build either fails outright or
+throws at runtime because of nodemailer — this change eliminates the runtime
+half of that risk; the build-time half needs `npm run cf:build` run for real
+before this is fully closed out.
+
 ## Build-time versus runtime integration configuration
 
 - All client-used `NEXT_PUBLIC_*` values are build inputs and may be inlined
@@ -227,16 +263,19 @@ alignment question, so payment readiness must stay unproven until reconciled.
    authentication, contract rendering, asset headers, PDFs, integrations and
    webhooks. Existing consent-PDF logo filesystem fallback remains outside
    this narrow change.
-5. Separately design runtime SMTP support, monitoring and deployment CI.
-   Client-IP trust for the six existing audit/rate-limit call sites is now
-   handled by `src/lib/hosting/client-ip.ts` (see above); this does not
-   cover any future call site added without using that helper, and does not
-   add distributed (cross-instance) rate limiting. The incremental cache now
+5. Separately design monitoring and deployment CI. Client-IP trust for the
+   six existing audit/rate-limit call sites is now handled by
+   `src/lib/hosting/client-ip.ts` (see above); this does not cover any
+   future call site added without using that helper, and does not add
+   distributed (cross-instance) rate limiting. The incremental cache now
    persists via Workers KV (see above); tag cache and the background
    revalidation queue are still unresolved and default to OpenNext's
    built-in behaviour, not a Cloudflare-native implementation. Image
    optimization is deliberately deferred to unoptimized (see above) pending
-   a real cost/traffic decision on Cloudflare Images.
+   a real cost/traffic decision on Cloudflare Images. The SMTP fallback is
+   now guarded off on Cloudflare (see above) rather than left to fail at
+   request time; whether it also affects the build itself is still
+   unconfirmed pending a real `cf:build` run.
 6. Plan and rehearse a monitored, single-scheduler handover with rollback.
    Preserve original schedules; deletion remains subject to its own approval.
 7. Reproduce canonical host redirects and preserve mail/verification DNS before
