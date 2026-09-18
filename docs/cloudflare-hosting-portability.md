@@ -98,6 +98,23 @@ every business operation succeeded; reconcile existing job ledgers separately.
 cron list. No deploy command is added to the app build. Do not enable deletion,
 payroll, payout, refund or other jobs as part of a preview smoke test.
 
+### Trusted client IP
+
+`src/lib/hosting/client-ip.ts` replaces six duplicated inline readers of
+`x-forwarded-for` (admin audit logging, org/agency contract-signing audit
+trails, reference-consent records, timesheet-approval records, and the
+marketing-form rate limiter). Vercel's edge sets `x-forwarded-for` itself, so
+trusting its first entry was safe there; Cloudflare does not rewrite a
+client-supplied `X-Forwarded-For` the same way; it appends the real IP rather
+than replacing what the client sent, so a client could otherwise spoof any IP
+in these audit trails and rate-limit buckets. The shared helper trusts
+`CF-Connecting-IP` first — set by Cloudflare's edge and not forgeable by the
+client — falling back to `X-Forwarded-For`'s first entry, then `X-Real-IP`,
+so existing Vercel behaviour is unchanged. `src/lib/hosting/client-ip.test.ts`
+asserts the spoofing scenario directly and that no call site re-parses the
+header itself. This is address-selection only; it does not add IP-based
+blocking, geolocation or new logging destinations.
+
 ## Build-time versus runtime integration configuration
 
 - All client-used `NEXT_PUBLIC_*` values are build inputs and may be inlined
@@ -168,8 +185,11 @@ alignment question, so payment readiness must stay unproven until reconciled.
    webhooks. Existing consent-PDF logo filesystem fallback remains outside
    this narrow change.
 5. Separately design persistent cache/revalidation, image optimisation,
-   proxy/client-IP trust, runtime SMTP support, monitoring and deployment CI.
-   No cache resources, paid services or IP trust changes were made here.
+   runtime SMTP support, monitoring and deployment CI. No cache resources or
+   paid services were provisioned here. Client-IP trust for the six existing
+   audit/rate-limit call sites is now handled by `src/lib/hosting/client-ip.ts`
+   (see above); this does not cover any future call site added without using
+   that helper, and does not add distributed (cross-instance) rate limiting.
 6. Plan and rehearse a monitored, single-scheduler handover with rollback.
    Preserve original schedules; deletion remains subject to its own approval.
 7. Reproduce canonical host redirects and preserve mail/verification DNS before

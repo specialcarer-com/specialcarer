@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { extractClientIp } from "@/lib/hosting/client-ip";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { approveTimesheet } from "@/lib/timesheet/approve";
@@ -138,8 +139,7 @@ export async function POST(
     );
   }
 
-  const xfwd = req.headers.get("x-forwarded-for") ?? "";
-  const approverIp = xfwd.split(",")[0]?.trim() || null;
+  const approverIp = extractClientIp(req.headers);
 
   const result = await approveTimesheet(admin, {
     timesheetId: ts.id,
