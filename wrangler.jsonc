@@ -2,6 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "specialcarer-preview",
   "main": ".open-next/worker.js",
+  "minify": true,
   "compatibility_date": "2026-09-17",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   // This file must not expose the application or start background processing.
