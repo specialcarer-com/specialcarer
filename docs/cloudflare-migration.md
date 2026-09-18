@@ -1,7 +1,8 @@
 # SpecialCarer Cloudflare migration: preview scaffold
 
-Status: DRAFT. GitHub compatibility build and packaging passed; deployment is
-blocked by bundle size. No Cloudflare deployment or production cutover has occurred.
+Status: DRAFT. GitHub compatibility build and minified packaging passed within
+Cloudflare's Worker-size limit. No Cloudflare deployment or production cutover
+has occurred.
 
 ## Scope
 
@@ -39,11 +40,16 @@ https://github.com/specialcarer-com/specialcarer/actions/runs/35263872288
 - Node 22 locked dependency installation: passed.
 - OpenNext Workers build: passed.
 - Wrangler packaging dry run: passed; no deployment performed.
-- Total Upload: 77,357.48 KiB uncompressed (approximately 75.54 MiB).
-- Gzip size: 11,403.56 KiB (reported for reference).
-- Cloudflare's documentation checked on this date specifies a 64 MiB
-  uncompressed Worker-size limit for both Free and Paid plans. This bundle
-  exceeds it; paying alone does not resolve the size blocker.
+- The first dry run reported 77,357.48 KiB uncompressed (approximately
+  75.54 MiB), above Cloudflare's documented 64 MiB limit.
+- Production minification is now mandatory in both `wrangler.jsonc` and the
+  `cf:dry-run` script.
+- The bounded verification run on 18 September 2026 passed:
+  https://github.com/specialcarer-com/specialcarer/actions/runs/35290284272
+- The verified minified upload is 59,779.33 KiB uncompressed (approximately
+  58.38 MiB) and 10,099.43 KiB gzip, below the 64 MiB limit without removing
+  routes or features.
+- Test, typecheck and rate-limit workflows passed on the minification commit.
 - Existing test, typecheck and rate-limit workflows also passed on the build
   commit. Previously reported unrelated failures were not investigated.
 - Workers runtime and authenticated integration smoke tests remain unperformed.
