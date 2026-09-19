@@ -158,6 +158,20 @@ optimization on Cloudflare, switch to the Cloudflare Images binding then,
 once real traffic/cost tradeoffs can be weighed. No Cloudflare Images
 product was enabled and no related cost was incurred by this change.
 
+Setting `images.unoptimized` does not remove Next's built-in image-
+optimization route handler from the build — OpenNext's Cloudflare adapter
+still includes it (to serve images unchanged), and that handler has a
+conditional `require("sharp")` for the case where optimization *is* wanted.
+Sharp ships per-platform native binaries; bundling that reference (rather
+than leaving it as an external, unresolved require) made esbuild try to
+statically resolve those binaries during Cloudflare bundling and fail, even
+though the code path is never actually reached here. `serverExternalPackages:
+["sharp"]` (Cloudflare build only) tells Next.js's own bundler to leave
+`sharp` as an external require instead of inlining it — the documented fix
+for this class of native-dependency bundling failure. Confirmed against a
+real `cf:build` run (heap raised to 8 GiB; see the build log from that run)
+that this was the actual reported error, not a guess.
+
 ### Email transport — SMTP fallback guarded, not fixed
 
 `src/lib/email/smtp.ts`'s SMTP fallback (used only when `RESEND_API_KEY` is

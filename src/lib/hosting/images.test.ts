@@ -13,3 +13,8 @@ test("next.config.ts only disables image optimization for the Cloudflare build, 
   assert.match(source, /process\.env\.CLOUDFLARE_BUILD === "1"/);
   assert.match(source, /images:\s*isCloudflareBuild\s*\?\s*\{\s*unoptimized:\s*true\s*\}\s*:\s*undefined/);
 });
+
+test("next.config.ts externalizes sharp for the Cloudflare build so the bundler doesn't try to resolve its native binaries", () => {
+  const source = readFileSync("next.config.ts", "utf8");
+  assert.match(source, /isCloudflareBuild\s*\?\s*\{\s*serverExternalPackages:\s*\["sharp"\]\s*\}\s*:\s*\{\}/);
+});

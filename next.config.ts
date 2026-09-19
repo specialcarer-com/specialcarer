@@ -50,6 +50,16 @@ const nextConfig: NextConfig = {
   // is completely unaffected (images stays unset there, i.e. Next's default
   // built-in optimizer).
   images: isCloudflareBuild ? { unoptimized: true } : undefined,
+  // sharp is only ever reached through Next's built-in image-optimization
+  // route handler, which OpenNext's Cloudflare adapter still includes even
+  // with images.unoptimized above — the route must exist to serve images
+  // unchanged. sharp ships per-platform native binaries; bundling it
+  // (rather than leaving it as an external require) makes esbuild try to
+  // statically resolve those binaries and fail. This is never actually
+  // invoked on Cloudflare (images are unoptimized there), so externalizing
+  // it is safe — it just stops the bundler from trying. Scoped to the
+  // Cloudflare build only; Vercel's own image pipeline is unaffected.
+  ...(isCloudflareBuild ? { serverExternalPackages: ["sharp"] } : {}),
   async redirects() {
     return [
       // US spelling alias for the organisations marketing page.
