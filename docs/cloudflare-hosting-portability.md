@@ -359,6 +359,55 @@ build-time-injected `NEXT_PUBLIC_` equivalent, not just a runtime fallback
 like the one added here — left as an open, separately-scoped item rather
 than bundled into this change.
 
+## Scheduler cutover — staged by risk, Phase 1 in progress
+
+Cutting the scheduler over from Vercel's 26 cron jobs to Cloudflare's is
+staged by risk rather than done as one switch, because the same job firing
+from both providers simultaneously would double-execute it — harmless for
+an idempotent aggregation, potentially serious for a payout.
+
+- **Phase 1 (in progress)**: shadow-run three read/aggregation-only jobs
+  (`kpi-rollup-hourly`, `experiment-rollup`, `dbs-update-service-poll`) —
+  each confirmed to have a cron expression no other job shares, so
+  registering only these three schedules structurally prevents any other
+  job, including the dangerous ones, from ever firing here regardless of
+  the enable flag. `cloudflare/scheduler/rehearsal.test.ts` asserts this
+  mechanically (exact job set, no shared expressions, explicit denylist of
+  financial/destructive paths) rather than relying on manual review holding
+  forever.
+- **Phase 2 (not started)**: user-facing reminder jobs. Requires pausing
+  Vercel's cron for those specific paths before enabling Cloudflare's —
+  not a dual-run — to avoid double-sending real users the same message.
+- **Phase 3 (not started)**: financial and destructive jobs (payouts,
+  payroll, refund reconciliation, account deletion, DSAR fulfilment,
+  Stripe webhook recovery). Instantaneous cutover only, never overlapping;
+  requires confirming existing idempotency/claim safeguards per job before
+  moving, not assuming they hold.
+
+**Step 1a of Phase 1** (mechanism-only, no real secrets, no real data):
+`cloudflare/scheduler/wrangler.rehearsal.jsonc` defines a separate,
+dedicated `specialcarer-scheduler-rehearsal` Worker — not a change to
+`specialcarer-scheduler-preview` — with `APP_ENV=production` and
+`SCHEDULER_ENABLED=true` on the *scheduler* Worker only, service-bound to
+the *existing* `specialcarer-preview` app (which holds no real database
+credentials). This tests only whether Cloudflare's own cron trigger
+mechanism correctly invokes this Worker's `scheduled()` handler — the
+dispatcher's own logic (auth header, timeout, retry behaviour) is already
+fully covered by `cloudflare/scheduler/worker.test.ts`. Any dispatched
+request either fails cleanly at the app (missing DB credentials, secret
+mismatch) or is a genuine no-op; no real job execution is possible via
+this Worker as configured. A wrong/placeholder `CRON_SECRET` is
+acceptable here specifically because an auth failure is a safe, expected
+outcome for this step — it still proves the platform mechanism reached
+the app.
+
+**Step 1b (separate, later, bigger decision, not yet approved)**: only
+once Step 1a proves the mechanism works, decide separately whether to
+stand up a dedicated Worker with real production secrets to prove these
+three jobs complete correctly against real data. Recommended: a new,
+narrowly-scoped Worker for this — not promoting `specialcarer-preview` —
+so CI's repeated use of that Worker name never touches live credentials.
+
 ## Remaining gates and next order
 
 1. The orchestrator now reports user confirmation of the destination account.

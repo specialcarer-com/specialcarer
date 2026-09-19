@@ -1,0 +1,30 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "specialcarer-scheduler-rehearsal",
+  "main": "worker.ts",
+  "compatibility_date": "2026-09-17",
+  "workers_dev": false,
+  "preview_urls": false,
+  // Deliberately still points at the EXISTING specialcarer-preview app, not a
+  // new production-secreted Worker. specialcarer-preview has no real database
+  // credentials, so any dispatched request either fails cleanly at the app
+  // (e.g. auth/config error) or is a genuinely harmless no-op — this step
+  // tests only whether Cloudflare's own cron trigger mechanism correctly
+  // invokes this Worker's scheduled() handler, not whether the underlying
+  // jobs complete successfully against real data. That is a separate,
+  // later decision (see docs/cloudflare-hosting-portability.md, "Scheduler
+  // cutover").
+  "vars": {
+    "APP_ENV": "production",
+    "SCHEDULER_ENABLED": "true"
+  },
+  "services": [
+    { "binding": "APP", "service": "specialcarer-preview" }
+  ],
+  // Only the three Phase 1 jobs' exact cron expressions, each confirmed
+  // unique in cloudflare/scheduler/schedules.ts (no other job shares any of
+  // these three strings) - kpi-rollup-hourly, experiment-rollup,
+  // dbs-update-service-poll. No financial or destructive job's schedule is
+  // present here, by construction, regardless of the enable flag above.
+  "triggers": { "crons": ["5 * * * *", "0 5 * * *", "23 6 * * *"] }
+}
