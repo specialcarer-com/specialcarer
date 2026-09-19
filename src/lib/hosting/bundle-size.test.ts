@@ -13,7 +13,11 @@ test("the wrapper script uses pipefail so a real wrangler failure can't be maske
   assert.match(source, /set -euo pipefail/);
 });
 
-function runCheck(input) {
+// execFileSync's thrown error isn't a Node-exported type; this is the
+// shape actually present on it (status may be null if killed by signal).
+type ExecFileSyncError = { status: number | null; stdout?: string | Buffer; stderr?: string | Buffer };
+
+function runCheck(input: string) {
   try {
     const stdout = execFileSync("node", ["scripts/check-cloudflare-bundle-size.mjs"], {
       input,
@@ -21,7 +25,8 @@ function runCheck(input) {
     });
     return { code: 0, stdout };
   } catch (err) {
-    return { code: err.status, stdout: err.stdout ?? "", stderr: err.stderr ?? "" };
+    const e = err as ExecFileSyncError;
+    return { code: e.status, stdout: e.stdout ?? "", stderr: e.stderr ?? "" };
   }
 }
 
