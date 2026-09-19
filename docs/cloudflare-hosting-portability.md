@@ -322,6 +322,43 @@ added costs real, scarce headroom (~64 KiB). Removing an unused route
 frees roughly the same. This is worth knowing before adding routes
 casually once this is closer to go-live.
 
+## Monitoring — Sentry, verified compatible
+
+Checked Sentry's own "Next.js on Cloudflare" guide before assuming either
+compatibility or incompatibility, the same way nodemailer and Sharp were
+checked rather than guessed at. Unlike those two, **no wrangler or code
+change was needed for the core setup**: Sentry states two prerequisites —
+the `nodejs_compat` compatibility flag and a `compatibility_date` of
+2025-08-16 or later — and this app's `wrangler.jsonc` already satisfies
+both (`compatibility_date: 2026-09-17`). Reviewed all three Sentry config
+files (`sentry.server.config.ts`, `sentry.edge.config.ts`,
+`sentry.client.config.ts`) for anything Node-specific that could still
+trip Cloudflare's bundler the way Sharp did (native modules, profiling
+integrations); found none — this is a clean, dependency-light setup with
+good existing PII-scrubbing discipline.
+
+One real gap found and fixed: both server and edge configs tagged Sentry
+events with `release: process.env.VERCEL_GIT_COMMIT_SHA`, a Vercel-only
+variable that is simply undefined on Cloudflare (nothing sets it there).
+Not a crash — Sentry just omits release tagging — but every
+Cloudflare-originated error would have silently lost commit-level
+attribution, which matters during actual incident triage.
+`src/lib/hosting/release.ts` (`resolveReleaseSha()`) now checks
+`VERCEL_GIT_COMMIT_SHA` first (unchanged Vercel behaviour), falling back to
+`GITHUB_SHA` (set by both `.github/workflows/cloudflare-compatibility.yml`
+and `pr-checks.yml`, since this app's Cloudflare build runs via GitHub
+Actions). If the Cloudflare build/deploy path ever moves off GitHub
+Actions, this fallback will need updating — it is not a generic
+"any CI" detector.
+
+**Not yet addressed**: `sentry.client.config.ts` tags releases via
+`NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA`, a client-exposed variable that must be
+inlined into the browser bundle at *build* time (unlike server/edge, which
+read `process.env` at runtime). Fixing this for Cloudflare needs a
+build-time-injected `NEXT_PUBLIC_` equivalent, not just a runtime fallback
+like the one added here — left as an open, separately-scoped item rather
+than bundled into this change.
+
 ## Remaining gates and next order
 
 1. The orchestrator now reports user confirmation of the destination account.
@@ -340,7 +377,12 @@ casually once this is closer to go-live.
    authentication, contract rendering, asset headers, PDFs, integrations and
    webhooks. Existing consent-PDF logo filesystem fallback remains outside
    this narrow change.
-5. Separately design monitoring and deployment CI. Client-IP trust for the
+5. Deployment CI now exists (`.github/workflows/pr-checks.yml`: lint,
+   typecheck, `test:hosting` on relevant PRs/pushes; the locked one-shot
+   workflow for full `cf:build`/`cf:dry-run` verification). Monitoring
+   (Sentry) is verified compatible, with one real gap fixed (see above) and
+   one documented open item (client-side release tagging). Client-IP trust
+   for the six existing audit/rate-limit call sites is now handled by
    six existing audit/rate-limit call sites is now handled by
    `src/lib/hosting/client-ip.ts` (see above); this does not cover any
    future call site added without using that helper, and does not add
