@@ -21,5 +21,12 @@ test("next.config.ts uses a custom Cloudflare image loader, not images.unoptimiz
 test("the Cloudflare image loader returns the source URL unmodified (no sharp, no transformation)", () => {
   const source = readFileSync("cloudflare-image-loader.ts", "utf8");
   assert.match(source, /export default function identityLoader/);
-  assert.doesNotMatch(source, /sharp/i, "the loader itself must never reference sharp");
+  // Strip the file's leading block comment before checking: it documents
+  // *why* sharp is avoided and necessarily mentions it — including the
+  // literal text `require("sharp")` as inline code — so checking the raw
+  // file text produces a false failure on the documentation, not the code.
+  // (First correction attempt still matched this exact string; verified
+  // against the actual file content before landing on stripping comments.)
+  const codeOnly = source.replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.doesNotMatch(codeOnly, /sharp/i, "the loader's actual code must never reference sharp");
 });
