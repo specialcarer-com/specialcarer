@@ -16,7 +16,14 @@
   // cutover").
   "vars": {
     "APP_ENV": "production",
-    "SCHEDULER_ENABLED": "true"
+    "SCHEDULER_ENABLED": "true",
+    // Only used to construct a well-formed URL object for the request -
+    // the actual call routes through the APP service binding below,
+    // regardless of this value's host, not real DNS. "app.invalid" is
+    // RFC 2606's reserved non-resolving TLD, and is the same placeholder
+    // already used in cloudflare/scheduler/worker.test.ts's own "active"
+    // fixture - not a real origin, deliberately.
+    "APP_ORIGIN": "https://app.invalid"
   },
   "services": [
     { "binding": "APP", "service": "specialcarer-preview" }
