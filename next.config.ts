@@ -49,17 +49,13 @@ const nextConfig: NextConfig = {
   // this is a decision to revisit before go-live, not an oversight. Vercel
   // is completely unaffected (images stays unset there, i.e. Next's default
   // built-in optimizer).
-  images: isCloudflareBuild ? { unoptimized: true } : undefined,
-  // sharp is only ever reached through Next's built-in image-optimization
-  // route handler, which OpenNext's Cloudflare adapter still includes even
-  // with images.unoptimized above — the route must exist to serve images
-  // unchanged. sharp ships per-platform native binaries; bundling it
-  // (rather than leaving it as an external require) makes esbuild try to
-  // statically resolve those binaries and fail. This is never actually
-  // invoked on Cloudflare (images are unoptimized there), so externalizing
-  // it is safe — it just stops the bundler from trying. Scoped to the
-  // Cloudflare build only; Vercel's own image pipeline is unaffected.
-  ...(isCloudflareBuild ? { serverExternalPackages: ["sharp"] } : {}),
+  //
+  // A custom loader (not images.unoptimized) is required to actually
+  // achieve that zero-cost option on Cloudflare: unoptimized: true alone
+  // still leaves Next's built-in image-optimization route in the build,
+  // which requires sharp and fails Cloudflare's bundling step (confirmed
+  // against a real cf:build run). See cloudflare-image-loader.ts.
+  images: isCloudflareBuild ? { loader: "custom", loaderFile: "./cloudflare-image-loader.ts" } : undefined,
   async redirects() {
     return [
       // US spelling alias for the organisations marketing page.

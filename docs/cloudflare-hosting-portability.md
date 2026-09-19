@@ -162,15 +162,27 @@ Setting `images.unoptimized` does not remove Next's built-in image-
 optimization route handler from the build — OpenNext's Cloudflare adapter
 still includes it (to serve images unchanged), and that handler has a
 conditional `require("sharp")` for the case where optimization *is* wanted.
-Sharp ships per-platform native binaries; bundling that reference (rather
-than leaving it as an external, unresolved require) made esbuild try to
-statically resolve those binaries during Cloudflare bundling and fail, even
-though the code path is never actually reached here. `serverExternalPackages:
-["sharp"]` (Cloudflare build only) tells Next.js's own bundler to leave
-`sharp` as an external require instead of inlining it — the documented fix
-for this class of native-dependency bundling failure. Confirmed against a
-real `cf:build` run (heap raised to 8 GiB; see the build log from that run)
-that this was the actual reported error, not a guess.
+Sharp ships per-platform native `.node` binaries; a real `cf:build` run
+(heap raised to 8 GiB to get past an unrelated Next.js compilation OOM)
+confirmed this fails OpenNext's Cloudflare bundling step (esbuild) with
+"No loader is configured for '.node' files" and unresolved
+`sharp-*.node`/`sharp-wasm32-*.node` requires — not a guess.
+
+The first fix attempted, `serverExternalPackages: ["sharp"]`, did **not**
+work — confirmed against another real `cf:build` run, same failure,
+unchanged. That config only affects Next's Server Components bundling
+boundary; the built-in image route is not a Server Component, so it was
+never in scope. The actual fix: `images.loader = "custom"` with a no-op
+loader (`cloudflare-image-loader.ts`, returns the source URL unmodified).
+A custom loader means Next calls the loader function directly and never
+generates or proxies through the built-in `/_next/image` route at all, so
+sharp is never part of the Cloudflare build — not merely marked external,
+genuinely absent from that code path. Functionally this is the same "serve
+as-is, no optimization" outcome `unoptimized: true` was meant to provide.
+
+Still to confirm with a real `cf:build` run: whether removing sharp from
+this path is sufficient for the Cloudflare bundling step to complete
+end-to-end, or whether something else surfaces next.
 
 ### Email transport — SMTP fallback guarded, not fixed
 
