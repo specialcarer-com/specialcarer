@@ -271,6 +271,57 @@ provided; do not merely relabel the current placeholder build or print secret
 values. The orchestrator reports an unresolved Stripe public/private/account
 alignment question, so payment readiness must stay unproven until reconciled.
 
+## Bundle size — accepted risk, monitored
+
+The built Worker (`sc-cloudflare-preview` @ `b2222c5`, verified via the
+`Cloudflare compatibility (one-shot)` and manual bundle-analysis CI runs)
+is **10,089.80 KiB gzip against Cloudflare's 10,240 KiB (10 MiB) Workers
+Paid plan hard limit** — 98.5% full, ~150 KiB of headroom.
+
+Root cause: React Server Components client-reference-manifest data.
+`load-manifest.external.js` (9.7 MiB) and 392 separate per-route manifest
+modules (24.3 MiB) together account for 58% of the bundle. This app has 675
+route entries; per-route manifest cost scales at roughly 64 KiB/route. This
+is a documented, currently-unresolved upstream limitation
+([opennextjs/opennextjs-cloudflare#1294](https://github.com/opennextjs/opennextjs-cloudflare/issues/1294),
+closed without a changelog fix as of adapter 1.20.6, the version pinned
+here) in how the OpenNext Cloudflare adapter inlines RSC manifests, not a
+bug in this app's code, and not something safely fixable by patching our
+own source.
+
+**Decision (deliberate, not a default):** accept the current risk rather
+than take on a Multi-Worker split now. Two real options were considered:
+
+1. **Accept and monitor** (chosen): ship as-is, watch for an upstream fix,
+   and fail the build automatically if headroom shrinks further.
+2. **Split into multiple Workers**: OpenNext's documented Multi-Worker
+   setup (e.g. moving `/admin/*` into its own Worker) removes the ceiling
+   structurally, but is a real routing/deployment architecture change, not
+   a patch — deferred as a deliberate scope decision, not an oversight.
+
+**Safeguard implemented**: `scripts/check-cloudflare-bundle-size.mjs`,
+wired into `cf:dry-run` via `scripts/cf-dry-run-with-size-check.sh`, parses
+wrangler's own `Total Upload: ... / gzip: ...` line and:
+- **warns** (build still passes) above 9,933 KiB (97% of the cap) — the
+  current size already triggers this warning, deliberately, so it's
+  visible on every dry-run rather than silent;
+- **fails the build** above 10,137.6 KiB (99% of the cap, ≈9.9 MiB) — this
+  is the trigger to act (free up headroom or finally do the Multi-Worker
+  split), not a threshold to quietly raise;
+- **fails safe** if wrangler's output format ever changes such that the
+  size line can't be parsed at all, rather than silently passing an
+  unmeasured build.
+
+This check runs wherever `cf:dry-run` runs, including inside the locked
+`Cloudflare compatibility (one-shot)` workflow. Verified locally against
+the exact real reported string (10,089.80 KiB → warns, passes) and against
+a synthetic smaller value (5,000 KiB → passes cleanly) before landing.
+
+**Practical implication for future work on this app**: every new route
+added costs real, scarce headroom (~64 KiB). Removing an unused route
+frees roughly the same. This is worth knowing before adding routes
+casually once this is closer to go-live.
+
 ## Remaining gates and next order
 
 1. The orchestrator now reports user confirmation of the destination account.
