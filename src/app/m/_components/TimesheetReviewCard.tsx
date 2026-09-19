@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import * as React from "react"; // eslint-disable-line @typescript-eslint/no-unused-vars -- needed at runtime: this file has no automatic-JSX-runtime import, so its compiled JSX (React.createElement calls) needs React in scope when this module runs outside Next's own build pipeline (e.g. in tests run directly via tsx/esbuild, which fall back to the classic transform regardless of tsconfig's "jsx": "preserve"). Next's real build is unaffected either way. Same pattern already used in ./ui.tsx for the same reason.
 import {
   Elements,
   PaymentElement,

@@ -10,11 +10,17 @@
  *
  * NOTE: unlike this repo's hosting/* tests (which use only Node builtins),
  * the render checks below need the real `react` and `react-dom` packages
- * installed to execute — this could not be run in the sandbox that authored
- * it (no node_modules there). Please actually run this file with the
- * project's normal test command and confirm it passes for real, the same
- * way test:hosting results have been verified elsewhere in this migration —
- * don't take a clean diff as equivalent to a passing run.
+ * installed to execute — this still cannot be run in the sandbox that
+ * authored it (no node_modules there). The first version of this file had
+ * two real bugs, both found and fixed after an actual run reported them:
+ * a path relative to the test file's own directory instead of the repo
+ * root (this project's established convention), and a missing `React`
+ * import in TimesheetReviewCard.tsx itself (needed because this file has
+ * no automatic-JSX-runtime import, so running it outside Next's own build
+ * — e.g. directly via tsx/esbuild — falls back to the classic transform,
+ * which needs React in scope; see the import in TimesheetReviewCard.tsx
+ * for the full explanation). Please actually run this again and confirm a
+ * real pass — don't take this fix as verified until it's been executed.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -64,7 +70,7 @@ const baseProps = {
 };
 
 test("useCountdown is called unconditionally, above the early return — not inline in the pending-only branch", () => {
-  const source = readFileSync("./TimesheetReviewCard.tsx", "utf8");
+  const source = readFileSync("src/app/m/_components/TimesheetReviewCard.tsx", "utf8");
   const hookCallIndex = source.indexOf("useCountdown(ts.auto_approve_at)");
   const earlyReturnIndex = source.indexOf("if (!isPending)");
   assert.ok(hookCallIndex > -1, "useCountdown call site not found");
