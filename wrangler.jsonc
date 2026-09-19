@@ -1,4 +1,5 @@
 {
+  // CI trigger: see commit message
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "specialcarer-preview",
   "main": ".open-next/worker.js",
