@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { OnboardingForm } from "./onboarding-form";
 import MarketingShell from "@/components/marketing-shell";
 import PageHeroBanner from "@/components/page-hero-banner";
+import { isProductionDeployment } from "@/lib/hosting/environment";
 
 export const metadata = {
   title: "Welcome — SpecialCarer",
@@ -28,7 +29,7 @@ export default async function OnboardingPage({
 
   // If already complete, skip onboarding — unless ?preview=1 is set (design review bypass).
   // Gated to non-production deployments so production traffic can never bypass the redirect.
-  const isPreview = preview === "1" && process.env.VERCEL_ENV !== "production";
+  const isPreview = preview === "1" && !isProductionDeployment();
   if (profile?.full_name && profile?.country && !isPreview) {
     redirect(next || "/dashboard");
   }

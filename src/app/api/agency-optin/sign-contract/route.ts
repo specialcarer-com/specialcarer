@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { extractClientIp } from "@/lib/hosting/client-ip";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/smtp";
@@ -72,10 +73,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    req.headers.get("x-real-ip") ||
-    null;
+  const ip = extractClientIp(req.headers);
   const ua = req.headers.get("user-agent")?.slice(0, 240) ?? null;
   const now = new Date().toISOString();
 

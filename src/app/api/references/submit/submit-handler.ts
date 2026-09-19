@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { extractClientIp } from "@/lib/hosting/client-ip";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TRISTATE_YES_NO, type YesNoUnsure } from "@/lib/vetting/types";
 import {
@@ -144,10 +145,7 @@ export function createSubmitHandler(
           .eq("id", row.id);
         return NextResponse.json({ error: "expired" }, { status: 400 });
       }
-      const ip =
-        req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-        req.headers.get("x-real-ip") ||
-        null;
+      const ip = extractClientIp(req.headers);
       const ua = req.headers.get("user-agent")?.slice(0, 240) ?? null;
       if (responseMode === "declined") {
         const reason =
@@ -450,10 +448,7 @@ export function createSubmitHandler(
       return NextResponse.json({ error: "expired" }, { status: 400 });
     }
 
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      req.headers.get("x-real-ip") ||
-      null;
+    const ip = extractClientIp(req.headers);
     const ua = req.headers.get("user-agent")?.slice(0, 240) ?? null;
 
     const { data: updated, error } = await admin
