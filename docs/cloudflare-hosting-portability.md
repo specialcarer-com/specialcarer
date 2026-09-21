@@ -384,7 +384,8 @@ an idempotent aggregation, potentially serious for a payout.
   requires confirming existing idempotency/claim safeguards per job before
   moving, not assuming they hold.
 
-**Step 1a of Phase 1** (mechanism-only, no real secrets, no real data):
+**Step 1a of Phase 1 — complete and confirmed** (mechanism-only, no real
+secrets, no real data):
 `cloudflare/scheduler/wrangler.rehearsal.jsonc` defines a separate,
 dedicated `specialcarer-scheduler-rehearsal` Worker — not a change to
 `specialcarer-scheduler-preview` — with `APP_ENV=production` and
@@ -400,6 +401,20 @@ this Worker as configured. A wrong/placeholder `CRON_SECRET` is
 acceptable here specifically because an auth failure is a safe, expected
 outcome for this step — it still proves the platform mechanism reached
 the app.
+
+**Confirmed result** (19–20 September, `specialcarer-scheduler-rehearsal`,
+deployed and torn down deliberately for this test): all three schedules
+fired naturally at their expected times (hourly KPI at 23:05 BST,
+experiment rollup at 06:00 BST, DBS poll at 07:23 BST) and each correctly
+dispatched to its expected endpoint via the service binding. Each returned
+HTTP 500; the cause was not established. This confirms scheduled
+invocation and dispatch, not successful business-job execution.
+Triggers were removed after confirmation (verified via a
+fresh API read showing an empty schedule list); the Worker, its secrets,
+and both existing preview Workers were left untouched.
+`wrangler.rehearsal.jsonc`'s `triggers.crons` is deliberately emptied back
+to `[]` now that this step is done — re-populate only when deliberately
+resuming rehearsal or starting Step 1b.
 
 **Step 1b (separate, later, bigger decision, not yet approved)**: only
 once Step 1a proves the mechanism works, decide separately whether to

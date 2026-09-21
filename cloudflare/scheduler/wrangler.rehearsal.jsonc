@@ -33,5 +33,15 @@
   // these three strings) - kpi-rollup-hourly, experiment-rollup,
   // dbs-update-service-poll. No financial or destructive job's schedule is
   // present here, by construction, regardless of the enable flag above.
-  "triggers": { "crons": ["5 * * * *", "0 5 * * *", "23 6 * * *"] }
+  // Phase 1 Step 1a is complete and confirmed (see
+  // docs/cloudflare-hosting-portability.md, "Scheduler cutover"): all three
+  // jobs fired naturally and correctly dispatched via the platform's own
+  // cron trigger mechanism. Deliberately emptied after confirmation, same
+  // convention as cloudflare/scheduler/wrangler.jsonc - a checked-in map is
+  // not an activated trigger. Re-populate with exactly
+  // ["5 * * * *", "0 5 * * *", "23 6 * * *"] only when deliberately
+  // resuming rehearsal or moving to Step 1b; cloudflare/scheduler/
+  // rehearsal.test.ts enforces that if these are ever non-empty, they must
+  // resolve to exactly the three approved Phase 1 jobs and no others.
+  "triggers": { "crons": [] }
 }
