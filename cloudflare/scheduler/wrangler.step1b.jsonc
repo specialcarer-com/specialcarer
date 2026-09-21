@@ -1,0 +1,30 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "specialcarer-scheduler-step1b",
+  "main": "worker.ts",
+  "compatibility_date": "2026-09-17",
+  "workers_dev": false,
+  "preview_urls": false,
+  // Unlike Phase 1 Step 1a, this CRON_SECRET must genuinely match the
+  // value added to specialcarer-preview's own CRON_SECRET (set separately,
+  // directly in Cloudflare - never through this file or any chat). Step 1a
+  // used a deliberately wrong secret because an auth failure was the
+  // desired safe outcome; Step 1b's whole point is that authentication
+  // succeeds and the job actually runs against real data.
+  "vars": {
+    "APP_ENV": "production",
+    "SCHEDULER_ENABLED": "true",
+    "APP_ORIGIN": "https://app.invalid"
+  },
+  "services": [
+    { "binding": "APP", "service": "specialcarer-preview" }
+  ],
+  // Only the two jobs confirmed purely idempotent with no external side
+  // effects (pure DB read+upsert, no emails, no vendor calls).
+  // dbs-update-service-poll is deliberately excluded here: it can send
+  // real emails to real carers/admins on certain status transitions,
+  // which is not idempotent the way a database upsert is - see
+  // docs/cloudflare-hosting-portability.md, "Scheduler cutover", for the
+  // separate decision on how to handle it.
+  "triggers": { "crons": ["5 * * * *", "0 5 * * *"] }
+}

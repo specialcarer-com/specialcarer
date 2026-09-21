@@ -416,12 +416,42 @@ and both existing preview Workers were left untouched.
 to `[]` now that this step is done — re-populate only when deliberately
 resuming rehearsal or starting Step 1b.
 
-**Step 1b (separate, later, bigger decision, not yet approved)**: only
-once Step 1a proves the mechanism works, decide separately whether to
-stand up a dedicated Worker with real production secrets to prove these
-three jobs complete correctly against real data. Recommended: a new,
-narrowly-scoped Worker for this — not promoting `specialcarer-preview` —
-so CI's repeated use of that Worker name never touches live credentials.
+**Step 1b — approved, in progress**. The earlier plan here (a new,
+dedicated *app* Worker) was reconsidered once the Phase 1 investigation
+established two things: (1) `specialcarer-preview` already holds real
+`SUPABASE_SERVICE_ROLE_KEY`/`EMAIL_FROM` secrets — contrary to this
+document's own earlier, incorrect claim that it held no real credentials
+(corrected; see the commit that fixed that wording) — and (2) none of this
+migration's CI workflows ever actually deploy to the live
+`specialcarer-preview` Worker: `cf:build` only builds locally, and
+`wrangler deploy --dry-run` never calls Cloudflare's deploy API at all.
+The live Worker has sat untouched since 18 September. Given that, deploying
+an entire second full Next.js app just to add one missing secret is
+disproportionate — the actual gap is only a missing `CRON_SECRET`.
+
+Scope, narrowed from the original three-job plan: **`kpi-rollup-hourly`
+and `experiment-rollup` only.** `dbs-update-service-poll` is deliberately
+excluded — re-reading its actual code during this planning step showed it
+can send real emails to real carers/admins on certain status transitions
+(`carerInvalidated`, `adminChangePending`, `adminInvalidated`), which is
+not idempotent the way its database writes are. Handling it is a separate,
+later decision (a read-only pre-check for due rows, or Phase 2-style
+coordinated cutover rather than a dual-run) — not folded into Step 1b.
+
+`cloudflare/scheduler/wrangler.step1b.jsonc` defines a new scheduler
+Worker (`specialcarer-scheduler-step1b`), service-bound to the *existing*
+`specialcarer-preview` app, with `triggers.crons` restricted to just the
+two approved schedules. Unlike Phase 1's Step 1a, this `CRON_SECRET` must
+genuinely match the value added directly to `specialcarer-preview` itself
+— Step 1a's mismatched placeholder was deliberate (an auth failure was the
+desired safe outcome); Step 1b's entire point is that authentication
+succeeds and the jobs actually run against real data, dual-run alongside
+Vercel's still-active cron for the same two jobs, with no coordination
+needed since both are confirmed idempotent.
+`cloudflare/scheduler/step1b.test.ts` asserts the approved job set exactly,
+and explicitly denylists `dbs-update-service-poll` by name (not merely by
+omission) so it can't be silently reintroduced without that decision being
+revisited, plus the same financial/destructive denylist as Phase 1.
 
 ## Remaining gates and next order
 
