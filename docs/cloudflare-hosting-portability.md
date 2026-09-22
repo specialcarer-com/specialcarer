@@ -502,6 +502,49 @@ than the original "pause one Vercel cron entry" plan, and not worth doing
 until closer to actual go-live. Decision recorded here rather than left
 implicit: deferred deliberately, not blocked-and-forgotten.
 
+**Phase 2 (user-facing reminders) — scoping started, Step A config
+ready, not yet deployed or triggered.** Re-reading each of the five
+jobs' actual route code (not just their names) before writing any config
+surfaced two things the original three-phase plan hadn't distinguished:
+
+1. Idempotency varies. `timesheet-reminders` (`reminder_sent_at`,
+   checked-before/marked-after) and `care-plan-review-reminder`
+   (`last_reminded_at`, day-granularity) each have a guard that narrows a
+   duplicate to a tight race window. `booking-reminders` and
+   `payout-digest-weekly` have no guard at all — the former's own code
+   comment admits "a stricter dedupe via a reminder_sent_at column is a
+   follow-up" that was never done, and the latter recomputes a fresh
+   rolling 7-day window every run with no "sent" marker. Either would
+   duplicate deterministically on any overlap, not just in a race.
+2. `reference-reminders` shares its exact cron expression, `0 9 * * *`,
+   with `run-monthly-payroll` — confirmed directly via
+   `jobsForSchedule("0 9 * * *")`, which returns both paths. The
+   dispatcher resolves every job matching a fired cron string with no
+   per-Worker path scoping, so a naive cutover Worker registered at that
+   trigger would silently also invoke a Phase 3 financial job on every
+   firing. None of Phase 1/Step 1b hit this because those jobs' cron
+   strings happened to be unique. Needs an offset trigger time (or a
+   dispatcher change) before this job can be touched at all — not folded
+   into the same batch as the other four.
+
+Given that, `cloudflare/scheduler/wrangler.phase2a.jsonc` scopes a first
+batch to only `care-plan-review-reminder` and `timesheet-reminders` —
+the two with an existing partial guard and no cron collision. Like
+Step 1c, this is framed explicitly as a **one-time coordinated cutover
+test, not a dual-run**: both jobs send real emails/notifications against
+the same live Supabase project `specialcarer-preview` is bound to, so
+leaving this Worker's triggers active alongside Vercel's matching crons
+would double-notify real users on every firing, not just occasionally.
+Vercel's own crons for these two exact paths must be paused first, this
+Worker fired once and observed, then either torn down or the cutover
+made permanent. `cloudflare/scheduler/phase2a.test.ts` asserts the exact
+two-job resolution, denylists the three not-yet-handled Phase 2 jobs by
+name (not merely by omission), and reuses the standing
+financial/destructive denylist. `booking-reminders` and
+`payout-digest-weekly` need a zero-tolerance pause-then-cutover moment of
+their own (no code-level safety net at all); `reference-reminders` needs
+its schedule collision resolved first. Neither started yet.
+
 ## Remaining gates and next order
 
 1. The orchestrator now reports user confirmation of the destination account.

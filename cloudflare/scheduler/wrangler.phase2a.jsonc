@@ -1,0 +1,41 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "specialcarer-scheduler-phase2a",
+  "main": "worker.ts",
+  "compatibility_date": "2026-09-17",
+  "workers_dev": false,
+  "preview_urls": false,
+  // Reuses the same CRON_SECRET already set on specialcarer-preview for
+  // Step 1b (real value, entered directly in Cloudflare, never through this
+  // file or any chat).
+  "vars": {
+    "APP_ENV": "production",
+    "SCHEDULER_ENABLED": "true",
+    "APP_ORIGIN": "https://app.invalid"
+  },
+  "services": [
+    { "binding": "APP", "service": "specialcarer-preview" }
+  ],
+  // ONLY care-plan-review-reminder and timesheet-reminders. This is a
+  // ONE-TIME COORDINATED CUTOVER TEST, not a dual-run like Step 1b's two
+  // jobs. Unlike kpi-rollup-hourly/experiment-rollup, these two jobs send
+  // real emails and real in-app notifications to real seekers/approvers -
+  // and specialcarer-preview is bound to the SAME live Supabase project
+  // used by production. Leaving this Worker's triggers live while Vercel's
+  // matching crons are also active would double-notify real users on every
+  // firing (timesheet-reminders has a narrow race window via
+  // reminder_sent_at; care-plan-review-reminder likewise via
+  // last_reminded_at - see docs/cloudflare-hosting-portability.md,
+  // "Scheduler cutover"). Vercel's own crons for these two exact paths
+  // must be paused first, this Worker fired once/observed, then either
+  // torn down or the cutover made permanent (Vercel's pause kept) based on
+  // the result - never left running alongside an active Vercel schedule.
+  //
+  // booking-reminders, payout-digest-weekly and reference-reminders are
+  // deliberately NOT included here - see phase2a.test.ts and
+  // docs/cloudflare-hosting-portability.md for why each needs separate,
+  // later handling (no idempotency guard at all for the first two;
+  // reference-reminders shares its exact cron expression with the
+  // Phase 3 job run-monthly-payroll and needs that resolved first).
+  "triggers": { "crons": ["0 6 * * *", "30 */6 * * *"] }
+}
