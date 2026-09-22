@@ -545,6 +545,58 @@ financial/destructive denylist. `booking-reminders` and
 their own (no code-level safety net at all); `reference-reminders` needs
 its schedule collision resolved first. Neither started yet.
 
+**Phase 2 Step A prerequisite checks (22 September).** Before pausing
+anything, we checked whether today would actually exercise either job's
+processing logic, not just its dispatch path. Both came back negative in
+different ways:
+
+- Zero rows are currently eligible for either job (`shift_timesheets`
+  pending >24h with no reminder; `care_plan_reviews` due at the 14-day or
+  1-day lead mark). A pause-and-fire test today would only prove
+  dispatch/auth, the same limited result Step 1a already gave.
+- `care-plan-review-reminder` is additionally gated by
+  `NEXT_PUBLIC_REG9_REVIEW_CADENCE_ENABLED`, which the deployed
+  `specialcarer-preview` build did not have set — confirmed by the
+  build's recorded environment (the flag absent) and by the compiled
+  server bundle, which retains `process.env.NEXT_PUBLIC_REG9_REVIEW_CADENCE_ENABLED
+  === "true"` as a literal runtime read rather than a build-time-inlined
+  constant. This corrects an earlier assumption in this doc that a
+  `NEXT_PUBLIC_*` var would need a full rebuild to change - for this
+  OpenNext/Cloudflare build path it's read at request time, same as
+  every other env var this Worker already uses.
+
+Given that evidence, we set `NEXT_PUBLIC_REG9_REVIEW_CADENCE_ENABLED: "true"`
+on `specialcarer-preview` only (never on Vercel, where the flag stays off
+by its own separate config, and where turning it off would additionally
+blank the live seeker/admin review UI - the wrong tool for this job even
+setting the rebuild question aside). Applied via the Cloudflare dashboard's
+settings-only variable action after a TLS verification failure blocked the
+API/wrangler path; confirmed live by dashboard readback (version
+`b9cbc146`) and mirrored into the checked-in `wrangler.jsonc`
+(commit `9b304bca2bdf3ce9cab09182d0e721892398e92f`).
+
+We deliberately did not go further and invoke the route live to observe
+the response body. The matching `CRON_SECRET` needed to authenticate the
+request was generated in-memory during Step 1b and never retained, and
+Cloudflare secrets aren't retrievable once set - the only way to test the
+real route today would be to deploy `specialcarer-scheduler-phase2a` (which
+would need its own fresh `CRON_SECRET` reused-or-rotated to match) or to
+rotate `specialcarer-preview`'s existing `CRON_SECRET`, which the two
+already-live Step 1b schedules (`kpi-rollup-hourly`, `experiment-rollup`)
+also depend on matching. Rotating it for a verification-only check risked
+breaking a confirmed-good dual-run for no real gain, so we didn't.
+
+Evidentiary standard accepted here, consistent with the DBS
+binding/HTTP-500 investigation: the flag is **strongly supported as live
+and functional, not route-level confirmed**. Full end-to-end confirmation
+will happen naturally as part of the real Stage B pause-and-fire test,
+when `phase2a`'s secret is provisioned properly as part of that
+deployment anyway - not forced early via a separate, riskier path. A
+lightweight daily read-only check for eligible rows (mirroring
+`experiment-rollup`'s monitoring, no deadline) continues in the
+background; Stage B is written up once either job shows a non-zero
+count.
+
 ## Remaining gates and next order
 
 1. The orchestrator now reports user confirmation of the destination account.

@@ -11,6 +11,13 @@
   "preview_urls": false,
   "vars": {
     "APP_ENV": "preview",
+    // Applied live via the Cloudflare dashboard's settings-only variable
+    // action (API/wrangler blocked by a local TLS verification failure at
+    // the time) on 22 September, confirmed by dashboard readback, version
+    // b9cbc146. Enables care-plan-review-reminder's real processing path
+    // on this Worker only (Vercel production keeps this flag off, per its
+    // own separate build config) - see docs/cloudflare-hosting-portability.md,
+    // "Scheduler cutover", Phase 2 Step A.
     "NEXT_PUBLIC_REG9_REVIEW_CADENCE_ENABLED": "true"
   },
   // Workers KV-backed incremental cache (ISR/data cache) for OpenNext.
