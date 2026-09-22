@@ -1,0 +1,46 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "specialcarer-scheduler-phase2b",
+  "main": "worker.ts",
+  "compatibility_date": "2026-09-17",
+  "workers_dev": false,
+  "preview_urls": false,
+  // Reuses the same CRON_SECRET already set on specialcarer-preview
+  // (real value, entered directly in Cloudflare, never through this
+  // file or any chat).
+  "vars": {
+    "APP_ENV": "production",
+    "SCHEDULER_ENABLED": "true",
+    "APP_ORIGIN": "https://app.invalid"
+  },
+  "services": [
+    { "binding": "APP", "service": "specialcarer-preview" }
+  ],
+  // ONLY booking-reminders and payout-digest-weekly. ONE-TIME COORDINATED
+  // CUTOVER TEST, not a dual-run - and unlike Phase 2 Step A, ZERO
+  // tolerance for even a brief overlap. Neither job has any idempotency
+  // guard at all:
+  //   - booking-reminders unconditionally writes a real row via
+  //     dispatch() -> createNotification() before it even attempts push
+  //     delivery (swallow-all try/catch around the whole thing, by
+  //     design, so a real duplicate in-app notification is written
+  //     regardless of whether push credentials exist). Push delivery
+  //     itself uses Expo's public HTTP endpoint (native fetch, no SDK,
+  //     EXPO_ACCESS_TOKEN optional) - so a real push can also be
+  //     delivered to a real device with no credential provisioning
+  //     needed at all. There is no missing-dependency safety net here.
+  //   - payout-digest-weekly recomputes a fresh rolling 7-day window
+  //     every run with no "sent" marker. Its email step currently
+  //     no-ops on specialcarer-preview only because RESEND_API_KEY /
+  //     IONOS_SMTP_USER+PASS are absent there (see the Step 1c
+  //     blockers in docs/cloudflare-hosting-portability.md) - that is
+  //     an incidental, fragile protection, not a reason to skip pausing
+  //     Vercel properly. It disappears the moment those creds are added
+  //     for any other reason, and the DB scan/bucket step runs either
+  //     way.
+  // Vercel's own crons for these two exact paths must be confirmed
+  // paused - not just edited-and-assumed - before this Worker is
+  // deployed with these triggers live. See
+  // docs/cloudflare-hosting-portability.md, "Scheduler cutover".
+  "triggers": { "crons": ["0 8 * * *", "0 8 * * 1"] }
+}

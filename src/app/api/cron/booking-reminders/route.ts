@@ -13,9 +13,11 @@ export const dynamic = "force-dynamic";
  * any booking starting between now+23h and now+25h whose status is
  * still active (accepted or paid). Idempotency is left to the cron
  * schedule (hourly window straddles each booking once); a stricter
- * dedupe via a reminder_sent_at column is a follow-up.
+ * dedupe via a reminder_sent_at column is a follow-up, not yet done -
+ * see docs/cloudflare-hosting-portability.md, "Scheduler cutover",
+ * Phase 2.
  *
- * NOTE: schedule needs to be added to vercel.json in a follow-up PR.
+ * Registered in vercel.json as "0 8 * * *" (confirmed live).
  */
 export async function GET(req: NextRequest) {
   const authError = requireCronAuth(req);

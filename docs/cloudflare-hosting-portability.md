@@ -597,6 +597,43 @@ lightweight daily read-only check for eligible rows (mirroring
 background; Stage B is written up once either job shows a non-zero
 count.
 
+**Phase 2 Step B (22 September) — scoping and config ready for
+`booking-reminders` and `payout-digest-weekly`, not deployed.** These
+are the two Phase 2 jobs with no idempotency guard at all, confirmed by
+reading both routes directly rather than trusting the earlier
+"not dangerous, just annoying" framing:
+
+- `booking-reminders` calls `dispatch()`, which unconditionally writes a
+  real row via `createNotification` before it even attempts push
+  delivery - wrapped in a swallow-all `try/catch` by design ("a failed
+  notification must never break the booking write that fired it"). Push
+  delivery itself goes through Expo's public HTTP endpoint (native
+  `fetch`, no SDK, `EXPO_ACCESS_TOKEN` optional), so a real push can also
+  reach a real device with zero credential provisioning needed. There is
+  no missing-dependency safety net for this job at all on
+  `specialcarer-preview`.
+- `payout-digest-weekly` recomputes a fresh rolling 7-day window every
+  run with no "sent" marker. Its email step currently no-ops on
+  `specialcarer-preview` only because `RESEND_API_KEY` /
+  `IONOS_SMTP_USER`+`PASS` are absent there (the same gap identified as
+  a Step 1c blocker) - an incidental, fragile protection that
+  disappears the moment those creds are added for any other reason, not
+  a substitute for actually pausing Vercel.
+
+Also corrected a stale comment in `booking-reminders/route.ts` claiming
+its schedule still needed adding to `vercel.json` - confirmed directly
+against the live-mirrored `vercel.json` that it's already registered
+and has been all along; the comment was just never cleaned up after
+that follow-up PR landed.
+
+`cloudflare/scheduler/wrangler.phase2b.jsonc` and `phase2b.test.ts`
+follow the same shape as Step A: exact two-job resolution, the three
+other Phase 2 jobs denylisted by name, plus the standing
+financial/destructive denylist. Framed with the same one-time
+coordinated cutover language as Step A, but with explicit zero-tolerance
+wording given neither job has any guard to fall back on. Not deployed;
+no secrets changed; no Vercel changes.
+
 ## Remaining gates and next order
 
 1. The orchestrator now reports user confirmation of the destination account.
