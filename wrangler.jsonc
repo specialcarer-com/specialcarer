@@ -10,7 +10,8 @@
   "workers_dev": false,
   "preview_urls": false,
   "vars": {
-    "APP_ENV": "preview"
+    "APP_ENV": "preview",
+    "NEXT_PUBLIC_REG9_REVIEW_CADENCE_ENABLED": "true"
   },
   // Workers KV-backed incremental cache (ISR/data cache) for OpenNext.
   // Persists across isolates/cold starts, unlike the prior no-op default.
