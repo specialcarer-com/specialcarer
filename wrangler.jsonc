@@ -1,0 +1,39 @@
+{
+  // CI trigger: see commit message
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "specialcarer-preview",
+  "main": ".open-next/worker.js",
+  "minify": true,
+  "compatibility_date": "2026-09-17",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // This file must not expose the application or start background processing.
+  // Public/custom-domain deployment requires separate approval and configuration.
+  "workers_dev": false,
+  "preview_urls": false,
+  "vars": {
+    "APP_ENV": "preview"
+  },
+  // Workers KV-backed incremental cache (ISR/data cache) for OpenNext.
+  // Persists across isolates/cold starts, unlike the prior no-op default.
+  // Tag cache / background revalidation queue selection is a separate,
+  // later decision — see docs/cloudflare-hosting-portability.md.
+  "kv_namespaces": [
+    {
+      "binding": "NEXT_INC_CACHE_KV",
+      "id": "3a67972a34164a86aeddb6bc691d21a2"
+    }
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "specialcarer-preview"
+    }
+  ],
+  "triggers": {
+    "crons": []
+  }
+}

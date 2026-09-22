@@ -25,6 +25,8 @@
  * ```
  */
 
+import { extractClientIp } from "@/lib/hosting/client-ip";
+
 type Bucket = { count: number; reset: number };
 
 const HITS = new Map<string, Bucket>();
@@ -56,16 +58,11 @@ export function rateLimit(key: string, opts: RateLimitOptions = {}): boolean {
 }
 
 /**
- * Best-effort extraction of the client IP from a Vercel/Node request.
- * Falls back to "unknown" so the bucket key is still stable.
+ * Best-effort extraction of the client IP, trusting Cloudflare's
+ * `CF-Connecting-IP` over `X-Forwarded-For`/`X-Real-IP` (see
+ * `@/lib/hosting/client-ip` for why). Falls back to "unknown" so the
+ * bucket key is still stable.
  */
 export function getRequestIp(req: Request): string {
-  const fwd = req.headers.get("x-forwarded-for");
-  if (fwd) {
-    const first = fwd.split(",")[0]?.trim();
-    if (first) return first;
-  }
-  const real = req.headers.get("x-real-ip");
-  if (real) return real;
-  return "unknown";
+  return extractClientIp(req.headers) ?? "unknown";
 }

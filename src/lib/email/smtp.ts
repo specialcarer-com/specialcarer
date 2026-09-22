@@ -21,8 +21,9 @@
  */
 
 import "server-only";
-import nodemailer, { type Transporter } from "nodemailer";
+import type { Transporter } from "nodemailer";
 import { Resend } from "resend";
+import { isCloudflareWorkersRuntime } from "@/lib/hosting/runtime";
 
 export type SendEmailInput = {
   to: string;
@@ -39,7 +40,6 @@ export type SendEmailResult =
 const DEFAULT_FROM = "SpecialCarer Ops <ops@specialcarer.com>";
 
 let cachedResend: Resend | null = null;
-let cachedSmtp: Transporter | null = null;
 
 function getResend(): Resend | null {
   if (cachedResend) return cachedResend;
@@ -49,13 +49,38 @@ function getResend(): Resend | null {
   return cachedResend;
 }
 
-function getSmtp(): Transporter | null {
+let cachedSmtp: Transporter | null = null;
+let warnedSmtpUnavailableOnCloudflare = false;
+
+async function getSmtp(): Promise<Transporter | null> {
   if (cachedSmtp) return cachedSmtp;
+
+  if (isCloudflareWorkersRuntime()) {
+    // Nodemailer's SMTP transport needs raw TCP/TLS sockets, which the
+    // Workers runtime does not provide the way Node.js does — this is a
+    // fundamental runtime limitation, not a missing config value, and it
+    // is never going to work here. Resend (HTTP-based) is the only
+    // supported transport on Cloudflare. The nodemailer import below is
+    // dynamic specifically so this branch (which always runs first on
+    // Cloudflare) never triggers it, keeping nodemailer's own code out of
+    // any bundling concern on this runtime as well as out of the runtime
+    // failure path.
+    if (!warnedSmtpUnavailableOnCloudflare) {
+      warnedSmtpUnavailableOnCloudflare = true;
+      console.warn(
+        "[email] SMTP fallback is unavailable on Cloudflare Workers (no raw TCP sockets) — configure RESEND_API_KEY instead of relying on IONOS SMTP here",
+      );
+    }
+    return null;
+  }
+
   const host = process.env.IONOS_SMTP_HOST ?? "smtp.ionos.co.uk";
   const port = Number(process.env.IONOS_SMTP_PORT ?? "587");
   const user = process.env.IONOS_SMTP_USER;
   const pass = process.env.IONOS_SMTP_PASS;
   if (!user || !pass) return null;
+
+  const { default: nodemailer } = await import("nodemailer");
   cachedSmtp = nodemailer.createTransport({
     host,
     port,
@@ -132,7 +157,7 @@ export async function sendEmail(
   }
 
   // Fallback to IONOS SMTP.
-  const smtp = getSmtp();
+  const smtp = await getSmtp();
   if (smtp) {
     return sendViaSmtp(smtp, input, from);
   }
