@@ -454,8 +454,8 @@ omission) so it can't be silently reintroduced without that decision being
 revisited, plus the same financial/destructive denylist as Phase 1.
 
 **Step 1c — dbs-update-service-poll, one-time coordinated cutover test
-(approved, not yet executed)**. Excluded from Step 1b's dual-run because
-its code (`src/app/api/cron/dbs-update-service-poll/{route,poll-handler}.ts`)
+(deferred until closer to go-live)**. Excluded from Step 1b's dual-run
+because its code (`src/app/api/cron/dbs-update-service-poll/{route,poll-handler}.ts`)
 has no locking/idempotency guard on its notification path: rows become
 "due" purely by `update_service_last_checked_at` being older than 23
 hours, so if Vercel and Cloudflare both ran this job on the identical
@@ -481,6 +481,26 @@ path (edit `vercel.json` and redeploy, vs. an app-level feature flag
 matching the `FEATURE_BACS18_EXPORT_ENABLED` pattern used elsewhere in
 this app) is still to be determined — needs real Vercel dashboard/config
 access this sandbox doesn't have.
+
+**Blockers found during prerequisite investigation (21 September) —
+why this is deferred, not just unscheduled**: as of the last live check,
+`specialcarer-preview` has no `DBS_VENDOR` set, meaning `getDbsVendor()`
+resolves to the mock provider, whose default result (`clear`) would
+silently advance real carers' safeguarding-check timestamps without any
+genuine DBS check ever occurring — a false safeguarding record, not
+merely an unhelpful test result. Hard blocker, not a prerequisite to
+schedule around. Separately, `RESEND_API_KEY` and IONOS SMTP credentials
+are both absent, so `sendEmail()`'s no-transport path would return
+`{ok: false}` silently — and the DBS notification wrappers don't check
+that return value, so job completion wouldn't prove a notification was
+actually sent either. A read-only check on 21 September also found zero
+currently-due DBS records, meaning even fully unblocked, that day
+wouldn't have exercised the vendor-check or notification paths at all.
+Fixing this properly means provisioning real third-party DBS vendor and
+email credentials onto `specialcarer-preview` — a materially bigger step
+than the original "pause one Vercel cron entry" plan, and not worth doing
+until closer to actual go-live. Decision recorded here rather than left
+implicit: deferred deliberately, not blocked-and-forgotten.
 
 ## Remaining gates and next order
 
