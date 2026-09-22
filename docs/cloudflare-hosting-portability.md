@@ -453,6 +453,35 @@ and explicitly denylists `dbs-update-service-poll` by name (not merely by
 omission) so it can't be silently reintroduced without that decision being
 revisited, plus the same financial/destructive denylist as Phase 1.
 
+**Step 1c — dbs-update-service-poll, one-time coordinated cutover test
+(approved, not yet executed)**. Excluded from Step 1b's dual-run because
+its code (`src/app/api/cron/dbs-update-service-poll/{route,poll-handler}.ts`)
+has no locking/idempotency guard on its notification path: rows become
+"due" purely by `update_service_last_checked_at` being older than 23
+hours, so if Vercel and Cloudflare both ran this job on the identical
+`23 6 * * *` schedule, they'd fire at the same wall-clock minute — and on
+the (rare) day this job finds a genuine status change, both could
+independently see the same row as due and each send the resulting email
+(`adminChangePending`, `adminInvalidated`, or `carerInvalidated` — the
+last reaches an actual carer). The database writes themselves are
+idempotent (applying a status change twice doesn't compound the harm);
+the real, avoidable cost is one duplicate email landing on a real person.
+
+Plan: pause Vercel's own cron for this one path, let
+`cloudflare/scheduler/wrangler.step1c-dbs.jsonc` (a new, one-off scheduler
+Worker, service-bound to `specialcarer-preview`, triggers restricted to
+only this job's schedule) fire naturally in Vercel's place, observe via
+the same log-tail + before/after database technique already proven in
+Step 1b, then re-enable Vercel's cron and tear down or disable this
+Worker again — a one-time test, not an ongoing dual-run.
+`cloudflare/scheduler/step1c-dbs.test.ts` asserts this Worker can only
+ever fire this one job, plus the same financial/destructive denylist used
+throughout. The exact mechanism for pausing only this one Vercel cron
+path (edit `vercel.json` and redeploy, vs. an app-level feature flag
+matching the `FEATURE_BACS18_EXPORT_ENABLED` pattern used elsewhere in
+this app) is still to be determined — needs real Vercel dashboard/config
+access this sandbox doesn't have.
+
 ## Remaining gates and next order
 
 1. The orchestrator now reports user confirmation of the destination account.

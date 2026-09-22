@@ -1,0 +1,30 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "specialcarer-scheduler-step1c-dbs",
+  "main": "worker.ts",
+  "compatibility_date": "2026-09-17",
+  "workers_dev": false,
+  "preview_urls": false,
+  // Reuses the same CRON_SECRET already set on specialcarer-preview for
+  // Step 1b (real value, entered directly in Cloudflare, never through this
+  // file or any chat).
+  "vars": {
+    "APP_ENV": "production",
+    "SCHEDULER_ENABLED": "true",
+    "APP_ORIGIN": "https://app.invalid"
+  },
+  "services": [
+    { "binding": "APP", "service": "specialcarer-preview" }
+  ],
+  // ONLY dbs-update-service-poll. This is a one-time coordinated cutover
+  // test, not a dual-run like Step 1b's other two jobs: Vercel's own cron
+  // for this exact path must be paused before this fires, and this Worker
+  // torn down or disabled again immediately after one natural observation.
+  // See docs/cloudflare-hosting-portability.md, "Scheduler cutover" -
+  // dbs-update-service-poll can send real emails to real carers/admins on
+  // certain status transitions, which is not idempotent the way its
+  // database writes are; a dual-run on the identical schedule Vercel uses
+  // risks a genuine duplicate email on the (rare) day this job finds an
+  // actual status change.
+  "triggers": { "crons": ["23 6 * * *"] }
+}
