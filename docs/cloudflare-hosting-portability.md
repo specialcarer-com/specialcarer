@@ -702,6 +702,94 @@ confirmed pre-existing and unrelated (a handful of `TS2345`s elsewhere
 in the app, and a flood of `TS2591`s from this sandbox's own missing
 `@types/node`, not present in the app's real dependency tree).
 
+### Phase 2 Stage B execution runbooks (prepared 23 September, not yet run)
+
+Written ahead of time so that whenever a monitor reports eligible rows,
+execution can start immediately rather than needing another round of
+clarifying questions. Nothing below has been performed; all three
+batches remain dormant. Common shape for all three:
+
+1. **Immediate pre-flight.** Re-run the eligibility query one more time,
+   right before pausing anything - the monitor's last report may be
+   hours old. If the count has dropped back to zero, stop and wait for
+   the monitor again rather than proceeding on stale evidence.
+2. **Pause Vercel.** Remove the batch's specific `path`/`schedule`
+   entries from `vercel.json`'s `crons` array (leave every other entry
+   untouched) and redeploy production. Confirm via Vercel's deployment
+   log that the *live* deployment (not just the repo file) no longer
+   lists those paths - `vercel.json` only takes effect on the deployment
+   that ships it.
+3. **Deploy the Cloudflare Worker.** `wrangler deploy --config
+   cloudflare/scheduler/wrangler.phase2X.jsonc` (X = a/b/c). Confirm the
+   dashboard shows the expected trigger(s) live and `SCHEDULER_ENABLED`/
+   `APP_ENV`/`DISPATCH_PATH_ALLOWLIST` (Step C only) match the checked-in
+   config exactly.
+4. **Wait for the natural firing(s)** - see per-batch cadence below. Do
+   not manually trigger; natural firing is what's been used throughout
+   this whole cutover (Step 1a/1b/1c).
+5. **Observe** - see per-batch queries below. Distinguish "ran and found
+   zero eligible rows at that moment" from "didn't run" the same way
+   Step 1b's `experiment-rollup` result was reported.
+6. **Restore Vercel.** Re-add the removed `crons` entries exactly as
+   they were, redeploy, confirm the live deployment lists them again.
+7. **Return the Cloudflare Worker to dormant** (`triggers.crons: []`,
+   matching the rehearsal Worker's pattern) unless the observation was
+   clean and permanent cutover is explicitly decided separately - that
+   is a distinct decision from "did the test work," not an automatic
+   follow-on.
+8. **Write up the result** in this doc, in the same evidentiary style as
+   Step 1b/1c (real counts, real timestamps, what was and wasn't
+   confirmed).
+
+**Step A - `care-plan-review-reminder` + `timesheet-reminders`.**
+Cadence: `care-plan-review-reminder` fires once daily at 06:00 UTC;
+`timesheet-reminders` fires four times daily at :30 past 00/06/12/18
+UTC. A ~24-25h window catches at least one of each.
+- `care_plan_reviews`: check `last_reminded_at` advancing (from null or
+  a prior date to today) for rows that were eligible pre-fire (`status
+  = 'due'`, `scheduled_for` = today+14 or today+1).
+- `shift_timesheets`: check `reminder_sent_at` advancing from null to
+  non-null for rows eligible pre-fire (`status = 'pending_approval'`,
+  `submitted_at` >24h old). Also check `notifications` for new rows with
+  `kind = 'timesheet_reminder'` around the fire time.
+
+**Step B - `booking-reminders` + `payout-digest-weekly`.** Cadence:
+`booking-reminders` fires daily at 08:00 UTC; `payout-digest-weekly`
+fires only on Mondays at 08:00 UTC. If the eligible-rows monitor reports
+a positive `payout_alerts` count on a non-Monday, the actual fire is up
+to 6 days away - re-check the count hasn't reset to zero before that
+day arrives, per step 1 above, rather than assuming it holds.
+- `bookings`/`notifications`: check for new `notifications` rows with
+  `type = 'booking.reminder_24h'` (note: this job's dispatch path uses
+  the `type` field, not `kind` - a real inconsistency in this codebase,
+  not a typo in this runbook) for both the seeker and caregiver of each
+  eligible booking.
+- `payout_alerts`: this table has no "sent" marker at all (confirmed
+  during Phase 2 Step B scoping) - the only signal is whether the digest
+  email itself was sent, which currently no-ops on `specialcarer-preview`
+  for lack of transport creds (see Step B's entry above). If those creds
+  are still absent when this runs, expect a real scan (`carer_id`
+  buckets computed correctly) but a silently-failed send - confirm the
+  scan logic via logs, not via an email that was never going to arrive.
+
+**Step C - `reference-reminders`.** Cadence: fires once daily at 09:00
+UTC (same real Vercel time; the allowlist filters `run-monthly-payroll`
+out of that same trigger, so no time-shift is needed). Additionally,
+per the earlier caution in this doc: confirm `kpi-rollup-hourly` and
+`experiment-rollup` (Step 1b, sharing `worker.ts` with this Worker) are
+still firing normally on their next natural occurrence after this
+Worker is deployed - not because deploying `phase2c` should affect them,
+but because it's a real opportunity to confirm the shared dispatcher
+change hasn't regressed anything live, cheaply, in passing.
+- `carer_references`: check `reminder_stage` advancing (0→1, 1→2, or
+  2→3) and `last_reminder_at` updating for rows eligible pre-fire
+  (`status = 'invited'`, `token_expires_at` in the future,
+  `reminder_stage < 3`, aged past the 3/7/12-day thresholds in
+  `REFERENCE_REMINDER_DAYS`). A `markSent` failure
+  ("Reference reminder was already updated") would appear in the route's
+  JSON response `errors` array, not as a thrown exception - check that
+  array specifically, don't rely only on the HTTP status.
+
 ## Remaining gates and next order
 
 1. The orchestrator now reports user confirmation of the destination account.
