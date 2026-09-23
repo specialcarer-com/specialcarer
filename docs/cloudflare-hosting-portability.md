@@ -686,6 +686,22 @@ application code - it has its own unit test but is never imported by
 alone in this patch to keep it scoped to the collision fix; worth a
 follow-up cleanup at some point.
 
+**Typecheck fix (23 September).** Patch 0023 passed all 71 local hosting
+tests but failed CI's `tsc --noEmit` with 8 `TS2345`/`TS4104` errors, all
+the same root cause: `jobsForSchedule()` returns `readonly JobPath[]`,
+but `restrictToAllowlist()`'s parameter and one internal return path
+were typed as the mutable `JobPath[]`. `node --test` with `tsx`'s type
+stripping doesn't run real type checking, so this passed locally and
+only surfaced in CI. Fixed by accepting `readonly JobPath[]` as the
+parameter and copying (`[...paths]`) in the early-return branch rather
+than returning the readonly reference directly; the other return path
+(`paths.filter(...)`) already produced a genuinely mutable array.
+Confirmed clean via a real local `tsc --noEmit` run this time (not just
+`node --test`), with the remaining local errors traced individually and
+confirmed pre-existing and unrelated (a handful of `TS2345`s elsewhere
+in the app, and a flood of `TS2591`s from this sandbox's own missing
+`@types/node`, not present in the app's real dependency tree).
+
 ## Remaining gates and next order
 
 1. The orchestrator now reports user confirmation of the destination account.

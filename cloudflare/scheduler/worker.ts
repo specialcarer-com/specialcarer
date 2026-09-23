@@ -45,10 +45,10 @@ function logStatus(result: DispatchResult): void {
  * beyond what jobsForSchedule() legitimately resolved.
  */
 export function restrictToAllowlist(
-  paths: JobPath[],
+  paths: readonly JobPath[],
   allowlist: string | undefined,
 ): JobPath[] {
-  if (allowlist === undefined) return paths;
+  if (allowlist === undefined) return [...paths];
   const allowed = new Set(
     allowlist
       .split(",")
