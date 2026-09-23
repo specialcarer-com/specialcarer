@@ -634,6 +634,58 @@ coordinated cutover language as Step A, but with explicit zero-tolerance
 wording given neither job has any guard to fall back on. Not deployed;
 no secrets changed; no Vercel changes.
 
+**Phase 2 Step C (22 September) — dispatcher change, not just config,
+for `reference-reminders`.** This corrects something stated earlier in
+this doc: the collision with `run-monthly-payroll` (both
+`"0 9 * * *"`) was described as fixable with "an offset schedule (or a
+dispatcher change)". Direct testing showed the offset half of that
+doesn't exist - `jobsForSchedule()` resolves purely by matching the
+firing cron string against each job's own canonical Vercel schedule in
+`schedules.ts`; a Worker registered at any other time resolves to
+nothing at all (`unknown_schedule`), not to `reference-reminders`
+selectively. The only real fix was a dispatcher change.
+
+Added `DISPATCH_PATH_ALLOWLIST` to `worker.ts`'s `SchedulerEnv` -
+optional, comma-separated job paths. Absent (every Worker before this
+one: rehearsal, Step 1b, Step 1c, Phase 2 Steps A and B), behaviour is
+provably unchanged - confirmed by running all 23 pre-existing scheduler
+tests unmodified after the change, all still passing. Present, the
+result is intersected with `jobsForSchedule()`'s resolution rather than
+trusted outright, so a misconfigured allowlist can only narrow dispatch,
+never add a path that wasn't already legitimately resolved for that
+cron string - and a fully-filtered-out result surfaces as
+`unknown_schedule`, which `scheduled()` already treats as a failed
+invocation, so a misconfiguration fails closed and visibly rather than
+silently dispatching nothing.
+
+`wrangler.phase2c.jsonc` sets `DISPATCH_PATH_ALLOWLIST` to just
+`/api/cron/reference-reminders` and registers the trigger at the real
+`"0 9 * * *"` (no artificial time-shift needed now that dispatch is
+filtered, not merely cron-matched). `phase2c.test.ts` asserts the raw
+collision still exists (so this doesn't silently become unnecessary and
+go unnoticed), that the allowlist resolves it down to exactly one path,
+and that `run-monthly-payroll` is never actually dispatched despite
+sharing the raw cron string. `worker.test.ts` gained direct unit tests
+for `restrictToAllowlist` covering the no-op-when-absent case, the
+intersection-not-trust property, the concrete
+reference-reminders/run-monthly-payroll scenario, and the fail-closed
+behaviour on a fully-filtered result.
+
+`reference-reminders` sends real emails; its `markSent` write uses a
+compare-and-swap on `reminder_stage`, but the email dispatch happens
+before that check runs (see `processReferenceReminders`), so it carries
+the same narrow race-window duplicate risk as Phase 2 Step A's two jobs,
+not Step B's zero-guard category. Same one-time-coordinated-cutover
+framing as the other two batches. Not deployed; no secrets changed; no
+Vercel changes.
+
+A separate, unrelated observation from reading this route: `auth.ts` in
+the same directory (`authoriseReferenceReminderCron`) is dead
+application code - it has its own unit test but is never imported by
+`route.ts`, which uses the shared `requireCronAuth` instead. Left
+alone in this patch to keep it scoped to the collision fix; worth a
+follow-up cleanup at some point.
+
 ## Remaining gates and next order
 
 1. The orchestrator now reports user confirmation of the destination account.

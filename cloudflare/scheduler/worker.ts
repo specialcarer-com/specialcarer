@@ -6,6 +6,17 @@ export interface SchedulerEnv {
   CRON_SECRET?: string;
   APP_ORIGIN?: string;
   APP?: { fetch(request: Request): Promise<Response> };
+  // Optional, comma-separated job paths. Absent (every Worker before this
+  // one) means fully unchanged behaviour: every path jobsForSchedule()
+  // resolves for the firing cron is dispatched, exactly as before. When
+  // present, the result is INTERSECTED with this list, never trusted
+  // outright - a misconfigured allowlist can filter dispatch down, but
+  // can never add a path that wasn't already legitimately resolved for
+  // that cron string. Exists so a Worker can safely own a single job that
+  // shares its cron expression with another (e.g. reference-reminders
+  // shares "0 9 * * *" with run-monthly-payroll) without either changing
+  // the shared canonical schedule map or trusting an unverified list.
+  DISPATCH_PATH_ALLOWLIST?: string;
 }
 
 export type DispatchResult =
@@ -26,6 +37,27 @@ function logStatus(result: DispatchResult): void {
  * This dispatcher does not retry, replay, or replace application idempotency.
  * The bound application's CRON_SECRET must match this Worker's secret.
  */
+/**
+ * Intersects, never trusts outright. Absent allowlist -> unchanged input.
+ * Present (even empty/misconfigured) allowlist -> only paths that are
+ * BOTH already resolved for this cron AND named in the list survive. An
+ * allowlist can therefore only ever narrow dispatch, never widen it
+ * beyond what jobsForSchedule() legitimately resolved.
+ */
+export function restrictToAllowlist(
+  paths: JobPath[],
+  allowlist: string | undefined,
+): JobPath[] {
+  if (allowlist === undefined) return paths;
+  const allowed = new Set(
+    allowlist
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean),
+  );
+  return paths.filter((path) => allowed.has(path));
+}
+
 export async function dispatchSchedule(
   cron: string,
   env: SchedulerEnv,
@@ -41,7 +73,11 @@ export async function dispatchSchedule(
   if (env.SCHEDULER_ENABLED !== "true" || env.APP_ENV !== "production") {
     return finish({ outcome: "disabled", status: null });
   }
-  const paths = jobsForSchedule(cron);
+  const paths = restrictToAllowlist(jobsForSchedule(cron), env.DISPATCH_PATH_ALLOWLIST);
+  // A misconfigured allowlist that filters everything out surfaces as
+  // "unknown_schedule" here, which scheduled() below treats as a failed
+  // invocation (not "success" or "disabled") - fails closed and visibly,
+  // rather than silently dispatching nothing.
   if (!paths.length) return finish({ outcome: "unknown_schedule", status: null });
   const secret = env.CRON_SECRET;
   const app = env.APP;

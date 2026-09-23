@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import worker, { dispatchSchedule, MAX_CONCURRENCY, type DispatchResult, type SchedulerEnv } from "./worker";
+import worker, { dispatchSchedule, restrictToAllowlist, MAX_CONCURRENCY, type DispatchResult, type SchedulerEnv } from "./worker";
 import { jobsForSchedule, SCHEDULED_JOBS } from "./schedules";
 
 const active = { APP_ENV: "production", SCHEDULER_ENABLED: "true", CRON_SECRET: "offline-test-secret",
@@ -142,4 +142,67 @@ test("scheduled handler surfaces failure without including provider details", as
   } finally {
     console.log = originalLog;
   }
+});
+
+test("restrictToAllowlist is a no-op when the allowlist is absent - every existing Worker's behaviour is unchanged", () => {
+  const paths = jobsForSchedule("0 9 * * *");
+  assert.deepEqual(restrictToAllowlist(paths, undefined), paths);
+  assert.deepEqual(restrictToAllowlist([], undefined), []);
+});
+
+test("restrictToAllowlist intersects rather than trusts the allowlist outright - it can only narrow, never add a path", () => {
+  const resolved = jobsForSchedule("0 9 * * *");
+  assert.deepEqual(
+    [...resolved].sort(),
+    ["/api/cron/reference-reminders", "/api/cron/run-monthly-payroll"].sort(),
+    "this test's premise is the real collision - if schedules.ts changes, update this test",
+  );
+  // A path that was never actually resolved for this cron cannot be
+  // smuggled in via the allowlist, even if named explicitly.
+  const result = restrictToAllowlist(resolved, "/api/cron/reference-reminders,/api/cron/release-payouts");
+  assert.deepEqual(result, ["/api/cron/reference-reminders"]);
+});
+
+test("restrictToAllowlist resolves the real reference-reminders / run-monthly-payroll collision down to exactly one job", () => {
+  const resolved = jobsForSchedule("0 9 * * *");
+  assert.deepEqual(
+    restrictToAllowlist(resolved, "/api/cron/reference-reminders"),
+    ["/api/cron/reference-reminders"],
+  );
+});
+
+test("restrictToAllowlist fails closed (empty result) rather than open when the allowlist matches nothing", () => {
+  const resolved = jobsForSchedule("0 9 * * *");
+  assert.deepEqual(restrictToAllowlist(resolved, ""), []);
+  assert.deepEqual(restrictToAllowlist(resolved, "/api/cron/some-typo-path"), []);
+});
+
+test("dispatchSchedule surfaces a fully-filtered-out allowlist as unknown_schedule, which the scheduled handler then reports as a failure", async () => {
+  const env: SchedulerEnv = { ...active, DISPATCH_PATH_ALLOWLIST: "/api/cron/some-typo-path" };
+  const results = await dispatchSchedule("0 9 * * *", env);
+  assert.deepEqual(results, [{ outcome: "unknown_schedule", status: null }]);
+  await assert.rejects(
+    () => worker.scheduled({ cron: "0 9 * * *" }, env),
+    /Scheduled dispatch failed/,
+  );
+});
+
+test("dispatchSchedule with a real allowlist dispatches only the allowed job, even though the cron resolves to two", async () => {
+  const calledPaths: string[] = [];
+  const APP = {
+    async fetch(request: Request): Promise<Response> {
+      calledPaths.push(new URL(request.url).pathname);
+      return new Response(null, { status: 200 });
+    },
+  };
+  const env: SchedulerEnv = {
+    ...active,
+    APP,
+    DISPATCH_PATH_ALLOWLIST: "/api/cron/reference-reminders",
+  };
+  const results = await dispatchSchedule("0 9 * * *", env);
+  assert.deepEqual(calledPaths, ["/api/cron/reference-reminders"]);
+  assert.deepEqual(results, [
+    { path: "/api/cron/reference-reminders", status: 200, outcome: "success" },
+  ]);
 });
