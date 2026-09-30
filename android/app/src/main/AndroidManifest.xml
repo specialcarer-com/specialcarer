@@ -38,11 +38,11 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="www.specialcarers.com"
+                    android:host="www.specialcarer.com"
                     android:pathPrefix="/m" />
                 <data
                     android:scheme="https"
-                    android:host="specialcarers.com"
+                    android:host="specialcarer.com"
                     android:pathPrefix="/m" />
             </intent-filter>
 

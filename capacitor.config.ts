@@ -8,14 +8,14 @@ import type { CapacitorConfig } from "@capacitor/cli";
  * iOS simulator → host machine:     CAPACITOR_SERVER_URL=http://localhost:3000/m
  */
 const serverUrl =
-  process.env.CAPACITOR_SERVER_URL ?? "https://www.specialcarers.com/m";
+  process.env.CAPACITOR_SERVER_URL ?? "https://www.specialcarer.com/m";
 const cleartext = serverUrl.startsWith("http://");
 
 /**
  * SpecialCarer iOS / Android shell.
  *
  * v1 strategy: thin Capacitor wrapper that loads the live Next.js site
- * directly from https://www.specialcarers.com. This keeps the mobile app
+ * directly from https://www.specialcarer.com. This keeps the mobile app
  * in lockstep with web releases (every Vercel deploy is instantly live
  * inside the app — no resubmission needed for content/UX changes).
  *
@@ -33,10 +33,8 @@ const config: CapacitorConfig = {
 
   server: {
     // Live web app — Capacitor loads this URL inside the native WebView.
-    // Canonical production hostname is www.specialcarers.com (plural).
-    // The singular specialcarers.com 308-redirects here; pointing the
-    // WebView directly at the canonical host avoids a cross-domain
-    // bounce that would be blocked by allowNavigation.
+    // Use the singular production domain directly rather than relying
+    // on a redirect from the legacy plural domain.
     url: serverUrl,
     // Allow https everywhere; permit http only when CAPACITOR_SERVER_URL is http (local dev).
     androidScheme: cleartext ? "http" : "https",
@@ -46,10 +44,8 @@ const config: CapacitorConfig = {
     // out to Safari. Stripe Checkout / OAuth redirects need to stay
     // inside the app for the success callback to work.
     allowNavigation: [
-      "specialcarers.com",
-      "*.specialcarers.com",
-      "specialcarers.com",
-      "*.specialcarers.com",
+      "specialcarer.com",
+      "*.specialcarer.com",
       "checkout.stripe.com",
       "*.stripe.com",
       "appleid.apple.com",

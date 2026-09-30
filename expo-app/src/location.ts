@@ -6,7 +6,7 @@ import { getActiveTracking, getSession, setActiveTracking } from "./storage";
 const LOCATION_TASK = "specialcarer-shift-location";
 const WEB_ORIGIN: string =
   (Constants.expoConfig?.extra as { webOrigin?: string } | undefined)?.webOrigin ||
-  "https://specialcarers.com";
+  "https://specialcarer.com";
 
 /**
  * Background location task.
