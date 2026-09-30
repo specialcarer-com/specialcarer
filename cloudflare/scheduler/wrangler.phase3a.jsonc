@@ -1,0 +1,69 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "specialcarer-scheduler-phase3a",
+  "main": "worker.ts",
+  "compatibility_date": "2026-09-17",
+  "workers_dev": false,
+  "preview_urls": false,
+  // Reuses the same CRON_SECRET already set on specialcarer-preview
+  // (real value, entered directly in Cloudflare, never through this
+  // file or any chat).
+  "vars": {
+    "APP_ENV": "production",
+    "SCHEDULER_ENABLED": "true",
+    "APP_ORIGIN": "https://app.invalid",
+    // "*/15 * * * *" also fires stripe-webhook-recovery and dsar-fulfil;
+    // "0 * * * *" also fires account-deletion-worker. Neither has been
+    // cleared for Phase 3 yet (stripe-webhook-recovery's downstream replay
+    // idempotency is unconfirmed; account-deletion-worker performs real
+    // erasure when NEXT_PUBLIC_SELF_SERVICE_DELETION_ENABLED is on). This
+    // allowlist is the only thing stopping jobsForSchedule() from also
+    // dispatching them the moment either trigger fires - it is not
+    // optional hardening, it is the mechanism that makes this batch's
+    // scope match its five approved paths at all. phase3a.test.ts proves
+    // this mechanically rather than relying on this comment holding.
+    // (DISPATCH_PATH_ALLOWLIST itself isn't new - Phase 2 Step C already
+    // used it, as a single path, for the reference-reminders/
+    // run-monthly-payroll collision. This is the first config where it
+    // carries more than one path and resolves more than one collision at
+    // once, not the first time it's used at all.)
+    "DISPATCH_PATH_ALLOWLIST": "/api/cron/release-payouts,/api/cron/release-org-payouts,/api/cron/refund-reconciler,/api/cron/refund-reconciliation,/api/cron/finalise-org-invoices"
+  },
+  "services": [
+    { "binding": "APP", "service": "specialcarer-preview" }
+  ],
+  // Five Phase 3 jobs with a real claim/idempotency guard confirmed by
+  // direct code read on 30 September:
+  //   - release-payouts: conditional-UPDATE claim (paymentCaptureClaimFilter())
+  //     before any Stripe capture; a second invocation finds nothing left
+  //     to claim.
+  //   - release-org-payouts: does not move money - idempotent upsert on
+  //     (carer_id, period_start) only; the actual BACS transfer is manual.
+  //   - refund-reconciler: sweeps stuck claims back to a terminal state;
+  //     its secondary ledger/cache check only logs, never auto-corrects.
+  //   - refund-reconciliation: folds refund_ledger events into a distinct
+  //     refund_reconciliation state-machine table - NOT the same job as
+  //     refund-reconciler; see docs/cloudflare-hosting-portability.md.
+  //   - finalise-org-invoices: a "finalising" intermediate state guards
+  //     against double-finalize, with revert-on-error.
+  //
+  // docs/cloudflare-hosting-portability.md's existing Phase 3 policy reads
+  // "instantaneous cutover only, never overlapping" for the whole
+  // financial/destructive category - written before any Phase 3 job's
+  // code had actually been read line-by-line. Having now read all five,
+  // each does appear to tolerate a genuine overlap safely on its own
+  // merits. That is a PROPOSED reclassification, not a decision already
+  // taken: this file is deliberately framed and tested the same
+  // conservative way as Phase 2 Step A/B (one-time coordinated cutover
+  // test - Vercel's matching cron paths paused first, this Worker fired
+  // once, observed, then either made permanent or torn down) until a
+  // human explicitly approves treating these five as a true dual-run
+  // instead. Not deployed or triggered as of this commit; SCHEDULER_ENABLED
+  // is true here only because that is this repo's existing convention for
+  // a batch that is configured-and-tested-but-not-yet-live (see Step 1b,
+  // Phase 2 Step A/B) - the trigger is never actually registered with
+  // Cloudflare until someone deliberately deploys this config.
+  "triggers": {
+    "crons": ["0 2 * * *", "0 3 1 * *", "*/15 * * * *", "0 * * * *", "15 */6 * * *"]
+  }
+}
