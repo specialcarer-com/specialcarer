@@ -20,7 +20,7 @@ codes default to `in_progress`/`change_pending`, never silently to
 `clear`/`approved`). But the file's own header comment is explicit: it is
 built against an **assumed** endpoint contract, because "the detailed
 endpoint contract is only released under a partner onboarding agreement
-(≈12 weeks) - there is no public OpenAPI spec," with a standing
+(≈8-12 weeks) - there is no public OpenAPI spec," with a standing
 `TODO(dbs-partner-docs)` on the status-code maps (`mapDbsStatus`,
 `mapDbsUpdateServiceStatus`). Setting `DBS_VENDOR=rest` today would point
 real safeguarding checks at an integration nobody has verified against
@@ -72,6 +72,11 @@ Step 1b schedules are never touched. Rotating the app's `CRON_SECRET`
 (and both live Step 1b Worker secrets in the same window) is the riskier
 fallback, warranted only if that original value is genuinely
 unrecoverable.
+
+`cloudflare/scheduler/wrangler.step1c-dbs.jsonc` and the
+`specialcarer-scheduler-step1c-dbs` Worker do not exist yet; creating
+them is part of the pending Step 1c build-out, which this addendum
+does not document.
 
 **Net effect on sequencing:** items 2 and 3 can be done independently,
 at any time, by whoever holds the relevant credentials/values - neither
