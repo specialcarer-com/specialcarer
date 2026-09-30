@@ -10,6 +10,11 @@ const withBundleAnalyzer = bundleAnalyzer({
 // Points next-intl at the request config that resolves the active locale.
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
+// Set by the `cf:build` script (see package.json) — not by `next build` run
+// directly or via Vercel. Used to scope Cloudflare-only config below without
+// affecting the existing Vercel build path.
+const isCloudflareBuild = process.env.CLOUDFLARE_BUILD === "1";
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   // TEMPORARY UNBLOCK (see PR #187 typecheck hang):
@@ -37,6 +42,20 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Cloudflare has no bundled equivalent of Vercel's built-in image
+  // optimization service. Two real options exist — bind Cloudflare Images
+  // (a separate paid product, billed per stored/transformed image) or serve
+  // images unoptimized. Deliberately choosing the zero-cost option for now;
+  // this is a decision to revisit before go-live, not an oversight. Vercel
+  // is completely unaffected (images stays unset there, i.e. Next's default
+  // built-in optimizer).
+  //
+  // A custom loader (not images.unoptimized) is required to actually
+  // achieve that zero-cost option on Cloudflare: unoptimized: true alone
+  // still leaves Next's built-in image-optimization route in the build,
+  // which requires sharp and fails Cloudflare's bundling step (confirmed
+  // against a real cf:build run). See cloudflare-image-loader.ts.
+  images: isCloudflareBuild ? { loader: "custom", loaderFile: "./cloudflare-image-loader.ts" } : undefined,
   async redirects() {
     return [
       // US spelling alias for the organisations marketing page.
