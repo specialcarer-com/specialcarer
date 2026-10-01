@@ -8,7 +8,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { handleDisclosure } from "./route";
+import { handleDisclosure } from "./handler";
 import { makeFakeCaseDb, seedEvent } from "../__helpers__/fake-case-db";
 
 const EVENT_ID = "evt_1";

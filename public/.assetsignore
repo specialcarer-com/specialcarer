@@ -1,0 +1,2 @@
+# Cloudflare upload control file. Never publish generated source maps.
+**/*.map

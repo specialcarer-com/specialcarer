@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { extractClientIp } from "@/lib/hosting/client-ip";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveAdminMfaGate } from "@/lib/security/mfa-gate";
@@ -187,10 +188,7 @@ export async function logAdminAction(input: {
     let userAgent: string | null = null;
     try {
       const h = await headers();
-      ip =
-        h.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-        h.get("x-real-ip") ??
-        null;
+      ip = extractClientIp(h);
       userAgent = h.get("user-agent");
     } catch {
       // headers() unavailable in some contexts; ignore
