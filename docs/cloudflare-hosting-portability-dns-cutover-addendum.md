@@ -75,9 +75,11 @@ Moving nameservers to Cloudflare makes Cloudflare authoritative for
   TXT `send` -> `v=spf1 include:amazonses.com ~all` (Resend's sending
   records).
 - CNAME `_dmarc` -> `dmarc.ionos.co.uk`.
-- CNAME `www` -> Vercel (`3d6750b6adc6c3ff.vercel-dns-017.com`) - this is
-  the record a Workers Custom Domain will eventually replace; recreate
-  everything else first, change this one last, deliberately.
+- CNAME `www` -> Vercel (`3d6750b6adc6c3ff.vercel-dns-017.com`) -
+  recreate this too, so the Cloudflare zone mirrors production exactly
+  while the zone is still inactive; it is removed deliberately later
+  (step 7 below), once the zone is live and ready for its Custom
+  Domain.
 - The IONOS mail forwarders (`admin@`, `noreply@`, `hello@`,
   `employers@`, `privacy@` -> `office@allcare4u.co.uk` /
   `stevegisanrin@aol.com`) - these live at the IONOS mailbox/forwarder
@@ -92,49 +94,78 @@ Cloudflare DNS, verified value-by-value against IONOS, has to happen
 
 ### Also affected: mobile app domain verification
 
-Android App Links (`/.well-known/assetlinks.json`) and iOS Associated
-Domains depend on that well-known file continuing to resolve correctly
-through whichever infrastructure serves the domain after cutover.
-`src/app/.well-known/assetlinks.json/route.ts` is app code (so it moves
-with whatever Worker serves the domain), but both app stores cache
-verification results - a domain-serving change is worth re-verifying
-deliberately afterward. This is separate from, and shouldn't be
-conflated with, the plural-vs-singular mobile hardcoding issue flagged
-above - fix that first, independently, so the mobile apps are even
-pointed at the right domain before its infrastructure changes under it.
+Android App Links and iOS Associated Domains each depend on their own
+well-known file continuing to resolve correctly through whichever
+infrastructure serves the domain after cutover: Android checks
+`/.well-known/assetlinks.json`; iOS checks the separate
+`/.well-known/apple-app-site-association` file. The two are not
+interchangeable - verifying one does not verify the other, so both must
+be checked explicitly post-cutover, not just "the well-known file" as a
+single item. `src/app/.well-known/assetlinks.json/route.ts` is app code
+(so it moves with whatever Worker serves the domain); confirm the
+`apple-app-site-association` route exists and is served the same way.
+Both app stores cache verification results - a domain-serving change is
+worth re-verifying deliberately afterward for each platform. This is
+separate from, and shouldn't be conflated with, the plural-vs-singular
+mobile hardcoding issue flagged above - fix that first, independently,
+so the mobile apps are even pointed at the right domain before its
+infrastructure changes under it.
 
 ### Outline procedure
 
 1. Create a Cloudflare zone for `specialcarer.com`. Do **not** change
    nameservers yet - a zone can exist and be populated before it's live.
 2. Recreate every existing IONOS record in the new Cloudflare zone,
-   confirmed value-by-value: the MX/DKIM/SPF/DMARC records above, plus
-   any other subdomain records not yet enumerated here (the IONOS panel
-   is the source of truth, not this doc).
+   confirmed value-by-value: the MX/DKIM/SPF/DMARC/`www` records above,
+   plus any other subdomain records not yet enumerated here (the IONOS
+   panel is the source of truth, not this doc).
 3. Confirm a real (non-synthetic, non-preview) production Worker exists
    to route to. As of this investigation, only `specialcarer-preview`
    exists in the Cloudflare account, which this doc's own "Remaining
    gates" item 2 already notes is not yet a functional production
    candidate - domain cutover cannot target a Worker that doesn't exist
    yet in production form.
-4. Add the Workers Custom Domain for `specialcarer.com` and
+4. Lower IONOS DNS TTLs on the affected records ahead of the actual
+   cutover window, so a rollback (below) resolves as quickly as the
+   nameserver delegation (not just these records) allows.
+5. Check the registrar's DNSSEC setting and the parent-zone DS record
+   for `specialcarer.com`. If an active DS record exists, disable
+   DNSSEC at the registrar and wait for the DS record to clear from the
+   parent zone **before** step 6 - switching nameservers while a DS
+   record still points at the old (IONOS) key material can cause
+   validating resolvers to return SERVFAIL for the whole domain.
+6. Switch nameservers at the registrar to Cloudflare's assigned pair.
+   This is what makes the Cloudflare zone active.
+7. Once the zone is active, remove the `www` CNAME to Vercel from the
+   Cloudflare zone (recreated in step 2). Cloudflare rejects a Custom
+   Domain on a hostname that already has a CNAME, so this has to happen
+   before step 8, and only once Cloudflare is actually authoritative -
+   removing it any earlier would break `www` while IONOS was still
+   serving it.
+8. Add the Workers Custom Domain for `specialcarer.com` and
    `www.specialcarer.com` (both need their own Custom Domain entry -
    Custom Domains match exact hostnames only, so a redirect rule is also
-   needed for the apex, since `www` is canonical per the current Vercel
-   CNAME).
-5. Lower IONOS DNS TTLs on the affected records ahead of the actual
-   cutover window, so a rollback (below) resolves quickly if needed.
-6. Switch nameservers at the registrar to Cloudflare's assigned pair.
-7. Verify: DNS propagation, TLS certificate issuance on the new zone,
+   needed for the apex, since `www` is canonical). This step requires
+   both an active zone (step 6) and the conflicting CNAME already
+   removed (step 7); it cannot run any earlier.
+9. Verify: DNS propagation, TLS certificate issuance on the new zone,
    every recreated record resolving correctly (mail flow, forwarders,
    DKIM/SPF/DMARC), the web app serving correctly end-to-end, and (once
-   the mobile hardcoding issue above is separately fixed) the mobile
-   apps' domain verification still passing.
-8. **Rollback plan**: revert the registrar's nameservers back to IONOS.
-   Because IONOS's zone is never deleted, only deprioritized at the
-   registrar level during this process, reverting nameservers restores
-   the exact prior state once the (now-lowered) TTL expires - no data
-   loss, no record reconstruction needed on the way back.
+   the mobile hardcoding issue above is separately fixed) both
+   `/.well-known/assetlinks.json` (Android) and
+   `/.well-known/apple-app-site-association` (iOS) resolving and each
+   platform's domain verification passing independently.
+10. **Rollback plan**: revert the registrar's nameservers back to
+    IONOS. Because IONOS's zone is never deleted, only deprioritized at
+    the registrar level during this process, reverting nameservers
+    restores the exact prior state - but the rollback window is governed
+    by the **parent-zone nameserver delegation TTL**, not the lowered
+    record TTLs from step 4: lowering record TTLs does not lower the
+    cached NS delegation at the parent zone, so some resolvers can keep
+    querying Cloudflare until that delegation expires even after the
+    registrar points back to IONOS. State the delegation TTL before
+    cutover and expect rollback to complete only once it expires, not
+    immediately.
 
 Nothing in this plan has been executed. No Cloudflare zone, DNS record,
 or nameserver has been created or changed as part of this investigation.
