@@ -114,7 +114,7 @@ describe("buildBookingIcs / buildFeedIcs", () => {
   it("download mode produces a single REQUEST event with the booking sequence", () => {
     const out = buildBookingIcs(row, new Date("2026-06-11T00:00:00Z"));
     assert.match(out, /METHOD:REQUEST/);
-    assert.match(out, /UID:booking-bk-1@specialcarer\.com/);
+    assert.match(out, /UID:booking-bk-1@specialcarers\.com/);
     assert.match(out, /SEQUENCE:3/);
     assert.match(out, /DTSTART:20260701T090000Z/);
     assert.equal(out.match(/BEGIN:VEVENT/g)?.length, 1);
