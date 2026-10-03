@@ -4,13 +4,29 @@
  * Two responsibilities per event:
  *   1. Insert a row via `createNotification` so it shows up in the user's
  *      inbox + bell badge.
- *   2. (Future) deliver a real push via Expo/APNs. For now this is a stub.
+ *   2. Deliver a real push, routed by platform:
+ *      - ios: real APNs (src/lib/push/apns.ts), using the raw APNs device
+ *        token Capacitor's PushNotifications.register() returns.
+ *      - android / web: Expo's push API (src/lib/push/expo.ts). This is a
+ *        known, tracked gap, not introduced here: Capacitor's native
+ *        PushNotifications.register() returns a raw FCM token on Android
+ *        (and there is no native web-push sender yet), neither of which is
+ *        a valid Expo push token, so Expo will reject these sends.
+ *        TODO(push-android): build a dedicated FCM (and/or web-push) sender
+ *        and route android/web tokens there instead, the same way ios now
+ *        routes to APNs below. Tracked separately from this fix.
  *
  * Errors are swallowed locally — a failed notification must never break
  * the booking write that fired it.
  */
 import type { NotificationInsert } from "@/lib/notifications/server";
 import { sendExpoPush, type ExpoPushMessage } from "./expo";
+import {
+  sendPush as sendApnsPush,
+  type ApnsPayload,
+  type SendPushArgs as ApnsSendArgs,
+  type SendPushResult as ApnsSendResult,
+} from "./apns";
 import type { PushToken } from "./tokens";
 
 export type DispatchEvent =
@@ -315,26 +331,104 @@ export type SendPushDeps = {
         }
     >;
   }>;
+  /** Real APNs send for ios tokens — see src/lib/push/apns.ts. */
+  sendApnsPush: (args: ApnsSendArgs) => Promise<ApnsSendResult>;
   revokeToken: (token: string) => Promise<void>;
 };
 
 const defaultSendPushDeps: SendPushDeps = {
   sendExpoPush,
+  sendApnsPush,
   async revokeToken(token: string) {
     const { revokeToken } = await import("./tokens");
     await revokeToken(token);
   },
 };
 
+// APNs rejects any request whose JSON payload exceeds 4KB (4096 bytes) with
+// a 413. The dispatcher's generic `payload.payload` can carry an arbitrary,
+// caller-controlled string (e.g. timeline.event_created's `eventTitle`), so
+// it is never forwarded to APNs — only the fields the app actually needs to
+// route a tap (the deeplink) go in the custom section, and the alert text
+// itself is capped well under the limit.
+const APNS_ALERT_TITLE_MAX = 120;
+const APNS_ALERT_BODY_MAX = 500;
+
+function truncateForApns(s: string, max: number): string {
+  if (s.length <= max) return s;
+  return s.slice(0, max - 1) + "…";
+}
+
+/** Translate the dispatcher's generic payload into a bounded APNs aps dictionary. */
+function buildApnsPayload(payload: BuiltPayload): ApnsPayload {
+  return {
+    aps: {
+      alert: {
+        title: truncateForApns(payload.title, APNS_ALERT_TITLE_MAX),
+        body: truncateForApns(payload.body, APNS_ALERT_BODY_MAX),
+      },
+      sound: "default",
+    },
+    // Intentionally just the deeplink — see the size-limit note above.
+    // Anything else the client needs can be looked up via the deeplink's
+    // target page rather than carried in the push payload itself.
+    deeplink: payload.deeplink,
+  };
+}
+
 /**
- * Fire-and-forget push delivery via Expo. Tickets marked
- * `DeviceNotRegistered` cause the matching token to be revoked so we stop
- * dispatching to dead devices.
+ * Send to every ios token via real APNs, one request per device (APNs has
+ * no batch endpoint). A device-level failure is logged and swallowed so it
+ * never blocks delivery to the other tokens in this dispatch. A 410
+ * (Unregistered) revokes the token locally, mirroring the Expo
+ * DeviceNotRegistered handling below. Any other unsuccessful status is
+ * logged with its reason so a real delivery failure leaves a diagnostic
+ * trail instead of disappearing silently.
  */
-export async function sendPush(
+async function sendIosPush(
   tokens: PushToken[],
   payload: BuiltPayload,
-  deps: SendPushDeps = defaultSendPushDeps,
+  deps: SendPushDeps,
+): Promise<void> {
+  if (tokens.length === 0) return;
+  const apnsPayload = buildApnsPayload(payload);
+
+  await Promise.all(
+    tokens.map(async (t) => {
+      try {
+        const result = await deps.sendApnsPush({
+          deviceToken: t.token,
+          payload: apnsPayload,
+        });
+        if (!result.ok) {
+          if (result.status === 410) {
+            await deps.revokeToken(t.token).catch(() => {});
+          } else {
+            console.error("[notify.sendIosPush] APNs rejected the notification", {
+              status: result.status,
+              reason: result.reason,
+            });
+          }
+        }
+      } catch (err) {
+        console.error("[notify.sendIosPush] APNs send failed", err);
+      }
+    }),
+  );
+}
+
+/**
+ * Send to every android/web token via Expo's push API.
+ *
+ * TODO(push-android): these tokens are raw FCM (android) or not-yet-built
+ * web-push tokens, not Expo push tokens, so Expo will reject them — see the
+ * module doc comment above. Kept as-is (not newly broken) while a dedicated
+ * FCM/web-push sender is built as a separate follow-up.
+ */
+async function sendExpoRoutedPush(
+  tokens: PushToken[],
+  payload: BuiltPayload,
+  deps: SendPushDeps,
 ): Promise<void> {
   if (tokens.length === 0) return;
 
@@ -348,21 +442,49 @@ export async function sendPush(
     channelId: "default",
   }));
 
-  const response = await deps.sendExpoPush(messages);
+  // Caught locally (rather than left to propagate) so a thrown/rejected
+  // Expo call can't win a race against sendIosPush inside the outer
+  // Promise.all in sendPush below and cut APNs delivery short.
+  try {
+    const response = await deps.sendExpoPush(messages);
 
-  await Promise.all(
-    response.data.map(async (ticket, idx) => {
-      if (
-        ticket.status === "error" &&
-        ticket.details?.error === "DeviceNotRegistered"
-      ) {
-        const token = tokens[idx]?.token;
-        if (token) {
-          await deps.revokeToken(token).catch(() => {});
+    await Promise.all(
+      response.data.map(async (ticket, idx) => {
+        if (
+          ticket.status === "error" &&
+          ticket.details?.error === "DeviceNotRegistered"
+        ) {
+          const token = tokens[idx]?.token;
+          if (token) {
+            await deps.revokeToken(token).catch(() => {});
+          }
         }
-      }
-    }),
-  );
+      }),
+    );
+  } catch (err) {
+    console.error("[notify.sendExpoRoutedPush] Expo send failed", err);
+  }
+}
+
+/**
+ * Fire-and-forget push delivery, routed by platform. See the module doc
+ * comment at the top of this file for the ios-vs-android/web split and the
+ * tracked android/web gap.
+ */
+export async function sendPush(
+  tokens: PushToken[],
+  payload: BuiltPayload,
+  deps: SendPushDeps = defaultSendPushDeps,
+): Promise<void> {
+  if (tokens.length === 0) return;
+
+  const iosTokens = tokens.filter((t) => t.platform === "ios");
+  const otherTokens = tokens.filter((t) => t.platform !== "ios");
+
+  await Promise.all([
+    sendIosPush(iosTokens, payload, deps),
+    sendExpoRoutedPush(otherTokens, payload, deps),
+  ]);
 }
 
 export type DispatchDeps = {

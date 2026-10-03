@@ -3,7 +3,8 @@
  *
  * Pure-function tests over `buildPayload` + `formatMoney`, plus a
  * `dispatch` test that injects a fake createNotification to assert call
- * shape without touching the DB.
+ * shape without touching the DB, plus `sendPush` tests covering the
+ * platform split: ios -> real APNs, android/web -> Expo (tracked gap).
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
@@ -17,7 +18,7 @@ import {
   type DispatchEvent,
 } from "./notify";
 import type { NotificationInsert } from "@/lib/notifications/server";
-import type { PushToken } from "./tokens";
+import type { PushPlatform, PushToken } from "./tokens";
 import type { ExpoPushMessage, ExpoPushResponse } from "./expo";
 
 const BOOKING_ID = "11111111-1111-1111-1111-111111111111";
@@ -254,11 +255,15 @@ describe("buildPayload — offer.expired", () => {
   });
 });
 
-function makeToken(token: string, user_id: string): PushToken {
+function makeToken(
+  token: string,
+  user_id: string,
+  platform: PushPlatform = "android",
+): PushToken {
   return {
     id: `id-${token}`,
     user_id,
-    platform: "ios",
+    platform,
     token,
     device_id: null,
     app_version: null,
@@ -364,6 +369,7 @@ describe("dispatch", () => {
 describe("sendPush", () => {
   it("is a no-op when there are no tokens", async () => {
     let expoCalls = 0;
+    let apnsCalls = 0;
     let revoked = 0;
     await sendPush(
       [],
@@ -379,21 +385,26 @@ describe("sendPush", () => {
           expoCalls += 1;
           return { data: [] };
         },
+        async sendApnsPush() {
+          apnsCalls += 1;
+          return { ok: true, apnsId: "unused" };
+        },
         async revokeToken() {
           revoked += 1;
         },
       },
     );
     assert.equal(expoCalls, 0);
+    assert.equal(apnsCalls, 0);
     assert.equal(revoked, 0);
   });
 
-  it("maps tokens to Expo messages with title/body/deeplink", async () => {
+  it("maps android/web tokens to Expo messages with title/body/deeplink", async () => {
     const seen: ExpoPushMessage[][] = [];
     await sendPush(
       [
-        makeToken("ExponentPushToken[a]", SEEKER_ID),
-        makeToken("ExponentPushToken[b]", SEEKER_ID),
+        makeToken("ExponentPushToken[a]", SEEKER_ID, "android"),
+        makeToken("ExponentPushToken[b]", SEEKER_ID, "web"),
       ],
       {
         recipientUserId: SEEKER_ID,
@@ -408,6 +419,9 @@ describe("sendPush", () => {
           return {
             data: messages.map(() => ({ status: "ok" as const, id: "tk" })),
           };
+        },
+        async sendApnsPush() {
+          throw new Error("sendApnsPush should not be called for non-ios tokens");
         },
         async revokeToken() {
           /* not expected */
@@ -428,12 +442,12 @@ describe("sendPush", () => {
     });
   });
 
-  it("revokes tokens flagged as DeviceNotRegistered", async () => {
+  it("revokes android/web tokens flagged as DeviceNotRegistered", async () => {
     const revoked: string[] = [];
     await sendPush(
       [
-        makeToken("ExponentPushToken[kept]", SEEKER_ID),
-        makeToken("ExponentPushToken[dead]", SEEKER_ID),
+        makeToken("ExponentPushToken[kept]", SEEKER_ID, "android"),
+        makeToken("ExponentPushToken[dead]", SEEKER_ID, "android"),
       ],
       {
         recipientUserId: SEEKER_ID,
@@ -456,12 +470,276 @@ describe("sendPush", () => {
           };
           return body;
         },
+        async sendApnsPush() {
+          throw new Error("sendApnsPush should not be called for non-ios tokens");
+        },
         async revokeToken(t) {
           revoked.push(t);
         },
       },
     );
     assert.deepEqual(revoked, ["ExponentPushToken[dead]"]);
+  });
+
+  it("does not let a thrown Expo error block or fail ios APNs delivery", async () => {
+    const apnsCalls: string[] = [];
+    await sendPush(
+      [
+        makeToken("apns-token", SEEKER_ID, "ios"),
+        makeToken("ExponentPushToken[droid]", SEEKER_ID, "android"),
+      ],
+      {
+        recipientUserId: SEEKER_ID,
+        title: "t",
+        body: "b",
+        deeplink: "/x",
+        payload: {},
+      },
+      {
+        async sendExpoPush() {
+          throw new Error("network error talking to Expo");
+        },
+        async sendApnsPush(args) {
+          apnsCalls.push(args.deviceToken);
+          return { ok: true, apnsId: "ok" };
+        },
+        async revokeToken() {
+          /* not expected */
+        },
+      },
+    );
+    // Should not throw, and the ios send should still have gone through.
+    assert.deepEqual(apnsCalls, ["apns-token"]);
+  });
+
+  it("sends ios tokens via real APNs with a bounded, translated payload, not Expo", async () => {
+    const seen: Array<{ deviceToken: string; payload: unknown }> = [];
+    await sendPush(
+      [makeToken("apns-device-token-abc", SEEKER_ID, "ios")],
+      {
+        recipientUserId: SEEKER_ID,
+        title: "Hello",
+        body: "World",
+        deeplink: "/m/bookings/123",
+        // A real BuiltPayload.payload carries the whole event (e.g. a
+        // caller-controlled eventTitle for timeline events) — it must not
+        // be forwarded to APNs verbatim, see the size-limit test below.
+        payload: { bookingId: BOOKING_ID, foo: "bar" },
+      },
+      {
+        async sendExpoPush() {
+          throw new Error("sendExpoPush should not be called for ios tokens");
+        },
+        async sendApnsPush(args) {
+          seen.push(args);
+          return { ok: true, apnsId: "apns-id-1" };
+        },
+        async revokeToken() {
+          /* not expected */
+        },
+      },
+    );
+    assert.equal(seen.length, 1);
+    assert.equal(seen[0].deviceToken, "apns-device-token-abc");
+    const payload = seen[0].payload as {
+      aps: { alert: { title: string; body: string }; sound: string };
+      deeplink: string;
+    };
+    assert.equal(payload.aps.alert.title, "Hello");
+    assert.equal(payload.aps.alert.body, "World");
+    assert.equal(payload.aps.sound, "default");
+    assert.equal(payload.deeplink, "/m/bookings/123");
+    // Only `aps` and `deeplink` should be present — none of the caller's
+    // arbitrary custom-payload fields.
+    assert.deepEqual(Object.keys(payload).sort(), ["aps", "deeplink"]);
+  });
+
+  it("truncates an oversized title/body before handing it to APNs", async () => {
+    const seen: Array<{ payload: unknown }> = [];
+    const longTitle = "T".repeat(500);
+    const longBody = "B".repeat(5000);
+    await sendPush(
+      [makeToken("apns-device-token-long", SEEKER_ID, "ios")],
+      {
+        recipientUserId: SEEKER_ID,
+        title: longTitle,
+        body: longBody,
+        deeplink: "/m/timeline?event=1",
+        payload: { eventTitle: longBody },
+      },
+      {
+        async sendExpoPush() {
+          throw new Error("sendExpoPush should not be called for ios tokens");
+        },
+        async sendApnsPush(args) {
+          seen.push(args);
+          return { ok: true, apnsId: "ok" };
+        },
+        async revokeToken() {
+          /* not expected */
+        },
+      },
+    );
+    const payload = seen[0].payload as {
+      aps: { alert: { title: string; body: string } };
+    };
+    // Bounded well under APNs' 4KB total-payload limit, with the standard
+    // truncation marker.
+    assert.ok(payload.aps.alert.title.length <= 120);
+    assert.ok(payload.aps.alert.body.length <= 500);
+    assert.ok(payload.aps.alert.title.endsWith("…"));
+    assert.ok(payload.aps.alert.body.endsWith("…"));
+    assert.ok(JSON.stringify(payload).length < 4096);
+  });
+
+  it("revokes an ios token on APNs 410 (Unregistered), keeps others", async () => {
+    const revoked: string[] = [];
+    await sendPush(
+      [
+        makeToken("apns-kept", SEEKER_ID, "ios"),
+        makeToken("apns-dead", SEEKER_ID, "ios"),
+      ],
+      {
+        recipientUserId: SEEKER_ID,
+        title: "t",
+        body: "b",
+        deeplink: "/x",
+        payload: {},
+      },
+      {
+        async sendExpoPush() {
+          throw new Error("sendExpoPush should not be called for ios tokens");
+        },
+        async sendApnsPush(args) {
+          if (args.deviceToken === "apns-dead") {
+            return { ok: false, status: 410, reason: "Unregistered" };
+          }
+          return { ok: true, apnsId: "ok" };
+        },
+        async revokeToken(t) {
+          revoked.push(t);
+        },
+      },
+    );
+    assert.deepEqual(revoked, ["apns-dead"]);
+  });
+
+  it("does not revoke an ios token on a non-410 APNs failure, but logs it", async () => {
+    const revoked: string[] = [];
+    const originalError = console.error;
+    const logged: unknown[][] = [];
+    console.error = (...args: unknown[]) => {
+      logged.push(args);
+    };
+    try {
+      await sendPush(
+        [makeToken("apns-retryable", SEEKER_ID, "ios")],
+        {
+          recipientUserId: SEEKER_ID,
+          title: "t",
+          body: "b",
+          deeplink: "/x",
+          payload: {},
+        },
+        {
+          async sendExpoPush() {
+            throw new Error("sendExpoPush should not be called for ios tokens");
+          },
+          async sendApnsPush() {
+            return { ok: false, status: 500, reason: "InternalServerError" };
+          },
+          async revokeToken(t) {
+            revoked.push(t);
+          },
+        },
+      );
+    } finally {
+      console.error = originalError;
+    }
+    assert.deepEqual(revoked, []);
+    assert.ok(
+      logged.some((args) =>
+        args.some(
+          (a) =>
+            typeof a === "object" &&
+            a !== null &&
+            (a as { status?: number }).status === 500,
+        ),
+      ),
+      "expected the non-410 APNs failure to be logged with its status",
+    );
+  });
+
+  it("isolates a thrown APNs error to that token without blocking others", async () => {
+    const revoked: string[] = [];
+    const apnsCalls: string[] = [];
+    await sendPush(
+      [
+        makeToken("apns-boom", SEEKER_ID, "ios"),
+        makeToken("apns-fine", SEEKER_ID, "ios"),
+      ],
+      {
+        recipientUserId: SEEKER_ID,
+        title: "t",
+        body: "b",
+        deeplink: "/x",
+        payload: {},
+      },
+      {
+        async sendExpoPush() {
+          throw new Error("sendExpoPush should not be called for ios tokens");
+        },
+        async sendApnsPush(args) {
+          apnsCalls.push(args.deviceToken);
+          if (args.deviceToken === "apns-boom") {
+            throw new Error("network error");
+          }
+          return { ok: true, apnsId: "ok" };
+        },
+        async revokeToken(t) {
+          revoked.push(t);
+        },
+      },
+    );
+    assert.deepEqual(apnsCalls.sort(), ["apns-boom", "apns-fine"]);
+    assert.deepEqual(revoked, []);
+  });
+
+  it("routes ios tokens to APNs and android/web tokens to Expo in one dispatch", async () => {
+    const apnsCalls: string[] = [];
+    const expoCalls: ExpoPushMessage[][] = [];
+    await sendPush(
+      [
+        makeToken("apns-token", SEEKER_ID, "ios"),
+        makeToken("ExponentPushToken[droid]", SEEKER_ID, "android"),
+      ],
+      {
+        recipientUserId: SEEKER_ID,
+        title: "Hello",
+        body: "World",
+        deeplink: "/m/x",
+        payload: {},
+      },
+      {
+        async sendExpoPush(messages) {
+          expoCalls.push(messages);
+          return {
+            data: messages.map(() => ({ status: "ok" as const, id: "tk" })),
+          };
+        },
+        async sendApnsPush(args) {
+          apnsCalls.push(args.deviceToken);
+          return { ok: true, apnsId: "ok" };
+        },
+        async revokeToken() {
+          /* not expected */
+        },
+      },
+    );
+    assert.deepEqual(apnsCalls, ["apns-token"]);
+    assert.equal(expoCalls.length, 1);
+    assert.equal(expoCalls[0].length, 1);
+    assert.equal(expoCalls[0][0].to, "ExponentPushToken[droid]");
   });
 });
 
