@@ -54,6 +54,19 @@ describe("buildNavigationScript", () => {
 });
 
 describe("classifyDeeplink", () => {
+  it("uses the literal singular production origin", () => {
+    assert.equal(WEB_DEEPLINK_ORIGIN_DEFAULT, "https://specialcarer.com");
+    assert.deepEqual(classifyDeeplink("https://specialcarer.com/m/chat/1"), {
+      kind: "web",
+      path: "/m/chat/1",
+    });
+  });
+
+  it("does not route the legacy plural origin inside the WebView", () => {
+    const url = "https://specialcarers.com/m/chat/1";
+    assert.deepEqual(classifyDeeplink(url), { kind: "external", url });
+  });
+
   it("treats a leading-slash path as an in-app web route", () => {
     assert.deepEqual(classifyDeeplink("/m/chat/abc-123"), {
       kind: "web",

@@ -6,7 +6,7 @@
  * CapacitorShell can route inside the WebView or hand off to the OS browser.
  */
 
-export const WEB_DEEPLINK_ORIGIN_DEFAULT = "https://www.specialcarers.com";
+export const WEB_DEEPLINK_ORIGIN_DEFAULT = "https://www.specialcarer.com";
 
 export type DeeplinkRoute =
   | { kind: "web"; path: string }
@@ -54,8 +54,8 @@ export function classifyDeeplink(
       const u = new URL(trimmed);
       const allowedHosts = new Set([
         new URL(webOrigin).host,
-        "specialcarers.com",
-        "www.specialcarers.com",
+        "specialcarer.com",
+        "www.specialcarer.com",
       ]);
       if (allowedHosts.has(u.host)) {
         return { kind: "web", path: `${u.pathname}${u.search}${u.hash}` };
