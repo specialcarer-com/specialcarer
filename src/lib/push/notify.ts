@@ -345,15 +345,34 @@ const defaultSendPushDeps: SendPushDeps = {
   },
 };
 
-/** Translate the dispatcher's generic payload into an APNs aps dictionary. */
+// APNs rejects any request whose JSON payload exceeds 4KB (4096 bytes) with
+// a 413. The dispatcher's generic `payload.payload` can carry an arbitrary,
+// caller-controlled string (e.g. timeline.event_created's `eventTitle`), so
+// it is never forwarded to APNs — only the fields the app actually needs to
+// route a tap (the deeplink) go in the custom section, and the alert text
+// itself is capped well under the limit.
+const APNS_ALERT_TITLE_MAX = 120;
+const APNS_ALERT_BODY_MAX = 500;
+
+function truncateForApns(s: string, max: number): string {
+  if (s.length <= max) return s;
+  return s.slice(0, max - 1) + "…";
+}
+
+/** Translate the dispatcher's generic payload into a bounded APNs aps dictionary. */
 function buildApnsPayload(payload: BuiltPayload): ApnsPayload {
   return {
     aps: {
-      alert: { title: payload.title, body: payload.body },
+      alert: {
+        title: truncateForApns(payload.title, APNS_ALERT_TITLE_MAX),
+        body: truncateForApns(payload.body, APNS_ALERT_BODY_MAX),
+      },
       sound: "default",
     },
+    // Intentionally just the deeplink — see the size-limit note above.
+    // Anything else the client needs can be looked up via the deeplink's
+    // target page rather than carried in the push payload itself.
     deeplink: payload.deeplink,
-    ...payload.payload,
   };
 }
 
@@ -362,7 +381,9 @@ function buildApnsPayload(payload: BuiltPayload): ApnsPayload {
  * no batch endpoint). A device-level failure is logged and swallowed so it
  * never blocks delivery to the other tokens in this dispatch. A 410
  * (Unregistered) revokes the token locally, mirroring the Expo
- * DeviceNotRegistered handling below.
+ * DeviceNotRegistered handling below. Any other unsuccessful status is
+ * logged with its reason so a real delivery failure leaves a diagnostic
+ * trail instead of disappearing silently.
  */
 async function sendIosPush(
   tokens: PushToken[],
@@ -379,8 +400,15 @@ async function sendIosPush(
           deviceToken: t.token,
           payload: apnsPayload,
         });
-        if (!result.ok && result.status === 410) {
-          await deps.revokeToken(t.token).catch(() => {});
+        if (!result.ok) {
+          if (result.status === 410) {
+            await deps.revokeToken(t.token).catch(() => {});
+          } else {
+            console.error("[notify.sendIosPush] APNs rejected the notification", {
+              status: result.status,
+              reason: result.reason,
+            });
+          }
         }
       } catch (err) {
         console.error("[notify.sendIosPush] APNs send failed", err);
@@ -414,21 +442,28 @@ async function sendExpoRoutedPush(
     channelId: "default",
   }));
 
-  const response = await deps.sendExpoPush(messages);
+  // Caught locally (rather than left to propagate) so a thrown/rejected
+  // Expo call can't win a race against sendIosPush inside the outer
+  // Promise.all in sendPush below and cut APNs delivery short.
+  try {
+    const response = await deps.sendExpoPush(messages);
 
-  await Promise.all(
-    response.data.map(async (ticket, idx) => {
-      if (
-        ticket.status === "error" &&
-        ticket.details?.error === "DeviceNotRegistered"
-      ) {
-        const token = tokens[idx]?.token;
-        if (token) {
-          await deps.revokeToken(token).catch(() => {});
+    await Promise.all(
+      response.data.map(async (ticket, idx) => {
+        if (
+          ticket.status === "error" &&
+          ticket.details?.error === "DeviceNotRegistered"
+        ) {
+          const token = tokens[idx]?.token;
+          if (token) {
+            await deps.revokeToken(token).catch(() => {});
+          }
         }
-      }
-    }),
-  );
+      }),
+    );
+  } catch (err) {
+    console.error("[notify.sendExpoRoutedPush] Expo send failed", err);
+  }
 }
 
 /**
