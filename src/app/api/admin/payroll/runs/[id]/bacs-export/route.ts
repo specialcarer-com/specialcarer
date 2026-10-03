@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import { requireAdminApi, logAdminAction } from "@/lib/admin/auth";
-import { createAdminClient } from "@/lib/supabase/admin";
 import {
   generateBacs18File,
   bacsFilenameDate,
@@ -40,7 +38,19 @@ export async function POST(
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
 
-  // 2. Admin auth via the JSON-safe helper.
+  // 2. Admin auth via the JSON-safe helper. Imported lazily, after the
+  // flag check above, so the flag-off path doesn't need to load the
+  // admin/auth + MFA module graph at all. That graph includes
+  // src/lib/security/mfa-server.ts, which imports the "server-only"
+  // package — a package that intentionally throws when required
+  // outside Next's webpack/turbopack bundler (e.g. under plain
+  // `node --test`, as bacs18.test.ts's 404-when-flag-off test does by
+  // dynamically importing this route file). Deferring the import means
+  // that test path — and any other flag-off caller — never touches it.
+  const { requireAdminApi, logAdminAction } = await import(
+    "@/lib/admin/auth"
+  );
+  const { createAdminClient } = await import("@/lib/supabase/admin");
   const guard = await requireAdminApi();
   if (!guard.ok) return guard.response;
   const adminUser = guard.admin;
