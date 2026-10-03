@@ -82,7 +82,7 @@ describe("buildIcs", () => {
 
   it("builds a stable UID from the booking id", () => {
     const out = buildIcs([baseEvent], { method: "REQUEST", now: NOW });
-    assert.match(out, /UID:booking-abc-123@specialcarer\.com/);
+    assert.match(out, /UID:booking-abc-123@specialcarers\.com/);
   });
 
   it("renders DTSTART/DTEND/DTSTAMP in UTC", () => {
@@ -102,8 +102,8 @@ describe("buildIcs", () => {
 
   it("embeds the deep link in DESCRIPTION and URL", () => {
     const out = buildIcs([baseEvent], { method: "REQUEST", now: NOW });
-    assert.match(out, /URL:https:\/\/specialcarer\.com\/m\/bookings\/abc-123/);
-    assert.match(out, /DESCRIPTION:.*specialcarer\.com\/m\/bookings\/abc-123/);
+    assert.match(out, /URL:https:\/\/specialcarers\.com\/m\/bookings\/abc-123/);
+    assert.match(out, /DESCRIPTION:.*specialcarers\.com\/m\/bookings\/abc-123/);
   });
 
   it("uses METHOD:REQUEST for per-booking download", () => {
@@ -142,6 +142,6 @@ describe("buildIcs", () => {
     );
     const count = out.match(/BEGIN:VEVENT/g)?.length ?? 0;
     assert.equal(count, 2);
-    assert.match(out, /UID:booking-def-456@specialcarer\.com/);
+    assert.match(out, /UID:booking-def-456@specialcarers\.com/);
   });
 });

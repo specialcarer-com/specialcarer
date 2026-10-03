@@ -1,9 +1,18 @@
+/**
+ * Tests the pure template renderers directly from
+ * ./grace-period-blast-templates - NOT from ./grace-period-blast, which
+ * imports ./smtp (server-only + nodemailer + resend) at module scope. That
+ * import crashed this file at load time when run under `npm test`'s
+ * `node --test` glob, before any test body ran - a file-level failure
+ * that was previously CI-allow-listed rather than fixed. See
+ * grace-period-blast-templates.ts's header comment for the full story.
+ */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
-  _renderGracePeriodBlastHtml,
-  _renderGracePeriodBlastText,
-} from "./grace-period-blast";
+  renderGracePeriodBlastHtml as _renderGracePeriodBlastHtml,
+  renderGracePeriodBlastText as _renderGracePeriodBlastText,
+} from "./grace-period-blast-templates";
 
 const base = {
   fullName: "Priya Sharma",
