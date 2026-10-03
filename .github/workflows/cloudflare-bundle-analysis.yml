@@ -1,4 +1,10 @@
 name: Cloudflare bundle analysis
+# DISABLED: this job runs `npm run cf:build` and expects OpenNext/Cloudflare
+# Workers build output, but none of that toolchain exists on main yet (no
+# open-next.config, no wrangler.jsonc, no @opennextjs/cloudflare dependency,
+# no `cf:build` script). It only exists on the still-unmerged
+# cloudflare/trusted-client-ip branch. Re-enable (remove the `if: false`
+# below) once that migration actually merges into main.
 
 on:
   workflow_dispatch:
@@ -8,7 +14,8 @@ permissions:
 
 jobs:
   analysis:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest 
+    if: false
     timeout-minutes: 20
     env:
       CI: "true"
