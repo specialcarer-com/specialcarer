@@ -54,9 +54,7 @@ $$;
 comment on function public.organizations_sync_booking_enabled() is
   'Forces organizations.booking_enabled to false whenever verification_status is not ''verified''. Prevents a rejected/suspended/pending/draft org from silently staying bookable after a status change. See migration 20261004033900.';
 
-drop trigger if exists trg_organizations_sync_booking_enabled on public.organizations;
-
-create trigger trg_organizations_sync_booking_enabled
+create or replace trigger trg_organizations_sync_booking_enabled
   before insert or update of verification_status, booking_enabled
   on public.organizations
   for each row
