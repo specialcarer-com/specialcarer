@@ -12,7 +12,7 @@ describe("classifyDeeplink", () => {
 
   it("strips same-origin https to a path", () => {
     assert.deepEqual(
-      classifyDeeplink("https://www.specialcarers.com/m/chat/thread-1"),
+      classifyDeeplink("https://www.specialcarer.com/m/chat/thread-1"),
       { kind: "web", path: "/m/chat/thread-1" },
     );
   });
@@ -20,6 +20,20 @@ describe("classifyDeeplink", () => {
   it("opens Stripe checkout externally", () => {
     const out = classifyDeeplink("https://checkout.stripe.com/c/pay/cs_test");
     assert.equal(out.kind, "external");
+  });
+
+  it("routes the singular apex domain in-app", () => {
+    assert.deepEqual(
+      classifyDeeplink("https://specialcarer.com/m/bookings/1?ref=push#details"),
+      { kind: "web", path: "/m/bookings/1?ref=push#details" },
+    );
+  });
+
+  it("does not treat the legacy plural domain as an in-app host", () => {
+    for (const host of ["specialcarers.com", "www.specialcarers.com"]) {
+      const url = `https://${host}/m/bookings/1`;
+      assert.deepEqual(classifyDeeplink(url), { kind: "external", url });
+    }
   });
 
   it("routes specialcarer:// custom scheme", () => {

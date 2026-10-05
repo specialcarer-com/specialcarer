@@ -22,7 +22,7 @@ npx cap sync android && ./scripts/apply-android-overlay.sh
 ## What's covered
 
 ### Permissions declared
-- `INTERNET` — remote WebView loads `https://www.specialcarers.com/m`
+- `INTERNET` — remote WebView loads `https://www.specialcarer.com/m`
 - `POST_NOTIFICATIONS` — FCM push (Android 13+ runtime prompt)
 - `ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION` — shift tracking + search
 - `ACCESS_BACKGROUND_LOCATION` — reserved for active-shift background tracking (Phase 3)
@@ -32,7 +32,7 @@ npx cap sync android && ./scripts/apply-android-overlay.sh
 
 ### Deep links
 - Custom scheme: `specialcarer://m/...` (parity with iOS URL scheme)
-- Verified App Links: `https://www.specialcarers.com/m/*` and `https://specialcarers.com/m/*`
+- Verified App Links: `https://www.specialcarer.com/m/*` and `https://specialcarer.com/m/*`
   - Requires `/.well-known/assetlinks.json` on production (see `src/app/.well-known/assetlinks.json/route.ts`)
   - Set `ANDROID_APP_LINKS_SHA256` on Vercel with the signing cert fingerprint(s)
 

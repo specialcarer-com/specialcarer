@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Production loads https://www.specialcarers.com/m (cleartext disabled).
+  Production loads https://www.specialcarer.com/m (cleartext disabled).
   Local emulator dev via CAPACITOR_SERVER_URL=http://10.0.2.2:3000/m needs
   cleartext to the host loopback alias only — never globally.
 -->
