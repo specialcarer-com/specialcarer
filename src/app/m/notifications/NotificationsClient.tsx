@@ -59,8 +59,15 @@ export default function NotificationsClient({
   // (reads from another tab) on the caller's rows only.
   useEffect(() => {
     const supabase = createClient();
+    // Deliberately NOT `notifications:user_id=eq.${userId}`: that topic is
+    // already owned by the bell-badge singleton in
+    // `@/lib/notifications/useUnreadNotifications`. supabase-js returns the
+    // existing channel for a repeated topic, so sharing it made `.on()` throw
+    // "cannot add `postgres_changes` callbacks ... after `subscribe()`"
+    // (Sentry SPECIALCARER-WEB-8) and, on unmount, `removeChannel` would tear
+    // down the bell's live updates. Use a topic that is private to this page.
     const channel = supabase
-      .channel(`notifications:user_id=eq.${userId}`)
+      .channel(`notifications-inbox:user_id=eq.${userId}`)
       .on(
         "postgres_changes",
         {

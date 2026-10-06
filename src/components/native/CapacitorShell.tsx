@@ -6,7 +6,8 @@
  * Responsibilities (iOS + Android):
  *   - Register / revoke push tokens on auth transitions
  *   - Route deep links (custom scheme, App Links, push taps)
- *   - Intercept Stripe / OAuth URLs and open the system browser
+ *   - (Stripe / OAuth URL interception is not wired; see the note in the
+ *     effect below.)
  *
  * No-ops in a normal browser — all Capacitor imports are dynamic.
  */
@@ -164,19 +165,16 @@ export default function CapacitorShell() {
       );
       cleanups.push(() => authSub.subscription.unsubscribe());
 
-      // ── Stripe / OAuth: intercept top-level navigations ───────────────────
-      const originalAssign = window.location.assign.bind(window.location);
-      window.location.assign = (url: string | URL) => {
-        const href = String(url);
-        if (shouldOpenExternally(href)) {
-          void openExternalUrl(href);
-          return;
-        }
-        originalAssign(href);
-      };
-      cleanups.push(() => {
-        window.location.assign = originalAssign;
-      });
+      // NOTE: this effect used to monkey-patch `window.location.assign` to
+      // send Stripe / Google / Apple URLs to the system browser. That never
+      // worked: `location.assign` is a non-writable, non-configurable
+      // property in every browser, so the assignment threw a TypeError
+      // ("Attempted to assign to readonly property", Sentry
+      // SPECIALCARER-WEB-C) on every native launch, after the push and
+      // deep-link setup above had already completed. The dead block was
+      // removed with no change in behaviour: Stripe/OAuth navigations have
+      // never been intercepted. Callers that must leave the WebView should
+      // call `openExternalUrl()` from `@/lib/capacitor/browser` directly.
     })();
 
     return () => {
