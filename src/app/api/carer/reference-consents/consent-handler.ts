@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { extractClientIp } from "@/lib/hosting/client-ip";
 import { createClient } from "@/lib/supabase/server";
 import {
   consentPdfErrorMessage,
@@ -98,10 +99,7 @@ export function createConsentPostHandler(
       );
     }
 
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      req.headers.get("x-real-ip") ||
-      null;
+    const ip = extractClientIp(req.headers);
     const ua = req.headers.get("user-agent")?.slice(0, 500) ?? null;
     const { data, error } = await supabase
       .from("carer_reference_consents")
