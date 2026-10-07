@@ -1,0 +1,42 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "specialcarer-scheduler-phase2c",
+  "main": "worker.ts",
+  "compatibility_date": "2026-09-17",
+  "workers_dev": false,
+  "preview_urls": false,
+  // Reuses the same CRON_SECRET already set on specialcarer-preview
+  // (real value, entered directly in Cloudflare, never through this
+  // file or any chat).
+  "vars": {
+    "APP_ENV": "production",
+    "SCHEDULER_ENABLED": "true",
+    "APP_ORIGIN": "https://app.invalid",
+    // reference-reminders shares its exact Vercel cron expression,
+    // "0 9 * * *", with run-monthly-payroll (a Phase 3 financial job) -
+    // confirmed directly via jobsForSchedule("0 9 * * *") returning both
+    // paths. Without this allowlist, registering that trigger here would
+    // silently also invoke payroll on every firing. See worker.ts's
+    // restrictToAllowlist and docs/cloudflare-hosting-portability.md,
+    // "Scheduler cutover". The trigger below uses the REAL Vercel
+    // schedule (no artificial time-shift needed now that dispatch is
+    // filtered, not just cron-matched).
+    "DISPATCH_PATH_ALLOWLIST": "/api/cron/reference-reminders"
+  },
+  "services": [
+    { "binding": "APP", "service": "specialcarer-preview" }
+  ],
+  // ONE-TIME COORDINATED CUTOVER TEST, not a dual-run. reference-reminders
+  // sends real emails to real referees. Its markSent write uses a
+  // compare-and-swap on reminder_stage, but the email dispatch happens
+  // BEFORE that check runs (see processReferenceReminders in
+  // src/lib/vetting/reference-reminders.ts) - so a duplicate email is
+  // still possible in a narrow race window if this fires at the same
+  // moment as Vercel's own cron, even though the CAS correctly prevents
+  // a duplicate stage-advancement. Same category of risk as
+  // timesheet-reminders / care-plan-review-reminder (Phase 2 Step A),
+  // not the zero-guard category (Phase 2 Step B). Vercel's own cron for
+  // this exact path must be confirmed paused before this Worker is
+  // deployed with this trigger live.
+  "triggers": { "crons": ["0 9 * * *"] }
+}
