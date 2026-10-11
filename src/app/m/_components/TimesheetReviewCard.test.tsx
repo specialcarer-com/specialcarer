@@ -71,7 +71,7 @@ const baseProps = {
 
 test("useCountdown is called unconditionally, above the early return — not inline in the pending-only branch", () => {
   const source = readFileSync("src/app/m/_components/TimesheetReviewCard.tsx", "utf8");
-  const hookCallIndex = source.indexOf("useCountdown(ts.auto_approve_at)");
+  const hookCallIndex = source.indexOf("useCountdown(ts.auto_approve_at");
   const earlyReturnIndex = source.indexOf("if (!isPending)");
   assert.ok(hookCallIndex > -1, "useCountdown call site not found");
   assert.ok(earlyReturnIndex > -1, "early return not found");

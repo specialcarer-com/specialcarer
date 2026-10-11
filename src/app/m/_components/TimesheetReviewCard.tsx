@@ -126,12 +126,15 @@ function fmtTimeRange(startIso: string, endIso: string): string {
   return `${fmt(s)}–${fmt(e)}`;
 }
 
-function useCountdown(targetIso: string): string {
+function useCountdown(targetIso: string, enabled = true): string {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
+    // Only tick while the countdown is actually displayed. The hook is still
+    // called on every render (Rules of Hooks); only the interval is gated.
+    if (!enabled) return;
     const t = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(t);
-  }, []);
+  }, [enabled]);
   const target = Date.parse(targetIso);
   if (!Number.isFinite(target)) return "—";
   const diff = target - now;
@@ -224,8 +227,9 @@ export function TimesheetReviewCard({
   // worst silently misattributed hook state. The computed value is only
   // ever displayed in the pending branch; calling it unconditionally here
   // has no behavioural cost (auto_approve_at is a required, always-present
-  // field) beyond a harmless unused re-render tick on non-pending cards.
-  const countdown = useCountdown(ts.auto_approve_at);
+  // field). Its interval only runs while the card is pending, so approved and
+  // disputed cards do not re-render every minute.
+  const countdown = useCountdown(ts.auto_approve_at, isPending);
 
   // Read-only summary view once approved or disputed.
   if (!isPending) {
