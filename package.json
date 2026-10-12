@@ -22,7 +22,7 @@
     "mobile:bootstrap:android": "bash mobile/scripts/bootstrap-android.sh",
     "mobile:build": "echo \"v1 uses remote web; webDir is offline shell only\"",
     "mobile:android:setup": "npm run mobile:bootstrap:android",
-    "analyze": "ANALYZE=true next build",
+    "analyze": "npm run contracts:check && ANALYZE=true next build",
     "contracts:sync": "node scripts/sync-contracts.mjs",
     "contracts:check": "node scripts/sync-contracts.mjs --check",
     "prebuild": "npm run contracts:check"
