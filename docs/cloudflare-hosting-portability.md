@@ -381,9 +381,11 @@ an idempotent aggregation, potentially serious for a payout.
   Each job has a cron expression no other job shares, so registering only these
   schedules structurally prevents any other job, including the dangerous ones,
   from ever firing here regardless of the enable flag.
-  `cloudflare/scheduler/rehearsal.test.ts` asserts this mechanically (exact job
-  set, no shared expressions, explicit denylist of financial/destructive
-  paths) rather than relying on manual review holding forever.
+  `cloudflare/scheduler/step1b.test.ts` asserts this mechanically for Step 1b
+  (exact two-job set, `dbs-update-service-poll` unreachable even via a shared
+  cron expression, explicit denylist of financial/destructive paths) rather
+  than relying on manual review holding forever. `rehearsal.test.ts` covers the
+  earlier rehearsal Worker.
 - **Phase 2 (not started)**: user-facing reminder jobs. Requires pausing
   Vercel's cron for those specific paths before enabling Cloudflare's —
   not a dual-run — to avoid double-sending real users the same message.
