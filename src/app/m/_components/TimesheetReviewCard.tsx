@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import * as React from "react"; // eslint-disable-line @typescript-eslint/no-unused-vars -- needed at runtime: this file has no automatic-JSX-runtime import, so its compiled JSX (React.createElement calls) needs React in scope when this module runs outside Next's own build pipeline (e.g. in tests run directly via tsx/esbuild, which fall back to the classic transform regardless of tsconfig's "jsx": "preserve"). Next's real build is unaffected either way. Same pattern already used in ./ui.tsx for the same reason.
 import {
   Elements,
   PaymentElement,
@@ -125,12 +126,15 @@ function fmtTimeRange(startIso: string, endIso: string): string {
   return `${fmt(s)}–${fmt(e)}`;
 }
 
-function useCountdown(targetIso: string): string {
+function useCountdown(targetIso: string, enabled = true): string {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
+    // Only tick while the countdown is actually displayed. The hook is still
+    // called on every render (Rules of Hooks); only the interval is gated.
+    if (!enabled) return;
     const t = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(t);
-  }, []);
+  }, [enabled]);
   const target = Date.parse(targetIso);
   if (!Number.isFinite(target)) return "—";
   const diff = target - now;
@@ -212,6 +216,21 @@ export function TimesheetReviewCard({
   const isPending = ts.status === "pending_approval";
   const isApproved = ts.status === "approved" || ts.status === "auto_approved";
 
+  // Rules-of-Hooks fix: this hook must be called on every render, not only
+  // when falling through to the "pending" branch below. It previously sat
+  // inline at the countdown's display site, after the early return for
+  // isApproved/isDisputed — meaning it was skipped entirely on renders
+  // where the timesheet isn't pending. If a mounted card's ts.status ever
+  // changes (e.g. approved while still on screen), that mismatched hook
+  // count between renders is exactly what React's Rules of Hooks exist to
+  // prevent: at best a hard "Rendered fewer hooks than expected" error, at
+  // worst silently misattributed hook state. The computed value is only
+  // ever displayed in the pending branch; calling it unconditionally here
+  // has no behavioural cost (auto_approve_at is a required, always-present
+  // field). Its interval only runs while the card is pending, so approved and
+  // disputed cards do not re-render every minute.
+  const countdown = useCountdown(ts.auto_approve_at, isPending);
+
   // Read-only summary view once approved or disputed.
   if (!isPending) {
     const tone: Tone = isApproved ? "green" : isDisputed ? "red" : "neutral";
@@ -255,7 +274,7 @@ export function TimesheetReviewCard({
               Review your carer&rsquo;s timesheet
             </p>
             <p className="mt-0.5 text-[12px] text-subheading">
-              Auto-approves in <strong>{useCountdown(ts.auto_approve_at)}</strong>
+              Auto-approves in <strong>{countdown}</strong>
             </p>
           </div>
           <Tag tone="amber">Pending</Tag>
