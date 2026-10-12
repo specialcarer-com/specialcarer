@@ -101,8 +101,11 @@ checks the known static control files and constructs non-secret asset metadata.
 
 ## Direct-upload metadata: important difference from the old artifact
 
-The installed Wrangler 4.134.0 reads `_headers` as UTF-8 and sends its **raw file
-contents** in `metadata.assets.config._headers`. A direct uploader must carry
+The installed Wrangler 4.134.0 reads `_headers` as UTF-8 and, as observed,
+sends its **raw file contents** in `metadata.assets.config._headers`. Cloudflare's
+public metadata reference does not document this field (it lists only
+`html_handling` and `not_found_handling` under `assets.config`), so confirm the
+placement against the Wrangler version actually used before any direct upload. A direct uploader must carry
 that field alongside the in-memory provider completion JWT. `.assetsignore`
 controls local manifest construction; it is neither a public asset nor an API
 configuration property.

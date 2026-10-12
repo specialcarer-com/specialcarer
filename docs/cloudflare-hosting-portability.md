@@ -1,6 +1,9 @@
 # Hosting portability: local implementation and environment contract
 
-Status: local changes only; no deployment, credentials, DNS or schedules activated.
+Status: for this hosting-portability candidate, local changes only; no
+deployment, credentials, DNS or schedules are activated by it. This is separate
+from the Step 1b preview dual-run described under "Scheduler cutover" below,
+whose two idempotent schedules are live.
 The previous uploaded compatibility build predates these changes. A new local
 Node 22 synthetic OpenNext build, Wrangler dry-run, full post-build typecheck
 and hosting tests have passed; this candidate is not deployed or configured
@@ -53,7 +56,10 @@ unversioned media, private content or server cache behaviour.
 its assets output; Wrangler interprets them during upload.
 
 A direct-API uploader must also honour exclusions and pass the raw `_headers`
-text as `metadata.assets.config._headers`. Uploading the control files as
+text. In the installed Wrangler 4.134.0 this was observed as
+`metadata.assets.config._headers`; Cloudflare's public metadata reference does
+not document that field, so re-check it against the Wrangler version actually
+used before any direct upload. Uploading the control files as
 ordinary assets is not equivalent. The rebuilt local output has both controls
 verified; the previously uploaded bundle is unchanged.
 
@@ -366,15 +372,18 @@ staged by risk rather than done as one switch, because the same job firing
 from both providers simultaneously would double-execute it — harmless for
 an idempotent aggregation, potentially serious for a payout.
 
-- **Phase 1 (in progress)**: shadow-run three read/aggregation-only jobs
-  (`kpi-rollup-hourly`, `experiment-rollup`, `dbs-update-service-poll`) —
-  each confirmed to have a cron expression no other job shares, so
-  registering only these three schedules structurally prevents any other
-  job, including the dangerous ones, from ever firing here regardless of
-  the enable flag. `cloudflare/scheduler/rehearsal.test.ts` asserts this
-  mechanically (exact job set, no shared expressions, explicit denylist of
-  financial/destructive paths) rather than relying on manual review holding
-  forever.
+- **Phase 1 (in progress)**: shadow-run read/aggregation-only jobs, staged.
+  **Step 1b (live)** is two idempotent jobs, `kpi-rollup-hourly` and
+  `experiment-rollup`. **Step 1a** was only a dispatch rehearsal in which the
+  job endpoint returned HTTP 500; that proved routing, not a successful job
+  run. `dbs-update-service-poll` is **not** part of Step 1b: it can email real
+  carers, so it is deferred to the separate, coordinated Step 1c cutover test.
+  Each job has a cron expression no other job shares, so registering only these
+  schedules structurally prevents any other job, including the dangerous ones,
+  from ever firing here regardless of the enable flag.
+  `cloudflare/scheduler/rehearsal.test.ts` asserts this mechanically (exact job
+  set, no shared expressions, explicit denylist of financial/destructive
+  paths) rather than relying on manual review holding forever.
 - **Phase 2 (not started)**: user-facing reminder jobs. Requires pausing
   Vercel's cron for those specific paths before enabling Cloudflare's —
   not a dual-run — to avoid double-sending real users the same message.
