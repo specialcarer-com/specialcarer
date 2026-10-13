@@ -1,0 +1,32 @@
+# TEMPORARY: adds the Cloudflare build and ESLint dev dependencies and commits
+# package.json + package-lock.json back to this branch. Delete before merging.
+name: tmp-regenerate-lockfile
+on:
+  push:
+    branches: [chore/cloudflare-deps]
+    paths: ['.github/workflows/tmp-regenerate-lockfile.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --save-dev --save-exact @opennextjs/cloudflare@1.20.6 wrangler@4.134.0 --no-audit --no-fund
+      - run: npm install --save-dev @eslint/eslintrc@^3.3.7 --no-audit --no-fund
+      - name: Show what changed
+        run: git status --short && git diff --stat
+      - name: Commit package files back to the branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit -m "chore: add Cloudflare build and ESLint dev dependencies (lockfile regenerated in CI)"
+          git push
