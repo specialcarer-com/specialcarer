@@ -11,9 +11,10 @@ export const dynamic = "force-dynamic";
  *
  * Fires a 24h-ahead booking reminder to both seeker and caregiver for
  * any booking starting between now+23h and now+25h whose status is
- * still active (accepted or paid). Idempotency is left to the cron
- * schedule (hourly window straddles each booking once); a stricter
- * dedupe via a reminder_sent_at column is a follow-up, not yet done -
+ * still active (accepted or paid). The registered schedule runs once a
+ * day, so bookings starting outside that 23-25h window relative to the
+ * run are not reminded. A stricter dedupe via a reminder_sent_at column
+ * is a follow-up, not yet done -
  * see docs/cloudflare-hosting-portability.md, "Scheduler cutover",
  * Phase 2.
  *
