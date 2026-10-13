@@ -20,7 +20,7 @@ For the categories not listed in this document, leave them **unticked** (i.e. we
 
 ## Step 2 — Which data types do you collect?
 
-Tick these 14 boxes:
+Tick these 16 boxes:
 
 | Section | Box to tick |
 |---|---|
@@ -32,6 +32,7 @@ Tick these 14 boxes:
 | **Location** | ☑ Coarse Location |
 | **Contacts** | ☑ Contacts |
 | **Financial Info** | ☑ Payment Info |
+| **Health & Fitness** | ☑ Health |
 | **Sensitive Info** | ☑ Sensitive Info |
 | **User Content** | ☑ Photos or Videos |
 | **User Content** | ☑ Other User Content |
@@ -112,21 +113,28 @@ The answers are below. **For every single data type, the "tracking" answer is "N
 - Purposes:
   - ☑ App Functionality
 
-### 9. Sensitive Info
+### 9. Health
 
 - Linked to user? **Yes**
 - Used for tracking? **No**
 - Purposes:
   - ☑ App Functionality
 
-### 10. Photos or Videos
+### 10. Sensitive Info
 
 - Linked to user? **Yes**
 - Used for tracking? **No**
 - Purposes:
   - ☑ App Functionality
 
-### 11. Other User Content
+### 11. Photos or Videos
+
+- Linked to user? **Yes**
+- Used for tracking? **No**
+- Purposes:
+  - ☑ App Functionality
+
+### 12. Other User Content
 
 - Linked to user? **Yes**
 - Used for tracking? **No**
@@ -134,14 +142,14 @@ The answers are below. **For every single data type, the "tracking" answer is "N
   - ☑ App Functionality
   - ☑ Customer Support
 
-### 12. Device ID
+### 13. Device ID
 
 - Linked to user? **Yes**
 - Used for tracking? **No**
 - Purposes:
   - ☑ App Functionality
 
-### 13. Product Interaction
+### 14. Product Interaction
 
 - Linked to user? **No** *(this is the one exception — analytics is anonymised)*
 - Used for tracking? **No**
@@ -149,14 +157,14 @@ The answers are below. **For every single data type, the "tracking" answer is "N
   - ☑ Analytics
   - ☑ App Functionality
 
-### 14. Crash Data
+### 15. Crash Data
 
 - Linked to user? **No**
 - Used for tracking? **No**
 - Purposes:
   - ☑ App Functionality
 
-### 15. Performance Data
+### 16. Performance Data
 
 - Linked to user? **No**
 - Used for tracking? **No**
@@ -169,7 +177,7 @@ The answers are below. **For every single data type, the "tracking" answer is "N
 
 Apple shows a summary of what you've declared. Sanity-check:
 
-- **Data Linked to You**: 12 items (Name, Email, Phone, Physical Address, Precise Location, Coarse Location, Contacts, Payment Info, Sensitive Info, Photos/Videos, Other User Content, Device ID)
+- **Data Linked to You**: 13 items (Name, Email, Phone, Physical Address, Precise Location, Coarse Location, Contacts, Payment Info, Health, Sensitive Info, Photos/Videos, Other User Content, Device ID)
 - **Data Not Linked to You**: 3 items (Product Interaction, Crash Data, Performance Data)
 - **Data Used to Track You**: **0 items** — this section should be empty
 
@@ -193,7 +201,8 @@ If Apple ever queries any of these in App Review, here are the one-line justific
 | Coarse Location | Carer search results sorted by distance |
 | Contacts | Optional; only when the user explicitly invites a friend |
 | Payment Info | Stripe-hosted; we store only Stripe customer/account IDs |
-| Sensitive Info | Government ID for caregiver background checks (uCheck UK / Checkr US) |
+| Health | Care plans, medications and allergies a family or carer enters so the carer can deliver safe care for a booking |
+| Sensitive Info | Government ID for caregiver background checks (Enhanced DBS, UK) |
 | Photos / Videos | Profile photo + ID document upload |
 | Other User Content | In-app booking messages between family and caregiver |
 | Device ID | APNs push token for booking-status notifications |
@@ -207,7 +216,7 @@ If Apple ever queries any of these in App Review, here are the one-line justific
 
 - **Don't tick Marketing or Advertising** as a purpose for anything — we don't use data for marketing
 - **Don't tick "Used for Tracking"** — even for analytics
-- **Don't add Health & Fitness data** — even though the app supports elderly care, we don't store medical records
+- **Declare Health data** — care plans, medications and allergies are health information, so the Health type above must stay ticked. (Do not tick the separate Fitness type — we collect none.)
 - **Don't tick Browsing History or Search History** — we don't collect them
 
 If you ever start using a third-party SDK that contradicts this (e.g. an ad network, a marketing automation tool), the questionnaire **must** be updated and the privacy manifest re-shipped.
