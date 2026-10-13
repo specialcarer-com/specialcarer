@@ -281,8 +281,10 @@ alignment question, so payment readiness must stay unproven until reconciled.
 
 The built Worker (`sc-cloudflare-preview` @ `b2222c5`, verified via the
 `Cloudflare compatibility (one-shot)` and manual bundle-analysis CI runs)
-is **10,089.80 KiB gzip against Cloudflare's 10,240 KiB (10 MiB) Workers
-Paid plan hard limit** — 98.5% full, ~150 KiB of headroom.
+is **59,844.47 KiB uncompressed against Cloudflare's 65,536 KiB (64 MiB)
+uncompressed Worker hard limit** — 91.3% full, ~5,692 KiB of headroom.
+Wrangler also reports 10,089.80 KiB gzip; the size check uses `Total Upload`
+to enforce the uncompressed limit.
 
 Root cause: React Server Components client-reference-manifest data.
 `load-manifest.external.js` (9.7 MiB) and 392 separate per-route manifest
@@ -307,11 +309,10 @@ than take on a Multi-Worker split now. Two real options were considered:
 
 **Safeguard implemented**: `scripts/check-cloudflare-bundle-size.mjs`,
 wired into `cf:dry-run` via `scripts/cf-dry-run-with-size-check.sh`, parses
-wrangler's own `Total Upload: ... / gzip: ...` line and:
-- **warns** (build still passes) above 9,933 KiB (97% of the cap) — the
-  current size already triggers this warning, deliberately, so it's
-  visible on every dry-run rather than silent;
-- **fails the build** above 10,137.6 KiB (99% of the cap, ≈9.9 MiB) — this
+wrangler's own `Total Upload: ... KiB` metric and:
+- **warns** (build still passes) at or above 63,569.92 KiB (97% of the cap,
+  62.08 MiB) — the measured size is below this warning threshold;
+- **fails the build** at or above 64,880.64 KiB (99% of the cap, 63.36 MiB) — this
   is the trigger to act (free up headroom or finally do the Multi-Worker
   split), not a threshold to quietly raise;
 - **fails safe** if wrangler's output format ever changes such that the
@@ -319,9 +320,9 @@ wrangler's own `Total Upload: ... / gzip: ...` line and:
   unmeasured build.
 
 This check runs wherever `cf:dry-run` runs, including inside the locked
-`Cloudflare compatibility (one-shot)` workflow. Verified locally against
-the exact real reported string (10,089.80 KiB → warns, passes) and against
-a synthetic smaller value (5,000 KiB → passes cleanly) before landing.
+`Cloudflare compatibility (one-shot)` workflow. Regression tests cover
+the recorded real reported string (59,844.47 KiB → passes cleanly), the
+warning and failure boundaries, and missing size output.
 
 **Practical implication for future work on this app**: every new route
 added costs real, scarce headroom (~64 KiB). Removing an unused route
