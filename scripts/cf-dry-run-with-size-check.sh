@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs the Cloudflare dry-run package step, then checks the reported gzip
+# Runs the Cloudflare dry-run package step, then checks the reported uncompressed
 # size against the safety threshold in check-cloudflare-bundle-size.mjs.
 #
 # A plain `wrangler ... | node check-....mjs` pipeline would only propagate

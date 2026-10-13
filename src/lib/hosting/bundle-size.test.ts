@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
@@ -13,39 +13,62 @@ test("the wrapper script uses pipefail so a real wrangler failure can't be maske
   assert.match(source, /set -euo pipefail/);
 });
 
-// execFileSync's thrown error isn't a Node-exported type; this is the
-// shape actually present on it (status may be null if killed by signal).
-type ExecFileSyncError = { status: number | null; stdout?: string | Buffer; stderr?: string | Buffer };
-
 function runCheck(input: string) {
-  try {
-    const stdout = execFileSync("node", ["scripts/check-cloudflare-bundle-size.mjs"], {
-      input,
-      encoding: "utf8",
-    });
-    return { code: 0, stdout };
-  } catch (err) {
-    const e = err as ExecFileSyncError;
-    return { code: e.status, stdout: e.stdout ?? "", stderr: e.stderr ?? "" };
-  }
+  const result = spawnSync(process.execPath, ["scripts/check-cloudflare-bundle-size.mjs"], {
+    input,
+    encoding: "utf8",
+  });
+  if (result.error) throw result.error;
+  return { code: result.status, stdout: result.stdout, stderr: result.stderr };
 }
 
-test("passes (with a warning) at the currently-measured real size, 10089.80 KiB gzip", () => {
+test("passes cleanly at the measured size, 59844.47 KiB uncompressed", () => {
   const result = runCheck("Total Upload: 59844.47 KiB / gzip: 10089.80 KiB\n");
   assert.equal(result.code, 0);
+  assert.equal(result.stderr, "");
+  assert.match(result.stdout, /Worker uncompressed size: 59844\.47 KiB \(91\.3% of the 65536 KiB/);
 });
 
-test("fails once size crosses the 99%-of-cap threshold (~9.9 MiB)", () => {
-  const result = runCheck("Total Upload: 60000.00 KiB / gzip: 10150.00 KiB\n");
-  assert.notEqual(result.code, 0);
-});
-
-test("passes cleanly well under the threshold", () => {
-  const result = runCheck("Total Upload: 20000.00 KiB / gzip: 5000.00 KiB\n");
+test("passes cleanly just below the 97% uncompressed warning threshold, regardless of gzip size", () => {
+  const result = runCheck("Total Upload: 63569.91 KiB / gzip: 20000.00 KiB\n");
   assert.equal(result.code, 0);
+  assert.equal(result.stderr, "");
+});
+
+test("warns at the 97% uncompressed threshold (62.08 MiB)", () => {
+  const result = runCheck("Total Upload: 63569.92 KiB / gzip: 5000.00 KiB\n");
+  assert.equal(result.code, 0);
+  assert.match(result.stderr, /WARNING:.*63569\.92 KiB/);
+});
+
+test("warns and passes just below the 99% uncompressed failure threshold", () => {
+  const result = runCheck("Total Upload: 64880.63 KiB / gzip: 5000.00 KiB\n");
+  assert.equal(result.code, 0);
+  assert.match(result.stderr, /WARNING:/);
+});
+
+test("fails at the 99% uncompressed threshold (63.36 MiB), even with small gzip size", () => {
+  const result = runCheck("Total Upload: 64880.64 KiB / gzip: 5000.00 KiB\n");
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /FAIL:.*64880\.64 KiB/);
+});
+
+test("fails at and above the 64 MiB uncompressed hard cap", () => {
+  for (const size of [65536, 70000]) {
+    const result = runCheck(`Total Upload: ${size} KiB / gzip: 5000.00 KiB\n`);
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /FAIL:/);
+  }
+});
+
+test("can measure Total Upload without a gzip metric", () => {
+  const result = runCheck("Total Upload: 20000.00 KiB\n");
+  assert.equal(result.code, 0);
+  assert.equal(result.stderr, "");
 });
 
 test("fails safe (does not silently pass) when the expected size line is missing", () => {
   const result = runCheck("some unrelated wrangler output\nwith no matching line\n");
-  assert.notEqual(result.code, 0);
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /Could not find a 'Total Upload:/);
 });
