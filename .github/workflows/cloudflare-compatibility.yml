@@ -1,0 +1,71 @@
+name: Cloudflare compatibility (one-shot)
+
+on:
+  push:
+    branches: [sc-cloudflare-preview]
+    paths:
+      - .github/workflows/cloudflare-compatibility.yml
+      - package.json
+      - wrangler.jsonc
+
+permissions:
+  contents: read
+
+jobs:
+  compatibility:
+    # Only this explicitly authorised verification commit may run.
+    # No schedule, PR trigger, deployment or automatic retry.
+    if: >-
+      github.event.head_commit.message == 'ci: verify minified Cloudflare bundle (2026-09-18)'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      WRANGLER_SEND_METRICS: "false"
+      NODE_OPTIONS: "--max-old-space-size=6144"
+      # Synthetic, deliberately unusable credentials. Never contact production.
+      NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:9"
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "compatibility-build-placeholder"
+      NEXT_PUBLIC_SITE_URL: "http://127.0.0.1:9"
+      NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "pk_test_compatibility_placeholder"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build Cloudflare Workers bundle
+        run: |
+          set -o pipefail
+          npm run cf:build 2>&1 | tee "$RUNNER_TEMP/cloudflare-build.log"
+      - name: Package dry run (no deployment)
+        run: |
+          set -o pipefail
+          npm run cf:dry-run 2>&1 | tee "$RUNNER_TEMP/cloudflare-package.log"
+      - name: Record scope and result
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          {
+            echo "# Cloudflare compatibility result"
+            echo "Job status: $JOB_STATUS"
+            echo ""
+            echo "Build and packaging only. No production secrets, deployment, domain changes or scheduled task execution."
+            echo "Uses synthetic local-only public configuration; integration behaviour is not tested."
+            echo "A successful build is not approval for production cutover."
+            for log in "$RUNNER_TEMP/cloudflare-build.log" "$RUNNER_TEMP/cloudflare-package.log"; do
+              if [ -f "$log" ]; then
+                echo ""
+                echo "## $(basename "$log") (last 35 lines)"
+                echo '```text'
+                tail -35 "$log"
+                echo '```'
+              fi
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
