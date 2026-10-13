@@ -150,6 +150,20 @@
             </array>
         </dict>
 
+        <!-- Health: care plans, medications and allergies entered by families/carers for a booking -->
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeHealth</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+            </array>
+        </dict>
+
         <!-- Photos: caregiver profile photos and ID-document upload -->
         <dict>
             <key>NSPrivacyCollectedDataType</key>
