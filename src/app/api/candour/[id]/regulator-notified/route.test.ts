@@ -3,7 +3,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { handleRegulatorNotified } from "./route";
+import { handleRegulatorNotified } from "./handler";
 import { makeFakeCaseDb, seedEvent } from "../__helpers__/fake-case-db";
 
 const EVENT_ID = "evt_1";
