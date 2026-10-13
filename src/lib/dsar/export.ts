@@ -65,6 +65,8 @@ type TableSpec =
       owner_col: string;
       columns?: string; // defaults to "*"
       label?: string;
+      // Columns removed in-app after the fetch (credentials, staff notes).
+      strip?: string[];
     }
   | {
       // OR of multiple owner columns (e.g. bookings.seeker_id OR
@@ -74,6 +76,7 @@ type TableSpec =
       owner_cols: string[];
       columns?: string;
       label?: string;
+      strip?: string[];
     };
 
 /**
@@ -96,7 +99,14 @@ type TableSpec =
  * creates the table so the DSAR export doesn't silently omit them.
  */
 export const DSAR_TABLES: TableSpec[] = [
-  { table: "profiles", owner_col: "id", label: "Account profile" },
+  {
+    table: "profiles",
+    owner_col: "id",
+    label: "Account profile",
+    // `calendar_token` is a secret feed URL token, not information about
+    // the subject; it is not released in a file that gets emailed.
+    strip: ["calendar_token"],
+  },
   {
     table: "caregiver_profiles",
     owner_col: "user_id",
@@ -131,6 +141,7 @@ export const DSAR_TABLES: TableSpec[] = [
     // the table has 47 columns and hand-maintaining an allow-list is
     // fragile as the schema grows. See `stripReferenceSecrets`.
     columns: "*",
+    strip: ["token", "verified_by", "admin_notes", "ip_address", "user_agent"],
     label: "Employment references submitted for the subject",
   },
   {
@@ -170,6 +181,123 @@ export const DSAR_TABLES: TableSpec[] = [
     owner_col: "seeker_id",
     label: "Saved caregivers list",
   },
+  // ---- Added in 1.3.0 (see data-map.ts for the decision on every table) ----
+  { table: "account_deletion_jobs", owner_col: "user_id", label: "Account deletion requests", strip: ["verification_token_hash"] },
+  { table: "agency_optin_audit_log", owner_col: "carer_id", label: "Agency opt-in change log" },
+  { table: "background_checks", owner_col: "user_id", label: "Background checks", strip: ["raw", "invite_url"] },
+  { table: "blocked_caregivers", owner_col: "seeker_id", label: "Carers the subject has blocked" },
+  { table: "booking_match_offers", owner_col: "carer_id", label: "Booking offers sent to the subject" },
+  { table: "booking_payouts", owner_col: "payee_user_id", label: "Booking payouts" },
+  { table: "caregiver_availability", owner_col: "user_id", label: "Weekly availability" },
+  { table: "caregiver_availability_slots", owner_col: "user_id", label: "Availability slots" },
+  { table: "caregiver_blockouts", owner_col: "user_id", label: "Blocked-out dates" },
+  { table: "caregiver_certifications", owner_col: "caregiver_id", label: "Certifications (profile)" },
+  { table: "caregiver_instant_settings", owner_col: "user_id", label: "Instant-booking settings" },
+  { table: "caregiver_photos", owner_col: "caregiver_id", label: "Profile photos" },
+  { table: "caregiver_rates_cache", owner_col: "carer_id", label: "Response and completion rates used in matching" },
+  { table: "caregiver_stage_history", owner_col: "caregiver_id", label: "Onboarding stage history", strip: ["note"] },
+  { table: "caregiver_stripe_accounts", owner_col: "user_id", label: "Payout account (Stripe)" },
+  { table: "caregiver_timeoff_requests", owner_col: "user_id", label: "Time-off requests" },
+  { table: "carer_certifications", owner_col: "carer_id", label: "Certifications (uploaded)" },
+  { table: "carer_course_progress", owner_col: "carer_id", label: "Course progress" },
+  { table: "carer_holiday_pots", owner_col: "carer_id", label: "Holiday pot balances" },
+  { table: "carer_interview_submissions", owner_col: "carer_id", label: "Interview video submissions (file paths only)" },
+  { table: "carer_memberships", owner_col: "carer_user_id", label: "Carer membership" },
+  { table: "carer_preferred_clients", owner_col: "carer_id", label: "Preferred clients" },
+  { table: "carer_qualifications", owner_col: "carer_id", label: "Qualifications" },
+  { table: "carer_reference_consents", owner_col: "carer_id", label: "Reference consent forms", strip: ["signature_data_url"] },
+  { table: "carer_referral_codes", owner_col: "owner_id", label: "Carer referral codes" },
+  { table: "carer_saved_searches", owner_col: "carer_id", label: "Saved searches" },
+  { table: "carer_skills_attempts", owner_col: "carer_id", label: "Skills test attempts" },
+  { table: "dbs_applications", owner_col: "carer_id", label: "DBS applications", strip: ["surname_override_by", "surname_override_reason"] },
+  { table: "dsar_requests", owner_col: "subject_user_id", label: "Data requests made by the subject", strip: ["verification_token_hash"] },
+  { table: "emergency_contacts", owner_col: "owner_id", label: "Emergency contacts" },
+  { table: "families", owner_col: "primary_user_id", label: "Family groups owned by the subject" },
+  { table: "family_members", owner_col: "user_id", label: "Family group memberships" },
+  { table: "forum_posts", owner_col: "author_user_id", label: "Forum posts" },
+  { table: "forum_threads", owner_col: "author_user_id", label: "Forum threads" },
+  { table: "forum_reports", owner_col: "reporter_user_id", label: "Forum reports made by the subject" },
+  { table: "holiday_leave_requests", owner_col: "carer_id", label: "Holiday pay requests", strip: ["admin_notes", "admin_id"] },
+  { table: "holiday_pot_ledger", owner_col: "carer_id", label: "Holiday pot ledger" },
+  { table: "household_recipients", owner_col: "owner_id", label: "People the subject arranges care for" },
+  { table: "identity_verifications", owner_col: "user_id", label: "Identity verifications", strip: ["verification_url"] },
+  { table: "interviews", owner_col: "carer_id", label: "Interviews" },
+  { table: "kyc_escalations", owner_col: "user_id", label: "Identity check escalations", strip: ["notes", "decided_by", "decided_by_email"] },
+  { table: "leave_requests", owner_col: "carer_user_id", label: "Shift leave requests", strip: ["admin_notes", "resolved_by"] },
+  { table: "live_in_requests", owner_col: "user_id", label: "Live-in care requests" },
+  { table: "notifications", owner_col: "user_id", label: "Notifications" },
+  { table: "org_booking_offers", owner_col: "carer_id", label: "Organisation booking offers" },
+  { table: "org_carer_payouts", owner_col: "carer_id", label: "Payslips and payroll records" },
+  { table: "org_membership_audit", owner_col: "target_user_id", label: "Organisation role changes affecting the subject" },
+  { table: "organization_members", owner_col: "user_id", label: "Organisation memberships" },
+  { table: "outreach_email_log", owner_col: "caregiver_id", label: "Outreach emails sent to the subject" },
+  { table: "payout_alerts", owner_col: "carer_id", label: "Payout alerts", strip: ["notes"] },
+  { table: "payout_intents", owner_col: "carer_id", label: "Instant payout requests" },
+  { table: "payouts", owner_col: "caregiver_id", label: "Payouts" },
+  { table: "push_tokens", owner_col: "user_id", label: "Registered devices", strip: ["token"] },
+  { table: "referral_codes", owner_col: "user_id", label: "Referral codes" },
+  { table: "referral_credits", owner_col: "user_id", label: "Referral credits" },
+  { table: "review_private_feedback", owner_col: "reviewer_id", label: "Private feedback the subject wrote" },
+  { table: "safety_reports", owner_col: "reporter_user_id", label: "Safety reports the subject filed", strip: ["admin_notes", "resolved_by"] },
+  { table: "seeker_ratings", owner_col: "caregiver_id", label: "Ratings the subject wrote about clients" },
+  { table: "service_requests", owner_col: "seeker_id", label: "Service requests" },
+  { table: "shift_time_adjustments", owner_cols: ["proposer_user_id", "responder_user_id"], label: "Shift time adjustments" },
+  { table: "shift_tracking_sessions", owner_cols: ["caregiver_id", "seeker_id"], label: "Shift tracking sessions" },
+  { table: "shift_locations", owner_col: "caregiver_id", label: "Shift location pings" },
+  { table: "carer_positions", owner_col: "carer_id", label: "Live position records" },
+  { table: "visit_events", owner_col: "carer_id", label: "Clock-in and clock-out events", strip: ["admin_override_by", "admin_override_reason", "verified_by_admin_id", "verification_note"] },
+  { table: "shift_timesheets", owner_col: "carer_id", label: "Timesheets (carer side)", strip: ["approver_user_id", "approver_ip", "approver_typed_reason", "dispute_admin_notes"] },
+  { table: "sos_alerts", owner_col: "user_id", label: "SOS alerts" },
+  { table: "subscriptions", owner_col: "user_id", label: "Subscriptions", strip: ["granted_by", "grant_reason"] },
+  { table: "support_tickets", owner_col: "user_id", label: "Support tickets", strip: ["assigned_to"] },
+  { table: "tax_documents", owner_col: "user_id", label: "Tax documents" },
+  { table: "tips", owner_cols: ["payer_id", "caregiver_id"], label: "Tips" },
+  { table: "training_enrollments", owner_col: "carer_id", label: "Training enrolments" },
+];
+
+/**
+ * Child tables reached through a table the exporter has already read.
+ * `parent` names that table; `fk` is the child column holding its id.
+ * `care_plans` is special: only plans on bookings where the subject is
+ * the seeker are used, because allergies and medications are the
+ * recipient's health information.
+ */
+export type ChildSpec = {
+  table: string;
+  parent: string;
+  fk: string;
+  label: string;
+  strip?: string[];
+  seekerPlansOnly?: boolean;
+  dropWhere?: { column: string; equals: unknown };
+};
+export const CHILD_TABLES: ChildSpec[] = [
+  { table: "allergies", parent: "care_plans", fk: "care_plan_id", label: "Allergies on the subject's care plans", seekerPlansOnly: true },
+  { table: "medications", parent: "care_plans", fk: "care_plan_id", label: "Medications on the subject's care plans", seekerPlansOnly: true },
+  { table: "care_plan_reviews", parent: "care_plans", fk: "care_plan_id", label: "Care plan reviews", seekerPlansOnly: true },
+  { table: "training_quiz_attempts", parent: "training_enrollments", fk: "enrollment_id", label: "Training quiz attempts" },
+  { table: "support_messages", parent: "support_tickets", fk: "ticket_id", label: "Support messages (internal notes removed)", strip: ["internal_note"], dropWhere: { column: "internal_note", equals: true } },
+  { table: "org_carer_payout_items", parent: "org_carer_payouts", fk: "payout_id", label: "Payslip line items" },
+];
+
+/**
+ * Tables keyed by email address rather than user id: people who joined
+ * a waiting list, were sourced as prospects, or were invited, and may
+ * hold no account. Matched on the request's verified email address.
+ */
+export type EmailKeyedSpec = {
+  table: string;
+  email_col: string;
+  label: string;
+  strip?: string[];
+};
+export const EMAIL_KEYED_TABLES: EmailKeyedSpec[] = [
+  { table: "waitlist", email_col: "email", label: "Waiting list entries" },
+  { table: "carer_sourcing_prospects", email_col: "email", label: "Carer prospect records", strip: ["notes"] },
+  { table: "carer_outreach_suppression", email_col: "email", label: "Outreach opt-outs", strip: ["notes"] },
+  { table: "employer_leads", email_col: "work_email", label: "Employer enquiries" },
+  { table: "org_leads", email_col: "work_email", label: "Organisation enquiries", strip: ["notes"] },
+  { table: "organization_invitations", email_col: "email", label: "Organisation invitations sent to the subject", strip: ["token_hash"] },
 ];
 
 // `care_plans` and `payments` are enumerated via a booking-id join
@@ -201,17 +329,6 @@ const CARE_PLAN_PROJECTION_SEEKER =
 const CARE_PLAN_PROJECTION_CARER =
   "id, booking_id, goals, special_instructions, routine_notes, created_at, updated_at";
 
-// `carer_references` has 47 columns; rather than hand-maintaining an
-// allow-list, we fetch everything and strip these secrets/forensic
-// fields in-app before including the rows in the export.
-const CARER_REFERENCES_EXCLUDED = [
-  "token",
-  "verified_by",
-  "admin_notes",
-  "ip_address",
-  "user_agent",
-];
-
 // Payment rows are enumerated separately because we project to a
 // safe subset — `raw` (the full Stripe webhook payload) and
 // `hsa_tagged_by` (admin id) are excluded. Refund totals no longer
@@ -229,16 +346,27 @@ const PAYMENT_PROJECTION_SEEKER =
 const PAYMENT_PROJECTION_CARER =
   "id, booking_id, stripe_transfer_id, destination_account_id, status, amount_cents, currency, kind, parent_payment_id, timesheet_id, created_at, updated_at";
 
-function stripReferenceSecrets(rows: unknown[]): unknown[] {
+/** Remove named columns from every row (credentials, staff notes). */
+function stripColumns(rows: unknown[], strip?: string[]): unknown[] {
+  if (!strip || strip.length === 0) return rows;
   return rows.map((row) => {
     if (!row || typeof row !== "object") return row;
     const copy: Record<string, unknown> = { ...(row as Record<string, unknown>) };
-    for (const key of CARER_REFERENCES_EXCLUDED) {
-      delete copy[key];
-    }
+    for (const key of strip) delete copy[key];
     return copy;
   });
 }
+
+/**
+ * A single PostgREST request returns at most this many rows. The exporter
+ * does not page, so a result of exactly this size may be incomplete and is
+ * flagged in the manifest rather than passed off as complete.
+ */
+const REQUEST_ROW_LIMIT = 1000;
+const TRUNCATION_NOTE = "possibly_incomplete_row_limit";
+
+/** Ids per OR filter; keeps the request URL a safe length. */
+const ID_CHUNK = 40;
 
 export type ExportedTable = {
   table: string;
@@ -275,7 +403,11 @@ export type SubjectExport = {
 //     seeker/recipient's identity, DoB or address on care plans, and
 //     payments now project only fields attributable to the subject's
 //     role on the parent booking (payer vs payee Stripe ids).
-const EXPORTER_VERSION = "dsar-export/1.2.0";
+//   1.3.0 — coverage (13 Oct 2026): exports every table the data map
+//     (data-map.ts) marks as exported, 94 in all, up from 11. Adds child
+//     tables, email-keyed tables, request chunking for large id lists,
+//     a row-limit warning, and removes the profile calendar token.
+const EXPORTER_VERSION = "dsar-export/1.3.0";
 
 const UNDEFINED_TABLE = "42P01"; // Postgres error code
 
@@ -306,15 +438,23 @@ async function fetchBookingLinkedRows(
   table: string,
   columns: string,
   bookingIds: string[],
+  fk = "booking_id",
 ): Promise<BookingLinkedFetch> {
   if (bookingIds.length === 0) return { kind: "empty" };
-  const filter = bookingIds.map((id) => `booking_id.eq.${id}`).join(",");
-  const { data, error } = await admin.from(table).select(columns).or(filter);
-  if (error) {
-    if (isSchemaNotReady(error)) return { kind: "schema_not_ready" };
-    return { kind: "error", message: error.message };
+  const rows: unknown[] = [];
+  for (let i = 0; i < bookingIds.length; i += ID_CHUNK) {
+    const filter = bookingIds
+      .slice(i, i + ID_CHUNK)
+      .map((id) => `${fk}.eq.${id}`)
+      .join(",");
+    const { data, error } = await admin.from(table).select(columns).or(filter);
+    if (error) {
+      if (isSchemaNotReady(error)) return { kind: "schema_not_ready" };
+      return { kind: "error", message: error.message };
+    }
+    rows.push(...(data ?? []));
   }
-  return { kind: "ok", rows: data ?? [] };
+  return { kind: "ok", rows };
 }
 
 /**
@@ -418,6 +558,16 @@ async function enumerateBookingLinked(
   });
 }
 
+/** Every table the exporter reads. The data-map guard test compares this with data-map.ts. */
+export const EXPORTED_TABLE_NAMES: ReadonlySet<string> = new Set([
+  ...DSAR_TABLES.map((t) => t.table),
+  ...CHILD_TABLES.map((t) => t.table),
+  ...EMAIL_KEYED_TABLES.map((t) => t.table),
+  "care_plans",
+  "payments",
+  "refund_ledger",
+]);
+
 /**
  * Run the export for a single subject. Returns a plain-object structure
  * ready to be JSON-stringified into the zip.
@@ -465,16 +615,13 @@ export async function exportSubject(
       }
       continue;
     }
-    const rawRows = data ?? [];
-    const rows =
-      spec.table === "carer_references"
-        ? stripReferenceSecrets(rawRows)
-        : rawRows;
+    const rows = stripColumns(data ?? [], spec.strip);
     tables.push({
       table: spec.table,
       label,
       row_count: rows.length,
       rows,
+      ...(rows.length >= REQUEST_ROW_LIMIT ? { note: TRUNCATION_NOTE } : {}),
     });
   }
 
@@ -585,6 +732,85 @@ export async function exportSubject(
       continue;
     }
     await enumerateBookingLinked(admin, tables, notes, spec);
+  }
+
+  // Step 3: child tables reached through a parent already read.
+  const seekerBookingSet = new Set(seekerBookingIds);
+  for (const child of CHILD_TABLES) {
+    const parentRow = tables.find((t) => t.table === child.parent);
+    if (!parentRow || parentRow.error !== undefined || parentRow.note === "schema_not_ready") {
+      tables.push({
+        table: child.table,
+        label: child.label,
+        row_count: 0,
+        ...(parentRow?.error !== undefined
+          ? { error: `parent ${child.parent}: ${parentRow.error}` }
+          : { note: "parent_unavailable" }),
+      });
+      continue;
+    }
+    const parentIds: string[] = [];
+    for (const r of (parentRow.rows ?? []) as Array<Record<string, unknown>>) {
+      if (typeof r.id !== "string") continue;
+      if (child.seekerPlansOnly && !(typeof r.booking_id === "string" && seekerBookingSet.has(r.booking_id))) {
+        continue;
+      }
+      parentIds.push(r.id);
+    }
+    const result = await fetchBookingLinkedRows(admin, child.table, "*", parentIds, child.fk);
+    if (result.kind === "empty") {
+      tables.push({ table: child.table, label: child.label, row_count: 0, rows: [] });
+    } else if (result.kind === "schema_not_ready") {
+      tables.push({ table: child.table, label: child.label, row_count: 0, note: "schema_not_ready" });
+      notes.push(`Table ${child.table} is not present in this environment; skipped.`);
+    } else if (result.kind === "error") {
+      tables.push({ table: child.table, label: child.label, row_count: 0, error: result.message });
+    } else {
+      let rows = result.rows;
+      if (child.dropWhere) {
+        const { column, equals } = child.dropWhere;
+        rows = rows.filter((r) => !(r && typeof r === "object" && (r as Record<string, unknown>)[column] === equals));
+      }
+      rows = stripColumns(rows, child.strip);
+      tables.push({ table: child.table, label: child.label, row_count: rows.length, rows });
+    }
+  }
+
+  // Step 4: tables keyed by the request's verified email address.
+  const emailVariants = [...new Set([args.email, args.email.toLowerCase()])].filter(
+    (e) => e.length > 0,
+  );
+  const emailUsable = emailVariants.every((e) => !/[,()]/.test(e));
+  if (!emailUsable) {
+    notes.push(
+      "The request email contains characters the exporter cannot match safely; email-keyed tables were skipped. Contact the data protection lead.",
+    );
+  }
+  for (const spec of EMAIL_KEYED_TABLES) {
+    if (!emailUsable) {
+      tables.push({ table: spec.table, label: spec.label, row_count: 0, note: "email_not_matchable" });
+      continue;
+    }
+    const filter = emailVariants.map((e) => `${spec.email_col}.eq.${e}`).join(",");
+    const { data, error } = await admin.from(spec.table).select("*").or(filter);
+    if (error) {
+      if (isSchemaNotReady(error)) {
+        tables.push({ table: spec.table, label: spec.label, row_count: 0, note: "schema_not_ready" });
+        notes.push(`Table ${spec.table} is not present in this environment; skipped.`);
+      } else {
+        tables.push({ table: spec.table, label: spec.label, row_count: 0, error: error.message });
+      }
+      continue;
+    }
+    const rows = stripColumns(data ?? [], spec.strip);
+    tables.push({ table: spec.table, label: spec.label, row_count: rows.length, rows });
+  }
+
+  const truncated = tables.filter((t) => t.note === TRUNCATION_NOTE).map((t) => t.table);
+  if (truncated.length > 0) {
+    notes.push(
+      `These tables returned ${REQUEST_ROW_LIMIT} rows, the most one request can return, so they may be incomplete: ${truncated.join(", ")}.`,
+    );
   }
 
   // Sanity fingerprint. Not a cryptographic commitment — just something

@@ -17,7 +17,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { exportSubject, DSAR_TABLES, type ExportAdminClient } from "../export";
+import { exportSubject, EXPORTED_TABLE_NAMES, type ExportAdminClient } from "../export";
 
 // Minimal columns each table needs to expose so the exporter's
 // booking-linked lookups (care_plans / payments / refund_ledger)
@@ -48,6 +48,11 @@ const SEEDED_ROWS: Record<string, unknown[]> = {
 function makeSeededAdmin(): ExportAdminClient {
   const respond = (table: string) => {
     if (!(table in SEEDED_ROWS)) {
+      // A table the exporter is meant to read but this file does not
+      // seed answers with no rows. Anything else is unknown to the
+      // exporter and gets the "relation does not exist" error that
+      // the drift guard exists to catch.
+      if (EXPORTED_TABLE_NAMES.has(table)) return { data: [], error: null };
       return {
         data: null,
         error: { code: "42P01", message: `relation "${table}" does not exist` },
@@ -77,19 +82,15 @@ describe("DSAR exporter — schema drift regression", () => {
   const subject = { user_id: "sub-1", email: "sub@example.com" };
 
   it("every table query resolves against current schema — no error field", async () => {
-    // Sanity check first: the manifest must cover every table this
-    // test knows about. If a new table is added to DSAR_TABLES
-    // without a fixture entry, the check below would silently pass
-    // by falling through to the 42P01 branch.
-    const declared = new Set<string>(DSAR_TABLES.map((t) => t.table));
-    // Booking-linked lookups aren't in DSAR_TABLES but ARE enumerated.
-    declared.add("care_plans");
-    declared.add("payments");
-    for (const table of declared) {
-      assert.ok(
-        table in SEEDED_ROWS,
-        `Test fixture missing seed for ${table}; add to SEEDED_ROWS or the drift guard won't cover it.`,
-      );
+    // The core eleven tables carry hand-written fixtures; the rest are
+    // covered by the generic fake and by data-map.test.ts.
+    for (const table of [
+      "profiles", "caregiver_profiles", "bookings", "carer_references",
+      "compliance_documents", "dbs_change_events", "reviews",
+      "saved_caregivers", "care_plans", "payments", "refund_ledger",
+    ]) {
+      assert.ok(table in SEEDED_ROWS, `missing seed for ${table}`);
+      assert.ok(EXPORTED_TABLE_NAMES.has(table), `${table} not exported`);
     }
 
     const doc = await exportSubject(makeSeededAdmin(), subject);
@@ -110,9 +111,9 @@ describe("DSAR exporter — schema drift regression", () => {
     }
   });
 
-  it("exporter version is 1.2.0", async () => {
+  it("exporter version is 1.3.0", async () => {
     const doc = await exportSubject(makeSeededAdmin(), subject);
-    assert.equal(doc.subject.exporter_version, "dsar-export/1.2.0");
+    assert.equal(doc.subject.exporter_version, "dsar-export/1.3.0");
   });
 });
 

@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { exportSubject, type ExportAdminClient } from "./export";
+import { EMAIL_KEYED_TABLES, exportSubject, type ExportAdminClient } from "./export";
 import {
   generateVerificationToken,
   hashVerificationToken,
@@ -134,10 +134,21 @@ describe("exportSubject", () => {
       if (call.value !== undefined) {
         assert.equal(call.value, subject.user_id);
       } else if (call.or !== undefined) {
-        assert.ok(
-          call.or.includes(subject.user_id),
-          `or clause on ${call.table} must reference subject id`,
-        );
+        // Email-keyed tables (waiting list, prospects) filter on the
+        // request's verified email; booking-linked and child tables
+        // filter on ids that came from the subject's own rows.
+        const emailKeyed = EMAIL_KEYED_TABLES.some((t) => t.table === call.table);
+        if (emailKeyed) {
+          assert.ok(
+            call.or.includes(subject.email),
+            `or clause on ${call.table} must reference the subject email`,
+          );
+        } else {
+          assert.ok(
+            call.or.includes(subject.user_id),
+            `or clause on ${call.table} must reference subject id`,
+          );
+        }
       } else {
         assert.fail(`call on ${call.table} had no filter`);
       }
