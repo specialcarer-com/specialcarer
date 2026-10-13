@@ -3,7 +3,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { handleClose } from "./route";
+import { handleClose } from "./handler";
 import {
   makeFakeCaseDb,
   seedEvent,
