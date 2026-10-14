@@ -6,7 +6,9 @@ import {
   assertConnectReadyForBooking,
   evaluateReadiness,
   friendlyReasonMessage,
+  isAccountUnavailableError,
   isCacheStale,
+  looksLikeRealStripeAccountId,
   parseIsoMs,
   type ConnectAccountRow,
   type ReadinessDeps,
@@ -391,5 +393,96 @@ describe("assertConnectReadyForBooking", () => {
     );
     // Uses whatever we had cached — which was not ready.
     assert.deepEqual(out, { ready: false, reason: "charges_disabled" });
+  });
+});
+
+describe("placeholder and missing Stripe accounts fail closed", () => {
+  const now = new Date("2026-09-11T22:00:00Z");
+  const deps = (over: Partial<ReadinessDeps>): ReadinessDeps => ({
+    now: () => now,
+    ...over,
+  } as ReadinessDeps);
+  const staleIso = new Date(now.getTime() - 3 * CONNECT_CACHE_TTL_MS).toISOString();
+
+  it("recognises real account ids and rejects demo placeholders", () => {
+    assert.equal(looksLikeRealStripeAccountId("acct_1UGqUk2YWpZYTV3R"), true);
+    assert.equal(looksLikeRealStripeAccountId("acct_demo_5fd7e907"), false);
+    assert.equal(looksLikeRealStripeAccountId(""), false);
+    assert.equal(looksLikeRealStripeAccountId(null), false);
+  });
+
+  it("refuses a demo account id even when the cached flags say ready, without calling Stripe", async () => {
+    const { admin } = mockAdmin({
+      row: makeRow({ stripe_account_id: "acct_demo_5fd7e907" }),
+    });
+    const { stripe, calls } = mockStripe(new Error("should not be called"));
+    const out = await assertConnectReadyForBooking(
+      deps({ admin, stripe }),
+      { carerId: "user_1" },
+    );
+    assert.deepEqual(out, { ready: false, reason: "legacy_incomplete" });
+    assert.equal(calls.length, 0);
+  });
+
+  it("fails closed when Stripe says the account does not exist, despite a ready cached row", async () => {
+    const { admin } = mockAdmin({
+      row: makeRow({
+        stripe_account_id: "acct_1AbCdEfGhIjKlMnO",
+        last_refreshed_at: staleIso,
+      }),
+    });
+    const err = Object.assign(new Error("No such account"), {
+      code: "resource_missing",
+      statusCode: 404,
+    });
+    const { stripe } = mockStripe(err);
+    const out = await assertConnectReadyForBooking(
+      deps({ admin, stripe }),
+      { carerId: "user_1" },
+    );
+    assert.deepEqual(out, { ready: false, reason: "legacy_incomplete" });
+  });
+
+  it("fails closed on a permission error for the account", async () => {
+    const { admin } = mockAdmin({
+      row: makeRow({
+        stripe_account_id: "acct_1AbCdEfGhIjKlMnO",
+        last_refreshed_at: staleIso,
+      }),
+    });
+    const err = Object.assign(new Error("no access"), {
+      type: "StripePermissionError",
+      code: "account_invalid",
+      statusCode: 403,
+    });
+    const { stripe } = mockStripe(err);
+    const out = await assertConnectReadyForBooking(
+      deps({ admin, stripe }),
+      { carerId: "user_1" },
+    );
+    assert.equal(out.ready, false);
+  });
+
+  it("still falls back to the cached row on a transient Stripe failure", async () => {
+    const { admin } = mockAdmin({
+      row: makeRow({
+        stripe_account_id: "acct_1AbCdEfGhIjKlMnO",
+        last_refreshed_at: staleIso,
+      }),
+    });
+    const { stripe } = mockStripe(new Error("socket hang up"));
+    const out = await assertConnectReadyForBooking(
+      deps({ admin, stripe }),
+      { carerId: "user_1" },
+    );
+    assert.deepEqual(out, { ready: true });
+  });
+
+  it("classifies unavailable-account errors", () => {
+    assert.equal(isAccountUnavailableError({ code: "resource_missing" }), true);
+    assert.equal(isAccountUnavailableError({ type: "StripePermissionError" }), true);
+    assert.equal(isAccountUnavailableError({ statusCode: 500 }), false);
+    assert.equal(isAccountUnavailableError(new Error("timeout")), false);
+    assert.equal(isAccountUnavailableError(null), false);
   });
 });

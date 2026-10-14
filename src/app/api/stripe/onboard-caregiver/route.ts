@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/server";
+import { buildCarerAccountPrefill } from "@/lib/stripe/carer-account-profile";
 
 /**
  * POST /api/stripe/onboard-caregiver
@@ -42,6 +43,18 @@ export async function POST(req: Request) {
   let accountId = existing?.stripe_account_id;
 
   if (!accountId) {
+    // Pre-fill what we already know so Stripe's hosted form does not ask the
+    // carer for an industry, business description or name again.
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .maybeSingle<{ full_name: string | null }>();
+    const prefill = buildCarerAccountPrefill({
+      fullName: profile?.full_name,
+      email: user.email,
+    });
+
     const account = await stripe.accounts.create({
       controller: {
         stripe_dashboard: { type: "express" },
@@ -55,6 +68,7 @@ export async function POST(req: Request) {
         card_payments: { requested: true },
       },
       business_type: "individual",
+      ...prefill,
       metadata: {
         specialcarer_user_id: user.id,
       },
