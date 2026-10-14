@@ -22,18 +22,19 @@ export const CARER_PRODUCT_DESCRIPTION =
 
 export const CARER_PROFILE_URL = "https://www.specialcarer.com";
 
-/** Split "Jane Q Doe" into first and last name; a single word has no last name. */
+/**
+ * Split a display name into first and last name, but only when it is
+ * unambiguous (exactly two words). Stripe treats these as the legal name, so
+ * we never guess: "Jane Q Doe" would otherwise send "Q Doe" as the surname.
+ * Ambiguous names return nothing and the carer types their own on Stripe.
+ */
 export function splitFullName(fullName: string | null | undefined): {
   first_name?: string;
   last_name?: string;
 } {
   const parts = (fullName ?? "").trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return {};
-  if (parts.length === 1) return { first_name: parts[0] };
-  return {
-    first_name: parts[0],
-    last_name: parts.slice(1).join(" "),
-  };
+  if (parts.length === 2) return { first_name: parts[0], last_name: parts[1] };
+  return {};
 }
 
 /** Build the prefill block for `stripe.accounts.create`. Pure, so it is testable. */
@@ -42,7 +43,7 @@ export function buildCarerAccountPrefill(input: {
   email?: string | null;
 }): Pick<Stripe.AccountCreateParams, "business_profile" | "individual"> {
   const name = splitFullName(input.fullName);
-  const displayName = [name.first_name, name.last_name].filter(Boolean).join(" ");
+  const displayName = (input.fullName ?? "").trim().replace(/\s+/g, " ");
   const individual: Stripe.AccountCreateParams.Individual = {
     ...(name.first_name ? { first_name: name.first_name } : {}),
     ...(name.last_name ? { last_name: name.last_name } : {}),

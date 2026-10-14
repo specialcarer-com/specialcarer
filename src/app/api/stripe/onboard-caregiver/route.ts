@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/server";
+import { US_REGION_ENABLED } from "@/lib/region";
 import { buildCarerAccountPrefill } from "@/lib/stripe/carer-account-profile";
 
 /**
@@ -29,6 +30,15 @@ export async function POST(req: Request) {
     }
   } catch {
     // empty body is fine, keep default
+  }
+
+  // US launch is on hold: the UI no longer offers a country, so refuse it here
+  // too rather than letting a direct POST create a US Connect account.
+  if (country === "US" && !US_REGION_ENABLED) {
+    return NextResponse.json(
+      { error: "Carer payouts are only available in the United Kingdom for now." },
+      { status: 400 },
+    );
   }
 
   const admin = createAdminClient();

@@ -8,11 +8,15 @@ import {
 } from "./carer-account-profile";
 
 describe("splitFullName", () => {
-  it("splits first and remaining names", () => {
-    assert.deepEqual(splitFullName("Jane Q Doe"), { first_name: "Jane", last_name: "Q Doe" });
+  it("splits a two-word name", () => {
+    assert.deepEqual(splitFullName("Jane Doe"), { first_name: "Jane", last_name: "Doe" });
+  });
+  it("does not guess a legal surname for three or more words", () => {
+    assert.deepEqual(splitFullName("Jane Q Doe"), {});
+    assert.deepEqual(splitFullName("Mary Anne van der Berg"), {});
   });
   it("handles one word, blanks and null", () => {
-    assert.deepEqual(splitFullName("Jane"), { first_name: "Jane" });
+    assert.deepEqual(splitFullName("Jane"), {});
     assert.deepEqual(splitFullName("   "), {});
     assert.deepEqual(splitFullName(null), {});
   });
@@ -25,6 +29,11 @@ describe("buildCarerAccountPrefill", () => {
     assert.equal(out.business_profile?.product_description, CARER_PRODUCT_DESCRIPTION);
     assert.equal(out.business_profile?.name, "David Okafor");
     assert.deepEqual(out.individual, { first_name: "David", last_name: "Okafor", email: "d@example.com" });
+  });
+  it("keeps the display name but omits the legal name when ambiguous", () => {
+    const out = buildCarerAccountPrefill({ fullName: "Jane Q Doe", email: "j@example.com" });
+    assert.equal(out.business_profile?.name, "Jane Q Doe");
+    assert.deepEqual(out.individual, { email: "j@example.com" });
   });
   it("still sends the business profile when we know nothing about the carer", () => {
     const out = buildCarerAccountPrefill({});
