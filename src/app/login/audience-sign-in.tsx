@@ -24,6 +24,7 @@ export type AudienceSignInProps = {
  *  - an optional signup CTA for new users
  */
 export default async function AudienceSignIn({
+  audience,
   pageKey,
   headline,
   intro,
@@ -57,7 +58,7 @@ export default async function AudienceSignIn({
           )}
 
           <div className="mt-8">
-            <LoginForm redirectTo={redirectTo} />
+            <LoginForm redirectTo={redirectTo} audience={audience} />
           </div>
 
           {signupCta ? (

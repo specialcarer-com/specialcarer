@@ -5,11 +5,20 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { resolvePostAuthRedirect } from "@/lib/security/mfa-client";
+import {
+  roleForNewAccount,
+  sideMismatch,
+  type Audience,
+} from "@/lib/auth/account-side";
 
-type Props = { redirectTo: string };
+type Props = {
+  redirectTo: string;
+  /** Set on the carer / family / organisation sign-in pages. */
+  audience?: Audience;
+};
 type Stage = "enter-email" | "enter-code";
 
-export function LoginForm({ redirectTo }: Props) {
+export function LoginForm({ redirectTo, audience }: Props) {
   const t = useTranslations("auth");
   const router = useRouter();
   const [stage, setStage] = useState<Stage>("enter-email");
@@ -18,6 +27,7 @@ export function LoginForm({ redirectTo }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [, startTransition] = useTransition();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [wrongSideHref, setWrongSideHref] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
   const codeInputRef = useRef<HTMLInputElement>(null);
   const googleEnabled =
@@ -41,6 +51,11 @@ export function LoginForm({ redirectTo }: Props) {
       options: {
         // Setting shouldCreateUser=true is the default; included for clarity
         shouldCreateUser: true,
+        // A brand-new account made on a carer or family page starts on that
+        // side. Ignored for existing accounts.
+        ...(audience && roleForNewAccount(audience)
+          ? { data: { role: roleForNewAccount(audience) } }
+          : {}),
       },
     });
     if (error) throw error;
@@ -98,9 +113,26 @@ export function LoginForm({ redirectTo }: Props) {
       if (user) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("full_name, country")
+          .select("full_name, country, role")
           .eq("id", user.id)
           .maybeSingle();
+        if (audience) {
+          const mismatch = sideMismatch({
+            role: profile?.role,
+            profileComplete: !!profile?.full_name && !!profile?.country,
+            audience,
+          });
+          if (mismatch) {
+            // Keep the sides apart: do not leave them signed in on the wrong one.
+            await supabase.auth.signOut();
+            setWrongSideHref(mismatch.signInHref);
+            setErrorMsg(mismatch.message);
+            setStage("enter-email");
+            setCode("");
+            setSubmitting(false);
+            return;
+          }
+        }
         if (!profile?.full_name || !profile?.country) {
           dest = `/onboarding?next=${encodeURIComponent(redirectTo)}`;
         }
@@ -173,7 +205,19 @@ export function LoginForm({ redirectTo }: Props) {
             />
           </label>
 
-          {errorMsg && <p className="text-sm text-rose-600">{errorMsg}</p>}
+          {errorMsg && (
+          <p className="text-sm text-rose-600">
+            {errorMsg}
+            {wrongSideHref && (
+              <>
+                {" "}
+                <a href={wrongSideHref} className="underline font-medium">
+                  Go to that sign-in page
+                </a>
+              </>
+            )}
+          </p>
+        )}
 
           <button
             type="submit"
@@ -246,7 +290,19 @@ export function LoginForm({ redirectTo }: Props) {
           />
         </label>
 
-        {errorMsg && <p className="text-sm text-rose-600">{errorMsg}</p>}
+        {errorMsg && (
+          <p className="text-sm text-rose-600">
+            {errorMsg}
+            {wrongSideHref && (
+              <>
+                {" "}
+                <a href={wrongSideHref} className="underline font-medium">
+                  Go to that sign-in page
+                </a>
+              </>
+            )}
+          </p>
+        )}
 
         <button
           type="submit"
