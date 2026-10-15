@@ -81,6 +81,7 @@ export function SignupForm({ audience, next }: Props) {
     e.preventDefault();
     setSubmitting(true);
     setErrorMsg(null);
+    setWrongSideHref(null);
     const cleaned = email.trim().toLowerCase();
     try {
       await sendCode(cleaned);
@@ -118,6 +119,7 @@ export function SignupForm({ audience, next }: Props) {
     e.preventDefault();
     setSubmitting(true);
     setErrorMsg(null);
+    setWrongSideHref(null);
     try {
       const supabase = createClient();
       const cleanCode = code.trim();
@@ -194,6 +196,7 @@ export function SignupForm({ audience, next }: Props) {
   async function handleResend() {
     if (resendCooldown > 0) return;
     setErrorMsg(null);
+    setWrongSideHref(null);
     try {
       await sendCode(email);
       setResendCooldown(30);
@@ -261,6 +264,7 @@ export function SignupForm({ audience, next }: Props) {
               setStage("enter-details");
               setCode("");
               setErrorMsg(null);
+              setWrongSideHref(null);
             }}
             className="text-slate-600 hover:text-slate-900 underline"
           >

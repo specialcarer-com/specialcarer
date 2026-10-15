@@ -65,6 +65,7 @@ export function LoginForm({ redirectTo, audience }: Props) {
     e.preventDefault();
     setSubmitting(true);
     setErrorMsg(null);
+    setWrongSideHref(null);
     const cleaned = email.trim().toLowerCase();
     try {
       await sendCode(cleaned);
@@ -82,6 +83,7 @@ export function LoginForm({ redirectTo, audience }: Props) {
     e.preventDefault();
     setSubmitting(true);
     setErrorMsg(null);
+    setWrongSideHref(null);
     try {
       const supabase = createClient();
       // Try "email" type first (new sign-up / first-time OTP),
@@ -166,6 +168,7 @@ export function LoginForm({ redirectTo, audience }: Props) {
   async function handleResend() {
     if (resendCooldown > 0) return;
     setErrorMsg(null);
+    setWrongSideHref(null);
     try {
       await sendCode(email);
       setResendCooldown(30);
@@ -247,6 +250,7 @@ export function LoginForm({ redirectTo, audience }: Props) {
               setStage("enter-email");
               setCode("");
               setErrorMsg(null);
+              setWrongSideHref(null);
             }}
             className="text-slate-600 hover:text-slate-900 underline"
           >
