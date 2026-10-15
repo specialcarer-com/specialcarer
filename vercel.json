@@ -104,6 +104,18 @@
     {
       "path": "/api/cron/care-plan-review-reminder",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/compliance-sweep",
+      "schedule": "5 6 * * *"
+    },
+    {
+      "path": "/api/cron/reverify-sweep",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/surge-recompute",
+      "schedule": "7 * * * *"
     }
   ]
 }

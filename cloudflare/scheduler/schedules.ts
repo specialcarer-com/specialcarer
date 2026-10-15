@@ -30,6 +30,9 @@ export const SCHEDULED_JOBS = [
   { path: "/api/cron/experiment-rollup", schedule: "0 5 * * *" },
   { path: "/api/cron/kpi-rollup-hourly", schedule: "5 * * * *" },
   { path: "/api/cron/care-plan-review-reminder", schedule: "0 6 * * *" },
+  { path: "/api/cron/compliance-sweep", schedule: "5 6 * * *" },
+  { path: "/api/cron/reverify-sweep", schedule: "0 7 * * *" },
+  { path: "/api/cron/surge-recompute", schedule: "7 * * * *" },
 ] as const;
 
 export type JobPath = (typeof SCHEDULED_JOBS)[number]["path"];
