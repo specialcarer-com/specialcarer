@@ -12,6 +12,9 @@ import type Stripe from "stripe";
 /**
  * Merchant category code sent to Stripe for carer accounts.
  * 8099 = "Health practitioners, medical services (not elsewhere classified)".
+ * Alternative raised in review: 8050 = "Nursing, home healthcare and personal
+ * care facilities". Neither is verified; independent home carers may not fit
+ * either perfectly.
  * OWNER SIGN-OFF NEEDED before live mode: confirm the code with Stripe, as it
  * affects their risk review. It has no effect in test mode.
  */
