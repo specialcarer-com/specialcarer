@@ -133,6 +133,30 @@ export function parseIsoMs(iso: string | null): number {
 
 export const CONNECT_CACHE_TTL_MS = 60 * 60 * 1000;
 
+/**
+ * Real Stripe account ids are `acct_` followed by alphanumerics only. Seed
+ * and demo rows use placeholders such as `acct_demo_5fd7e907` (note the second
+ * underscore); Stripe has never heard of them, so a booking against one can
+ * only fail at PaymentIntent creation. Refuse them up front.
+ */
+export function looksLikeRealStripeAccountId(id: string | null | undefined): boolean {
+  return typeof id === "string" && /^acct_[A-Za-z0-9]+$/.test(id);
+}
+
+/**
+ * True when Stripe's error says the account itself is gone or unreachable
+ * with our key (as opposed to a transient network or 5xx failure). In that
+ * case the cached row describes an account that cannot receive a transfer,
+ * so it must not be trusted.
+ */
+export function isAccountUnavailableError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as { code?: unknown; type?: unknown; statusCode?: unknown };
+  if (e.code === "resource_missing" || e.code === "account_invalid") return true;
+  if (e.type === "StripePermissionError") return true;
+  return e.statusCode === 403 || e.statusCode === 404;
+}
+
 /** True if the cached row is older than the TTL (or has never been refreshed). */
 export function isCacheStale(
   row: Pick<ConnectAccountRow, "last_refreshed_at">,
@@ -229,14 +253,26 @@ export async function assertConnectReadyForBooking(
   }
   const cached = row as ConnectAccountRow;
 
+  // 1b. A placeholder id can never be paid out to, whatever the cached flags
+  // say. Same seeker-facing outcome as "never finished setting up payments".
+  if (!looksLikeRealStripeAccountId(cached.stripe_account_id)) {
+    console.error(
+      "[connect-readiness] refusing non-Stripe account id for carer",
+      args.carerId,
+    );
+    return { ready: false, reason: "legacy_incomplete" };
+  }
+
   // 2. Fresh enough? Serve local.
   if (!isCacheStale(cached, nowMs)) {
     return evaluateReadiness(cached);
   }
 
   // 3. Stale. Do exactly one live refresh, then re-evaluate. If the
-  // refresh fails, evaluate against whatever we already had — the
-  // freshest source of truth we can honestly use.
+  // refresh fails for a transient reason, evaluate against whatever we
+  // already had — the freshest source of truth we can honestly use. If
+  // Stripe says the account does not exist (or our key cannot see it), the
+  // cached row is not trustworthy: fail closed.
   let refreshed: Stripe.Account | null = null;
   try {
     refreshed = await deps.stripe.accounts.retrieve(cached.stripe_account_id);
@@ -245,6 +281,9 @@ export async function assertConnectReadyForBooking(
       "[connect-readiness] Stripe accounts.retrieve failed",
       err,
     );
+    if (isAccountUnavailableError(err)) {
+      return { ready: false, reason: "legacy_incomplete" };
+    }
   }
 
   if (!refreshed) {
