@@ -15,6 +15,12 @@ export type AudienceSignInProps = {
   error?: string;
 };
 
+const SIDE_WORD: Record<string, string> = {
+  caregiver: "carer",
+  family: "family",
+  organisation: "organisation",
+};
+
 /**
  * Shared layout for the per-audience sign-in pages. Each variant gets:
  *  - the standard SiteHeader (via MarketingShell)
@@ -24,6 +30,7 @@ export type AudienceSignInProps = {
  *  - an optional signup CTA for new users
  */
 export default async function AudienceSignIn({
+  audience,
   pageKey,
   headline,
   intro,
@@ -52,12 +59,16 @@ export default async function AudienceSignIn({
 
           {error && (
             <div className="mt-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-sm">
-              {error === "callback" ? t("errorCallback") : t("errorGeneric")}
+              {error === "callback"
+                ? t("errorCallback")
+                : error.startsWith("side_")
+                  ? `This email already has a ${SIDE_WORD[error.slice(5)] ?? "different"} account. Carer, family and organisation accounts are kept separate, so please sign in on the right page or use a different email address.`
+                  : t("errorGeneric")}
             </div>
           )}
 
           <div className="mt-8">
-            <LoginForm redirectTo={redirectTo} />
+            <LoginForm redirectTo={redirectTo} audience={audience} />
           </div>
 
           {signupCta ? (

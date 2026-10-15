@@ -22,6 +22,7 @@ import {
   priceBookingFromServerRate,
 } from "@/lib/bookings/server-pricing";
 import { retrievePaymentIntent } from "@/lib/payments/payment-intent-retrieval";
+import { canCreateFamilyBooking } from "@/lib/auth/account-side";
 import {
   assertConnectReadyForBooking,
   friendlyReasonMessage,
@@ -59,6 +60,30 @@ export async function POST(req: Request) {
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  // Carer and family accounts are separate: a carer account cannot book care.
+  const { data: bookerProfile, error: bookerProfileError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle<{ role: string | null }>();
+  if (bookerProfileError) {
+    console.error(
+      "[create-booking-intent] booker role lookup failed",
+      bookerProfileError,
+    );
+    return NextResponse.json({ error: "database_error" }, { status: 503 });
+  }
+  if (!canCreateFamilyBooking(bookerProfile?.role)) {
+    return NextResponse.json(
+      {
+        error:
+          "Carer accounts can't book care. Please use a family account to book a carer.",
+        reason: "carer_account",
+      },
+      { status: 403 },
+    );
   }
 
   type BookingPreferences = {

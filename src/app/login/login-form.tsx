@@ -5,11 +5,20 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { resolvePostAuthRedirect } from "@/lib/security/mfa-client";
+import {
+  roleForNewAccount,
+  sideMismatch,
+  type Audience,
+} from "@/lib/auth/account-side";
 
-type Props = { redirectTo: string };
+type Props = {
+  redirectTo: string;
+  /** Set on the carer / family / organisation sign-in pages. */
+  audience?: Audience;
+};
 type Stage = "enter-email" | "enter-code";
 
-export function LoginForm({ redirectTo }: Props) {
+export function LoginForm({ redirectTo, audience }: Props) {
   const t = useTranslations("auth");
   const router = useRouter();
   const [stage, setStage] = useState<Stage>("enter-email");
@@ -18,6 +27,7 @@ export function LoginForm({ redirectTo }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [, startTransition] = useTransition();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [wrongSideHref, setWrongSideHref] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
   const codeInputRef = useRef<HTMLInputElement>(null);
   const googleEnabled =
@@ -41,6 +51,11 @@ export function LoginForm({ redirectTo }: Props) {
       options: {
         // Setting shouldCreateUser=true is the default; included for clarity
         shouldCreateUser: true,
+        // A brand-new account made on a carer or family page starts on that
+        // side. Ignored for existing accounts.
+        ...(audience && roleForNewAccount(audience)
+          ? { data: { role: roleForNewAccount(audience) } }
+          : {}),
       },
     });
     if (error) throw error;
@@ -50,6 +65,7 @@ export function LoginForm({ redirectTo }: Props) {
     e.preventDefault();
     setSubmitting(true);
     setErrorMsg(null);
+    setWrongSideHref(null);
     const cleaned = email.trim().toLowerCase();
     try {
       await sendCode(cleaned);
@@ -67,6 +83,7 @@ export function LoginForm({ redirectTo }: Props) {
     e.preventDefault();
     setSubmitting(true);
     setErrorMsg(null);
+    setWrongSideHref(null);
     try {
       const supabase = createClient();
       // Try "email" type first (new sign-up / first-time OTP),
@@ -96,11 +113,40 @@ export function LoginForm({ redirectTo }: Props) {
       } = await supabase.auth.getUser();
       let dest = redirectTo;
       if (user) {
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
-          .select("full_name, country")
+          .select("full_name, country, role")
           .eq("id", user.id)
           .maybeSingle();
+        if (profileError) {
+          // Fail closed: without the profile we cannot tell which side this
+          // account belongs to, so do not leave them signed in.
+          await supabase.auth.signOut();
+          setErrorMsg(
+            "We couldn't check your account just now. Please try signing in again."
+          );
+          setStage("enter-email");
+          setCode("");
+          setSubmitting(false);
+          return;
+        }
+        if (audience) {
+          const mismatch = sideMismatch({
+            role: profile?.role,
+            profileComplete: !!profile?.full_name && !!profile?.country,
+            audience,
+          });
+          if (mismatch) {
+            // Keep the sides apart: do not leave them signed in on the wrong one.
+            await supabase.auth.signOut();
+            setWrongSideHref(mismatch.signInHref);
+            setErrorMsg(mismatch.message);
+            setStage("enter-email");
+            setCode("");
+            setSubmitting(false);
+            return;
+          }
+        }
         if (!profile?.full_name || !profile?.country) {
           dest = `/onboarding?next=${encodeURIComponent(redirectTo)}`;
         }
@@ -122,6 +168,7 @@ export function LoginForm({ redirectTo }: Props) {
   async function handleResend() {
     if (resendCooldown > 0) return;
     setErrorMsg(null);
+    setWrongSideHref(null);
     try {
       await sendCode(email);
       setResendCooldown(30);
@@ -138,7 +185,7 @@ export function LoginForm({ redirectTo }: Props) {
         options: {
           redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(
             redirectTo
-          )}`,
+          )}${audience ? `&aud=${audience}` : ""}`,
         },
       });
     });
@@ -173,7 +220,19 @@ export function LoginForm({ redirectTo }: Props) {
             />
           </label>
 
-          {errorMsg && <p className="text-sm text-rose-600">{errorMsg}</p>}
+          {errorMsg && (
+          <p className="text-sm text-rose-600">
+            {errorMsg}
+            {wrongSideHref && (
+              <>
+                {" "}
+                <a href={wrongSideHref} className="underline font-medium">
+                  Go to that sign-in page
+                </a>
+              </>
+            )}
+          </p>
+        )}
 
           <button
             type="submit"
@@ -191,6 +250,7 @@ export function LoginForm({ redirectTo }: Props) {
               setStage("enter-email");
               setCode("");
               setErrorMsg(null);
+              setWrongSideHref(null);
             }}
             className="text-slate-600 hover:text-slate-900 underline"
           >
@@ -246,7 +306,19 @@ export function LoginForm({ redirectTo }: Props) {
           />
         </label>
 
-        {errorMsg && <p className="text-sm text-rose-600">{errorMsg}</p>}
+        {errorMsg && (
+          <p className="text-sm text-rose-600">
+            {errorMsg}
+            {wrongSideHref && (
+              <>
+                {" "}
+                <a href={wrongSideHref} className="underline font-medium">
+                  Go to that sign-in page
+                </a>
+              </>
+            )}
+          </p>
+        )}
 
         <button
           type="submit"

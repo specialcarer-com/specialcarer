@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { sideMismatch, type Audience } from "@/lib/auth/account-side";
 import { resolveAdminMfaGate, needsMfaChallenge } from "@/lib/security/mfa-gate";
 import {
   getAalLevels,
@@ -78,11 +79,36 @@ export async function GET(req: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (user) {
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("full_name, country, role")
       .eq("id", user.id)
       .maybeSingle();
+
+    // Carer, family and organisation accounts are separate. Sign-in pages pass
+    // ?aud= so Google sign-in gets the same side check as the code flow.
+    const audParam = url.searchParams.get("aud");
+    const aud: Audience | null =
+      audParam === "caregiver" || audParam === "family" || audParam === "organisation"
+        ? audParam
+        : null;
+    if (aud) {
+      if (profileError) {
+        await supabase.auth.signOut();
+        return NextResponse.redirect(new URL("/login?error=callback", req.url));
+      }
+      const mismatch = sideMismatch({
+        role: profile?.role,
+        profileComplete: !!profile?.full_name && !!profile?.country,
+        audience: aud,
+      });
+      if (mismatch) {
+        await supabase.auth.signOut();
+        const back = new URL(mismatch.signInHref, req.url);
+        back.searchParams.set("error", `side_${mismatch.actual}`);
+        return NextResponse.redirect(back);
+      }
+    }
 
     // Admins land in the admin dashboard, not the seeker surface. Honor an
     // explicit ?next that already points into /admin/* (e.g. a deep link the

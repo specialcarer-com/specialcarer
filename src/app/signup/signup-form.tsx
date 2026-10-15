@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
+import { sideMismatch } from "@/lib/auth/account-side";
 
 export type SignupAudience = "caregiver" | "family" | "organisation";
 
@@ -39,6 +40,7 @@ export function SignupForm({ audience, next }: Props) {
   const [code, setCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [wrongSideHref, setWrongSideHref] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
   const codeInputRef = useRef<HTMLInputElement>(null);
 
@@ -79,6 +81,7 @@ export function SignupForm({ audience, next }: Props) {
     e.preventDefault();
     setSubmitting(true);
     setErrorMsg(null);
+    setWrongSideHref(null);
     const cleaned = email.trim().toLowerCase();
     try {
       await sendCode(cleaned);
@@ -116,6 +119,7 @@ export function SignupForm({ audience, next }: Props) {
     e.preventDefault();
     setSubmitting(true);
     setErrorMsg(null);
+    setWrongSideHref(null);
     try {
       const supabase = createClient();
       const cleanCode = code.trim();
@@ -136,6 +140,44 @@ export function SignupForm({ audience, next }: Props) {
       }
       if (!verified) throw lastErr ?? new Error(t("invalidCode"));
 
+      // Carer, family and organisation accounts are separate. If this email
+      // already has a finished account on another side, stop here rather than
+      // signing them into the wrong experience.
+      const {
+        data: { user: verifiedUser },
+      } = await supabase.auth.getUser();
+      if (verifiedUser) {
+        const { data: existing, error: existingError } = await supabase
+          .from("profiles")
+          .select("full_name, country, role")
+          .eq("id", verifiedUser.id)
+          .maybeSingle();
+        if (existingError) {
+          await supabase.auth.signOut();
+          setErrorMsg(
+            "We couldn't check your account just now. Please try again."
+          );
+          setStage("enter-details");
+          setCode("");
+          setSubmitting(false);
+          return;
+        }
+        const mismatch = sideMismatch({
+          role: existing?.role,
+          profileComplete: !!existing?.full_name && !!existing?.country,
+          audience,
+        });
+        if (mismatch) {
+          await supabase.auth.signOut();
+          setWrongSideHref(mismatch.signInHref);
+          setErrorMsg(mismatch.message);
+          setStage("enter-details");
+          setCode("");
+          setSubmitting(false);
+          return;
+        }
+      }
+
       await stampProfile();
       router.push(next);
       router.refresh();
@@ -154,6 +196,7 @@ export function SignupForm({ audience, next }: Props) {
   async function handleResend() {
     if (resendCooldown > 0) return;
     setErrorMsg(null);
+    setWrongSideHref(null);
     try {
       await sendCode(email);
       setResendCooldown(30);
@@ -191,7 +234,19 @@ export function SignupForm({ audience, next }: Props) {
             />
           </label>
 
-          {errorMsg && <p className="text-sm text-rose-600">{errorMsg}</p>}
+          {errorMsg && (
+          <p className="text-sm text-rose-600">
+            {errorMsg}
+            {wrongSideHref && (
+              <>
+                {" "}
+                <a href={wrongSideHref} className="underline font-medium">
+                  Go to that sign-in page
+                </a>
+              </>
+            )}
+          </p>
+        )}
 
           <button
             type="submit"
@@ -209,6 +264,7 @@ export function SignupForm({ audience, next }: Props) {
               setStage("enter-details");
               setCode("");
               setErrorMsg(null);
+              setWrongSideHref(null);
             }}
             className="text-slate-600 hover:text-slate-900 underline"
           >
@@ -276,7 +332,19 @@ export function SignupForm({ audience, next }: Props) {
         />
       </label>
 
-      {errorMsg && <p className="text-sm text-rose-600">{errorMsg}</p>}
+      {errorMsg && (
+          <p className="text-sm text-rose-600">
+            {errorMsg}
+            {wrongSideHref && (
+              <>
+                {" "}
+                <a href={wrongSideHref} className="underline font-medium">
+                  Go to that sign-in page
+                </a>
+              </>
+            )}
+          </p>
+        )}
 
       <button
         type="submit"
