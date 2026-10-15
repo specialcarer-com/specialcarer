@@ -8,17 +8,17 @@ const active = { APP_ENV: "production", SCHEDULER_ENABLED: "true", CRON_SECRET: 
   APP_ORIGIN: "https://app.invalid" };
 const noop = () => {};
 
-test("explicit scheduler map is exactly the existing 26 Vercel definitions / 21 UTC expressions", () => {
+test("explicit scheduler map is exactly the existing 29 Vercel definitions / 24 UTC expressions", () => {
   const vercel = JSON.parse(readFileSync("vercel.json", "utf8"));
   assert.deepEqual(SCHEDULED_JOBS, vercel.crons);
-  assert.equal(SCHEDULED_JOBS.length, 26);
-  assert.equal(new Set(SCHEDULED_JOBS.map((job) => job.schedule)).size, 21);
+  assert.equal(SCHEDULED_JOBS.length, 29);
+  assert.equal(new Set(SCHEDULED_JOBS.map((job) => job.schedule)).size, 24);
   for (const job of SCHEDULED_JOBS) {
     const route = readFileSync(`src/app${job.path}/route.ts`, "utf8");
     assert.match(route, /export async function GET\(/);
     assert.match(route, /requireCronAuth\(req\)/);
   }
-  for (const name of ["ai-anomaly-sweep", "ai-feature-refresh", "ai-schedule-predict", "ai-summary-rollup", "compliance-sweep", "reverify-sweep", "surge-recompute"]) {
+  for (const name of ["ai-anomaly-sweep", "ai-feature-refresh", "ai-schedule-predict", "ai-summary-rollup"]) {
     assert.equal(SCHEDULED_JOBS.some((job) => job.path === `/api/cron/${name}`), false);
   }
 });
