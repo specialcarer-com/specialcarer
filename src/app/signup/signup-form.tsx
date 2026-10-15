@@ -145,11 +145,21 @@ export function SignupForm({ audience, next }: Props) {
         data: { user: verifiedUser },
       } = await supabase.auth.getUser();
       if (verifiedUser) {
-        const { data: existing } = await supabase
+        const { data: existing, error: existingError } = await supabase
           .from("profiles")
           .select("full_name, country, role")
           .eq("id", verifiedUser.id)
           .maybeSingle();
+        if (existingError) {
+          await supabase.auth.signOut();
+          setErrorMsg(
+            "We couldn't check your account just now. Please try again."
+          );
+          setStage("enter-details");
+          setCode("");
+          setSubmitting(false);
+          return;
+        }
         const mismatch = sideMismatch({
           role: existing?.role,
           profileComplete: !!existing?.full_name && !!existing?.country,

@@ -5,13 +5,14 @@ import { useState } from "react";
 export default function PayoutsClient({
   hasAccount,
   payoutsEnabled,
-  defaultCountry,
 }: {
   hasAccount: boolean;
   payoutsEnabled: boolean;
-  defaultCountry: "GB" | "US";
+  /** Kept for the caller; carer payouts are UK only for now. */
+  defaultCountry?: "GB" | "US";
 }) {
-  const [country, setCountry] = useState<"GB" | "US">(defaultCountry);
+  // UK only for now; US onboarding is on hold.
+  const country: "GB" = "GB";
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,19 +46,7 @@ export default function PayoutsClient({
 
   return (
     <div className="space-y-3">
-      {!hasAccount && (
-        <label className="block text-sm">
-          <span className="text-slate-700 font-medium">Country</span>
-          <select
-            value={country}
-            onChange={(e) => setCountry(e.target.value as "GB" | "US")}
-            className="mt-1 w-full px-3 py-2 rounded-xl border border-slate-200"
-          >
-            <option value="GB">United Kingdom</option>
-            <option value="US">United States</option>
-          </select>
-        </label>
-      )}
+      {/* UK only for now: no country picker. */}
 
       <button
         onClick={startOnboarding}

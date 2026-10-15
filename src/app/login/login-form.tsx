@@ -111,11 +111,23 @@ export function LoginForm({ redirectTo, audience }: Props) {
       } = await supabase.auth.getUser();
       let dest = redirectTo;
       if (user) {
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("full_name, country, role")
           .eq("id", user.id)
           .maybeSingle();
+        if (profileError) {
+          // Fail closed: without the profile we cannot tell which side this
+          // account belongs to, so do not leave them signed in.
+          await supabase.auth.signOut();
+          setErrorMsg(
+            "We couldn't check your account just now. Please try signing in again."
+          );
+          setStage("enter-email");
+          setCode("");
+          setSubmitting(false);
+          return;
+        }
         if (audience) {
           const mismatch = sideMismatch({
             role: profile?.role,
@@ -170,7 +182,7 @@ export function LoginForm({ redirectTo, audience }: Props) {
         options: {
           redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(
             redirectTo
-          )}`,
+          )}${audience ? `&aud=${audience}` : ""}`,
         },
       });
     });

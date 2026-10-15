@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/server";
+import { US_REGION_ENABLED } from "@/lib/region";
+import { buildCarerAccountPrefill } from "@/lib/stripe/carer-account-profile";
 
 /**
  * POST /api/stripe/onboard-caregiver
@@ -30,6 +32,15 @@ export async function POST(req: Request) {
     // empty body is fine, keep default
   }
 
+  // US launch is on hold: the UI no longer offers a country, so refuse it here
+  // too rather than letting a direct POST create a US Connect account.
+  if (country === "US" && !US_REGION_ENABLED) {
+    return NextResponse.json(
+      { error: "Carer payouts are only available in the United Kingdom for now." },
+      { status: 400 },
+    );
+  }
+
   const admin = createAdminClient();
 
   // Look for an existing Connect account for this user
@@ -42,6 +53,18 @@ export async function POST(req: Request) {
   let accountId = existing?.stripe_account_id;
 
   if (!accountId) {
+    // Pre-fill what we already know so Stripe's hosted form does not ask the
+    // carer for an industry, business description or name again.
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .maybeSingle<{ full_name: string | null }>();
+    const prefill = buildCarerAccountPrefill({
+      fullName: profile?.full_name,
+      email: user.email,
+    });
+
     const account = await stripe.accounts.create({
       controller: {
         stripe_dashboard: { type: "express" },
@@ -55,6 +78,7 @@ export async function POST(req: Request) {
         card_payments: { requested: true },
       },
       business_type: "individual",
+      ...prefill,
       metadata: {
         specialcarer_user_id: user.id,
       },
