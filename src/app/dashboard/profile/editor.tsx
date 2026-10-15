@@ -6,6 +6,13 @@ import { SERVICES } from "@/lib/care/services";
 import { CARE_FORMATS } from "@/lib/care/formats";
 import { createClient as createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { CARER_FEE_PERCENT, CARER_PAYOUT_PERCENT } from "@/lib/fees/config";
+import { US_REGION_ENABLED } from "@/lib/region";
+import {
+  LANGUAGE_OPTIONS,
+  splitLanguages,
+  startingStep,
+  STEP_TITLES,
+} from "./registration-steps";
 import InstantBookingSection from "./InstantBookingSection";
 import type { CaregiverProfileFull, ProfileReadiness } from "@/lib/care/profile";
 import {
@@ -43,7 +50,10 @@ export default function ProfileEditor({
   const [bio, setBio] = useState(initial.bio ?? "");
   const [city, setCity] = useState(initial.city ?? "");
   const [region, setRegion] = useState(initial.region ?? "");
-  const [country, setCountry] = useState<"GB" | "US">(initial.country);
+  // UK only for now: the country picker is hidden until the US launch.
+  const [country, setCountry] = useState<"GB" | "US">(
+    US_REGION_ENABLED ? initial.country : "GB",
+  );
   const [postcode, setPostcode] = useState(initial.postcode ?? "");
   const [hidePreciseLocation, setHidePreciseLocation] = useState<boolean>(
     initial.hide_precise_location !== false,
@@ -55,13 +65,17 @@ export default function ProfileEditor({
   const [hourlyRate, setHourlyRate] = useState<number>(
     initial.hourly_rate_cents ? initial.hourly_rate_cents / 100 : 18,
   );
-  const [weeklyRate, setWeeklyRate] = useState<number>(
-    initial.weekly_rate_cents ? initial.weekly_rate_cents / 100 : 750,
+  // Weekly rate is optional: blank means "agree it with the family".
+  const [weeklyRate, setWeeklyRate] = useState<number | "">(
+    initial.weekly_rate_cents ? initial.weekly_rate_cents / 100 : "",
   );
   const [yearsExp, setYearsExp] = useState<number>(initial.years_experience ?? 0);
-  const [languages, setLanguages] = useState<string>(
-    (initial.languages ?? []).join(", "),
+  const initialLangs = splitLanguages(initial.languages ?? []);
+  const [languages, setLanguages] = useState<string[]>(initialLangs.known);
+  const [otherLanguages, setOtherLanguages] = useState<string>(
+    initialLangs.other.join(", "),
   );
+  const [step, setStep] = useState<number>(() => startingStep(initialReadiness));
   const [maxRadius, setMaxRadius] = useState<number>(initial.max_radius_km ?? 15);
   const [photoUrl, setPhotoUrl] = useState<string | null>(initial.photo_url);
   const [isPublished, setIsPublished] = useState(initial.is_published);
@@ -93,6 +107,12 @@ export default function ProfileEditor({
     );
   }
 
+  function toggleLanguage(l: string) {
+    setLanguages((prev) =>
+      prev.includes(l) ? prev.filter((x) => x !== l) : [...prev, l],
+    );
+  }
+
   function toggleCert(key: string) {
     setCerts((prev) =>
       prev.includes(key) ? prev.filter((c) => c !== key) : [...prev, key],
@@ -114,11 +134,22 @@ export default function ProfileEditor({
   const offersLiveIn = careFormats.includes("live_in");
   const currencySymbol = country === "US" ? "$" : "£";
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
+  async function save(): Promise<boolean> {
     setSaving(true);
     setErr(null);
     try {
+      const weeklyCents =
+        offersLiveIn && weeklyRate !== "" ? Math.round(weeklyRate * 100) : null;
+      if (weeklyCents !== null && (weeklyCents < 10000 || weeklyCents > 500000)) {
+        throw new Error(
+          "Weekly rate should be between £100 and £5,000 — or leave it blank to agree it with each family.",
+        );
+      }
+      const otherLangs = otherLanguages
+        .split(",")
+        .map((l) => l.trim())
+        .filter(Boolean);
+      const allLanguages = Array.from(new Set([...languages, ...otherLangs])).slice(0, 8);
       const res = await fetch("/api/caregiver/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -134,16 +165,10 @@ export default function ProfileEditor({
           hourly_rate_cents: offersVisiting
             ? Math.round(hourlyRate * 100)
             : null,
-          weekly_rate_cents: offersLiveIn
-            ? Math.round(weeklyRate * 100)
-            : null,
+          weekly_rate_cents: weeklyCents,
           currency: country === "US" ? "USD" : "GBP",
           years_experience: Math.max(0, Math.min(60, Math.round(yearsExp))),
-          languages: languages
-            .split(",")
-            .map((l) => l.trim())
-            .filter(Boolean)
-            .slice(0, 8),
+          languages: allLanguages,
           max_radius_km: Math.max(1, Math.min(200, Math.round(maxRadius))),
           gender: gender || null,
           has_drivers_license: hasLicense,
@@ -164,11 +189,45 @@ export default function ProfileEditor({
       if (!res.ok) throw new Error(json.error ?? "Save failed");
       if (json.readiness) setReadiness(json.readiness);
       setSavedAt(Date.now());
+      return true;
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Unknown error");
+      return false;
     } finally {
       setSaving(false);
     }
+  }
+
+  async function goNext() {
+    if (step === 0 && !displayName.trim()) {
+      setErr("Please add the name families will see.");
+      return;
+    }
+    if (step === 2 && !city.trim()) {
+      setErr("Please add your town or city so we can match you with nearby families.");
+      return;
+    }
+    if (step === 2 && offersVisiting && !(hourlyRate >= 8)) {
+      setErr("Please set an hourly rate of at least £8.");
+      return;
+    }
+    if (await save()) {
+      setStep((n) => Math.min(n + 1, STEP_TITLES.length - 1));
+      if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
+
+  function goBack() {
+    setErr(null);
+    setStep((n) => Math.max(n - 1, 0));
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    // Enter key / submit: save and move on, same as the Next button.
+    if (step < STEP_TITLES.length - 1) await goNext();
+    else await save();
   }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -269,351 +328,561 @@ export default function ProfileEditor({
     });
   }
 
+  const lastStep = STEP_TITLES.length - 1;
+  const isGoLive = step === lastStep;
+  const nextLabel = saving ? "Saving…" : step === lastStep - 1 ? "Save & review" : "Save & continue";
+
   return (
     <form onSubmit={handleSave} className="mt-8 space-y-6">
-      {/* Photo */}
-      <Section title="Photo">
-        <div className="flex items-center gap-5">
-          {photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={photoUrl}
-              alt=""
-              className="w-24 h-24 rounded-full object-cover bg-brand-50"
-            />
-          ) : (
-            <div className="w-24 h-24 rounded-full bg-brand-50 text-brand-700 flex items-center justify-center font-semibold text-2xl">
-              {(displayName.trim()[0] ?? "C").toUpperCase()}
+      {/* Progress */}
+      <div>
+        <div className="flex items-center justify-between text-sm">
+          <span className="font-medium text-slate-900">
+            Step {step + 1} of {STEP_TITLES.length}: {STEP_TITLES[step]}
+          </span>
+          <span className="text-slate-500">
+            {savedAt ? "Progress saved" : "Saved as you go"}
+          </span>
+        </div>
+        <div
+          className="mt-2 h-2 rounded-full bg-slate-200 overflow-hidden"
+          role="progressbar"
+          aria-valuemin={1}
+          aria-valuemax={STEP_TITLES.length}
+          aria-valuenow={step + 1}
+        >
+          <div
+            className="h-full bg-brand transition-all"
+            style={{ width: `${((step + 1) / STEP_TITLES.length) * 100}%` }}
+          />
+        </div>
+        <ol className="mt-3 flex flex-wrap gap-2">
+          {STEP_TITLES.map((title, i) => (
+            <li key={title}>
+              <button
+                type="button"
+                onClick={() => {
+                  setErr(null);
+                  setStep(i);
+                }}
+                className={`px-3 py-1 rounded-full text-xs font-medium border transition ${
+                  i === step
+                    ? "bg-brand text-white border-brand"
+                    : i < step
+                      ? "bg-brand-50 text-brand-700 border-brand-200"
+                      : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+                }`}
+              >
+                {i + 1}. {title}
+              </button>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      {step === 0 && (
+        <>
+          <Section title="Your photo">
+            <div className="flex items-center gap-5">
+              {photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={photoUrl}
+                  alt=""
+                  className="w-24 h-24 rounded-full object-cover bg-brand-50"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-brand-50 text-brand-700 flex items-center justify-center font-semibold text-2xl">
+                  {(displayName.trim()[0] ?? "C").toUpperCase()}
+                </div>
+              )}
+              <div>
+                <label className="inline-block px-4 py-2 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 text-sm font-medium">
+                  Upload photo
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleUpload}
+                    className="hidden"
+                  />
+                </label>
+                <p className="mt-2 text-xs text-slate-500">
+                  A clear, friendly headshot works best. JPG, PNG or WebP, up
+                  to 5 MB. You can add this later.
+                </p>
+              </div>
             </div>
-          )}
-          <div>
-            <label className="inline-block px-4 py-2 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 text-sm font-medium">
-              Upload photo
+          </Section>
+
+          <Section title="Tell families about you">
+            <Field label="Name families will see">
               <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={handleUpload}
-                className="hidden"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                maxLength={80}
+                required
+                className={INPUT_CLASS}
+                placeholder="Emma Thompson"
               />
-            </label>
-            <p className="mt-2 text-xs text-slate-500">
-              JPG, PNG, or WebP — max 5 MB. Clear, well-lit headshot.
+            </Field>
+            <Field label="Headline" help="One short line families see at a glance (optional)">
+              <input
+                value={headline}
+                onChange={(e) => setHeadline(e.target.value)}
+                maxLength={120}
+                className={INPUT_CLASS}
+                placeholder="Maternity nurse · paediatric first-aid"
+              />
+            </Field>
+            <Field
+              label="About you"
+              help="A few sentences on your experience and what families can expect from you."
+            >
+              <textarea
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                rows={5}
+                maxLength={2000}
+                className={INPUT_CLASS}
+                placeholder="What you specialise in, your experience, what families can expect."
+              />
+              <div className="text-xs text-slate-500 mt-1">
+                {bio.trim().length >= 60
+                  ? `${bio.length}/2000 — that's plenty`
+                  : `${Math.max(0, 60 - bio.trim().length)} more characters needed before you can go live`}
+              </div>
+            </Field>
+          </Section>
+        </>
+      )}
+
+      {step === 1 && (
+        <>
+          <Section title="Who do you care for?">
+            <p className="text-sm text-slate-600 -mt-2">Tick everything that applies.</p>
+            <div className="grid sm:grid-cols-2 gap-2">
+              {SERVICES.map((s) => {
+                const on = services.includes(s.key);
+                return (
+                  <button
+                    key={s.key}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => toggleService(s.key)}
+                    className={`text-left p-3 rounded-xl border transition ${
+                      on
+                        ? "bg-brand-50 border-brand-200 text-brand-700"
+                        : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
+                    }`}
+                  >
+                    <span className="font-medium">{s.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </Section>
+
+          <Section title="How do you work?">
+            <p className="text-sm text-slate-600 -mt-2">
+              Choose live-in, visiting, or both. Visits are paid by the hour;
+              live-in placements are agreed as a weekly price.
             </p>
-          </div>
-        </div>
-      </Section>
+            <div className="grid sm:grid-cols-2 gap-2">
+              {CARE_FORMATS.map((f) => {
+                const on = careFormats.includes(f.key);
+                return (
+                  <button
+                    key={f.key}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => toggleFormat(f.key)}
+                    className={`text-left p-3 rounded-xl border transition ${
+                      on
+                        ? "bg-brand-50 border-brand-200 text-brand-700"
+                        : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
+                    }`}
+                  >
+                    <span className="font-medium">{f.label}</span>
+                    <span className="block text-xs text-slate-500 mt-0.5">
+                      Paid by the {f.rateUnit}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </Section>
+        </>
+      )}
 
-      <Section title="Basics">
-        <Field label="Display name">
-          <input
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            maxLength={80}
-            required
-            className={INPUT_CLASS}
-            placeholder="Emma Thompson"
-          />
-        </Field>
-        <Field label="Headline" help="One line that families see at a glance">
-          <input
-            value={headline}
-            onChange={(e) => setHeadline(e.target.value)}
-            maxLength={120}
-            className={INPUT_CLASS}
-            placeholder="Maternity nurse · paediatric first-aid"
-          />
-        </Field>
-        <Field label="About you" help="At least 60 characters. Be specific.">
-          <textarea
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            rows={5}
-            maxLength={2000}
-            className={INPUT_CLASS}
-            placeholder="What you specialise in, your experience, what families can expect."
-          />
-          <div className="text-xs text-slate-500 mt-1">{bio.length}/2000</div>
-        </Field>
-      </Section>
-
-      <Section title="Where you work">
-        <div className="grid sm:grid-cols-2 gap-4">
-          <Field label="Country">
-            <select
-              value={country}
-              onChange={(e) => setCountry(e.target.value as "GB" | "US")}
-              className={INPUT_CLASS}
-            >
-              <option value="GB">United Kingdom</option>
-              <option value="US">United States</option>
-            </select>
-          </Field>
-          <Field label="City">
-            <input
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              required
-              className={INPUT_CLASS}
-              placeholder={country === "US" ? "New York" : "London"}
-            />
-          </Field>
-          <Field label="Region (optional)">
-            <input
-              value={region}
-              onChange={(e) => setRegion(e.target.value)}
-              className={INPUT_CLASS}
-              placeholder={country === "US" ? "NY" : "Greater London"}
-            />
-          </Field>
-          <Field label="Travel radius (km)">
-            <input
-              type="number"
-              min={1}
-              max={200}
-              value={maxRadius}
-              onChange={(e) => setMaxRadius(Number(e.target.value))}
-              className={INPUT_CLASS}
-            />
-          </Field>
-        </div>
-        <div className="mt-4">
-          <label className="flex items-start gap-2 text-sm text-slate-700 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={hidePreciseLocation}
-              onChange={(e) => setHidePreciseLocation(e.target.checked)}
-              className="mt-0.5 h-4 w-4 accent-brand"
-            />
-            <span>
-              Hide my exact location on the map.{" "}
-              <span className="text-slate-500">
-                Recommended — your pin is shown at district level only until a
-                booking is confirmed.
-              </span>
-            </span>
-          </label>
-        </div>
-      </Section>
-
-      <Section title="Services">
-        <p className="text-sm text-slate-600 -mt-2">Select all that apply.</p>
-        <div className="grid sm:grid-cols-2 gap-2">
-          {SERVICES.map((s) => {
-            const on = services.includes(s.key);
-            return (
-              <button
-                key={s.key}
-                type="button"
-                onClick={() => toggleService(s.key)}
-                className={`text-left p-3 rounded-xl border transition ${
-                  on
-                    ? "bg-brand-50 border-brand-200 text-brand-700"
-                    : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
-                }`}
-              >
-                <span className="font-medium">{s.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </Section>
-
-      <Section title="Work I take on">
-        <p className="text-sm text-slate-600 -mt-2">
-          Choose live-in, visiting, or both. Live-in placements are paid as a
-          weekly rate; visits are paid by the hour.
-        </p>
-        <div className="grid sm:grid-cols-2 gap-2">
-          {CARE_FORMATS.map((f) => {
-            const on = careFormats.includes(f.key);
-            return (
-              <button
-                key={f.key}
-                type="button"
-                onClick={() => toggleFormat(f.key)}
-                className={`text-left p-3 rounded-xl border transition ${
-                  on
-                    ? "bg-brand-50 border-brand-200 text-brand-700"
-                    : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
-                }`}
-              >
-                <span className="font-medium">{f.label}</span>
-                <span className="block text-xs text-slate-500 mt-0.5">
-                  Paid by the {f.rateUnit}
+      {step === 2 && (
+        <>
+          <Section title="Where you work">
+            <div className="grid sm:grid-cols-2 gap-4">
+              {US_REGION_ENABLED && (
+                <Field label="Country">
+                  <select
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value as "GB" | "US")}
+                    className={INPUT_CLASS}
+                  >
+                    <option value="GB">United Kingdom</option>
+                    <option value="US">United States</option>
+                  </select>
+                </Field>
+              )}
+              <Field label="Town or city">
+                <input
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  required
+                  className={INPUT_CLASS}
+                  placeholder={country === "US" ? "New York" : "London"}
+                />
+              </Field>
+              <Field label="County or area (optional)">
+                <input
+                  value={region}
+                  onChange={(e) => setRegion(e.target.value)}
+                  className={INPUT_CLASS}
+                  placeholder={country === "US" ? "NY" : "Greater London"}
+                />
+              </Field>
+              <Field label="How far will you travel? (km)">
+                <input
+                  type="number"
+                  min={1}
+                  max={200}
+                  value={maxRadius}
+                  onChange={(e) => setMaxRadius(Number(e.target.value))}
+                  className={INPUT_CLASS}
+                />
+              </Field>
+            </div>
+            <div className="mt-4">
+              <label className="flex items-start gap-2 text-sm text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hidePreciseLocation}
+                  onChange={(e) => setHidePreciseLocation(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-brand"
+                />
+                <span>
+                  Hide my exact location on the map.{" "}
+                  <span className="text-slate-500">
+                    Recommended: your pin shows at district level only until a
+                    booking is confirmed.
+                  </span>
                 </span>
-              </button>
-            );
-          })}
-        </div>
-      </Section>
-
-      <Section title="Rate & experience">
-        {careFormats.length === 0 && (
-          <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3 -mt-2">
-            Select at least one work type above to set your rate.
-          </p>
-        )}
-        <div className="grid sm:grid-cols-3 gap-4">
-          {offersVisiting && (
-            <Field
-              label={`Hourly rate (${currencySymbol})`}
-              help={`Your take-home: ${currencySymbol}${(
-                (hourlyRate * CARER_PAYOUT_PERCENT) /
-                100
-              ).toFixed(2)}/hr after ${CARER_FEE_PERCENT}% platform fee`}
-            >
-              <input
-                type="number"
-                min={8}
-                max={200}
-                step={1}
-                value={hourlyRate}
-                onChange={(e) => setHourlyRate(Number(e.target.value))}
-                required
-                className={INPUT_CLASS}
-              />
-            </Field>
-          )}
-          {offersLiveIn && (
-            <Field
-              label={`Weekly rate (${currencySymbol})`}
-              help={`Your take-home: ${currencySymbol}${(
-                (weeklyRate * CARER_PAYOUT_PERCENT) /
-                100
-              ).toFixed(2)}/wk after ${CARER_FEE_PERCENT}% platform fee`}
-            >
-              <input
-                type="number"
-                min={100}
-                max={5000}
-                step={10}
-                value={weeklyRate}
-                onChange={(e) => setWeeklyRate(Number(e.target.value))}
-                required
-                className={INPUT_CLASS}
-              />
-            </Field>
-          )}
-          <Field label="Years experience">
-            <input
-              type="number"
-              min={0}
-              max={60}
-              value={yearsExp}
-              onChange={(e) => setYearsExp(Number(e.target.value))}
-              className={INPUT_CLASS}
-            />
-          </Field>
-          <Field label="Languages (comma-separated)">
-            <input
-              value={languages}
-              onChange={(e) => setLanguages(e.target.value)}
-              className={INPUT_CLASS}
-              placeholder="English, Spanish"
-            />
-          </Field>
-        </div>
-      </Section>
-
-      <Section title="Personal & extras">
-        <p className="text-sm text-slate-600 -mt-2">
-          Optional. These help families filter to the right match. None are
-          required to publish.
-        </p>
-        <div className="grid sm:grid-cols-2 gap-4">
-          <Field label="Gender" help="Some families request gender-matched care">
-            <select
-              value={gender}
-              onChange={(e) => setGender(e.target.value as GenderKey | "")}
-              className={INPUT_CLASS}
-            >
-              <option value="">Not specified</option>
-              {GENDERS.map((g) => (
-                <option key={g.key} value={g.key}>
-                  {g.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Driving">
-            <div className="flex flex-col gap-2 mt-1">
-              <label className="inline-flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={hasLicense}
-                  onChange={(e) => setHasLicense(e.target.checked)}
-                  className="h-4 w-4 accent-brand"
-                />
-                I have a valid driver&rsquo;s licence
-              </label>
-              <label className="inline-flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={hasVehicle}
-                  onChange={(e) => setHasVehicle(e.target.checked)}
-                  className="h-4 w-4 accent-brand"
-                />
-                I have my own vehicle (insured for work use)
               </label>
             </div>
-          </Field>
-        </div>
+          </Section>
 
-        <Field
-          label="Certifications"
-          help="Tick everything you hold. Background checks are tracked separately."
-        >
-          <div className="mt-1 grid sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
-            {CERTIFICATIONS.map((c) => {
-              const on = certs.includes(c.key);
-              return (
-                <button
-                  key={c.key}
-                  type="button"
-                  onClick={() => toggleCert(c.key)}
-                  className={`text-left px-3 py-2 rounded-xl border text-sm transition ${
-                    on
-                      ? "bg-brand-50 border-brand-200 text-brand-700"
-                      : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
-                  }`}
+          <Section title="Your rates">
+            {careFormats.length === 0 && (
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3 -mt-2">
+                Go back one step and choose how you work (visiting, live-in or
+                both) to set your rates.
+              </p>
+            )}
+            <div className="grid sm:grid-cols-2 gap-4">
+              {offersVisiting && (
+                <Field
+                  label={`Hourly rate (${currencySymbol})`}
+                  help={`You keep ${currencySymbol}${(
+                    (hourlyRate * CARER_PAYOUT_PERCENT) /
+                    100
+                  ).toFixed(2)} per hour after our ${CARER_FEE_PERCENT}% platform fee`}
                 >
-                  <span className="inline-flex items-center gap-1.5">
-                    <span
-                      aria-hidden
-                      className={`h-3.5 w-3.5 rounded border ${on ? "bg-brand border-brand" : "border-slate-300"}`}
-                    />
-                    {c.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </Field>
+                  <input
+                    type="number"
+                    min={8}
+                    max={200}
+                    step={1}
+                    value={hourlyRate}
+                    onChange={(e) => setHourlyRate(Number(e.target.value))}
+                    required
+                    className={INPUT_CLASS}
+                  />
+                </Field>
+              )}
+              {offersLiveIn && (
+                <Field
+                  label={`Weekly rate for live-in (${currencySymbol}) — optional`}
+                  help={
+                    weeklyRate === ""
+                      ? "Leave blank if you'd rather agree a price with each family."
+                      : `You keep ${currencySymbol}${(
+                          (weeklyRate * CARER_PAYOUT_PERCENT) /
+                          100
+                        ).toFixed(2)} per week after our ${CARER_FEE_PERCENT}% platform fee`
+                  }
+                >
+                  <input
+                    type="number"
+                    min={100}
+                    max={5000}
+                    step={10}
+                    value={weeklyRate}
+                    onChange={(e) =>
+                      setWeeklyRate(e.target.value === "" ? "" : Number(e.target.value))
+                    }
+                    className={INPUT_CLASS}
+                    placeholder="e.g. 750"
+                  />
+                </Field>
+              )}
+            </div>
+          </Section>
 
-        <Field
-          label="Tags (comma-separated)"
-          help="Free-form keywords. e.g. non-smoker, pet-friendly, school-runs."
-        >
-          <input
-            value={tagsInput}
-            onChange={(e) => setTagsInput(e.target.value)}
-            className={INPUT_CLASS}
-            placeholder="non-smoker, pet-friendly, school-runs"
-          />
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {SUGGESTED_TAGS.map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => addTag(t)}
-                className="px-2 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs transition"
+          <Section title="Experience & languages">
+            <Field label="Years of experience">
+              <input
+                type="number"
+                min={0}
+                max={60}
+                value={yearsExp}
+                onChange={(e) => setYearsExp(Number(e.target.value))}
+                className={`${INPUT_CLASS} sm:max-w-[10rem]`}
+              />
+            </Field>
+            <Field label="Languages you speak" help="Tick all that apply.">
+              <div className="mt-1 flex flex-wrap gap-2">
+                {LANGUAGE_OPTIONS.map((l) => {
+                  const on = languages.includes(l);
+                  return (
+                    <button
+                      key={l}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => toggleLanguage(l)}
+                      className={`px-3 py-1.5 rounded-full border text-sm transition ${
+                        on
+                          ? "bg-brand-50 border-brand-200 text-brand-700"
+                          : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
+                      }`}
+                    >
+                      {on ? "✓ " : ""}
+                      {l}
+                    </button>
+                  );
+                })}
+              </div>
+              <input
+                value={otherLanguages}
+                onChange={(e) => setOtherLanguages(e.target.value)}
+                className={`${INPUT_CLASS} mt-3`}
+                placeholder="Other languages (separate with commas)"
+              />
+            </Field>
+          </Section>
+        </>
+      )}
+
+      {step === 3 && (
+        <Section title="A few extras">
+          <p className="text-sm text-slate-600 -mt-2">
+            All optional. These help families find the right match, and you
+            can skip this step.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Field label="Gender" help="Some families ask for gender-matched care">
+              <select
+                value={gender}
+                onChange={(e) => setGender(e.target.value as GenderKey | "")}
+                className={INPUT_CLASS}
               >
-                + {t}
-              </button>
-            ))}
+                <option value="">Prefer not to say</option>
+                {GENDERS.map((g) => (
+                  <option key={g.key} value={g.key}>
+                    {g.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Driving">
+              <div className="flex flex-col gap-2 mt-1">
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={hasLicense}
+                    onChange={(e) => setHasLicense(e.target.checked)}
+                    className="h-4 w-4 accent-brand"
+                  />
+                  I have a valid driver&rsquo;s licence
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={hasVehicle}
+                    onChange={(e) => setHasVehicle(e.target.checked)}
+                    className="h-4 w-4 accent-brand"
+                  />
+                  I have my own vehicle (insured for work use)
+                </label>
+              </div>
+            </Field>
           </div>
-        </Field>
-      </Section>
+
+          <Field
+            label="Certifications"
+            help="Tick everything you hold. Background checks are handled separately."
+          >
+            <div className="mt-1 grid sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
+              {CERTIFICATIONS.map((c) => {
+                const on = certs.includes(c.key);
+                return (
+                  <button
+                    key={c.key}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => toggleCert(c.key)}
+                    className={`text-left px-3 py-2 rounded-xl border text-sm transition ${
+                      on
+                        ? "bg-brand-50 border-brand-200 text-brand-700"
+                        : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      <span
+                        aria-hidden
+                        className={`h-3.5 w-3.5 rounded border ${on ? "bg-brand border-brand" : "border-slate-300"}`}
+                      />
+                      {c.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+
+          <Field
+            label="Tags"
+            help="Short keywords such as non-smoker, pet-friendly, school-runs. Tap to add."
+          >
+            <input
+              value={tagsInput}
+              onChange={(e) => setTagsInput(e.target.value)}
+              className={INPUT_CLASS}
+              placeholder="non-smoker, pet-friendly, school-runs"
+            />
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {SUGGESTED_TAGS.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => addTag(t)}
+                  className="px-2 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs transition"
+                >
+                  + {t}
+                </button>
+              ))}
+            </div>
+          </Field>
+        </Section>
+      )}
+
+      {isGoLive && (
+        <>
+          <div className="rounded-2xl border border-brand/30 bg-brand-50 p-5">
+            <h2 className="font-semibold text-brand-900">
+              Before you go live: the Founder Membership
+            </h2>
+            <p className="mt-1 text-sm text-slate-700">
+              Your profile and checks are free to set up. A £4.99/month
+              Founder Membership is only needed when you publish, so families
+              can find and book you. Your founder rate is locked for life.
+            </p>
+            <Link
+              href="/m/carer/membership"
+              className="mt-3 inline-flex items-center rounded-xl border border-brand px-4 py-2 text-sm font-medium text-brand-700 hover:bg-white"
+            >
+              Learn about membership
+            </Link>
+          </div>
+
+          <div className="p-6 rounded-2xl border border-slate-100 bg-white">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="font-semibold">
+                  {isPublished ? "You're listed on SpecialCarer" : "Ready to go live?"}
+                </h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  {isPublished
+                    ? "Families can find and book you. Unpublish to pause new requests."
+                    : "Tick off the list below, then publish."}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={pending || (!isPublished && !readiness.isPublishable)}
+                onClick={handlePublishToggle}
+                className={`px-5 py-2.5 rounded-xl text-sm font-medium transition disabled:opacity-50 ${
+                  isPublished
+                    ? "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
+                    : "bg-brand text-white hover:bg-brand-600"
+                }`}
+              >
+                {pending ? "Working…" : isPublished ? "Unpublish" : "Publish profile"}
+              </button>
+            </div>
+
+            <ul className="mt-5 space-y-2 text-sm">
+              <Check ok={readiness.hasName && readiness.hasBio}>
+                About you (name and a short bio){" "}
+                {!(readiness.hasName && readiness.hasBio) && (
+                  <StepLink onClick={() => setStep(0)}>add now</StepLink>
+                )}
+              </Check>
+              <Check ok={readiness.hasService && readiness.hasFormat}>
+                Who you care for and how you work{" "}
+                {!(readiness.hasService && readiness.hasFormat) && (
+                  <StepLink onClick={() => setStep(1)}>add now</StepLink>
+                )}
+              </Check>
+              <Check ok={readiness.hasRate && readiness.hasLocation}>
+                Your area and hourly rate{" "}
+                {!(readiness.hasRate && readiness.hasLocation) && (
+                  <StepLink onClick={() => setStep(2)}>add now</StepLink>
+                )}
+              </Check>
+              <Check ok={readiness.payoutsEnabled}>
+                Payouts, so you get paid —{" "}
+                <Link href="/dashboard/payouts" className="text-brand-700 underline">
+                  {readiness.payoutsEnabled ? "connected" : "set up now"}
+                </Link>
+              </Check>
+              <Check ok={readiness.bgChecksCleared}>
+                Background checks —{" "}
+                <Link href="/dashboard/verification" className="text-brand-700 underline">
+                  {readiness.bgChecksCleared
+                    ? "all cleared"
+                    : `${readiness.missingChecks.length} still to do`}
+                </Link>
+              </Check>
+            </ul>
+          </div>
+
+          {upgradeUrl && (
+            <div className="rounded-xl border border-brand/30 bg-brand-50 p-4">
+              <p className="text-sm font-semibold text-brand-900">
+                One last thing: start your Founder Membership
+              </p>
+              <p className="mt-1 text-sm text-slate-700">
+                Publishing needs an active £4.99/month Founder Membership. Your
+                profile is saved and nothing is lost.
+              </p>
+              <Link
+                href={upgradeUrl}
+                className="mt-3 inline-flex items-center rounded-xl bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
+              >
+                View membership
+              </Link>
+            </div>
+          )}
+
+          <InstantBookingSection />
+        </>
+      )}
 
       {err && (
         <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl p-3">
@@ -621,99 +890,49 @@ export default function ProfileEditor({
         </p>
       )}
 
-      {upgradeUrl && (
-        <div className="rounded-xl border border-brand/30 bg-brand-50 p-4">
-          <p className="text-sm font-semibold text-brand-900">
-            Become a Founding Carer to publish
-          </p>
-          <p className="mt-1 text-sm text-slate-700">
-            Publishing your profile requires an active £4.99/month Founder
-            Membership. Your founder rate is locked for life.
-          </p>
-          <Link
-            href={upgradeUrl}
-            className="mt-3 inline-flex items-center rounded-xl bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
-          >
-            View membership
-          </Link>
-        </div>
-      )}
-
       <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="submit"
-          disabled={saving}
-          className="px-5 py-2.5 rounded-xl bg-brand text-white text-sm font-medium hover:bg-brand-600 transition disabled:opacity-50"
-        >
-          {saving ? "Saving…" : "Save changes"}
-        </button>
+        {step > 0 && (
+          <button
+            type="button"
+            onClick={goBack}
+            disabled={saving}
+            className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition disabled:opacity-50"
+          >
+            Back
+          </button>
+        )}
+        {!isGoLive ? (
+          <button
+            type="submit"
+            disabled={saving}
+            className="px-5 py-2.5 rounded-xl bg-brand text-white text-sm font-medium hover:bg-brand-600 transition disabled:opacity-50"
+          >
+            {nextLabel}
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={saving}
+            className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 transition disabled:opacity-50"
+          >
+            {saving ? "Saving…" : "Save changes"}
+          </button>
+        )}
+        {step === 3 && !saving && (
+          <button
+            type="button"
+            onClick={() => setStep(lastStep)}
+            className="text-sm text-slate-500 underline hover:text-slate-700"
+          >
+            Skip for now
+          </button>
+        )}
         {savedAt && (
           <span className="text-sm text-emerald-700">
             Saved {new Date(savedAt).toLocaleTimeString()}
           </span>
         )}
       </div>
-
-      {/* Instant booking (additive) */}
-      <InstantBookingSection />
-
-      {/* Publish gate */}
-      <div className="mt-8 p-6 rounded-2xl border border-slate-100 bg-white">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3 className="font-semibold">
-              {isPublished ? "Listed on SpecialCarer" : "Publish your profile"}
-            </h3>
-            <p className="mt-1 text-sm text-slate-600">
-              {isPublished
-                ? "Families can find and book you. Unpublish to pause new requests."
-                : "When all checks below are green, you can go live."}
-            </p>
-          </div>
-          <button
-            type="button"
-            disabled={pending || (!isPublished && !readiness.isPublishable)}
-            onClick={handlePublishToggle}
-            className={`px-5 py-2.5 rounded-xl text-sm font-medium transition disabled:opacity-50 ${
-              isPublished
-                ? "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
-                : "bg-brand text-white hover:bg-brand-600"
-            }`}
-          >
-            {pending
-              ? "Working…"
-              : isPublished
-                ? "Unpublish"
-                : "Publish profile"}
-          </button>
-        </div>
-
-        <ul className="mt-5 space-y-2 text-sm">
-          <Check ok={readiness.hasName}>Display name set</Check>
-          <Check ok={readiness.hasBio}>Bio (60+ characters)</Check>
-          <Check ok={readiness.hasService}>At least one service selected</Check>
-          <Check ok={readiness.hasFormat}>
-            Live-in or visiting work declared
-          </Check>
-          <Check ok={readiness.hasRate}>Rate set for each work type</Check>
-          <Check ok={readiness.hasLocation}>City set</Check>
-          <Check ok={readiness.payoutsEnabled}>
-            Stripe payouts —{" "}
-            <Link href="/dashboard/payouts" className="text-brand-700 underline">
-              {readiness.payoutsEnabled ? "connected" : "set up now"}
-            </Link>
-          </Check>
-          <Check ok={readiness.bgChecksCleared}>
-            Background checks —{" "}
-            <Link href="/dashboard/verification" className="text-brand-700 underline">
-              {readiness.bgChecksCleared
-                ? "all cleared"
-                : `${readiness.missingChecks.length} still required`}
-            </Link>
-          </Check>
-        </ul>
-      </div>
-
     </form>
   );
 }
@@ -761,5 +980,23 @@ function Check({ ok, children }: { ok: boolean; children: React.ReactNode }) {
       </span>
       <span className={ok ? "text-slate-900" : "text-slate-700"}>{children}</span>
     </li>
+  );
+}
+
+function StepLink({
+  onClick,
+  children,
+}: {
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="text-brand-700 underline"
+    >
+      {children}
+    </button>
   );
 }

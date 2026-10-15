@@ -210,11 +210,14 @@ export function CarerOnboardingWizardClient({ initial, readiness }: Props) {
               setError("Set an hourly rate of at least £10/hr.");
               return;
             }
+            // Weekly rate is optional; only reject one that is set too low.
             if (
               offersLiveIn &&
-              (!state.weekly_rate_cents || state.weekly_rate_cents < 10000)
+              state.weekly_rate_cents != null &&
+              state.weekly_rate_cents > 0 &&
+              state.weekly_rate_cents < 10000
             ) {
-              setError("Set a weekly rate of at least £100/week.");
+              setError("A weekly rate should be at least £100, or leave it blank.");
               return;
             }
             if (!state.postcode.trim()) {
