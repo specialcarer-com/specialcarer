@@ -34,4 +34,8 @@ describe("verification page while uCheck is not live", () => {
     assert.match(page, /const stubMode =\s*country === "GB" && isUCheckStubMode\(\)/);
     assert.match(page, /stubMode\s*\n?\s*\? "Send your documents for review"/);
   });
+  it("does not say we never see documents while carers can send us documents", () => {
+    assert.match(page, /showManual \?/);
+    assert.match(page, /seen only by named SpecialCarer staff/);
+  });
 });

@@ -260,11 +260,21 @@ export default async function VerificationPage() {
 
       {showManual && <ManualVerification items={manualItems} />}
 
-      <p className="text-xs text-slate-500 mt-6">
-        SpecialCarer uses {provider} to run your checks. We never see your
-        personal documents &mdash; they&rsquo;re held securely by the provider
-        under {country === "US" ? "FCRA + CCPA" : "UK GDPR"}.
-      </p>
+      {showManual ? (
+        <p className="text-xs text-slate-500 mt-6">
+          Documents you send here are seen only by named SpecialCarer staff who
+          carry out your checks. They are stored securely and handled under UK
+          GDPR. Photo ID is deleted once it has been checked. Once automatic
+          online checks open, they are run by {provider} and we do not see your
+          documents.
+        </p>
+      ) : (
+        <p className="text-xs text-slate-500 mt-6">
+          SpecialCarer uses {provider} to run your checks. We never see your
+          personal documents &mdash; they&rsquo;re held securely by the provider
+          under {country === "US" ? "FCRA + CCPA" : "UK GDPR"}.
+        </p>
+      )}
     </div>
   );
 }
