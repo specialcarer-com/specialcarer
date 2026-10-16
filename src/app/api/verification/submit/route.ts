@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isStubMode as isUCheckStubMode } from "@/lib/uchecks/server";
 import {
   KINDS,
   KIND_KEYS,
@@ -41,6 +42,12 @@ export async function POST(req: Request) {
   }
   if (profile.country !== "GB") {
     return NextResponse.json({ error: "Manual verification is only available in the UK" }, { status: 400 });
+  }
+
+  // The manual route is only for while uCheck is not live; otherwise an
+  // approval could clear checks that uCheck should be running.
+  if (!isUCheckStubMode()) {
+    return NextResponse.json({ error: "Manual verification is not available right now." }, { status: 400 });
   }
 
   let form: FormData;
@@ -135,7 +142,7 @@ export async function POST(req: Request) {
       // Roll back so the carer can retry cleanly.
       const done = Object.values(paths);
       if (done.length) await admin.storage.from(BUCKET).remove(done);
-      await admin.from("verification_submissions").delete().eq("id", row.id);
+      await admin.from("verification_submissions").delete().eq("id", row.id).eq("status", "submitted");
       return NextResponse.json({ error: "Upload failed. Please try again." }, { status: 500 });
     }
     paths[key] = path;
@@ -147,7 +154,7 @@ export async function POST(req: Request) {
       .eq("id", row.id);
     if (updErr) {
       await admin.storage.from(BUCKET).remove(Object.values(paths));
-      await admin.from("verification_submissions").delete().eq("id", row.id);
+      await admin.from("verification_submissions").delete().eq("id", row.id).eq("status", "submitted");
       return NextResponse.json({ error: "Could not save your submission. Please try again." }, { status: 500 });
     }
   }

@@ -42,6 +42,13 @@ export async function decideSubmissionAction(input: {
   const checked = validateDecision(kind, input.decision, input.checklist ?? {}, input.note, input.expiresOn);
   if (!checked.ok) return { ok: false, error: checked.error };
 
+  // The row exists before its files finish uploading: never approve without evidence.
+  if (input.decision === "approved") {
+    const have = (row.files ?? {}) as Record<string, string>;
+    const missing = def.fields.filter((f) => f.type === "file" && f.required && !have[f.key]);
+    if (missing.length) return { ok: false, error: "The uploaded files are not ready yet. Please try again in a moment." };
+  }
+
   // 1. Claim the submission first (only one decision can win), so a second or
   //    stale request can never delete evidence it does not own.
   const nowIso = new Date().toISOString();
@@ -104,10 +111,23 @@ export async function decideSubmissionAction(input: {
       summary: `Verified by SpecialCarer back office on ${nowIso.slice(0, 10)}`,
     });
     if (!cleared.ok) {
-      await release();
+      if (def.deleteFilesOnDecision) {
+        // The photo is already gone, so this cannot go back in the queue: a
+        // retry would approve with no evidence. Close it so the carer resubmits.
+        await admin
+          .from("verification_submissions")
+          .update({
+            status: "rejected",
+            review_note: "System: the check could not be recorded after the photo was deleted. Please resubmit.",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", row.id);
+      } else {
+        await release();
+      }
       return {
         ok: false,
-        error: `Could not record the check: ${cleared.error}.${def.deleteFilesOnDecision ? " The photo has already been deleted, so reject this and ask the carer to resubmit." : ""}`,
+        error: `Could not record the check: ${cleared.error}.${def.deleteFilesOnDecision ? " The photo had already been deleted, so this was closed and the carer will be asked to resubmit." : ""}`,
       };
     }
   }

@@ -116,3 +116,19 @@ describe("decision flow order", () => {
     assert.ok(claim > 0 && del > claim, "claim must come before file deletion");
   });
 });
+
+describe("submit and decide safeguards", () => {
+  it("gates the submit route on stub mode and scopes rollback deletes", async () => {
+    const { readFileSync } = await import("node:fs");
+    const route = readFileSync(new URL("../../app/api/verification/submit/route.ts", import.meta.url), "utf8");
+    assert.match(route, /!isUCheckStubMode\(\)/);
+    assert.equal((route.match(/\.delete\(\)\.eq\("id", row\.id\)\.eq\("status", "submitted"\)/g) ?? []).length, 2);
+    assert.doesNotMatch(route, /\.delete\(\)\.eq\("id", row\.id\);/);
+  });
+  it("never approves without files and never requeues after the photo is deleted", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("../../app/admin/verification/actions.ts", import.meta.url), "utf8");
+    assert.match(src, /uploaded files are not ready yet/);
+    assert.match(src, /status: "rejected",\s*review_note: "System:/);
+  });
+});
