@@ -42,26 +42,14 @@ export async function decideSubmissionAction(input: {
   const checked = validateDecision(kind, input.decision, input.checklist ?? {}, input.note, input.expiresOn);
   if (!checked.ok) return { ok: false, error: checked.error };
 
-  // Photo ID is deleted before the decision is recorded: if deletion fails the
-  // decision is not saved and nothing is reported as done.
-  if (def.deleteFilesOnDecision) {
-    const paths = Object.values((row.files ?? {}) as Record<string, string>);
-    if (paths.length) {
-      const { error: rmErr } = await admin.storage.from(BUCKET).remove(paths);
-      if (rmErr) {
-        console.error("verification_file_delete_failed", { id: row.id, message: rmErr.message });
-        return { ok: false, error: "Could not delete the uploaded photo, so the decision was not saved. Please try again." };
-      }
-    }
-  }
-
+  // 1. Claim the submission first (only one decision can win), so a second or
+  //    stale request can never delete evidence it does not own.
   const nowIso = new Date().toISOString();
-  const { data: updated, error: updErr } = await admin
+  const { data: claimed, error: claimErr } = await admin
     .from("verification_submissions")
     .update({
       status: input.decision,
       checklist: input.checklist ?? {},
-      files: def.deleteFilesOnDecision ? {} : row.files ?? {},
       review_note: (input.note ?? "").trim() || null,
       expires_at: checked.expiresAt,
       reviewed_by: me.id,
@@ -71,9 +59,43 @@ export async function decideSubmissionAction(input: {
     .eq("id", row.id)
     .eq("status", "submitted")
     .select("id");
-  if (updErr) return { ok: false, error: updErr.message };
-  if (!updated || updated.length === 0) return { ok: false, error: "This has already been decided." };
+  if (claimErr) return { ok: false, error: claimErr.message };
+  if (!claimed || claimed.length === 0) return { ok: false, error: "This has already been decided." };
 
+  // Put the submission back in the queue so the decision can be retried.
+  const release = async () => {
+    await admin
+      .from("verification_submissions")
+      .update({
+        status: "submitted",
+        checklist: {},
+        review_note: null,
+        expires_at: null,
+        reviewed_by: null,
+        reviewed_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", row.id)
+      .eq("status", input.decision);
+  };
+
+  // 2. Photo ID is deleted before anything is reported as done. If deletion
+  //    fails the claim is released and the decision is not saved.
+  if (def.deleteFilesOnDecision) {
+    const paths = Object.values((row.files ?? {}) as Record<string, string>);
+    if (paths.length) {
+      const { error: rmErr } = await admin.storage.from(BUCKET).remove(paths);
+      if (rmErr) {
+        console.error("verification_file_delete_failed", { id: row.id, message: rmErr.message });
+        await release();
+        return { ok: false, error: "Could not delete the uploaded photo, so the decision was not saved. Please try again." };
+      }
+      const { error: clearErr } = await admin.from("verification_submissions").update({ files: {} }).eq("id", row.id);
+      if (clearErr) console.error("verification_files_column_clear_failed", { id: row.id, message: clearErr.message });
+    }
+  }
+
+  // 3. Approving a publish-gating kind records the cleared check.
   if (input.decision === "approved" && def.bgCheckType) {
     const cleared = await recordManualClearance(admin, {
       userId: row.user_id,
@@ -82,11 +104,7 @@ export async function decideSubmissionAction(input: {
       summary: `Verified by SpecialCarer back office on ${nowIso.slice(0, 10)}`,
     });
     if (!cleared.ok) {
-      // Put the submission back in the queue so the decision can be retried.
-      await admin
-        .from("verification_submissions")
-        .update({ status: "submitted", reviewed_by: null, reviewed_at: null, updated_at: nowIso })
-        .eq("id", row.id);
+      await release();
       return {
         ok: false,
         error: `Could not record the check: ${cleared.error}.${def.deleteFilesOnDecision ? " The photo has already been deleted, so reject this and ask the carer to resubmit." : ""}`,

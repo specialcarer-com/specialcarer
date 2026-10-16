@@ -106,3 +106,13 @@ describe("detectMime", () => {
     assert.equal(detectMime(new Uint8Array()), null);
   });
 });
+
+describe("decision flow order", () => {
+  it("claims the submission before deleting photo evidence", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("../../app/admin/verification/actions.ts", import.meta.url), "utf8");
+    const claim = src.indexOf('.eq("status", "submitted")');
+    const del = src.indexOf("storage.from(BUCKET).remove");
+    assert.ok(claim > 0 && del > claim, "claim must come before file deletion");
+  });
+});

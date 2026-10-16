@@ -262,8 +262,8 @@ export default async function VerificationPage() {
 
       {showManual ? (
         <p className="text-xs text-slate-500 mt-6">
-          Documents you send here are seen only by named SpecialCarer staff who
-          carry out your checks. They are stored securely and handled under UK
+          Documents you send here are seen only by SpecialCarer administrators
+          who carry out your checks. They are stored securely and handled under UK
           GDPR. Photo ID is deleted once it has been checked. Once automatic
           online checks open, they are run by {provider} and we do not see your
           documents.

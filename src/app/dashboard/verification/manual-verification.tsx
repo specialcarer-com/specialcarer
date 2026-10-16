@@ -169,7 +169,7 @@ export default function ManualVerification({ items }: { items: ManualItem[] }) {
     <section className="mt-8">
       <h2 className="font-medium">Send your documents for review</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Our team checks each item by hand. Your documents are stored securely, only named staff can see them, and photo
+        Our team checks each item by hand. Your documents are stored securely, only SpecialCarer administrators can see them, and photo
         ID is deleted once checked. Items marked as needed to go live are right to work, photo ID and your DBS.
       </p>
       <ul className="mt-4 space-y-3">

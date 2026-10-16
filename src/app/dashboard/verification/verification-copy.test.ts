@@ -36,6 +36,6 @@ describe("verification page while uCheck is not live", () => {
   });
   it("does not say we never see documents while carers can send us documents", () => {
     assert.match(page, /showManual \?/);
-    assert.match(page, /seen only by named SpecialCarer staff/);
+    assert.match(page, /seen only by SpecialCarer administrators/);
   });
 });
