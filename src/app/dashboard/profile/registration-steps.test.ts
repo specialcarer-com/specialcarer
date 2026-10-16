@@ -64,6 +64,12 @@ describe("editor wiring", () => {
     assert.match(src, /allLanguages\.length > MAX_LANGUAGES/);
     assert.doesNotMatch(src, /New York/);
   });
+  it("saves pending edits before any step jump", () => {
+    assert.match(src, /async function goToStep\(target: number\)/);
+    assert.match(src, /if \(await save\(\)\)/);
+    assert.doesNotMatch(src, /setStep\(i\)/);
+    assert.doesNotMatch(src, /onClick=\{\(\) => setStep\(/);
+  });
   it("explains the Founder Membership before the publish step fails", () => {
     assert.match(src, /Founder Membership/);
     assert.match(src, /only needed when you publish/);

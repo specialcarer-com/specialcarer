@@ -224,10 +224,20 @@ export default function ProfileEditor({
     }
   }
 
+  // Jump to any step (progress pills, "add now" links, Back, Skip). Pending
+  // edits are saved first so nothing is lost on refresh and the Go live
+  // checklist reflects what was just entered. If the save fails, stay put and
+  // show the error.
+  async function goToStep(target: number) {
+    if (target === step || saving) return;
+    if (await save()) {
+      setStep(target);
+      if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
+
   function goBack() {
-    setErr(null);
-    setStep((n) => Math.max(n - 1, 0));
-    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+    void goToStep(Math.max(step - 1, 0));
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -368,10 +378,7 @@ export default function ProfileEditor({
             <li key={title}>
               <button
                 type="button"
-                onClick={() => {
-                  setErr(null);
-                  setStep(i);
-                }}
+                onClick={() => void goToStep(i)}
                 className={`px-3 py-1 rounded-full text-xs font-medium border transition ${
                   i === step
                     ? "bg-brand text-white border-brand"
@@ -837,19 +844,19 @@ export default function ProfileEditor({
               <Check ok={readiness.hasName && readiness.hasBio}>
                 About you (name and a short bio){" "}
                 {!(readiness.hasName && readiness.hasBio) && (
-                  <StepLink onClick={() => setStep(0)}>add now</StepLink>
+                  <StepLink onClick={() => void goToStep(0)}>add now</StepLink>
                 )}
               </Check>
               <Check ok={readiness.hasService && readiness.hasFormat}>
                 Who you care for and how you work{" "}
                 {!(readiness.hasService && readiness.hasFormat) && (
-                  <StepLink onClick={() => setStep(1)}>add now</StepLink>
+                  <StepLink onClick={() => void goToStep(1)}>add now</StepLink>
                 )}
               </Check>
               <Check ok={readiness.hasRate && readiness.hasLocation}>
                 Your area and hourly rate{" "}
                 {!(readiness.hasRate && readiness.hasLocation) && (
-                  <StepLink onClick={() => setStep(2)}>add now</StepLink>
+                  <StepLink onClick={() => void goToStep(2)}>add now</StepLink>
                 )}
               </Check>
               <Check ok={readiness.payoutsEnabled}>
@@ -928,7 +935,7 @@ export default function ProfileEditor({
         {step === 3 && !saving && (
           <button
             type="button"
-            onClick={() => setStep(lastStep)}
+            onClick={() => void goToStep(lastStep)}
             className="text-sm text-slate-500 underline hover:text-slate-700"
           >
             Skip for now
