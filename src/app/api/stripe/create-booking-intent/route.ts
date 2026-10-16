@@ -23,6 +23,7 @@ import {
 } from "@/lib/bookings/server-pricing";
 import { retrievePaymentIntent } from "@/lib/payments/payment-intent-retrieval";
 import { canCreateFamilyBooking } from "@/lib/auth/account-side";
+import { carerBookableError } from "@/lib/bookings/carer-bookable";
 import {
   assertConnectReadyForBooking,
   friendlyReasonMessage,
@@ -325,6 +326,25 @@ export async function POST(req: Request) {
   // 60-min cache; live refresh on stale. See
   // src/lib/stripe/connect-readiness.ts and
   // supabase/migrations/20260911230000_stripe_connect_capabilities.sql.
+  // Only published carers can be booked. This runs first so a direct link to
+  // an unpublished (unverified, paused or test) carer never reaches Stripe.
+  const { data: publishState, error: publishStateError } = await admin
+    .from("caregiver_profiles")
+    .select("is_published")
+    .eq("user_id", body.caregiver_id!)
+    .maybeSingle<{ is_published: boolean | null }>();
+  if (publishStateError) {
+    console.error(
+      "[create-booking-intent] carer publish-state lookup failed",
+      publishStateError,
+    );
+    return NextResponse.json({ error: "database_error" }, { status: 503 });
+  }
+  const notBookable = carerBookableError(publishState);
+  if (notBookable) {
+    return NextResponse.json(notBookable, { status: 409 });
+  }
+
   const readiness = await assertConnectReadyForBooking(
     { admin, stripe },
     { carerId: body.caregiver_id! },
