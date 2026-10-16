@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import ManualVerification, { type ManualItem } from "./manual-verification";
+import { KIND_KEYS, type KindKey } from "@/lib/verification/kinds";
 import VerificationClient from "./verification-client";
 import { isStubMode as isUCheckStubMode } from "@/lib/uchecks/server";
 
@@ -135,6 +137,30 @@ export default async function VerificationPage() {
   const stubWithChecks =
     country === "GB" && isUCheckStubMode() && anyStarted && !allCleared;
 
+  // Interim manual route: while uCheck is not live, GB carers can send their
+  // evidence for back-office review.
+  const showManual = country === "GB" && isUCheckStubMode();
+  let manualItems: ManualItem[] = [];
+  if (showManual) {
+    const { data: subs } = await admin
+      .from("verification_submissions")
+      .select("kind, status, review_note, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    const latest = new Map<string, { status: string; review_note: string | null }>();
+    (subs ?? []).forEach((r) => {
+      if (!latest.has(r.kind)) latest.set(r.kind, r);
+    });
+    manualItems = KIND_KEYS.map((k: KindKey) => {
+      const r = latest.get(k);
+      return {
+        kind: k,
+        status: (r?.status as ManualItem["status"]) ?? "none",
+        reviewNote: r?.review_note ?? null,
+      };
+    });
+  }
+
   const provider =
     country === "US"
       ? "Checkr (FCRA-compliant background-check provider used by Lyft, DoorDash, and Care.com)"
@@ -202,7 +228,7 @@ export default async function VerificationPage() {
       <div className="mt-8 p-6 rounded-2xl bg-white border border-slate-200">
         <h2 className="font-medium">
           {stubMode
-            ? "Verification opens soon"
+            ? "Send your documents for review"
             : stubWithChecks
               ? "Your verification is under way"
               : anyStarted
@@ -211,7 +237,7 @@ export default async function VerificationPage() {
         </h2>
         <p className="text-sm text-slate-600 mt-1">
           {stubMode
-            ? "Your three DBS-backed checks will be run securely. Nothing for you to do yet."
+            ? "Use the section below to send your documents. Our team checks them by hand and there is no charge."
             : stubWithChecks
               ? "The status of each check is shown above."
               : anyStarted
@@ -228,6 +254,8 @@ export default async function VerificationPage() {
           />
         </div>
       </div>
+
+      {showManual && <ManualVerification items={manualItems} />}
 
       <p className="text-xs text-slate-500 mt-6">
         SpecialCarer uses {provider} to run your checks. We never see your
