@@ -226,7 +226,10 @@ export function CarerOnboardingWizardClient({ initial, readiness }: Props) {
             }
             const ok = await savePartial({
               hourly_rate_cents: offersVisiting ? state.hourly_rate_cents : null,
-              weekly_rate_cents: offersLiveIn ? state.weekly_rate_cents : null,
+              weekly_rate_cents:
+                offersLiveIn && state.weekly_rate_cents
+                  ? state.weekly_rate_cents
+                  : null,
               currency: state.country === "US" ? "USD" : "GBP",
               city: state.city.trim() || null,
               postcode: state.postcode.trim(),

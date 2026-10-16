@@ -59,6 +59,11 @@ describe("editor wiring", () => {
     assert.match(src, /US_REGION_ENABLED \? initial\.country : "GB"/);
     assert.match(src, /US_REGION_ENABLED && \(/);
   });
+  it("caps languages at the API limit with a visible message and no US placeholders", () => {
+    assert.match(src, /const MAX_LANGUAGES = 8/);
+    assert.match(src, /allLanguages\.length > MAX_LANGUAGES/);
+    assert.doesNotMatch(src, /New York/);
+  });
   it("explains the Founder Membership before the publish step fails", () => {
     assert.match(src, /Founder Membership/);
     assert.match(src, /only needed when you publish/);

@@ -22,6 +22,8 @@ import {
   type GenderKey,
 } from "@/lib/care/attributes";
 
+// Matches the limit enforced by PATCH /api/caregiver/profile.
+const MAX_LANGUAGES = 8;
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp"] as const;
 
@@ -149,7 +151,12 @@ export default function ProfileEditor({
         .split(",")
         .map((l) => l.trim())
         .filter(Boolean);
-      const allLanguages = Array.from(new Set([...languages, ...otherLangs])).slice(0, 8);
+      const allLanguages = Array.from(new Set([...languages, ...otherLangs]));
+      if (allLanguages.length > MAX_LANGUAGES) {
+        throw new Error(
+          `Please choose up to ${MAX_LANGUAGES} languages (you have ${allLanguages.length}). Untick a few and try again.`,
+        );
+      }
       const res = await fetch("/api/caregiver/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -536,7 +543,7 @@ export default function ProfileEditor({
                   onChange={(e) => setCity(e.target.value)}
                   required
                   className={INPUT_CLASS}
-                  placeholder={country === "US" ? "New York" : "London"}
+                  placeholder="London"
                 />
               </Field>
               <Field label="County or area (optional)">
@@ -544,7 +551,7 @@ export default function ProfileEditor({
                   value={region}
                   onChange={(e) => setRegion(e.target.value)}
                   className={INPUT_CLASS}
-                  placeholder={country === "US" ? "NY" : "Greater London"}
+                  placeholder="Greater London"
                 />
               </Field>
               <Field label="How far will you travel? (km)">
@@ -645,7 +652,7 @@ export default function ProfileEditor({
                 className={`${INPUT_CLASS} sm:max-w-[10rem]`}
               />
             </Field>
-            <Field label="Languages you speak" help="Tick all that apply.">
+            <Field label="Languages you speak" help="Tick up to 8.">
               <div className="mt-1 flex flex-wrap gap-2">
                 {LANGUAGE_OPTIONS.map((l) => {
                   const on = languages.includes(l);
