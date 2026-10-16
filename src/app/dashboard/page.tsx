@@ -337,7 +337,7 @@ export default async function DashboardPage() {
   return (
     <main className="min-h-screen flex flex-col bg-slate-50">
       <header className="px-6 py-5 bg-white border-b border-slate-100">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <Image src="/brand/logo.svg" alt="SpecialCarer" width={322} height={242} className="h-16 md:h-20 w-auto" priority />
           </Link>
@@ -358,7 +358,7 @@ export default async function DashboardPage() {
       </header>
 
       <section className="flex-1 px-6 py-10">
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <div>
               <span className="inline-block px-3 py-1 rounded-full bg-brand-50 text-brand-700 text-xs font-medium">
