@@ -18,7 +18,7 @@ describe("verification page while uCheck is not live", () => {
     assert.match(client, /\/dashboard\/support/);
   });
   it("does not name the vendor or promise an email nobody sends", () => {
-    const stub = client.slice(client.indexOf("if (stubMode)"), client.indexOf("return (", client.indexOf("if (stubMode)") + 20));
+    const stub = client.slice(client.indexOf("if (stubMode)"), client.indexOf("\n  }\n", client.indexOf("if (stubMode)")));
     assert.ok(stub.length > 100);
     assert.doesNotMatch(stub, /uCheck|Checkr/);
     assert.doesNotMatch(stub, /email\s+you/i);
