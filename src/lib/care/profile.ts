@@ -249,17 +249,16 @@ export async function computeReadiness(userId: string): Promise<ProfileReadiness
 
   const formats = (profile?.care_formats ?? []) as string[];
   const offersVisiting = formats.includes("visiting");
-  const offersLiveIn = formats.includes("live_in");
 
   const hasProfile = !!profile;
   const hasName = !!profile?.display_name;
   const hasBio = !!profile?.bio && profile.bio.length >= 60;
   const hasFormat = formats.length > 0;
-  // Rate readiness depends on declared formats: each declared format must
-  // have its corresponding rate set.
+  // Rate readiness: visiting carers must set an hourly rate. A live-in weekly
+  // rate is optional: live-in requests are agreed with the family directly
+  // rather than priced from the profile, so blank is allowed.
   const hourlyOk = !offersVisiting || (profile?.hourly_rate_cents != null && profile.hourly_rate_cents > 0);
-  const weeklyOk = !offersLiveIn || (profile?.weekly_rate_cents != null && profile.weekly_rate_cents > 0);
-  const hasRate = hasFormat && hourlyOk && weeklyOk;
+  const hasRate = hasFormat && hourlyOk;
   const hasService = (profile?.services ?? []).length > 0;
   const hasLocation = !!profile?.city;
   const payoutsEnabled = !!stripe?.payouts_enabled;
