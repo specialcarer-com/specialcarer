@@ -43,7 +43,7 @@ export default async function ReviewSubmission({ params }: { params: Promise<{ i
   // Short-lived links; every time documents are opened it is written to the audit log.
   const links: { key: string; label: string; url: string }[] = [];
   const paths = (sub.files ?? {}) as Record<string, string>;
-  for (const [key, path] of Object.entries(paths)) {
+  for (const [key, path] of sub.status === "submitted" ? Object.entries(paths) : []) {
     const { data } = await admin.storage.from(BUCKET).createSignedUrl(path, 300);
     if (data?.signedUrl) {
       links.push({ key, label: def.fields.find((f) => f.key === key)?.label ?? key, url: data.signedUrl });

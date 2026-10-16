@@ -42,12 +42,26 @@ export async function decideSubmissionAction(input: {
   const checked = validateDecision(kind, input.decision, input.checklist ?? {}, input.note, input.expiresOn);
   if (!checked.ok) return { ok: false, error: checked.error };
 
+  // Photo ID is deleted before the decision is recorded: if deletion fails the
+  // decision is not saved and nothing is reported as done.
+  if (def.deleteFilesOnDecision) {
+    const paths = Object.values((row.files ?? {}) as Record<string, string>);
+    if (paths.length) {
+      const { error: rmErr } = await admin.storage.from(BUCKET).remove(paths);
+      if (rmErr) {
+        console.error("verification_file_delete_failed", { id: row.id, message: rmErr.message });
+        return { ok: false, error: "Could not delete the uploaded photo, so the decision was not saved. Please try again." };
+      }
+    }
+  }
+
   const nowIso = new Date().toISOString();
   const { data: updated, error: updErr } = await admin
     .from("verification_submissions")
     .update({
       status: input.decision,
       checklist: input.checklist ?? {},
+      files: def.deleteFilesOnDecision ? {} : row.files ?? {},
       review_note: (input.note ?? "").trim() || null,
       expires_at: checked.expiresAt,
       reviewed_by: me.id,
@@ -73,19 +87,10 @@ export async function decideSubmissionAction(input: {
         .from("verification_submissions")
         .update({ status: "submitted", reviewed_by: null, reviewed_at: null, updated_at: nowIso })
         .eq("id", row.id);
-      return { ok: false, error: `Could not record the check: ${cleared.error}` };
-    }
-  }
-
-  if (def.deleteFilesOnDecision) {
-    const paths = Object.values((row.files ?? {}) as Record<string, string>);
-    if (paths.length) {
-      const { error: rmErr } = await admin.storage.from(BUCKET).remove(paths);
-      if (!rmErr) {
-        await admin.from("verification_submissions").update({ files: {} }).eq("id", row.id);
-      } else {
-        console.error("verification_file_delete_failed", { id: row.id, message: rmErr.message });
-      }
+      return {
+        ok: false,
+        error: `Could not record the check: ${cleared.error}.${def.deleteFilesOnDecision ? " The photo has already been deleted, so reject this and ask the carer to resubmit." : ""}`,
+      };
     }
   }
 

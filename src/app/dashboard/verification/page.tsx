@@ -144,10 +144,10 @@ export default async function VerificationPage() {
   if (showManual) {
     const { data: subs } = await admin
       .from("verification_submissions")
-      .select("kind, status, review_note, created_at")
+      .select("kind, status, review_note, expires_at, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
-    const latest = new Map<string, { status: string; review_note: string | null }>();
+    const latest = new Map<string, { status: string; review_note: string | null; expires_at: string | null }>();
     (subs ?? []).forEach((r) => {
       if (!latest.has(r.kind)) latest.set(r.kind, r);
     });
@@ -155,7 +155,10 @@ export default async function VerificationPage() {
       const r = latest.get(k);
       return {
         kind: k,
-        status: (r?.status as ManualItem["status"]) ?? "none",
+        status:
+          r?.status === "approved" && r.expires_at && new Date(r.expires_at).getTime() <= Date.now()
+            ? "expired"
+            : ((r?.status as ManualItem["status"]) ?? "none"),
         reviewNote: r?.review_note ?? null,
       };
     });

@@ -5,6 +5,7 @@ import {
   KINDS,
   KIND_KEYS,
   MAX_FILE_BYTES,
+  detectMime,
   fileAllowed,
   storagePath,
   validateSubmission,
@@ -65,10 +66,15 @@ export async function POST(req: Request) {
       if (v instanceof File && v.size > 0) {
         if (v.size > MAX_FILE_BYTES) {
           fileErrors.push(`${f.label} is too large (4MB maximum)`);
-        } else if (!fileAllowed(f.accept ?? "image", v.type)) {
-          fileErrors.push(`${f.label} must be a ${f.accept === "image_or_pdf" ? "photo or PDF" : "photo"}`);
         } else {
-          files[f.key] = { buf: Buffer.from(await v.arrayBuffer()), mime: v.type };
+          // Trust the bytes, not the client-supplied type.
+          const buf = Buffer.from(await v.arrayBuffer());
+          const mime = detectMime(buf);
+          if (!mime || !fileAllowed(f.accept ?? "image", mime)) {
+            fileErrors.push(`${f.label} must be a ${f.accept === "image_or_pdf" ? "photo or PDF" : "photo"}`);
+          } else {
+            files[f.key] = { buf, mime };
+          }
         }
       }
     } else if (typeof v === "string") {

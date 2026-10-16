@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   KINDS,
   KIND_KEYS,
+  detectMime,
   fileAllowed,
   normaliseShareCode,
   storagePath,
@@ -92,5 +93,16 @@ describe("files", () => {
     assert.ok(!fileAllowed("image", "application/pdf"));
     assert.ok(fileAllowed("image_or_pdf", "application/pdf"));
     assert.ok(!fileAllowed("image_or_pdf", "text/html"));
+  });
+});
+
+describe("detectMime", () => {
+  it("identifies formats from content, not from a label", () => {
+    assert.equal(detectMime(Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0])), "image/jpeg");
+    assert.equal(detectMime(Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])), "image/png");
+    assert.equal(detectMime(new TextEncoder().encode("RIFF\0\0\0\0WEBPVP8 ")), "image/webp");
+    assert.equal(detectMime(new TextEncoder().encode("%PDF-1.7")), "application/pdf");
+    assert.equal(detectMime(new TextEncoder().encode("<html><script>alert(1)</script>")), null);
+    assert.equal(detectMime(new Uint8Array()), null);
   });
 });

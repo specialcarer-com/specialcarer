@@ -6,7 +6,7 @@ import { KINDS, MAX_FILE_BYTES, type KindKey } from "@/lib/verification/kinds";
 
 export type ManualItem = {
   kind: KindKey;
-  status: "none" | "submitted" | "approved" | "rejected";
+  status: "none" | "submitted" | "approved" | "rejected" | "expired";
   reviewNote: string | null;
 };
 
@@ -14,6 +14,7 @@ const BADGE: Record<ManualItem["status"], { text: string; cls: string }> = {
   none: { text: "Not sent", cls: "bg-slate-100 text-slate-700 border-slate-200" },
   submitted: { text: "Awaiting review", cls: "bg-amber-50 text-amber-800 border-amber-200" },
   approved: { text: "Approved", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  expired: { text: "Expired", cls: "bg-rose-50 text-rose-700 border-rose-200" },
   rejected: { text: "Needs changes", cls: "bg-rose-50 text-rose-700 border-rose-200" },
 };
 
@@ -82,7 +83,7 @@ function KindForm({ item }: { item: ManualItem }) {
   }
 
   const badge = BADGE[item.status];
-  const canSend = item.status === "none" || item.status === "rejected";
+  const canSend = item.status === "none" || item.status === "rejected" || item.status === "expired";
   const input = "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm";
 
   return (
@@ -105,7 +106,7 @@ function KindForm({ item }: { item: ManualItem }) {
           onClick={() => setOpen(true)}
           className="mt-3 rounded-full bg-[#039EA0] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
         >
-          {item.status === "rejected" ? "Send again" : "Add details"}
+          {item.status === "rejected" || item.status === "expired" ? "Send again" : "Add details"}
         </button>
       )}
       {canSend && open && (
