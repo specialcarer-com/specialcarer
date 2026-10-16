@@ -42,8 +42,10 @@ export async function decideSubmissionAction(input: {
   const checked = validateDecision(kind, input.decision, input.checklist ?? {}, input.note, input.expiresOn);
   if (!checked.ok) return { ok: false, error: checked.error };
 
-  // The row exists before its files finish uploading: never approve without evidence.
-  if (input.decision === "approved") {
+  // The row exists before its files finish uploading. Wait for the files before
+  // approving (never approve without evidence) and before deciding any kind
+  // whose photo we delete, so a late upload cannot be attached to a decided row.
+  if (input.decision === "approved" || def.deleteFilesOnDecision) {
     const have = (row.files ?? {}) as Record<string, string>;
     const missing = def.fields.filter((f) => f.type === "file" && f.required && !have[f.key]);
     if (missing.length) return { ok: false, error: "The uploaded files are not ready yet. Please try again in a moment." };
@@ -114,14 +116,25 @@ export async function decideSubmissionAction(input: {
       if (def.deleteFilesOnDecision) {
         // The photo is already gone, so this cannot go back in the queue: a
         // retry would approve with no evidence. Close it so the carer resubmits.
-        await admin
-          .from("verification_submissions")
-          .update({
-            status: "rejected",
-            review_note: "System: the check could not be recorded after the photo was deleted. Please resubmit.",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", row.id);
+        let closed = false;
+        for (let attempt = 0; attempt < 2 && !closed; attempt++) {
+          const { error: closeErr } = await admin
+            .from("verification_submissions")
+            .update({
+              status: "rejected",
+              review_note: "System: the check could not be recorded after the photo was deleted. Please resubmit.",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", row.id);
+          closed = !closeErr;
+          if (closeErr) console.error("verification_close_failed", { id: row.id, message: closeErr.message });
+        }
+        if (!closed) {
+          return {
+            ok: false,
+            error: `Could not record the check, and the submission could not be closed either (reference ${row.id}). The photo has been deleted. Please contact the developer before taking any further action on this carer.`,
+          };
+        }
       } else {
         await release();
       }

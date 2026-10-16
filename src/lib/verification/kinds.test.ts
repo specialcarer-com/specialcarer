@@ -132,3 +132,15 @@ describe("submit and decide safeguards", () => {
     assert.match(src, /status: "rejected",\s*review_note: "System:/);
   });
 });
+
+describe("late-upload and closure safeguards", () => {
+  it("waits for files before deciding photo-backed kinds, and attaches files only while waiting", async () => {
+    const { readFileSync } = await import("node:fs");
+    const act = readFileSync(new URL("../../app/admin/verification/actions.ts", import.meta.url), "utf8");
+    assert.match(act, /input\.decision === "approved" \|\| def\.deleteFilesOnDecision/);
+    assert.match(act, /could not be closed either/);
+    const route = readFileSync(new URL("../../app/api/verification/submit/route.ts", import.meta.url), "utf8");
+    assert.match(route, /\.update\(\{ files: paths \}\)\s*\.eq\("id", row\.id\)\s*\.eq\("status", "submitted"\)/);
+  });
+});
+

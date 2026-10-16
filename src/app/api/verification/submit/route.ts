@@ -148,10 +148,18 @@ export async function POST(req: Request) {
     paths[key] = path;
   }
   if (Object.keys(paths).length) {
-    const { error: updErr } = await admin
+    // Only attach files while the submission is still waiting; if it was
+    // decided in the meantime, remove what we just uploaded.
+    const { data: attached, error: updErr } = await admin
       .from("verification_submissions")
       .update({ files: paths })
-      .eq("id", row.id);
+      .eq("id", row.id)
+      .eq("status", "submitted")
+      .select("id");
+    if (!updErr && (!attached || attached.length === 0)) {
+      await admin.storage.from(BUCKET).remove(Object.values(paths));
+      return NextResponse.json({ error: "This submission was already reviewed. Please start again." }, { status: 409 });
+    }
     if (updErr) {
       await admin.storage.from(BUCKET).remove(Object.values(paths));
       await admin.from("verification_submissions").delete().eq("id", row.id).eq("status", "submitted");
