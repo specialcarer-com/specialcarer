@@ -12,6 +12,8 @@ type Props = {
    * surface a clear message instead, so carers don't hit a broken page.
    */
   stubMode?: boolean;
+  /** Stub mode, but the carer already has check rows: show their state, not "opens soon". */
+  stubWithChecks?: boolean;
 };
 
 export default function VerificationClient({
@@ -19,6 +21,7 @@ export default function VerificationClient({
   allCleared,
   country,
   stubMode = false,
+  stubWithChecks = false,
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,17 +59,36 @@ export default function VerificationClient({
     );
   }
 
-  // Stub mode: real uCheck integration not yet live. Block the broken
-  // self-serve link and tell the carer what happens next.
+  // Stub mode: the live uCheck connection is not switched on yet. Hide the
+  // broken self-serve link and say plainly what is going on. We deliberately
+  // do not promise a manual process or a timescale: carers have no way to
+  // send documents here, so the honest message is "nothing to do yet".
+  if (stubWithChecks) {
+    return (
+      <p className="text-sm text-slate-600">
+        Your verification is already under way. The status of each check is
+        shown above and updates here as it changes.
+      </p>
+    );
+  }
+
   if (stubMode) {
     return (
       <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900">
-        <p className="font-medium">Self-serve verification coming soon.</p>
+        <p className="font-medium">Verification opens soon.</p>
         <p className="mt-1">
-          We&rsquo;re finalising our integration with uCheck. In the meantime,
-          our team will clear your DBS and Right to Work checks manually after
-          we&rsquo;ve received your documents. We&rsquo;ll email you with next
-          steps within one working day.
+          We&rsquo;re setting up DBS checks. There is nothing for you to do yet,
+          and your checks are free. Check back here later. In the meantime you
+          can finish your profile and set up payouts.
+        </p>
+        <p className="mt-2">
+          <a href="/dashboard/profile" className="underline font-medium">
+            Finish your profile
+          </a>
+          {" · "}
+          <a href="/dashboard/support" className="underline">
+            Contact support
+          </a>
         </p>
       </div>
     );
