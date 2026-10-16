@@ -128,6 +128,8 @@ export default async function VerificationPage() {
   );
   const anyStarted = (rows ?? []).length > 0;
 
+  const stubMode = country === "GB" && isUCheckStubMode();
+
   const provider =
     country === "US"
       ? "Checkr (FCRA-compliant background-check provider used by Lyft, DoorDash, and Care.com)"
@@ -194,19 +196,25 @@ export default async function VerificationPage() {
 
       <div className="mt-8 p-6 rounded-2xl bg-white border border-slate-200">
         <h2 className="font-medium">
-          {anyStarted ? "Continue your verification" : "Start your verification"}
+          {stubMode
+            ? "Verification opens soon"
+            : anyStarted
+              ? "Continue your verification"
+              : "Start your verification"}
         </h2>
         <p className="text-sm text-slate-600 mt-1">
-          {anyStarted
-            ? `Pick up where you left off in the secure ${vendorLabel} portal.`
-            : `We'll redirect you to ${vendorLabel} to verify your ID and run your checks. Takes about 10 minutes.`}
+          {stubMode
+            ? "Your three checks will be run securely by uCheck. We'll tell you the moment you can begin."
+            : anyStarted
+              ? `Pick up where you left off in the secure ${vendorLabel} portal.`
+              : `We'll redirect you to ${vendorLabel} to verify your ID and run your checks. Takes about 10 minutes.`}
         </p>
         <div className="mt-4">
           <VerificationClient
             inviteUrl={inviteUrl}
             allCleared={allCleared}
             country={country}
-            stubMode={country === "GB" && isUCheckStubMode()}
+            stubMode={stubMode}
           />
         </div>
       </div>
