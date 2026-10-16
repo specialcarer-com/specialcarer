@@ -128,7 +128,12 @@ export default async function VerificationPage() {
   );
   const anyStarted = (rows ?? []).length > 0;
 
-  const stubMode = country === "GB" && isUCheckStubMode();
+  // Stub notice only for carers who have not started: anyone with check rows
+  // (in progress or cleared) keeps the state-appropriate copy below.
+  const stubMode =
+    country === "GB" && isUCheckStubMode() && !anyStarted && !allCleared;
+  const stubWithChecks =
+    country === "GB" && isUCheckStubMode() && anyStarted && !allCleared;
 
   const provider =
     country === "US"
@@ -198,14 +203,18 @@ export default async function VerificationPage() {
         <h2 className="font-medium">
           {stubMode
             ? "Verification opens soon"
-            : anyStarted
-              ? "Continue your verification"
-              : "Start your verification"}
+            : stubWithChecks
+              ? "Your verification is under way"
+              : anyStarted
+                ? "Continue your verification"
+                : "Start your verification"}
         </h2>
         <p className="text-sm text-slate-600 mt-1">
           {stubMode
-            ? "Your three checks will be run securely by uCheck. We'll tell you the moment you can begin."
-            : anyStarted
+            ? "Your three DBS-backed checks will be run securely. Nothing for you to do yet."
+            : stubWithChecks
+              ? "The status of each check is shown above."
+              : anyStarted
               ? `Pick up where you left off in the secure ${vendorLabel} portal.`
               : `We'll redirect you to ${vendorLabel} to verify your ID and run your checks. Takes about 10 minutes.`}
         </p>
@@ -215,6 +224,7 @@ export default async function VerificationPage() {
             allCleared={allCleared}
             country={country}
             stubMode={stubMode}
+            stubWithChecks={stubWithChecks}
           />
         </div>
       </div>

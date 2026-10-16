@@ -17,8 +17,21 @@ describe("verification page while uCheck is not live", () => {
     assert.match(client, /\/dashboard\/profile/);
     assert.match(client, /\/dashboard\/support/);
   });
+  it("does not name the vendor or promise an email nobody sends", () => {
+    const stub = client.slice(client.indexOf("if (stubMode)"), client.indexOf("return (", client.indexOf("if (stubMode)") + 20));
+    assert.ok(stub.length > 100);
+    assert.doesNotMatch(stub, /uCheck|Checkr/);
+    assert.doesNotMatch(stub, /email\s+you/i);
+    assert.doesNotMatch(page, /run securely by uCheck/);
+  });
+  it("keeps state-appropriate copy for carers who already have checks", () => {
+    assert.match(page, /isUCheckStubMode\(\) && !anyStarted && !allCleared/);
+    assert.match(page, /stubWithChecks=\{stubWithChecks\}/);
+    assert.match(client, /stubWithChecks/);
+    assert.match(client, /already under way/);
+  });
   it("hides the 'redirect you to uCheck' text while in stub mode", () => {
-    assert.match(page, /const stubMode = country === "GB" && isUCheckStubMode\(\)/);
+    assert.match(page, /const stubMode =\s*country === "GB" && isUCheckStubMode\(\)/);
     assert.match(page, /stubMode\s*\n?\s*\? "Verification opens soon"/);
   });
 });
