@@ -72,9 +72,9 @@ export default async function DangerZonePage({
             <Image
               src="/brand/logo.svg"
               alt="SpecialCarer"
-              width={161}
-              height={121}
-              className="h-9 w-auto"
+              width={322}
+              height={242}
+              className="h-16 md:h-20 w-auto"
               priority
             />
           </Link>

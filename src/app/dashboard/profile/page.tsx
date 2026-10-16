@@ -69,7 +69,7 @@ export default async function CaregiverProfileEditPage() {
       <header className="px-6 py-5 bg-white border-b border-slate-100">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <Image src="/brand/logo.svg" alt="SpecialCarer" width={161} height={121} className="h-9 w-auto" priority />
+            <Image src="/brand/logo.svg" alt="SpecialCarer" width={322} height={242} className="h-16 md:h-20 w-auto" priority />
           </Link>
           <Link href="/dashboard" className="text-sm text-slate-500 hover:text-slate-700">
             ← Dashboard
