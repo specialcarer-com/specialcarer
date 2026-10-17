@@ -11,9 +11,9 @@ describe("verification page while uCheck is not live", () => {
     assert.doesNotMatch(client, /one working day/i);
     assert.doesNotMatch(client, /received your documents/i);
   });
-  it("tells the carer there is nothing to do yet and points to useful next steps", () => {
-    assert.match(client, /Verification opens soon/);
-    assert.match(client, /nothing for you to do yet/);
+  it("tells the carer how to send documents now and points to useful next steps", () => {
+    assert.match(client, /Our team can check your documents now/);
+    assert.match(client, /send your documents in the section below/);
     assert.match(client, /\/dashboard\/profile/);
     assert.match(client, /\/dashboard\/support/);
   });
@@ -32,6 +32,10 @@ describe("verification page while uCheck is not live", () => {
   });
   it("hides the 'redirect you to uCheck' text while in stub mode", () => {
     assert.match(page, /const stubMode =\s*country === "GB" && isUCheckStubMode\(\)/);
-    assert.match(page, /stubMode\s*\n?\s*\? "Verification opens soon"/);
+    assert.match(page, /stubMode\s*\n?\s*\? "Send your documents for review"/);
+  });
+  it("does not say we never see documents while carers can send us documents", () => {
+    assert.match(page, /showManual \?/);
+    assert.match(page, /seen only by SpecialCarer administrators/);
   });
 });

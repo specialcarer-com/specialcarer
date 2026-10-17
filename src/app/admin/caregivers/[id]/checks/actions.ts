@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin, logAdminAction } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { recordManualClearance } from "@/lib/verification/clear";
 
 type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -58,14 +59,16 @@ export async function clearCheckAction(input: {
       .eq("id", input.existingId);
     if (error) return { ok: false, error: error.message };
   } else {
-    const { error } = await admin.from("background_checks").insert({
-      user_id: input.userId,
-      check_type: input.checkType,
-      vendor: "admin_override",
-      status: "cleared",
-      issued_at: nowIso,
+    // vendor is a bg_vendor enum ('uchecks' | 'checkr'), so manual clearances
+    // are recorded under the real vendor value with source 'admin_manual'. Upserting on the
+    // (user, vendor, check) key also covers a row that exists but was not passed in.
+    const cleared = await recordManualClearance(admin, {
+      userId: input.userId,
+      checkType: input.checkType,
+      expiresAt: null,
+      summary: `Cleared by admin override on ${nowIso.slice(0, 10)}`,
     });
-    if (error) return { ok: false, error: error.message };
+    if (!cleared.ok) return { ok: false, error: cleared.error };
   }
 
   await logAdminAction({

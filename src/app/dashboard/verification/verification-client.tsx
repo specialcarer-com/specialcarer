@@ -75,11 +75,12 @@ export default function VerificationClient({
   if (stubMode) {
     return (
       <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900">
-        <p className="font-medium">Verification opens soon.</p>
+        <p className="font-medium">Our team can check your documents now.</p>
         <p className="mt-1">
-          We&rsquo;re setting up DBS checks. There is nothing for you to do yet,
-          and your checks are free. Check back here later. In the meantime you
-          can finish your profile and set up payouts.
+          Our automatic online check is not switched on yet. In the meantime,
+          send your documents in the section below and our team will review
+          them by hand. Your checks are free. You can also finish your profile
+          and set up payouts while you wait.
         </p>
         <p className="mt-2">
           <a href="/dashboard/profile" className="underline font-medium">
