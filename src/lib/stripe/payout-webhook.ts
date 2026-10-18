@@ -137,6 +137,7 @@ function isUniqueViolation(err: unknown): boolean {
 async function resolveCarerId(
   admin: PayoutAdminClient,
   payout: Stripe.Payout,
+  connectAccountId?: string | null,
 ): Promise<string | null> {
   // 1. Direct lookup on payout_intents.
   const { data: pi } = await admin
@@ -146,13 +147,10 @@ async function resolveCarerId(
     .maybeSingle();
   if (pi?.carer_id) return pi.carer_id as string;
 
-  // 2. Fall back to Connect account → carer. Stripe attaches the
-  // destination account id on the event top level, but the Payout
-  // object itself doesn't carry it as a public field. The event's
-  // `account` property (webhook-level) tells us which Connect account
-  // the payout belongs to; the caller can pass it via `_stripeAccount`.
-  const acctId = (payout as unknown as { destination?: string | null })
-    .destination;
+  // 2. Fall back to Connect account → carer. The webhook-level
+  // `event.account` identifies the connected account (payout.destination
+  // is the bank account, not the Connect account), so the caller passes it.
+  const acctId = connectAccountId;
   if (typeof acctId === "string" && acctId.length > 0) {
     const { data: acct } = await admin
       .from("caregiver_stripe_accounts")
@@ -522,7 +520,7 @@ export async function handlePayoutAlertEvent(
   }
 
   // ── payout.failed / payout.canceled: open a fresh alert row ───────────────
-  const carerId = await resolveCarerId(admin, payout);
+  const carerId = await resolveCarerId(admin, payout, event.account ?? null);
   if (!carerId) {
     // Can't attribute this payout — log and skip. The router will
     // still mark processed_at via its own bookkeeping.

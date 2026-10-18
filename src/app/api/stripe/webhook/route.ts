@@ -28,6 +28,11 @@ export const runtime = "nodejs";
  * Stripe webhook handler. Configure in Stripe dashboard pointing to
  * `${SITE_URL}/api/stripe/webhook` and put the signing secret in
  * STRIPE_WEBHOOK_SECRET.
+ *
+ * Stripe signs "Your account" and "Connected accounts" destinations with
+ * different secrets, so a second destination pointing here (carer events:
+ * account.updated, capability.updated, payout.*) uses the optional
+ * STRIPE_WEBHOOK_SECRET_CONNECT (test) / STRIPE_WEBHOOK_SECRET_LIVE_CONNECT.
  */
 export async function POST(req: Request) {
   const sig = req.headers.get("stripe-signature");
@@ -36,6 +41,9 @@ export async function POST(req: Request) {
   // a trailing newline or surrounding whitespace that silently breaks HMAC.
   const secretTest = process.env.STRIPE_WEBHOOK_SECRET?.trim();
   const secretLive = process.env.STRIPE_WEBHOOK_SECRET_LIVE?.trim();
+  const secretTestConnect = process.env.STRIPE_WEBHOOK_SECRET_CONNECT?.trim();
+  const secretLiveConnect =
+    process.env.STRIPE_WEBHOOK_SECRET_LIVE_CONNECT?.trim();
   const cronSecret = process.env.CRON_SECRET?.trim();
   const raw = await req.text();
 
@@ -59,7 +67,7 @@ export async function POST(req: Request) {
       return diff === 0;
     })();
 
-  if (!isReplay && (!sig || (!secretTest && !secretLive))) {
+  if (!isReplay && (!sig || (!secretTest && !secretLive && !secretTestConnect && !secretLiveConnect))) {
     return NextResponse.json(
       { error: "Webhook signature or secret missing" },
       { status: 400 }
@@ -84,18 +92,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid replay JSON" }, { status: 400 });
     }
   } else {
-    if (secretLive && sig) {
+    // Live secrets first (production traffic), then test. Within a mode the
+    // platform secret is tried before the Connect-destination secret.
+    const candidates: Array<{ secret: string | undefined; mode: "live" | "test" }> = [
+      { secret: secretLive, mode: "live" },
+      { secret: secretLiveConnect, mode: "live" },
+      { secret: secretTest, mode: "test" },
+      { secret: secretTestConnect, mode: "test" },
+    ];
+    for (const c of candidates) {
+      if (event || !c.secret || !sig) continue;
       try {
-        event = stripe.webhooks.constructEvent(raw, sig, secretLive);
-        verifiedWith = "live";
-      } catch (err) {
-        lastError = err instanceof Error ? err.message : "Invalid signature";
-      }
-    }
-    if (!event && secretTest && sig) {
-      try {
-        event = stripe.webhooks.constructEvent(raw, sig, secretTest);
-        verifiedWith = "test";
+        event = stripe.webhooks.constructEvent(raw, sig, c.secret);
+        verifiedWith = c.mode;
       } catch (err) {
         lastError = err instanceof Error ? err.message : "Invalid signature";
       }

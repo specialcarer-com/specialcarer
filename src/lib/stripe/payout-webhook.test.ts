@@ -342,13 +342,16 @@ function payoutEvent(
   return {
     id: `evt_${Math.random().toString(36).slice(2, 8)}`,
     type,
+    // Connect events carry the connected account at the webhook level.
+    ...(args.destination ? { account: args.destination } : {}),
     data: {
       object: {
         id: args.id,
         amount: args.amount,
         currency: args.currency,
         failure_message: args.failure_message ?? null,
-        destination: args.destination ?? null,
+        // Real payouts expose the bank account here, never the acct_ id.
+        destination: args.destination ? "ba_test_bank" : null,
         object: "payout",
       },
     },
