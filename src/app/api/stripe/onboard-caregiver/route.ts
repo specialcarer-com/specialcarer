@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/server";
 import { US_REGION_ENABLED } from "@/lib/region";
 import { buildCarerAccountPrefill } from "@/lib/stripe/carer-account-profile";
+import { decideOnboardingAccount } from "@/lib/stripe/onboarding-account";
 
 /**
  * POST /api/stripe/onboard-caregiver
@@ -50,7 +51,15 @@ export async function POST(req: Request) {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  let accountId = existing?.stripe_account_id;
+  // The stored account may be a placeholder or belong to another Stripe
+  // environment (e.g. after swapping API keys). Only reuse it if Stripe can
+  // still see it; otherwise create a fresh one and replace the stored link.
+  const decision = await decideOnboardingAccount(
+    existing?.stripe_account_id,
+    (id) => stripe.accounts.retrieve(id),
+  );
+  let accountId: string | undefined =
+    decision.action === "reuse" ? decision.accountId : undefined;
 
   if (!accountId) {
     // Pre-fill what we already know so Stripe's hosted form does not ask the
@@ -85,12 +94,37 @@ export async function POST(req: Request) {
     });
     accountId = account.id;
 
-    await admin.from("caregiver_stripe_accounts").insert({
-      user_id: user.id,
+    const fresh = {
       stripe_account_id: account.id,
       country,
       default_currency: country === "GB" ? "gbp" : "usd",
-    });
+    };
+    if (decision.action === "create" && decision.replacesAccountId) {
+      // Replace the unusable link; reset the cached flags to a clean slate.
+      const { error: updErr } = await admin
+        .from("caregiver_stripe_accounts")
+        .update({
+          ...fresh,
+          charges_enabled: false,
+          payouts_enabled: false,
+          details_submitted: false,
+          capabilities: {},
+          disabled_reason: null,
+          requirements_currently_due: null,
+          last_refreshed_at: null,
+        })
+        .eq("user_id", user.id);
+      if (updErr) {
+        return NextResponse.json(
+          { error: "Could not save your payout account. Please try again." },
+          { status: 500 },
+        );
+      }
+    } else {
+      await admin
+        .from("caregiver_stripe_accounts")
+        .insert({ user_id: user.id, ...fresh });
+    }
   }
 
   const origin =
