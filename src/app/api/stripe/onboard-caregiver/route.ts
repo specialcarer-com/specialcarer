@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/server";
 import { US_REGION_ENABLED } from "@/lib/region";
 import { buildCarerAccountPrefill } from "@/lib/stripe/carer-account-profile";
+import { decideOnboardingAccount } from "@/lib/stripe/onboarding-account";
 
 /**
  * POST /api/stripe/onboard-caregiver
@@ -50,7 +51,15 @@ export async function POST(req: Request) {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  let accountId = existing?.stripe_account_id;
+  // The stored account may be a placeholder or belong to another Stripe
+  // environment (e.g. after swapping API keys). Only reuse it if Stripe can
+  // still see it; otherwise create a fresh one and replace the stored link.
+  const decision = await decideOnboardingAccount(
+    existing?.stripe_account_id,
+    (id) => stripe.accounts.retrieve(id),
+  );
+  let accountId: string | undefined =
+    decision.action === "reuse" ? decision.accountId : undefined;
 
   if (!accountId) {
     // Pre-fill what we already know so Stripe's hosted form does not ask the
@@ -85,12 +94,66 @@ export async function POST(req: Request) {
     });
     accountId = account.id;
 
-    await admin.from("caregiver_stripe_accounts").insert({
-      user_id: user.id,
+    const fresh = {
       stripe_account_id: account.id,
       country,
       default_currency: country === "GB" ? "gbp" : "usd",
-    });
+    };
+    const saveFailed = () =>
+      NextResponse.json(
+        { error: "Could not save your payout account. Please try again." },
+        { status: 500 },
+      );
+    // If a concurrent request already persisted an account for this carer,
+    // use that one so the link we return always matches what is stored.
+    const persistedAccountId = async (): Promise<string | null> => {
+      const { data } = await admin
+        .from("caregiver_stripe_accounts")
+        .select("stripe_account_id")
+        .eq("user_id", user.id)
+        .maybeSingle<{ stripe_account_id: string | null }>();
+      return data?.stripe_account_id ?? null;
+    };
+
+    if (existing) {
+      // Replace the unusable link, but only if the row still holds the id we
+      // read earlier (compare-and-swap), and reset the cached flags.
+      let update = admin
+        .from("caregiver_stripe_accounts")
+        .update({
+          ...fresh,
+          charges_enabled: false,
+          payouts_enabled: false,
+          details_submitted: false,
+          capabilities: {},
+          disabled_reason: null,
+          requirements_currently_due: null,
+          last_refreshed_at: null,
+        })
+        .eq("user_id", user.id);
+      if (existing.stripe_account_id) {
+        update = update.eq("stripe_account_id", existing.stripe_account_id);
+      }
+      const { data: updated, error: updErr } = await update.select(
+        "stripe_account_id",
+      );
+      if (updErr) return saveFailed();
+      if (!updated || updated.length === 0) {
+        // Lost the race: another request replaced it first.
+        const winner = await persistedAccountId();
+        if (!winner) return saveFailed();
+        accountId = winner;
+      }
+    } else {
+      const { error: insertErr } = await admin
+        .from("caregiver_stripe_accounts")
+        .insert({ user_id: user.id, ...fresh });
+      if (insertErr) {
+        const winner = await persistedAccountId();
+        if (!winner) return saveFailed();
+        accountId = winner;
+      }
+    }
   }
 
   const origin =
