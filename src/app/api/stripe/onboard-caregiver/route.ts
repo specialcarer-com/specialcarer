@@ -99,9 +99,26 @@ export async function POST(req: Request) {
       country,
       default_currency: country === "GB" ? "gbp" : "usd",
     };
-    if (decision.action === "create" && decision.replacesAccountId) {
-      // Replace the unusable link; reset the cached flags to a clean slate.
-      const { error: updErr } = await admin
+    const saveFailed = () =>
+      NextResponse.json(
+        { error: "Could not save your payout account. Please try again." },
+        { status: 500 },
+      );
+    // If a concurrent request already persisted an account for this carer,
+    // use that one so the link we return always matches what is stored.
+    const persistedAccountId = async (): Promise<string | null> => {
+      const { data } = await admin
+        .from("caregiver_stripe_accounts")
+        .select("stripe_account_id")
+        .eq("user_id", user.id)
+        .maybeSingle<{ stripe_account_id: string | null }>();
+      return data?.stripe_account_id ?? null;
+    };
+
+    if (existing) {
+      // Replace the unusable link, but only if the row still holds the id we
+      // read earlier (compare-and-swap), and reset the cached flags.
+      let update = admin
         .from("caregiver_stripe_accounts")
         .update({
           ...fresh,
@@ -114,16 +131,28 @@ export async function POST(req: Request) {
           last_refreshed_at: null,
         })
         .eq("user_id", user.id);
-      if (updErr) {
-        return NextResponse.json(
-          { error: "Could not save your payout account. Please try again." },
-          { status: 500 },
-        );
+      if (existing.stripe_account_id) {
+        update = update.eq("stripe_account_id", existing.stripe_account_id);
+      }
+      const { data: updated, error: updErr } = await update.select(
+        "stripe_account_id",
+      );
+      if (updErr) return saveFailed();
+      if (!updated || updated.length === 0) {
+        // Lost the race: another request replaced it first.
+        const winner = await persistedAccountId();
+        if (!winner) return saveFailed();
+        accountId = winner;
       }
     } else {
-      await admin
+      const { error: insertErr } = await admin
         .from("caregiver_stripe_accounts")
         .insert({ user_id: user.id, ...fresh });
+      if (insertErr) {
+        const winner = await persistedAccountId();
+        if (!winner) return saveFailed();
+        accountId = winner;
+      }
     }
   }
 
