@@ -10,6 +10,11 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { calculateReferenceGate } from "./reference-cqc";
+import {
+  backgroundChecksCompleteFrom,
+  CAREGIVER_VERIFICATION_COLUMNS,
+  type CaregiverVerificationRow,
+} from "./background-checks";
 import { COURSE_MODULE_KEYS } from "./types";
 import type {
   Vertical,
@@ -128,9 +133,9 @@ export async function hasInterviewApproved(
 }
 
 /**
- * Read the existing caregiver_verification view to determine whether
- * the country-required background checks are all cleared. The view
- * exposes per-country booleans like `gb_fully_cleared` / `us_fully_cleared`.
+ * Read the caregiver_verification view to determine whether the
+ * country-required background checks are all cleared. The view exposes
+ * `uk_fully_cleared` / `us_fully_cleared` (see background-checks.ts).
  */
 export async function getBackgroundChecksComplete(
   admin: AdminClient,
@@ -138,22 +143,10 @@ export async function getBackgroundChecksComplete(
 ): Promise<boolean> {
   const { data } = await admin
     .from("caregiver_verification")
-    .select(
-      "user_id, country, gb_fully_cleared, us_fully_cleared, fully_cleared",
-    )
+    .select(CAREGIVER_VERIFICATION_COLUMNS)
     .eq("user_id", carerId)
-    .maybeSingle<{
-      user_id: string;
-      country: string | null;
-      gb_fully_cleared: boolean | null;
-      us_fully_cleared: boolean | null;
-      fully_cleared: boolean | null;
-    }>();
-  if (!data) return false;
-  if (typeof data.fully_cleared === "boolean") return data.fully_cleared;
-  // Fall back to country-specific flag if available.
-  if (data.country === "US") return !!data.us_fully_cleared;
-  return !!data.gb_fully_cleared;
+    .maybeSingle<CaregiverVerificationRow & { user_id: string }>();
+  return backgroundChecksCompleteFrom(data);
 }
 
 /**
